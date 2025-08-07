@@ -1,1 +1,47 @@
-*.sqlite*
+# Laravel
+/vendor
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/public
+/storage/framework/cache/data
+/storage/framework/sessions
+/storage/framework/views
+/storage/logs
+/bootstrap/cache
+
+# Laravel environment files
+.env
+.env.*.backup
+.env.local
+.env.development
+.env.production
+
+# Laravel Sail (si llegás a usarlo)
+docker-compose.override.yml
+
+# OS / IDEs
+.DS_Store
+Thumbs.db
+
+# JetBrains (PhpStorm, WebStorm, etc.)
+.idea
+
+# VSCode
+.vscode
+
+# NPM/Vite artifacts
+*.log
+*.cache
+*.tsbuildinfo
+
+# Vite
+/.vite
+/public/build
+
+# Composer PHAR
+composer.phar
+
+# Coverage reports (si usás tests con cobertura)
+coverage/
