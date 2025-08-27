@@ -56,25 +56,17 @@ DB_DATABASE=servime_menu
 DB_USERNAME=root
 DB_PASSWORD=
 6. Generar la key de la app
-bash
-Copiar
-Editar
+
 php artisan key:generate
 7. Crear base de datos MySQL
 Crear una base llamada servime_menu en tu gestor favorito o consola:
 
-sql
-Copiar
-Editar
+
 CREATE DATABASE servime_menu CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 8. Ejecutar migraciones
-bash
-Copiar
-Editar
+
 php artisan migrate
 🧪 Servidor local
-bash
-Copiar
-Editar
+
 php artisan serve
 Visitar: http://127.0.0.1:8000
