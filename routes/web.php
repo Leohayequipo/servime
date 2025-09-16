@@ -19,11 +19,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Rutas de Comercios
     Route::get('/comercios/create', [ComercioController::class, 'create'])->name('comercios.create');
     Route::post('/comercios', [ComercioController::class, 'store'])->name('comercios.store');
     Route::get('/comercios', [ComercioController::class, 'index'])->name('comercios.index');
     Route::get('/comercios/{comercio}/edit', [ComercioController::class, 'edit'])->name('comercios.edit');
     Route::put('/comercios/{comercio}', [ComercioController::class, 'update'])->name('comercios.update');
     Route::delete('/comercios/{comercio}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
+    
+    // Rutas de Menús
+    Route::get('/menus', [App\Http\Controllers\MenuController::class, 'all'])->name('menus.all');
+    Route::get('/comercios/{comercio}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
+    Route::get('/comercios/{comercio}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
+    Route::post('/comercios/{comercio}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store');
+    Route::get('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'show'])->name('menus.show');
+    Route::get('/comercios/{comercio}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
+    Route::put('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
+    Route::delete('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
 });
 require __DIR__.'/auth.php';
