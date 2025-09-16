@@ -4,7 +4,10 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 {{ __('Mis Comercios') }}
             </h2>
-            <a href="{{ route('comercios.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+            <a href="{{ route('comercios.create') }}" class="group relative inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 border border-transparent rounded-lg font-semibold text-sm text-white shadow-lg hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
+                <svg class="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
                 {{ __('Crear Comercio') }}
             </a>
         </div>
@@ -18,34 +21,43 @@
                     @foreach($comercios as $comercio)
                         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                             <div class="p-6">
-                                <div class="flex items-start space-x-4">
-                                    @if($comercio->logo_url)
-                                        <div class="flex-shrink-0">
-                                            <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo de {{ $comercio->nombre }}" class="w-16 h-16 object-cover rounded-lg">
-                                        </div>
+                                <!-- Logo que ocupa todo el ancho -->
+                                @if($comercio->logo_url)
+                                    <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
+                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo de {{ $comercio->nombre }}" class="w-full h-full object-cover">
+                                    </div>
+                                @endif
+                                
+                                <!-- Información del comercio centrada -->
+                                <div class="text-center mb-6">
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ $comercio->nombre }}</h3>
+                                    @if($comercio->descripcion)
+                                        <p class="text-gray-600 dark:text-gray-300 mb-3">{{ $comercio->descripcion }}</p>
                                     @endif
-                                    <div class="flex-1">
-                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ $comercio->nombre }}</h3>
-                                @if($comercio->descripcion)
-                                    <p class="text-gray-600 dark:text-gray-300 mb-3">{{ $comercio->descripcion }}</p>
-                                @endif
-                                @if($comercio->direccion)
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                        <span class="font-medium">Dirección:</span> {{ $comercio->direccion }}
-                                    </p>
-                                @endif
-                                @if($comercio->horario)
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                        <span class="font-medium">Horario:</span> {{ $comercio->horario }}
-                                    </p>
-                                @endif
-                                <div class="flex flex-wrap gap-2">
-                                    <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-3 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 focus:bg-purple-700 active:bg-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    @if($comercio->direccion)
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                                            <span class="font-medium">Dirección:</span> {{ $comercio->direccion }}
+                                        </p>
+                                    @endif
+                                    @if($comercio->horario)
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="font-medium">Horario:</span> {{ $comercio->horario }}
+                                        </p>
+                                    @endif
+                                </div>
+                                
+                                <!-- Botón principal "Ver Menús" -->
+                                <div class="flex justify-center mb-4">
+                                    <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 border border-transparent rounded-lg font-semibold text-sm text-white shadow-lg hover:from-purple-700 hover:to-purple-800 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                         </svg>
                                         {{ __('Ver Menús') }}
                                     </a>
+                                </div>
+                                
+                                <!-- Botones secundarios -->
+                                <div class="flex flex-wrap gap-2 justify-center">
                                     <a href="{{ route('comercios.edit', $comercio) }}" class="inline-flex items-center px-3 py-2 bg-blue-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-900 focus:bg-blue-900 active:bg-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                         {{ __('Editar') }}
                                     </a>
@@ -58,8 +70,6 @@
                                         </svg>
                                         {{ __('Eliminar') }}
                                     </button>
-                                </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
