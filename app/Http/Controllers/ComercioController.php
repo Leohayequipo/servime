@@ -11,7 +11,8 @@ class ComercioController extends Controller
      */
     public function index()
     {
-        //
+        $comercios = Comercio::where('user_id', auth()->id())->get();
+        return view('comercios.index', compact('comercios'));
     }
 
     /**
@@ -70,15 +71,38 @@ class ComercioController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        return view('comercios.edit', compact('comercio'));
     }
-
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
     {
-        //
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'direccion' => 'nullable|string|max:255',
+            'horario' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
+        $comercio->nombre = $validated['nombre'];
+        $comercio->slug = \Str::slug($validated['nombre']);
+        $comercio->descripcion = $validated['descripcion'];
+        $comercio->direccion = $validated['direccion'];
+        $comercio->horario = $validated['horario'];
+
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $comercio->logo_url = $logoPath;
+        }
+
+        $comercio->save();
+
+        return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
     }
 
     /**
@@ -86,6 +110,9 @@ class ComercioController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $comercio->delete();
+        
+        return redirect()->route('comercios.index')->with('success', 'Comercio eliminado exitosamente');
     }
 }

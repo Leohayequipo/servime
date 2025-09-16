@@ -21,5 +21,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/comercios/create', [ComercioController::class, 'create'])->name('comercios.create');
     Route::post('/comercios', [ComercioController::class, 'store'])->name('comercios.store');
+    Route::get('/comercios', [ComercioController::class, 'index'])->name('comercios.index');
+    Route::get('/comercios/{comercio}/edit', [ComercioController::class, 'edit'])->name('comercios.edit');
+    Route::put('/comercios/{comercio}', [ComercioController::class, 'update'])->name('comercios.update');
+    Route::delete('/comercios/{comercio}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
 });
 require __DIR__.'/auth.php';
