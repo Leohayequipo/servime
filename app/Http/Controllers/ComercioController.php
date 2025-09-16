@@ -95,7 +95,20 @@ class ComercioController extends Controller
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
 
-        if ($request->hasFile('logo')) {
+        // Manejar eliminación de logo
+        if ($request->has('delete_logo') && $request->delete_logo == '1') {
+            // Eliminar archivo del storage si existe
+            if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
+                \Storage::disk('public')->delete($comercio->logo_url);
+            }
+            $comercio->logo_url = null;
+        }
+        // Manejar subida de nuevo logo
+        elseif ($request->hasFile('logo')) {
+            // Eliminar logo anterior si existe
+            if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
+                \Storage::disk('public')->delete($comercio->logo_url);
+            }
             $logoPath = $request->file('logo')->store('logos', 'public');
             $comercio->logo_url = $logoPath;
         }
@@ -111,6 +124,13 @@ class ComercioController extends Controller
     public function destroy(string $id)
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        
+        // Eliminar logo del storage si existe
+        if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
+            \Storage::disk('public')->delete($comercio->logo_url);
+        }
+        
+        // Eliminar el comercio (esto también eliminará los menús asociados por la relación)
         $comercio->delete();
         
         return redirect()->route('comercios.index')->with('success', 'Comercio eliminado exitosamente');
