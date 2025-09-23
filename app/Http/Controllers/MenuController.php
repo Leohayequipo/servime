@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Menu;
 use App\Models\Comercio;
+use App\Services\MenuProcessorService;
 use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
@@ -64,11 +65,21 @@ class MenuController extends Controller
         $menu->procesado = false;
         $menu->save();
 
-        // TODO: Aquí procesaremos con GPT en el siguiente paso
-        // Por ahora solo guardamos el archivo
+        // Procesar con OpenAI
+        try {
+            $processor = new MenuProcessorService();
+            $processed = $processor->processMenu($menu);
+        } catch (\Exception $e) {
+            dd('Error al procesar:', $e->getMessage(), $e->getTraceAsString());
+        }
 
-        return redirect()->route('menus.index', $comercio)
-            ->with('success', 'Menú subido exitosamente. Se procesará automáticamente.');
+        if ($processed) {
+            return redirect()->route('menus.index', $comercio)
+                ->with('success', 'Menú subido y procesado exitosamente con IA.');
+        } else {
+            return redirect()->route('menus.index', $comercio)
+                ->with('warning', 'Menú subido pero hubo un problema en el procesamiento.');
+        }
     }
 
     /**
@@ -121,8 +132,17 @@ class MenuController extends Controller
         $menu->procesado = false; // Marcar como no procesado si se actualiza
         $menu->save();
 
-        return redirect()->route('menus.index', $comercio)
-            ->with('success', 'Menú actualizado exitosamente.');
+        // Reprocesar con OpenAI
+        $processor = new MenuProcessorService();
+        $processed = $processor->processMenu($menu);
+
+        if ($processed) {
+            return redirect()->route('menus.index', $comercio)
+                ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
+        } else {
+            return redirect()->route('menus.index', $comercio)
+                ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
+        }
     }
 
     /**
