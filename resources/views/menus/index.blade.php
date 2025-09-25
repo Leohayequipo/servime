@@ -40,6 +40,17 @@
                     @foreach($menus as $menu)
                         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                             <div class="p-6">
+                                <!-- Logo del comercio -->
+                                @if($comercio->logo_url)
+                                    <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
+                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo de {{ $comercio->nombre }}" class="w-full h-full object-cover">
+                                    </div>
+                                @elseif($menu->archivo_original && $menu->formato !== 'pdf')
+                                    <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
+                                        <img src="{{ asset('storage/' . $menu->archivo_original) }}" alt="Menú de {{ $comercio->nombre }}" class="w-full h-full object-cover">
+                                    </div>
+                                @endif
+
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="flex items-center space-x-2">
                                         @if($menu->formato === 'pdf')
