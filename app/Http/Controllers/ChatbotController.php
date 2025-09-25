@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comercio;
+use App\Models\ChatConversation;
 use App\Services\ChatbotService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -27,10 +28,15 @@ class ChatbotController extends Controller
 
         $comercio = Comercio::findOrFail($comercioId);
         $message = $request->input('message');
+        $startTime = microtime(true);
         
         try {
             // Usar el servicio de chatbot con OpenAI
             $response = $this->chatbotService->processMessage($comercio, $message);
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            
+            // Log de la conversación
+            $this->logConversation($comercio, $message, $response, true, $responseTime, $request);
             
             return response()->json([
                 'response' => $response,
@@ -48,6 +54,10 @@ class ChatbotController extends Controller
             
             // Fallback a respuesta básica si OpenAI falla
             $fallbackResponse = $this->generateFallbackResponse($comercio, $message);
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            
+            // Log de la conversación con fallback
+            $this->logConversation($comercio, $message, $fallbackResponse, false, $responseTime, $request);
             
             return response()->json([
                 'response' => $fallbackResponse,
@@ -82,5 +92,47 @@ class ChatbotController extends Controller
         }
         
         return "Gracias por tu mensaje. Estoy aquí para ayudarte con información sobre nuestro menú. ¿Hay algo específico que te gustaría saber?";
+    }
+
+    /**
+     * Log de conversación en la base de datos
+     */
+    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request): void
+    {
+        try {
+            ChatConversation::create([
+                'comercio_id' => $comercio->id,
+                'session_id' => $this->getSessionId($request),
+                'user_message' => $message,
+                'bot_response' => $response,
+                'used_openai' => $usedOpenAI,
+                'response_time_ms' => $responseTime,
+                'user_ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'metadata' => [
+                    'comercio_name' => $comercio->nombre,
+                    'message_length' => strlen($message),
+                    'response_length' => strlen($response),
+                    'timestamp' => now()->toISOString()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error logging conversation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generar o obtener session ID
+     */
+    private function getSessionId(Request $request): string
+    {
+        // Intentar obtener session ID del header o generar uno nuevo
+        $sessionId = $request->header('X-Session-ID');
+        
+        if (!$sessionId) {
+            $sessionId = 'session_' . uniqid() . '_' . time();
+        }
+        
+        return $sessionId;
     }
 }
