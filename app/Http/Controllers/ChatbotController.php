@@ -31,6 +31,11 @@ class ChatbotController extends Controller
         $startTime = microtime(true);
         
         try {
+            // Verificar si las respuestas con IA están habilitadas
+            if (!$comercio->enable_ai_responses) {
+                throw new \Exception('Respuestas con IA deshabilitadas');
+            }
+            
             // Usar el servicio de chatbot con OpenAI
             $response = $this->chatbotService->processMessage($comercio, $message);
             $responseTime = round((microtime(true) - $startTime) * 1000);

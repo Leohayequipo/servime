@@ -4,9 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $comercio->nombre }} - Menú Digital</title>
+    <title>{{ $comercio->page_title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Estilos personalizados del comercio -->
+    <style>
+        :root {
+            --primary-color: {{ $comercio->primary_color }};
+            --secondary-color: {{ $comercio->secondary_color }};
+            --accent-color: {{ $comercio->accent_color }};
+            --background-color: {{ $comercio->background_color }};
+        }
+        
+        .bg-primary { background-color: var(--primary-color) !important; }
+        .bg-secondary { background-color: var(--secondary-color) !important; }
+        .bg-accent { background-color: var(--accent-color) !important; }
+        .text-primary { color: var(--primary-color) !important; }
+        .text-secondary { color: var(--secondary-color) !important; }
+        .text-accent { color: var(--accent-color) !important; }
+        .border-primary { border-color: var(--primary-color) !important; }
+        .hover\:bg-primary:hover { background-color: var(--primary-color) !important; }
+        .hover\:text-primary:hover { color: var(--primary-color) !important; }
+    </style>
     <style>
         .chat-container {
             height: calc(100vh - 200px);
@@ -81,10 +101,10 @@
         <div class="max-w-md mx-auto px-4 py-3 border-b">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-robot text-indigo-600 text-sm"></i>
+                    <div class="w-8 h-8 bg-primary bg-opacity-20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot text-primary text-sm"></i>
                     </div>
-                    <span class="font-medium text-gray-900">Asistente IA</span>
+                    <span class="font-medium text-gray-900">{{ $comercio->chatbot_name }}</span>
                 </div>
                 <button onclick="toggleChat()" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-chevron-up" id="chatToggle"></i>
@@ -100,7 +120,7 @@
                         <i class="fas fa-robot text-indigo-600 text-xs"></i>
                     </div>
                     <div class="bg-gray-100 rounded-lg p-3 max-w-xs">
-                        <p class="text-sm text-gray-800">¡Hola! Soy tu asistente de IA. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?</p>
+                        <p class="text-sm text-gray-800">{{ $comercio->welcome_message }}</p>
                     </div>
                 </div>
             </div>
@@ -110,7 +130,7 @@
                 <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." 
                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                        onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="sendMessage()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>

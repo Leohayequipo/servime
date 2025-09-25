@@ -37,10 +37,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
     Route::put('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
+    
+    // Rutas de personalización
+    Route::get('/comercios/{comercio}/customize', [App\Http\Controllers\CustomizationController::class, 'show'])->name('comercios.customize');
+    Route::put('/comercios/{comercio}/customize', [App\Http\Controllers\CustomizationController::class, 'update'])->name('comercios.customize.update');
+    Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\CustomizationController::class, 'preview'])->name('comercios.preview');
+    Route::post('/comercios/{comercio}/reset', [App\Http\Controllers\CustomizationController::class, 'reset'])->name('comercios.reset');
 });
 
 // Rutas públicas (sin autenticación)
 Route::get('/menu/{comercio}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
 Route::post('/api/chat/{comercio}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
+
+// Rutas de Analytics (requieren autenticación)
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
+        Route::get('/comercio/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
+        Route::get('/export/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+    });
+});
 
 require __DIR__.'/auth.php';
