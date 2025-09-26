@@ -178,11 +178,11 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 @if($comercio->logo_url)
-                                                    <img class="h-8 w-8 rounded-full object-cover" 
+                                                    <img class="h-4 w-4 rounded-full object-cover" 
                                                          src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                                          alt="{{ $comercio->nombre }}">
                                                 @else
-                                                    <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                                    <div class="h-4 w-4 rounded-full bg-gray-300 flex items-center justify-center">
                                                         <span class="text-gray-600 text-xs font-medium">{{ substr($comercio->nombre, 0, 1) }}</span>
                                                     </div>
                                                 @endif

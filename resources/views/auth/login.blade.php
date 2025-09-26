@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }} - Login</title>
+    <title>{{ config('app.name', 'ServiME') }} - Login</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -163,7 +167,7 @@
             <!-- <img src="{{ asset('images/logo.png') }}" 
                  alt="ServiMe Logo" 
                  class="w-24 h-24 mx-auto mb-6 logo-glow rounded-2xl">-->
-            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">ServiMe</h1>
+            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }}</h1>
             <p class="text-text-secondary">Accede a tu panel de administración</p>
         </div>
 
@@ -257,6 +261,9 @@
         </div>
     </div>
 
+    <!-- Dark Mode Script -->
+    <script src="{{ asset('js/dark-mode.js') }}"></script>
+    
     <!-- Scripts -->
     <script>
         // Add floating animation to particles
