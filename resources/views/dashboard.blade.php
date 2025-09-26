@@ -1,108 +1,120 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
-    </x-slot>
-
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Mensaje de bienvenida -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">¡Bienvenido, {{ Auth::user()->name }}!</h2>
-                    <p class="text-gray-600 dark:text-gray-300">Gestiona tus comercios y menús desde aquí.</p>
-                </div>
+    <div class="min-h-screen bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            
+            <!-- Welcome Section -->
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold text-text-primary mb-4">
+                    ¡Bienvenido, {{ auth()->user()->name }}!
+                </h1>
+                <p class="text-xl text-text-secondary">
+                    Gestiona tus comercios y menús desde aquí.
+                </p>
             </div>
 
-            <!-- Estadísticas rápidas -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Comercios</dt>
-                                    <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ Auth::user()->comercios()->count() }}</dd>
-                                </dl>
-                            </div>
+            <!-- Metrics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <!-- Total Comercios -->
+                <div class="metric-card">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-4 neon-glow">
+                            <span class="text-2xl">🏪</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-text-primary mb-1">Total Comercios</h3>
+                            <p class="text-3xl font-bold text-accent-blue">{{ $comercios->count() }}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Menús</dt>
-                                    <dd class="text-lg font-medium text-gray-900 dark:text-white">0</dd>
-                                </dl>
-                            </div>
+                <!-- Total Menús -->
+                <div class="metric-card">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gradient-to-r from-accent-green to-green-500 rounded-xl flex items-center justify-center mr-4 neon-glow-green">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-text-primary mb-1">Total Menús</h3>
+                            <p class="text-3xl font-bold text-accent-green">{{ $menus->count() }}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Actividad Reciente</dt>
-                                    <dd class="text-lg font-medium text-gray-900 dark:text-white">0</dd>
-                                </dl>
-                            </div>
+                <!-- Actividad Reciente -->
+                <div class="metric-card">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mr-4 neon-glow">
+                            <span class="text-2xl">⚡</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-text-primary mb-1">Actividad Reciente</h3>
+                            <p class="text-3xl font-bold text-yellow-400">{{ $conversaciones->count() }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Acciones rápidas -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Acciones Rápidas</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <a href="{{ route('comercios.create') }}" class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
+            <!-- Quick Actions Section -->
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8">
+                <h2 class="text-2xl font-bold text-text-primary mb-8 text-center">Acciones Rápidas</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Crear Nuevo Comercio -->
+                    <a href="{{ route('comercios.create') }}" 
+                       class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                <span class="text-2xl">➕</span>
                             </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">Crear Nuevo Comercio</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Agrega un nuevo comercio a tu cuenta</p>
+                            <div>
+                                <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Nuevo Comercio</h3>
+                                <p class="text-text-secondary">Agrega un nuevo comercio a tu cuenta</p>
                             </div>
-                        </a>
+                        </div>
+                    </a>
 
-                        <a href="{{ route('comercios.index') }}" class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
+                    <!-- Gestionar Comercios -->
+                    <a href="{{ route('comercios.index') }}" 
+                       class="group bg-gradient-to-r from-accent-green to-green-600 hover:from-green-500 hover:to-accent-green rounded-xl p-6 transition-all duration-300 hover-lift neon-glow-green">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                <span class="text-2xl">📊</span>
                             </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">Gestionar Comercios</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Ve y edita tus comercios existentes</p>
+                            <div>
+                                <h3 class="text-xl font-semibold text-text-primary mb-2">Gestionar Comercios</h3>
+                                <p class="text-text-secondary">Ve y edita tus comercios existentes</p>
                             </div>
-                        </a>
-                    </div>
+                        </div>
+                    </a>
                 </div>
             </div>
+
+            <!-- Recent Activity -->
+            @if($conversaciones->count() > 0)
+                <div class="mt-12">
+                    <h2 class="text-2xl font-bold text-text-primary mb-6">Actividad Reciente</h2>
+                    <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
+                        <div class="space-y-4">
+                            @foreach($conversaciones->take(5) as $conversacion)
+                                <div class="flex items-center justify-between p-4 bg-primary-dark rounded-lg border border-accent-gray">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center mr-3">
+                                            <span class="text-sm">💬</span>
+                                        </div>
+                                        <div>
+                                            <p class="text-text-primary font-medium">{{ $conversacion->comercio->nombre }}</p>
+                                            <p class="text-text-secondary text-sm">{{ Str::limit($conversacion->user_message, 50) }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-text-secondary text-sm">
+                                        {{ $conversacion->created_at->diffForHumans() }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>
