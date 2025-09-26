@@ -780,15 +780,8 @@
                                             Modo oscuro
                                         </button>
                                         
-                                        <!-- Configuración -->
-                                        <a href="#" 
-                                           class="flex items-center px-4 py-3 text-sm text-text-secondary hover:text-accent-blue hover:bg-primary-dark transition-all duration-300">
-                                            <span class="text-lg mr-3">⚙️</span>
-                                            Configuración
-                                        </a>
-                                        
                                         <!-- Ayuda -->
-                                        <a href="#" 
+                                        <a href="{{ route('help.index') }}" 
                                            class="flex items-center px-4 py-3 text-sm text-text-secondary hover:text-accent-blue hover:bg-primary-dark transition-all duration-300">
                                             <span class="text-lg mr-3">❓</span>
                                             Ayuda
