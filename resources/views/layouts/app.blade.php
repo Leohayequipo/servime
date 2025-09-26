@@ -407,6 +407,170 @@
             --text-secondary: #CCCCCC;
         }
         
+        /* Dark mode - RESPECT ORIGINAL AESTHETIC */
+        .dark body {
+            background: var(--background) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .min-h-screen {
+            background: var(--background) !important;
+        }
+        
+        .dark .container {
+            background: var(--background) !important;
+        }
+        
+        /* Dark mode cards - original aesthetic */
+        .dark .metric-card {
+            background: var(--primary-dark) !important;
+            border: 1px solid var(--accent-gray) !important;
+        }
+        
+        .dark .glass-effect {
+            background: rgba(42, 58, 85, 0.8) !important;
+            border: 1px solid rgba(0, 196, 255, 0.2) !important;
+        }
+        
+        /* Dark mode text - original aesthetic */
+        .dark h1,
+        .dark h2,
+        .dark h3,
+        .dark h4,
+        .dark h5,
+        .dark h6 {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark p,
+        .dark span,
+        .dark div {
+            color: var(--text-primary) !important;
+        }
+        
+        /* Dark mode buttons - original aesthetic */
+        .dark button {
+            background: var(--secondary-dark) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--accent-gray) !important;
+        }
+        
+        .dark .btn-primary {
+            background: #0ea5e9 !important;
+            color: #ffffff !important;
+            border: 1px solid #0284c7 !important;
+        }
+        
+        .dark .btn-secondary {
+            background: #64748b !important;
+            color: #ffffff !important;
+            border: 1px solid #475569 !important;
+        }
+        
+        .dark .btn-danger {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            border: 1px solid #dc2626 !important;
+        }
+        
+        /* Dark mode profile dropdown */
+        .dark .group:hover .group-hover\:block {
+            background: var(--primary-dark) !important;
+            border: 1px solid var(--accent-gray) !important;
+        }
+        
+        .dark .absolute {
+            background: var(--primary-dark) !important;
+            border: 1px solid var(--accent-gray) !important;
+        }
+        
+        .dark .py-2 {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .px-4 {
+            color: var(--text-primary) !important;
+        }
+        
+        /* Dark mode user dropdown menu */
+        .dark .user-dropdown {
+            background: var(--primary-dark) !important;
+            border: 1px solid var(--accent-gray) !important;
+        }
+        
+        .dark .user-dropdown a {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .user-dropdown a:hover {
+            background: var(--secondary-dark) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Dark mode navigation and user menu */
+        .dark .bg-background {
+            background: var(--background) !important;
+        }
+        
+        .dark .border-accent-gray {
+            border-color: var(--accent-gray) !important;
+        }
+        
+        .dark .nav-link {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .nav-link:hover {
+            color: #0ea5e9 !important;
+        }
+        
+        .dark .nav-link.active {
+            color: #0ea5e9 !important;
+            background: rgba(14, 165, 233, 0.1) !important;
+        }
+        
+        /* Dark mode user profile - FORCE STYLES */
+        .dark .user-profile {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .user-profile:hover {
+            background: var(--secondary-dark) !important;
+        }
+        
+        /* Dark mode - FORCE ALL ELEMENTS */
+        .dark * {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .bg-white {
+            background: var(--primary-dark) !important;
+        }
+        
+        .dark .text-gray-900 {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark .text-gray-700 {
+            color: var(--text-secondary) !important;
+        }
+        
+        .dark .border-gray-300 {
+            border-color: var(--accent-gray) !important;
+        }
+        
+        .dark input {
+            background: var(--secondary-dark) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--accent-gray) !important;
+        }
+        
+        .dark button {
+            background: var(--secondary-dark) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--accent-gray) !important;
+        }
+        
         .glass-effect {
             background: rgba(42, 58, 85, 0.8);
             backdrop-filter: blur(20px);
