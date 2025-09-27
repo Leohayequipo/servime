@@ -395,7 +395,7 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message-${sender} message`;
             
-            const avatar = sender === 'user' ? '👤' : '💬';
+            const avatar = sender === 'user' ? '🧑' : '💬';
             const avatarClass = sender === 'user' ? 'bg-gray-400' : 'bg-green-500';
             
             messageDiv.innerHTML = `
