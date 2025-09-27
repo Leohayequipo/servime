@@ -103,62 +103,64 @@
         
         /* Botones modernos */
         .btn-modern {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            background: #4fc3f7;
             border: none;
             color: white;
             font-weight: 600;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
         
         .btn-modern:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+            background: #29b6f6;
+            transform: translateY(-1px);
         }
         
         .btn-modern:active {
+            background: #0288d1;
             transform: translateY(0);
-        }
-        
-        .btn-modern::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .btn-modern:hover::before {
-            left: 100%;
         }
         
         /* Input moderno */
         .input-modern {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-primary);
-            backdrop-filter: blur(10px);
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            color: #303030;
             transition: all 0.3s ease;
         }
         
         .input-modern:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            background: rgba(255, 255, 255, 0.15);
+            border-color: #4fc3f7;
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+            background: #ffffff;
+            outline: none;
         }
         
         .input-modern::placeholder {
-            color: var(--text-secondary);
+            color: #9e9e9e;
         }
         
         /* Chat container */
         .chat-container {
-            height: calc(100vh - 180px);
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
+            height: calc(100vh - 100px);
+            background: #e5ddd5;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            padding-bottom: 200px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Espaciado entre mensajes para las puntitas */
+        .message {
+            margin-bottom: 16px;
+        }
+        
+        /* Header que se oculta al hacer scroll */
+        #header {
+            transition: transform 0.3s ease;
+        }
+        
+        #header.hidden {
+            transform: translateY(-100%);
         }
         
         /* Mensajes del chatbot */
@@ -166,25 +168,52 @@
             max-width: 85%;
             padding: 12px 16px;
             border-radius: 18px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             position: relative;
             word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.4;
         }
         
         .message-user {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: white;
+            background: #dcf8c6;
+            color: #303030;
             margin-left: auto;
-            border-bottom-right-radius: 6px;
+            margin-right: 0;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-user::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: -8px;
+            width: 0;
+            height: 0;
+            border: 8px solid transparent;
+            border-left-color: #dcf8c6;
+            border-bottom: 0;
         }
         
         .message-bot {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
+            background: #ffffff;
+            color: #303030;
+            margin-left: 0;
             margin-right: auto;
-            border-bottom-left-radius: 6px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message-bot::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border: 8px solid transparent;
+            border-right-color: #ffffff;
+            border-bottom: 0;
         }
         
         /* Emoji animations */
@@ -213,31 +242,31 @@
 </head>
 <body class="h-full">
     <!-- Header con logo ocupando toda la parte superior -->
-    <div class="relative">
+    <div class="relative" id="header">
         @if($comercio->logo_url)
             <!-- Logo como fondo de toda la sección -->
-            <div class="h-32 bg-cover bg-center bg-no-repeat relative" style="background-image: url('{{ asset('storage/' . $comercio->logo_url) }}');">
+            <div class="h-20 bg-cover bg-center bg-no-repeat relative" style="background-image: url('{{ asset('storage/' . $comercio->logo_url) }}');">
                 <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
                 <div class="absolute inset-0 flex items-center justify-center">
                     <div class="text-center">
-                        <h1 class="text-2xl font-bold text-white mb-1 drop-shadow-lg">{{ $comercio->nombre }}</h1>
+                        <h1 class="text-xl font-bold text-white mb-1 drop-shadow-lg">{{ $comercio->nombre }}</h1>
                         @if($comercio->descripcion)
-                            <p class="text-sm text-white/90 drop-shadow">{{ $comercio->descripcion }}</p>
+                            <p class="text-xs text-white/90 drop-shadow">{{ $comercio->descripcion }}</p>
                         @endif
                     </div>
                 </div>
             </div>
         @else
             <!-- Fondo con gradiente si no hay logo -->
-            <div class="h-32 bg-gradient-to-r from-accent-blue to-accent-purple relative">
+            <div class="h-20 bg-gradient-to-r from-accent-blue to-accent-purple relative">
                 <div class="absolute inset-0 flex items-center justify-center">
                     <div class="text-center">
-                        <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-white/20 flex items-center justify-center">
-                            <span class="text-3xl text-white">🏪</span>
+                        <div class="w-12 h-12 mx-auto mb-1 rounded-full bg-white/20 flex items-center justify-center">
+                            <span class="text-2xl text-white">🏪</span>
                         </div>
-                        <h1 class="text-2xl font-bold text-white mb-1">{{ $comercio->nombre }}</h1>
+                        <h1 class="text-xl font-bold text-white mb-1">{{ $comercio->nombre }}</h1>
                         @if($comercio->descripcion)
-                            <p class="text-sm text-white/90">{{ $comercio->descripcion }}</p>
+                            <p class="text-xs text-white/90">{{ $comercio->descripcion }}</p>
                         @endif
                     </div>
                 </div>
@@ -245,23 +274,6 @@
         @endif
     </div>
 
-    <!-- Navegación de menús -->
-    <div class="glass-effect border-b border-white/20">
-        <div class="max-w-md mx-auto px-4 py-3">
-            <div class="flex space-x-4">
-                <button class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition-all duration-300">
-                    <span class="text-lg">🤖</span>
-                    <span class="font-medium">Asistente IA</span>
-                </button>
-                @if($menus->count() > 0)
-                    <button onclick="showMenus()" class="flex items-center space-x-2 px-4 py-2 rounded-lg text-secondary hover:text-primary hover:bg-white/10 transition-all duration-300">
-                        <span class="text-lg">📋</span>
-                        <span class="font-medium">Ver Menús</span>
-                    </button>
-                @endif
-            </div>
-        </div>
-    </div>
 
     <!-- Chat Container -->
     <div class="chat-container overflow-y-auto px-4 py-6">
@@ -269,18 +281,12 @@
             <!-- Mensaje de bienvenida -->
             <div class="message-bot message">
                 <div class="flex items-start space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-accent-blue to-accent-purple flex items-center justify-center flex-shrink-0">
-                        <span class="text-white text-sm">🤖</span>
+                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white text-sm">💬</span>
                     </div>
                     <div class="flex-1">
                         <div class="message-bubble message-bot">
                             <p>{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
-                        </div>
-                        <div class="flex items-center space-x-2 mt-2">
-                            <span class="text-xs text-secondary">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
-                            <span class="text-xs text-secondary">•</span>
-                            <span class="text-xs text-secondary">En línea</span>
-                            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         </div>
                     </div>
                 </div>
@@ -289,7 +295,7 @@
     </div>
 
     <!-- Input del chat -->
-    <div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/20 p-4">
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3">
         <div class="max-w-md mx-auto">
             <form id="chatForm" class="flex space-x-3">
                 <div class="flex-1 relative">
@@ -323,28 +329,6 @@
         </div>
     </div>
 
-    <!-- Modal de menús -->
-    @if($menus->count() > 0)
-        <div id="menuModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="glass-effect rounded-2xl p-6 max-w-md w-full max-h-96 overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold gradient-text">📋 Nuestros Menús</h3>
-                    <button onclick="hideMenus()" class="text-secondary hover:text-primary transition-colors">
-                        <span class="text-xl">✕</span>
-                    </button>
-                </div>
-                <div class="space-y-3">
-                    @foreach($menus as $menu)
-                        <div class="p-4 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-all duration-300 cursor-pointer hover-lift">
-                            <h4 class="font-semibold text-primary">{{ $menu->nombre ?? 'Menú sin nombre' }}</h4>
-                            <p class="text-sm text-secondary mt-1">Estado: {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}</p>
-                            <p class="text-xs text-secondary">Creado: {{ $menu->created_at->format('d/m/Y') }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    @endif
 
     <script>
         let isLoading = false;
@@ -411,8 +395,8 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message-${sender} message`;
             
-            const avatar = sender === 'user' ? '👤' : '🤖';
-            const avatarClass = sender === 'user' ? 'bg-gradient-to-r from-accent-purple to-accent-pink' : 'bg-gradient-to-r from-accent-blue to-accent-purple';
+            const avatar = sender === 'user' ? '👤' : '💬';
+            const avatarClass = sender === 'user' ? 'bg-gray-400' : 'bg-green-500';
             
             messageDiv.innerHTML = `
                 <div class="flex items-start space-x-3 ${sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}">
@@ -423,16 +407,17 @@
                         <div class="message-bubble message-${sender}">
                             <p>${text}</p>
                         </div>
-                        <div class="flex items-center space-x-2 mt-2 ${sender === 'user' ? 'justify-end' : ''}">
-                            <span class="text-xs text-secondary">${new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</span>
-                            ${sender === 'bot' ? '<div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>' : ''}
-                        </div>
                     </div>
                 </div>
             `;
             
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Scroll simple y directo
+            setTimeout(() => {
+                const chatContainer = document.querySelector('.chat-container');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 100);
         }
         
         // Mostrar indicador de escritura
@@ -445,15 +430,15 @@
             
             typingDiv.innerHTML = `
                 <div class="flex items-start space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-accent-blue to-accent-purple flex items-center justify-center flex-shrink-0">
-                        <span class="text-white text-sm">🤖</span>
+                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white text-sm">💬</span>
                     </div>
                     <div class="flex-1">
                         <div class="message-bubble message-bot">
                             <div class="flex items-center space-x-1">
-                                <div class="typing-indicator w-2 h-2 bg-secondary rounded-full"></div>
-                                <div class="typing-indicator w-2 h-2 bg-secondary rounded-full" style="animation-delay: 0.2s"></div>
-                                <div class="typing-indicator w-2 h-2 bg-secondary rounded-full" style="animation-delay: 0.4s"></div>
+                                <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full"></div>
+                                <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full" style="animation-delay: 0.2s"></div>
+                                <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full" style="animation-delay: 0.4s"></div>
                             </div>
                         </div>
                     </div>
@@ -461,7 +446,12 @@
             `;
             
             chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Scroll simple y directo
+            setTimeout(() => {
+                const chatContainer = document.querySelector('.chat-container');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 100);
         }
         
         // Ocultar indicador de escritura
@@ -470,6 +460,12 @@
             const typingIndicator = document.getElementById('typingIndicator');
             if (typingIndicator) {
                 typingIndicator.remove();
+                
+                // Scroll al final después de ocultar el indicador
+                setTimeout(() => {
+                    const chatContainer = document.querySelector('.chat-container');
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 100);
             }
         }
         
@@ -490,27 +486,42 @@
             document.getElementById('messageInput').value = question;
             hideQuickQuestions();
             sendMessage(question);
+            
+            // Scroll al final después de enviar pregunta rápida
+            setTimeout(() => {
+                const chatContainer = document.querySelector('.chat-container');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 200);
         }
         
-        // Mostrar menús
-        function showMenus() {
-            document.getElementById('menuModal').classList.remove('hidden');
-        }
         
-        // Ocultar menús
-        function hideMenus() {
-            document.getElementById('menuModal').classList.add('hidden');
-        }
-        
-        // Cerrar modal al hacer click fuera
-        document.getElementById('menuModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideMenus();
-            }
-        });
-        
-        // Auto-focus en el input
+        // Auto-focus en el input y scroll inicial
         document.getElementById('messageInput').focus();
+        
+        // Scroll inicial al final del chat
+        setTimeout(() => {
+            const chatContainer = document.querySelector('.chat-container');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 500);
+        
+        // Ocultar header al hacer scroll
+        let lastScrollTop = 0;
+        const header = document.getElementById('header');
+        const chatContainer = document.querySelector('.chat-container');
+        
+        chatContainer.addEventListener('scroll', function() {
+            const scrollTop = chatContainer.scrollTop;
+            
+            if (scrollTop > lastScrollTop && scrollTop > 50) {
+                // Scrolling down - hide header
+                header.classList.add('hidden');
+            } else {
+                // Scrolling up - show header
+                header.classList.remove('hidden');
+            }
+            
+            lastScrollTop = scrollTop;
+        });
     </script>
 </body>
 </html>

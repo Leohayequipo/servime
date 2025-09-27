@@ -220,14 +220,14 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             
-            // Generar QR usando API online
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&color=3b82f6&bgcolor=ffffff&margin=10&ecc=M`;
+            // Generar QR usando API online con mejor configuración
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&color=000000&bgcolor=ffffff&margin=20&ecc=H&format=png`;
             
             const img = document.createElement('img');
             img.src = qrUrl;
             img.alt = 'Código QR';
             img.className = 'mx-auto';
-            img.style.maxWidth = '200px';
+            img.style.maxWidth = '300px';
             img.style.height = 'auto';
             
             img.onload = function() {
@@ -251,20 +251,14 @@
             const img = qrCodeDiv.querySelector('img');
             
             if (img) {
-                // Crear un canvas para convertir la imagen a PNG
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                // Descargar directamente la imagen desde la URL
+                const url = '{{ route("menu.public", $comercio) }}';
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&color=000000&bgcolor=ffffff&margin=20&ecc=H&format=png`;
                 
-                canvas.width = 200;
-                canvas.height = 200;
-                
-                // Dibujar la imagen en el canvas
-                ctx.drawImage(img, 0, 0, 200, 200);
-                
-                // Descargar el canvas como PNG
                 const link = document.createElement('a');
                 link.download = 'qr-{{ $comercio->slug }}.png';
-                link.href = canvas.toDataURL();
+                link.href = qrUrl;
+                link.target = '_blank';
                 link.click();
             } else {
                 alert('No se pudo generar el QR para descargar');
