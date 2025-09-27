@@ -180,24 +180,64 @@
         </div>
     </div>
 
+    <!-- Modal de QR -->
+    <div id="qrModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-effect rounded-2xl p-8 max-w-sm w-full text-center">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold gradient-text">📱 Código QR</h3>
+                <button onclick="closeQR()" class="text-secondary hover:text-primary transition-colors">
+                    <span class="text-2xl">✕</span>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <div id="qrCode" class="flex justify-center mb-4"></div>
+                <p class="text-sm text-secondary mb-2">{{ $comercio->nombre }}</p>
+                <p class="text-xs text-secondary">Escanea para acceder al chatbot</p>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button onclick="downloadQR()" class="flex-1 btn-primary py-2 px-4 rounded-lg">
+                    📥 Descargar
+                </button>
+                <button onclick="closeQR()" class="flex-1 bg-secondary-dark hover:bg-accent-gray text-text-primary py-2 px-4 rounded-lg transition-all duration-300">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function generateQR() {
             const url = '{{ route("menu.public", $comercio) }}';
             const qrCodeDiv = document.getElementById('qrCode');
             const modal = document.getElementById('qrModal');
             
-            // Generar QR usando qrcode.js
-            qrCodeDiv.innerHTML = '';
-            const qr = new QRCode(qrCodeDiv, {
-                text: url,
-                width: 200,
-                height: 200,
-                colorDark: '#00C4FF',
-                colorLight: '#FFFFFF',
-            });
+            // Limpiar contenido previo
+            qrCodeDiv.innerHTML = '<div class="text-center p-4"><p>Generando QR...</p></div>';
             
+            // Mostrar modal inmediatamente
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            
+            // Generar QR usando API online
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&color=3b82f6&bgcolor=ffffff&margin=10&ecc=M`;
+            
+            const img = document.createElement('img');
+            img.src = qrUrl;
+            img.alt = 'Código QR';
+            img.className = 'mx-auto';
+            img.style.maxWidth = '200px';
+            img.style.height = 'auto';
+            
+            img.onload = function() {
+                qrCodeDiv.innerHTML = '';
+                qrCodeDiv.appendChild(img);
+            };
+            
+            img.onerror = function() {
+                qrCodeDiv.innerHTML = '<div class="text-red-500 text-center p-4"><p>Error generando QR</p><p class="text-sm">Verifica tu conexión a internet</p></div>';
+            };
         }
         
         function closeQR() {
@@ -207,16 +247,35 @@
         }
         
         function downloadQR() {
-            const canvas = document.querySelector('#qrCode canvas');
-            if (canvas) {
+            const qrCodeDiv = document.getElementById('qrCode');
+            const img = qrCodeDiv.querySelector('img');
+            
+            if (img) {
+                // Crear un canvas para convertir la imagen a PNG
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = 200;
+                canvas.height = 200;
+                
+                // Dibujar la imagen en el canvas
+                ctx.drawImage(img, 0, 0, 200, 200);
+                
+                // Descargar el canvas como PNG
                 const link = document.createElement('a');
-                link.download = 'qr-menu-{{ $comercio->nombre }}.png';
+                link.download = 'qr-{{ $comercio->slug }}.png';
                 link.href = canvas.toDataURL();
                 link.click();
+            } else {
+                alert('No se pudo generar el QR para descargar');
             }
         }
+        
+        // Cerrar modal al hacer click fuera
+        document.getElementById('qrModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQR();
+            }
+        });
     </script>
-    
-    <!-- QR Code Library -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </x-app-layout>
