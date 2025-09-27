@@ -51,7 +51,6 @@ class MenuController extends Controller
         
         $validated = $request->validate([
             'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB max
-            'formato' => 'required|in:pdf,image'
         ]);
 
         // Subir archivo
@@ -61,7 +60,11 @@ class MenuController extends Controller
         $menu = new Menu();
         $menu->comercio_id = $comercio->id;
         $menu->archivo_original = $archivoPath;
-        $menu->formato = $validated['formato'];
+        
+        // Detectar formato automáticamente
+        $extension = $request->file('archivo')->getClientOriginalExtension();
+        $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
+        
         $menu->procesado = false;
         $menu->save();
 

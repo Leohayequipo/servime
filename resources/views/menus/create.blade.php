@@ -35,16 +35,6 @@
                             </p>
                         </div>
 
-                        <!-- Tipo de Archivo -->
-                        <div>
-                            <x-input-label for="formato" :value="__('Tipo de Archivo')" />
-                            <select id="formato" name="formato" required class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full">
-                                <option value="">Selecciona el tipo de archivo</option>
-                                <option value="pdf" {{ old('formato') == 'pdf' ? 'selected' : '' }}>PDF</option>
-                                <option value="image" {{ old('formato') == 'image' ? 'selected' : '' }}>Imagen (JPEG, PNG, JPG, GIF)</option>
-                            </select>
-                            <x-input-error :messages="$errors->get('formato')" class="mt-2" />
-                        </div>
 
                         <!-- Información sobre el procesamiento -->
                         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">

@@ -18,56 +18,67 @@
                    class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
                     <span class="mr-2">➕</span>
                     Crear Comercio
-                </a>
-            </div>
-
+            </a>
+        </div>
+        
             @if($comercios->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     @foreach($comercios as $comercio)
                         <div class="metric-card group">
                             <!-- Logo/Imagen del comercio -->
-                            @if($comercio->logo_url)
-                                <div class="relative h-48 overflow-hidden rounded-t-xl mb-6">
+                            <div class="relative h-48 overflow-hidden rounded-t-xl mb-6 bg-gradient-to-br from-primary-dark to-secondary-dark">
+                                @if($comercio->logo_url)
                                     <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                          alt="Logo de {{ $comercio->nombre }}" 
-                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent"></div>
-                                    <div class="absolute top-4 right-4">
-                                        <div class="w-8 h-8 bg-accent-blue/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow">
-                                            <span class="text-accent-blue text-sm">🏪</span>
+                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;"
+                                         onload="console.log('Image loaded successfully:', this.src);">
+                                @else
+                                    <!-- Placeholder cuando no hay logo -->
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <div class="text-center">
+                                            <div class="w-16 h-16 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center mx-auto mb-4 neon-glow">
+                                                <span class="text-3xl">🏪</span>
+                                            </div>
+                                            <p class="text-text-secondary text-sm">{{ $comercio->nombre }}</p>
                                         </div>
                                     </div>
+                                @endif
+                                <div class="absolute top-4 right-4">
+                                    <div class="w-8 h-8 bg-accent-blue/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow">
+                                        <span class="text-accent-blue text-sm">🏪</span>
+                                    </div>
                                 </div>
-                            @endif
+                            </div>
                             
                             <!-- Contenido de la tarjeta -->
                             <div class="p-6">
                                 <!-- Información principal -->
-                                <div class="mb-6">
+                                <div class="mb-6 text-center">
                                     <h3 class="text-2xl font-bold text-text-primary mb-2 group-hover:text-accent-blue transition-colors duration-300">
                                         {{ $comercio->nombre }}
                                     </h3>
                                     
-                                    @if($comercio->descripcion)
+                                @if($comercio->descripcion)
                                         <p class="text-text-secondary mb-4 line-clamp-2">{{ $comercio->descripcion }}</p>
-                                    @endif
+                                @endif
                                     
                                     <!-- Información de contacto -->
-                                    <div class="space-y-2 text-sm text-text-secondary">
-                                        @if($comercio->direccion)
-                                            <div class="flex items-center">
+                                    <div class="space-y-2 text-sm text-text-secondary text-center">
+                                @if($comercio->direccion)
+                                            <div class="flex items-center justify-center">
                                                 <span class="w-4 h-4 mr-2 text-accent-blue">📍</span>
                                                 <span class="truncate">{{ $comercio->direccion }}</span>
                                             </div>
                                         @endif
                                         @if($comercio->telefono)
-                                            <div class="flex items-center">
+                                            <div class="flex items-center justify-center">
                                                 <span class="w-4 h-4 mr-2 text-accent-blue">📞</span>
                                                 <span>{{ $comercio->telefono }}</span>
                                             </div>
-                                        @endif
+                                @endif
                                         @if($comercio->horario)
-                                            <div class="flex items-center">
+                                            <div class="flex items-center justify-center">
                                                 <span class="w-4 h-4 mr-2 text-accent-blue">🕒</span>
                                                 <span>{{ $comercio->horario }}</span>
                                             </div>

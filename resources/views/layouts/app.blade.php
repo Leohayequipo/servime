@@ -202,6 +202,36 @@
             max-height: 1rem !important;
         }
         
+        /* EXCEPTION: Allow full size for commerce logos */
+        :root:not(.dark) .metric-card img,
+        :root:not(.dark) .h-48 img,
+        :root:not(.dark) .w-full img {
+            height: auto !important;
+            width: auto !important;
+            max-width: none !important;
+            max-height: none !important;
+        }
+        
+        /* FORCE commerce logos to be visible and full size */
+        .metric-card img {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: 100% !important;
+            width: 100% !important;
+            object-fit: cover !important;
+        }
+        
+        /* Override any conflicting rules for commerce logos */
+        .metric-card .h-48 img {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: 100% !important;
+            width: 100% !important;
+            object-fit: cover !important;
+        }
+        
         /* Override any large image rules for table */
         :root:not(.dark) tbody img,
         :root:not(.dark) .whitespace-nowrap img {

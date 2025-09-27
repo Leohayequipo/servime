@@ -15,7 +15,7 @@
             <!-- Metrics Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                 <!-- Total Comercios -->
-                <div class="metric-card">
+                <a href="{{ route('comercios.index') }}" class="metric-card hover-lift cursor-pointer transition-all duration-300 hover:scale-105">
                     <div class="flex items-center">
                         <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-4 neon-glow">
                             <span class="text-2xl">🏪</span>
@@ -25,7 +25,7 @@
                             <p class="text-3xl font-bold text-accent-blue">{{ $comercios->count() }}</p>
                         </div>
                     </div>
-                </div>
+                </a>
 
                 <!-- Total Menús -->
                 <div class="metric-card">

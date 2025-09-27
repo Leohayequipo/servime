@@ -68,7 +68,6 @@
                                         <span class="text-6xl">📋</span>
                                     </div>
                                 @endif
-                                <div class="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent"></div>
                                 
                                 <!-- Estado del procesamiento -->
                                 <div class="absolute top-4 right-4">
@@ -112,7 +111,7 @@
                                 
                                 <!-- Botones de acción -->
                                 <div class="space-y-3">
-                                    <a href="{{ route('menus.show', $menu) }}" 
+                                    <a href="{{ route('menus.show', [$comercio, $menu]) }}" 
                                        class="w-full btn-primary text-center block">
                                         <span class="mr-2">👁️</span>
                                         Ver Detalles
@@ -120,12 +119,12 @@
                                     </a>
                                     
                                     <div class="grid grid-cols-2 gap-2">
-                                        <a href="{{ route('menus.edit', $menu) }}" 
+                                        <a href="{{ route('menus.edit', [$comercio, $menu]) }}" 
                                            class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
                                             <span class="mr-1">✏️</span>
                                             Editar
                                         </a>
-                                        <form method="POST" action="{{ route('menus.destroy', $menu) }}" 
+                                        <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
                                               onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
                                               class="inline">
                                             @csrf

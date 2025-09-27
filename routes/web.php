@@ -13,6 +13,17 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
+// Ruta para servir logos directamente
+Route::get('/logos/{filename}', function ($filename) {
+    $path = storage_path('app/public/logos/' . $filename);
+    
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    
+    return response()->file($path);
+})->name('logos.show');
+
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
