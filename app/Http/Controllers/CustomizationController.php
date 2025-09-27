@@ -284,33 +284,32 @@ class CustomizationController extends Controller
         $comercio = Comercio::findOrFail($comercioId);
         
         $request->validate([
-            'question_index' => 'required|integer|min:0',
+            'question_index' => 'nullable|integer|min:0',
+            'question_text' => 'required|string|max:500',
             'current_answer' => 'required|string|max:1000'
         ]);
 
         try {
             $questionIndex = $request->question_index;
+            $questionText = $request->input('question_text');
             $currentAnswer = $request->current_answer;
             $questions = $comercio->quick_questions;
             
-            // Si el índice no existe, es una pregunta nueva que aún no se guardó
-            if (!isset($questions[$questionIndex])) {
-                return redirect()
-                    ->route('comercios.customize', $comercio)
-                    ->with('error', 'Primero guarda la pregunta antes de mejorar la respuesta.');
+            // Si es una pregunta existente, usar la pregunta del comercio
+            if ($questionIndex !== null && isset($questions[$questionIndex])) {
+                $question = $questions[$questionIndex];
+                $questionText = $question['question'];
             }
-            
-            $question = $questions[$questionIndex];
             
             // Preparar información del comercio para la IA
             $comercioInfo = [
                 'nombre' => $comercio->nombre,
                 'descripcion' => $comercio->descripcion,
-                'categoria' => $question['category']
+                'categoria' => isset($question) ? $question['category'] : 'general'
             ];
 
             // Crear prompt para mejorar la respuesta
-            $prompt = $this->createPromptForAnswerImprovement($comercioInfo, $question['question'], $currentAnswer);
+            $prompt = $this->createPromptForAnswerImprovement($comercioInfo, $questionText, $currentAnswer);
 
             // Llamar a OpenAI
             $openaiApiKey = config('services.openai.api_key');
@@ -348,22 +347,21 @@ class CustomizationController extends Controller
                 throw new \Exception('No se pudo generar una respuesta mejorada');
             }
             
-            // Actualizar la respuesta específica
-            $questions[$questionIndex]['answer'] = $improvedAnswer;
-            $comercio->update([
-                'quick_questions' => $questions
-            ]);
+            // Si es una pregunta existente, actualizar en la base de datos
+            if ($questionIndex !== null && isset($questions[$questionIndex])) {
+                $questions[$questionIndex]['answer'] = $improvedAnswer;
+                $comercio->update([
+                    'quick_questions' => $questions
+                ]);
+            }
 
-            return redirect()
-                ->route('comercios.customize', $comercio)
-                ->with('success', 'Respuesta mejorada con IA exitosamente.');
+            // Devolver respuesta JSON para actualizar el frontend
+            return response()->json(['improved_answer' => $improvedAnswer]);
 
         } catch (\Exception $e) {
             \Log::error('Error improving answer with AI: ' . $e->getMessage());
             
-            return redirect()
-                ->route('comercios.customize', $comercio)
-                ->with('error', 'Error al mejorar respuesta con IA: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -379,10 +377,12 @@ class CustomizationController extends Controller
         $prompt .= "RESPUESTA ACTUAL: " . $currentAnswer . "\n\n";
         $prompt .= "INSTRUCCIONES:\n";
         $prompt .= "- Haz la respuesta más atractiva y profesional\n";
-        $prompt .= "- Mantén un tono amigable y acogedor\n";
+        $prompt .= "- Mantén un tono directo y útil, SIN saludos como \"Hola\" o \"¡Hola!\"\n";
+        $prompt .= "- Ve directo al punto con la información\n";
         $prompt .= "- Incluye detalles específicos si es posible\n";
         $prompt .= "- Haz que sea útil para el cliente\n";
-        $prompt .= "- Máximo 200 palabras\n\n";
+        $prompt .= "- Máximo 200 palabras\n";
+        $prompt .= "- NO uses expresiones como \"¡Hola!\", \"Bienvenido\", \"Te damos la bienvenida\"\n\n";
         $prompt .= "Responde ÚNICAMENTE con la respuesta mejorada, sin explicaciones adicionales:";
 
         return $prompt;

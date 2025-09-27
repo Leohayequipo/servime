@@ -377,6 +377,11 @@
             document.getElementById('chatForm').dispatchEvent(new Event('submit'));
         }
         
+        // Ocultar preguntas rápidas
+        function hideQuickQuestions() {
+            document.getElementById('quickQuestions').style.display = 'none';
+        }
+        
         // Configuración del comercio
         const comercio = {
             id: {{ $comercio->id }},

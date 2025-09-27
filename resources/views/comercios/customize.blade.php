@@ -320,6 +320,7 @@
                                         <!-- Pregunta -->
                                         <div class="col-span-4">
                                             <input type="text" 
+                                                   id="question_{{ $index }}"
                                                    name="quick_questions[{{ $index }}][question]" 
                                                    value="{{ $question['question'] }}"
                                                    placeholder="¿Pregunta frecuente?"
@@ -506,6 +507,7 @@
                     <!-- Pregunta -->
                     <div class="col-span-4">
                         <input type="text" 
+                               id="question_${questionIndex}"
                                name="quick_questions[${questionIndex}][question]" 
                                value=""
                                placeholder="¿Pregunta frecuente?"
@@ -593,17 +595,17 @@
         
         function improveAnswerWithAI(questionIndex) {
             const answerTextarea = document.getElementById(`answer_${questionIndex}`);
+            const questionTextarea = document.getElementById(`question_${questionIndex}`);
             const currentAnswer = answerTextarea.value.trim();
+            const questionText = questionTextarea ? questionTextarea.value.trim() : '';
             
             if (!currentAnswer) {
                 alert('Por favor, escribe una respuesta antes de mejorarla con IA.');
                 return;
             }
             
-            // Verificar si es una pregunta nueva (índice mayor al número de preguntas existentes)
-            const existingQuestionsCount = {{ count($comercio->quick_questions) }};
-            if (questionIndex >= existingQuestionsCount) {
-                alert('Primero guarda la pregunta haciendo clic en "Guardar Cambios" antes de mejorar la respuesta con IA.');
+            if (!questionText) {
+                alert('Por favor, escribe una pregunta antes de mejorar la respuesta con IA.');
                 return;
             }
             
@@ -614,34 +616,41 @@
                 button.innerHTML = '⏳';
                 button.disabled = true;
                 
-                // Crear formulario para mejorar respuesta
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ route("comercios.improve.answer", $comercio) }}';
+                // Preparar datos para envío
+                const formData = new FormData();
+                formData.append('_token', '{{ csrf_token() }}');
+                formData.append('question_text', questionText);
+                formData.append('current_answer', currentAnswer);
                 
-                // Agregar CSRF token
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                form.appendChild(csrfToken);
+                // Solo agregar question_index si es una pregunta existente
+                const existingQuestionsCount = {{ count($comercio->quick_questions) }};
+                if (questionIndex < existingQuestionsCount) {
+                    formData.append('question_index', questionIndex);
+                }
                 
-                // Agregar índice de pregunta y respuesta actual
-                const questionIndexInput = document.createElement('input');
-                questionIndexInput.type = 'hidden';
-                questionIndexInput.name = 'question_index';
-                questionIndexInput.value = questionIndex;
-                form.appendChild(questionIndexInput);
-                
-                const currentAnswerInput = document.createElement('input');
-                currentAnswerInput.type = 'hidden';
-                currentAnswerInput.name = 'current_answer';
-                currentAnswerInput.value = currentAnswer;
-                form.appendChild(currentAnswerInput);
-                
-                // Agregar al DOM y enviar
-                document.body.appendChild(form);
-                form.submit();
+                // Enviar petición AJAX
+                fetch('{{ route("comercios.improve.answer", $comercio) }}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        // Actualizar el textarea con la respuesta mejorada
+                        answerTextarea.value = data.improved_answer;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al mejorar la respuesta con IA.');
+                })
+                .finally(() => {
+                    // Restaurar botón
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
             }
         }
     </script>
