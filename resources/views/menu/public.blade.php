@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $comercio->page_title }}</title>
+    <title>{{ $comercio->page_title ?? config('app.name', 'ServiME') }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="shortcut icon" href="{{ asset('images/ServiME_IA.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -342,18 +344,11 @@
             <div style="background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; max-width: 280px; border: 1px solid #e5e7eb; margin-bottom: 8px;">
                 <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 8px 0;">Preguntas frecuentes:</h4>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <button onclick="askQuestion('¿Qué tenés en el menú?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
-                        🍽️ ¿Qué tenés en el menú?
+                    @foreach($comercio->quick_questions as $quickQuestion)
+                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
+                        {{ $quickQuestion['icon'] }} {{ $quickQuestion['question'] }}
                     </button>
-                    <button onclick="askQuestion('¿Cuáles son los precios?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
-                        💰 ¿Cuáles son los precios?
-                    </button>
-                    <button onclick="askQuestion('¿Tenés opciones vegetarianas?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
-                        🥗 ¿Tenés opciones vegetarianas?
-                    </button>
-                    <button onclick="askQuestion('¿Cuáles son los horarios?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
-                        🕒 ¿Cuáles son los horarios?
-                    </button>
+                    @endforeach
                 </div>
             </div>
         </div>

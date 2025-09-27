@@ -37,6 +37,19 @@
                 </div>
             @endif
 
+            @if (session('error'))
+                <div class="mb-8 bg-red-500/20 border border-red-500 text-red-400 px-6 py-4 rounded-xl">
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 mr-3">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        {{ session('error') }}
+                    </div>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('comercios.customize.update', $comercio) }}">
                 @csrf
                 @method('PUT')
@@ -275,6 +288,98 @@
                     </div>
                 </div>
 
+                <!-- Preguntas Frecuentes - Sección de ancho completo -->
+                <div class="mt-12">
+                    <div class="metric-card flex flex-col min-h-[500px]">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gradient-to-r from-accent-blue to-purple-600 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                    <span class="text-white text-lg">💡</span>
+                                </div>
+                                <h3 class="text-xl font-semibold text-text-primary">Preguntas Frecuentes</h3>
+                            </div>
+                            <button type="button" 
+                                    onclick="generateQuestionsWithAI()"
+                                    class="bg-accent-blue hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow">
+                                🤖 Generar con IA
+                            </button>
+                        </div>
+                        
+                        <div id="quick-questions-container" class="space-y-4 flex-grow overflow-y-auto pr-2">
+                            @foreach($comercio->quick_questions as $index => $question)
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-4 question-item" data-index="{{ $index }}">
+                                    <div class="grid grid-cols-12 gap-4 items-start">
+                                        <!-- Ícono -->
+                                        <div class="col-span-1">
+                                            <input type="text" 
+                                                   name="quick_questions[{{ $index }}][icon]" 
+                                                   value="{{ $question['icon'] }}"
+                                                   class="w-full px-2 py-2 bg-background border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                        </div>
+                                        
+                                        <!-- Pregunta -->
+                                        <div class="col-span-4">
+                                            <input type="text" 
+                                                   name="quick_questions[{{ $index }}][question]" 
+                                                   value="{{ $question['question'] }}"
+                                                   placeholder="¿Pregunta frecuente?"
+                                                   class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                        </div>
+                                        
+                                        <!-- Categoría -->
+                                        <div class="col-span-2">
+                                            <select name="quick_questions[{{ $index }}][category]" 
+                                                    class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                                <option value="menu" {{ $question['category'] === 'menu' ? 'selected' : '' }}>Menú</option>
+                                                <option value="precios" {{ $question['category'] === 'precios' ? 'selected' : '' }}>Precios</option>
+                                                <option value="horarios" {{ $question['category'] === 'horarios' ? 'selected' : '' }}>Horarios</option>
+                                                <option value="ubicacion" {{ $question['category'] === 'ubicacion' ? 'selected' : '' }}>Ubicación</option>
+                                                <option value="contacto" {{ $question['category'] === 'contacto' ? 'selected' : '' }}>Contacto</option>
+                                                <option value="general" {{ $question['category'] === 'general' ? 'selected' : '' }}>General</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Respuesta -->
+                                        <div class="col-span-4">
+                                            <textarea name="quick_questions[{{ $index }}][answer]" 
+                                                      rows="2"
+                                                      placeholder="Respuesta automática..."
+                                                      class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
+                                        </div>
+                                        
+                                        <!-- Botones -->
+                                        <div class="col-span-1 flex flex-col space-y-2">
+                                            <input type="hidden" name="quick_questions[{{ $index }}][auto_generated]" value="{{ $question['auto_generated'] ? '1' : '0' }}">
+                                            <button type="button" 
+                                                    onclick="removeQuestion({{ $index }})"
+                                                    class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg text-sm transition-colors duration-200">
+                                                🗑️
+                                            </button>
+                                            @if($question['auto_generated'])
+                                                <span class="text-xs text-accent-blue text-center">IA</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        
+                        <!-- Botón Agregar Pregunta -->
+                        <div class="mt-4">
+                            <button type="button" 
+                                    onclick="addNewQuestion()"
+                                    class="w-full bg-secondary-dark hover:bg-accent-gray border-2 border-dashed border-accent-gray hover:border-accent-blue text-text-secondary hover:text-accent-blue py-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2">
+                                <span class="text-lg">➕</span>
+                                <span>Agregar Nueva Pregunta</span>
+                            </button>
+                        </div>
+                        
+                        <p class="text-xs text-text-secondary mt-4">
+                            💡 Las preguntas marcadas con "IA" fueron generadas automáticamente. Puedes editarlas o agregar nuevas.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Botones de Acción -->
                 <div class="flex justify-center space-x-4 mt-12">
                     <button type="submit" 
@@ -293,6 +398,9 @@
 
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
+        // Variables globales para preguntas frecuentes
+        let questionIndex = {{ count($comercio->quick_questions) }};
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Aplicar tema predefinido
             function applyTheme(theme) {
@@ -368,5 +476,101 @@
             // Inicializar vista previa
             setTimeout(updatePreview, 100);
         });
+        
+        // Funciones para manejar preguntas frecuentes
+        function addNewQuestion() {
+            const container = document.getElementById('quick-questions-container');
+            const newQuestion = document.createElement('div');
+            newQuestion.className = 'bg-secondary-dark border border-accent-gray rounded-xl p-4 question-item';
+            newQuestion.setAttribute('data-index', questionIndex);
+            
+            newQuestion.innerHTML = `
+                <div class="grid grid-cols-12 gap-4 items-start">
+                    <!-- Ícono -->
+                    <div class="col-span-1">
+                        <input type="text" 
+                               name="quick_questions[${questionIndex}][icon]" 
+                               value="❓"
+                               class="w-full px-2 py-2 bg-background border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                    </div>
+                    
+                    <!-- Pregunta -->
+                    <div class="col-span-4">
+                        <input type="text" 
+                               name="quick_questions[${questionIndex}][question]" 
+                               value=""
+                               placeholder="¿Pregunta frecuente?"
+                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                    </div>
+                    
+                    <!-- Categoría -->
+                    <div class="col-span-2">
+                        <select name="quick_questions[${questionIndex}][category]" 
+                                class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                            <option value="menu">Menú</option>
+                            <option value="precios">Precios</option>
+                            <option value="horarios">Horarios</option>
+                            <option value="ubicacion">Ubicación</option>
+                            <option value="contacto">Contacto</option>
+                            <option value="general" selected>General</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Respuesta -->
+                    <div class="col-span-4">
+                        <textarea name="quick_questions[${questionIndex}][answer]" 
+                                  rows="2"
+                                  placeholder="Respuesta automática..."
+                                  class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
+                    </div>
+                    
+                    <!-- Botones -->
+                    <div class="col-span-1 flex flex-col space-y-2">
+                        <input type="hidden" name="quick_questions[${questionIndex}][auto_generated]" value="0">
+                        <button type="button" 
+                                onclick="removeQuestion(${questionIndex})"
+                                class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg text-sm transition-colors duration-200">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newQuestion);
+            questionIndex++;
+        }
+        
+        function removeQuestion(index) {
+            const questionItem = document.querySelector(`[data-index="${index}"]`);
+            if (questionItem) {
+                questionItem.remove();
+            }
+        }
+        
+        function generateQuestionsWithAI() {
+            if (confirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.')) {
+                // Mostrar indicador de carga
+                const button = document.querySelector('button[onclick="generateQuestionsWithAI()"]');
+                const originalText = button.innerHTML;
+                button.innerHTML = '⏳ Generando...';
+                button.disabled = true;
+                
+                // Crear formulario temporal para enviar POST
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("comercios.generate.questions", $comercio) }}';
+                
+                // Agregar CSRF token
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+                
+                // Agregar al DOM y enviar
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
     </script>
 </x-app-layout>

@@ -23,12 +23,14 @@ class Comercio extends Model
         'enable_ai_responses',
         'page_title',
         'page_description',
-        'favicon_url'
+        'favicon_url',
+        'quick_questions'
     ];
 
     protected $casts = [
         'show_contact_info' => 'boolean',
-        'enable_ai_responses' => 'boolean'
+        'enable_ai_responses' => 'boolean',
+        'quick_questions' => 'array'
     ];
 
     public function user()
@@ -68,5 +70,35 @@ class Comercio extends Model
     public function getPageTitleAttribute($value)
     {
         return $value ?: $this->nombre . ' - Menú Digital';
+    }
+
+    /**
+     * Obtener preguntas frecuentes personalizadas o por defecto
+     */
+    public function getQuickQuestionsAttribute($value)
+    {
+        if ($value) {
+            return json_decode($value, true);
+        }
+        
+        // Preguntas por defecto
+        return [
+            [
+                'icon' => '🍽️',
+                'question' => '¿Qué tenés en el menú?'
+            ],
+            [
+                'icon' => '💰',
+                'question' => '¿Cuáles son los precios?'
+            ],
+            [
+                'icon' => '🥗',
+                'question' => '¿Tenés opciones vegetarianas?'
+            ],
+            [
+                'icon' => '🕒',
+                'question' => '¿Cuáles son los horarios?'
+            ]
+        ];
     }
 }
