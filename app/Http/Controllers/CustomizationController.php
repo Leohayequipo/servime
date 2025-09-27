@@ -275,4 +275,116 @@ class CustomizationController extends Controller
             ];
         }
     }
+
+    /**
+     * Mejorar respuesta específica con IA
+     */
+    public function improveAnswer(Request $request, $comercioId)
+    {
+        $comercio = Comercio::findOrFail($comercioId);
+        
+        $request->validate([
+            'question_index' => 'required|integer|min:0',
+            'current_answer' => 'required|string|max:1000'
+        ]);
+
+        try {
+            $questionIndex = $request->question_index;
+            $currentAnswer = $request->current_answer;
+            $questions = $comercio->quick_questions;
+            
+            // Si el índice no existe, es una pregunta nueva que aún no se guardó
+            if (!isset($questions[$questionIndex])) {
+                return redirect()
+                    ->route('comercios.customize', $comercio)
+                    ->with('error', 'Primero guarda la pregunta antes de mejorar la respuesta.');
+            }
+            
+            $question = $questions[$questionIndex];
+            
+            // Preparar información del comercio para la IA
+            $comercioInfo = [
+                'nombre' => $comercio->nombre,
+                'descripcion' => $comercio->descripcion,
+                'categoria' => $question['category']
+            ];
+
+            // Crear prompt para mejorar la respuesta
+            $prompt = $this->createPromptForAnswerImprovement($comercioInfo, $question['question'], $currentAnswer);
+
+            // Llamar a OpenAI
+            $openaiApiKey = config('services.openai.api_key');
+            if (empty($openaiApiKey)) {
+                throw new \Exception('OpenAI API key no configurada');
+            }
+
+            $response = \Http::withHeaders([
+                'Authorization' => 'Bearer ' . $openaiApiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'Eres un experto en redacción de respuestas para restaurantes y comercios. Mejora las respuestas haciéndolas más atractivas, claras y útiles para los clientes.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'max_tokens' => 500,
+                'temperature' => 0.7
+            ]);
+
+            if (!$response->successful()) {
+                throw new \Exception('Error al conectar con OpenAI: ' . $response->body());
+            }
+
+            $data = $response->json();
+            $improvedAnswer = trim($data['choices'][0]['message']['content'] ?? '');
+            
+            if (empty($improvedAnswer)) {
+                throw new \Exception('No se pudo generar una respuesta mejorada');
+            }
+            
+            // Actualizar la respuesta específica
+            $questions[$questionIndex]['answer'] = $improvedAnswer;
+            $comercio->update([
+                'quick_questions' => $questions
+            ]);
+
+            return redirect()
+                ->route('comercios.customize', $comercio)
+                ->with('success', 'Respuesta mejorada con IA exitosamente.');
+
+        } catch (\Exception $e) {
+            \Log::error('Error improving answer with AI: ' . $e->getMessage());
+            
+            return redirect()
+                ->route('comercios.customize', $comercio)
+                ->with('error', 'Error al mejorar respuesta con IA: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Crear prompt para mejorar respuesta específica
+     */
+    private function createPromptForAnswerImprovement($comercioInfo, $question, $currentAnswer)
+    {
+        $prompt = "Mejora la siguiente respuesta para un restaurante/comercio:\n\n";
+        $prompt .= "NOMBRE DEL NEGOCIO: " . $comercioInfo['nombre'] . "\n";
+        $prompt .= "CATEGORÍA: " . $comercioInfo['categoria'] . "\n\n";
+        $prompt .= "PREGUNTA: " . $question . "\n\n";
+        $prompt .= "RESPUESTA ACTUAL: " . $currentAnswer . "\n\n";
+        $prompt .= "INSTRUCCIONES:\n";
+        $prompt .= "- Haz la respuesta más atractiva y profesional\n";
+        $prompt .= "- Mantén un tono amigable y acogedor\n";
+        $prompt .= "- Incluye detalles específicos si es posible\n";
+        $prompt .= "- Haz que sea útil para el cliente\n";
+        $prompt .= "- Máximo 200 palabras\n\n";
+        $prompt .= "Responde ÚNICAMENTE con la respuesta mejorada, sin explicaciones adicionales:";
+
+        return $prompt;
+    }
 }

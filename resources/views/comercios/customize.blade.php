@@ -339,13 +339,22 @@
                                             </select>
                                         </div>
                                         
-                                        <!-- Respuesta -->
-                                        <div class="col-span-4">
-                                            <textarea name="quick_questions[{{ $index }}][answer]" 
-                                                      rows="2"
-                                                      placeholder="Respuesta automática..."
-                                                      class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
-                                        </div>
+                                            <!-- Respuesta -->
+                                            <div class="col-span-4">
+                                                <div class="flex gap-2">
+                                                    <textarea name="quick_questions[{{ $index }}][answer]" 
+                                                              id="answer_{{ $index }}"
+                                                              rows="2"
+                                                              placeholder="Respuesta automática..."
+                                                              class="flex-1 px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
+                                                    <button type="button" 
+                                                            onclick="improveAnswerWithAI({{ $index }})"
+                                                            class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
+                                                            title="Mejorar respuesta con IA">
+                                                        🤖
+                                                    </button>
+                                                </div>
+                                            </div>
                                         
                                         <!-- Botones -->
                                         <div class="col-span-1 flex flex-col space-y-2">
@@ -518,10 +527,19 @@
                     
                     <!-- Respuesta -->
                     <div class="col-span-4">
-                        <textarea name="quick_questions[${questionIndex}][answer]" 
-                                  rows="2"
-                                  placeholder="Respuesta automática..."
-                                  class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
+                        <div class="flex gap-2">
+                            <textarea name="quick_questions[${questionIndex}][answer]" 
+                                      id="answer_${questionIndex}"
+                                      rows="2"
+                                      placeholder="Respuesta automática..."
+                                      class="flex-1 px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
+                            <button type="button" 
+                                    onclick="improveAnswerWithAI(${questionIndex})"
+                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
+                                    title="Mejorar respuesta con IA">
+                                🤖
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Botones -->
@@ -566,6 +584,60 @@
                 csrfToken.name = '_token';
                 csrfToken.value = '{{ csrf_token() }}';
                 form.appendChild(csrfToken);
+                
+                // Agregar al DOM y enviar
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        function improveAnswerWithAI(questionIndex) {
+            const answerTextarea = document.getElementById(`answer_${questionIndex}`);
+            const currentAnswer = answerTextarea.value.trim();
+            
+            if (!currentAnswer) {
+                alert('Por favor, escribe una respuesta antes de mejorarla con IA.');
+                return;
+            }
+            
+            // Verificar si es una pregunta nueva (índice mayor al número de preguntas existentes)
+            const existingQuestionsCount = {{ count($comercio->quick_questions) }};
+            if (questionIndex >= existingQuestionsCount) {
+                alert('Primero guarda la pregunta haciendo clic en "Guardar Cambios" antes de mejorar la respuesta con IA.');
+                return;
+            }
+            
+            if (confirm('¿Quieres mejorar esta respuesta con IA?')) {
+                // Mostrar indicador de carga en el botón
+                const button = document.querySelector(`button[onclick="improveAnswerWithAI(${questionIndex})"]`);
+                const originalText = button.innerHTML;
+                button.innerHTML = '⏳';
+                button.disabled = true;
+                
+                // Crear formulario para mejorar respuesta
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("comercios.improve.answer", $comercio) }}';
+                
+                // Agregar CSRF token
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+                
+                // Agregar índice de pregunta y respuesta actual
+                const questionIndexInput = document.createElement('input');
+                questionIndexInput.type = 'hidden';
+                questionIndexInput.name = 'question_index';
+                questionIndexInput.value = questionIndex;
+                form.appendChild(questionIndexInput);
+                
+                const currentAnswerInput = document.createElement('input');
+                currentAnswerInput.type = 'hidden';
+                currentAnswerInput.name = 'current_answer';
+                currentAnswerInput.value = currentAnswer;
+                form.appendChild(currentAnswerInput);
                 
                 // Agregar al DOM y enviar
                 document.body.appendChild(form);

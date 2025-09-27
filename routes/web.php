@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\CustomizationController::class, 'preview'])->name('comercios.preview');
     Route::post('/comercios/{comercio}/reset', [App\Http\Controllers\CustomizationController::class, 'reset'])->name('comercios.customize.reset');
     Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\CustomizationController::class, 'generateQuestions'])->name('comercios.generate.questions');
+    Route::post('/comercios/{comercio}/improve-answer', [App\Http\Controllers\CustomizationController::class, 'improveAnswer'])->name('comercios.improve.answer');
 });
 
 // Rutas públicas (sin autenticación)

@@ -42,7 +42,7 @@ class ChatbotService
     }
 
     /**
-     * Construir contexto de los menús
+     * Construir contexto de los menús y preguntas frecuentes
      */
     private function buildMenuContext(Comercio $comercio): string
     {
@@ -51,20 +51,43 @@ class ChatbotService
             ->whereNotNull('contexto_gpt')
             ->get();
 
-        if ($menus->isEmpty()) {
-            return "No hay menús procesados disponibles.";
-        }
-
         $contexto = "Información del restaurante: {$comercio->nombre}\n";
         if ($comercio->descripcion) {
             $contexto .= "Descripción: {$comercio->descripcion}\n";
         }
         
-        $contexto .= "\nMenús disponibles:\n";
+        // Agregar información de contacto si está disponible
+        if ($comercio->telefono) {
+            $contexto .= "Teléfono: {$comercio->telefono}\n";
+        }
+        if ($comercio->email) {
+            $contexto .= "Email: {$comercio->email}\n";
+        }
+        if ($comercio->direccion) {
+            $contexto .= "Dirección: {$comercio->direccion}\n";
+        }
         
-        foreach ($menus as $menu) {
-            $contexto .= "--- Menú {$menu->formato} ---\n";
-            $contexto .= $menu->contexto_gpt . "\n\n";
+        // Agregar preguntas frecuentes como contexto
+        $questions = $comercio->quick_questions;
+        if (!empty($questions)) {
+            $contexto .= "\nPREGUNTAS FRECUENTES Y SUS RESPUESTAS:\n";
+            foreach ($questions as $question) {
+                if (!empty($question['question']) && !empty($question['answer'])) {
+                    $contexto .= "Pregunta: {$question['question']}\n";
+                    $contexto .= "Respuesta: {$question['answer']}\n\n";
+                }
+            }
+        }
+        
+        // Agregar menús si están disponibles
+        if (!$menus->isEmpty()) {
+            $contexto .= "\nMenús disponibles:\n";
+            foreach ($menus as $menu) {
+                $contexto .= "--- Menú {$menu->formato} ---\n";
+                $contexto .= $menu->contexto_gpt . "\n\n";
+            }
+        } else {
+            $contexto .= "\nNo hay menús procesados disponibles.\n";
         }
 
         return $contexto;
@@ -82,10 +105,13 @@ INFORMACIÓN DEL RESTAURANTE:
 
 INSTRUCCIONES:
 - Responde de manera amigable y profesional
+- PRIORIZA las respuestas de las preguntas frecuentes cuando sean relevantes
+- Si la pregunta del cliente es similar a una pregunta frecuente, adapta esa respuesta
 - Usa la información del menú para responder preguntas sobre platos, precios, ingredientes
 - Si no tienes información específica, sé honesto y sugiere contactar al restaurante
 - Mantén las respuestas concisas pero útiles
 - Responde en español
+- Si alguien pregunta sobre algo que está en las preguntas frecuentes (como 'comida árabe', 'café', etc.), usa la respuesta correspondiente como base
 
 PREGUNTA DEL CLIENTE: {$message}
 
