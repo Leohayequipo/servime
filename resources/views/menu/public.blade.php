@@ -172,7 +172,34 @@
             position: relative;
             word-wrap: break-word;
             font-size: 14px;
-            line-height: 1.4;
+            line-height: 1.5;
+        }
+        
+        .message-bubble p {
+            margin: 0 0 8px 0;
+        }
+        
+        .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Preguntas frecuentes flotantes */
+        #quickQuestions {
+            transition: all 0.3s ease;
+        }
+        
+        #quickQuestions .bg-white {
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        #quickQuestions button {
+            border: none;
+            cursor: pointer;
+        }
+        
+        #quickQuestions button:hover {
+            background-color: #f3f4f6 !important;
         }
         
         .message-user {
@@ -298,40 +325,62 @@
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3">
         <div class="max-w-md mx-auto">
             <form id="chatForm" class="flex space-x-3">
-                <div class="flex-1 relative">
+                <div class="flex-1">
                     <input type="text" id="messageInput" placeholder="Escribe tu pregunta..." class="input-modern w-full px-4 py-3 rounded-xl focus:outline-none">
-                    <button type="button" onclick="showQuickQuestions()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary hover:text-primary transition-colors">
-                        <span class="text-lg">💡</span>
-                    </button>
                 </div>
                 <button type="submit" class="btn-modern px-4 py-3 rounded-xl flex items-center justify-center hover-lift">
                     <span class="text-lg emoji-bounce">🚀</span>
                 </button>
             </form>
             
-            <!-- Preguntas rápidas -->
-            <div id="quickQuestions" class="hidden mt-3 space-y-2">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="askQuestion('¿Qué tenés en el menú?')" class="px-3 py-1 bg-white/10 text-sm rounded-full hover:bg-white/20 transition-all duration-300 text-secondary hover:text-primary">
+        </div>
+    </div>
+
+    <!-- Preguntas frecuentes flotantes -->
+    <div style="position: fixed; bottom: 80px; right: 16px; z-index: 50;">
+        <div id="quickQuestions" style="display: none;">
+            <div style="background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; max-width: 280px; border: 1px solid #e5e7eb; margin-bottom: 8px;">
+                <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 8px 0;">Preguntas frecuentes:</h4>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <button onclick="askQuestion('¿Qué tenés en el menú?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
                         🍽️ ¿Qué tenés en el menú?
                     </button>
-                    <button onclick="askQuestion('¿Cuáles son los precios?')" class="px-3 py-1 bg-white/10 text-sm rounded-full hover:bg-white/20 transition-all duration-300 text-secondary hover:text-primary">
+                    <button onclick="askQuestion('¿Cuáles son los precios?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
                         💰 ¿Cuáles son los precios?
                     </button>
-                    <button onclick="askQuestion('¿Tenés opciones vegetarianas?')" class="px-3 py-1 bg-white/10 text-sm rounded-full hover:bg-white/20 transition-all duration-300 text-secondary hover:text-primary">
+                    <button onclick="askQuestion('¿Tenés opciones vegetarianas?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
                         🥗 ¿Tenés opciones vegetarianas?
                     </button>
-                    <button onclick="askQuestion('¿Cuáles son los horarios?')" class="px-3 py-1 bg-white/10 text-sm rounded-full hover:bg-white/20 transition-all duration-300 text-secondary hover:text-primary">
+                    <button onclick="askQuestion('¿Cuáles son los horarios?')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: #f9fafb; border: none; border-radius: 6px; font-size: 13px; color: #374151; cursor: pointer; transition: background-color 0.2s;">
                         🕒 ¿Cuáles son los horarios?
                     </button>
                 </div>
             </div>
         </div>
+        <button onclick="toggleQuickQuestions()" style="width: 48px; height: 48px; background: #3b82f6; border: none; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s;">
+            <span style="font-size: 18px;">💡</span>
+        </button>
     </div>
-
 
     <script>
         let isLoading = false;
+        
+        // Mostrar/ocultar preguntas frecuentes
+        function toggleQuickQuestions() {
+            var quickQuestions = document.getElementById('quickQuestions');
+            if (quickQuestions.style.display === 'none') {
+                quickQuestions.style.display = 'block';
+            } else {
+                quickQuestions.style.display = 'none';
+            }
+        }
+        
+        // Hacer pregunta rápida
+        function askQuestion(question) {
+            document.getElementById('messageInput').value = question;
+            document.getElementById('quickQuestions').style.display = 'none';
+            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        }
         
         // Configuración del comercio
         const comercio = {
@@ -398,6 +447,9 @@
             const avatar = sender === 'user' ? '🧑' : '💬';
             const avatarClass = sender === 'user' ? 'bg-gray-400' : 'bg-green-500';
             
+            // Formatear el texto para mejor legibilidad
+            const formattedText = formatMessageText(text);
+            
             messageDiv.innerHTML = `
                 <div class="flex items-start space-x-3 ${sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}">
                     <div class="w-8 h-8 rounded-full ${avatarClass} flex items-center justify-center flex-shrink-0">
@@ -405,7 +457,7 @@
                     </div>
                     <div class="flex-1 ${sender === 'user' ? 'flex flex-col items-end' : ''}">
                         <div class="message-bubble message-${sender}">
-                            <p>${text}</p>
+                            ${formattedText}
                         </div>
                     </div>
                 </div>
@@ -418,6 +470,11 @@
                 const chatContainer = document.querySelector('.chat-container');
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }, 100);
+        }
+        
+        function formatMessageText(text) {
+            // Simplificar: solo convertir saltos de línea a <br>
+            return `<p>${text.replace(/\n/g, '<br>')}</p>`;
         }
         
         // Mostrar indicador de escritura
@@ -469,30 +526,11 @@
             }
         }
         
-        // Mostrar preguntas rápidas
-        function showQuickQuestions() {
-            const quickQuestions = document.getElementById('quickQuestions');
-            quickQuestions.classList.toggle('hidden');
-        }
-        
-        // Ocultar preguntas rápidas
-        function hideQuickQuestions() {
-            const quickQuestions = document.getElementById('quickQuestions');
-            quickQuestions.classList.add('hidden');
-        }
-        
-        // Hacer pregunta rápida
-        function askQuestion(question) {
-            document.getElementById('messageInput').value = question;
-            hideQuickQuestions();
-            sendMessage(question);
-            
-            // Scroll al final después de enviar pregunta rápida
-            setTimeout(() => {
-                const chatContainer = document.querySelector('.chat-container');
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }, 200);
-        }
+        // Scroll al final después de enviar pregunta rápida
+        setTimeout(() => {
+            const chatContainer = document.querySelector('.chat-container');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 200);
         
         
         // Auto-focus en el input y scroll inicial
