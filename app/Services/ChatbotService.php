@@ -26,6 +26,18 @@ class ChatbotService
         try {
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
+
+            // DEBUG: Log de contexto (recortado) para ver qué se está enviando
+            try {
+                Log::info('CHAT_CONTEXT_PREVIEW', [
+                    'comercio_id' => $comercio->id,
+                    'comercio_nombre' => $comercio->nombre,
+                    'context_length' => mb_strlen($contexto, 'UTF-8'),
+                    'context_preview' => mb_substr($contexto, 0, 1500, 'UTF-8')
+                ]);
+            } catch (\Throwable $e) {
+                // no romper si falla el log
+            }
             
             // Crear prompt para OpenAI
             $prompt = $this->createPrompt($comercio, $contexto, $message);
@@ -83,8 +95,22 @@ class ChatbotService
         if (!$menus->isEmpty()) {
             $contexto .= "\nMenús disponibles:\n";
             foreach ($menus as $menu) {
-                $contexto .= "--- Menú {$menu->formato} ---\n";
-                $contexto .= $menu->contexto_gpt . "\n\n";
+                $contextoMenu = $this->sanitizeContext($menu->contexto_gpt);
+                $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
+                $contexto .= $contextoMenu . "\n\n";
+
+                // DEBUG: Log por menú para inspección
+                try {
+                    Log::info('CHAT_CONTEXT_MENU', [
+                        'comercio_id' => $comercio->id,
+                        'menu_id' => $menu->id,
+                        'formato' => $menu->formato,
+                        'length' => mb_strlen($contextoMenu, 'UTF-8'),
+                        'preview' => mb_substr($contextoMenu, 0, 600, 'UTF-8')
+                    ]);
+                } catch (\Throwable $e) {
+                    // ignorar
+                }
             }
         } else {
             $contexto .= "\nNo hay menús procesados disponibles.\n";
@@ -94,26 +120,81 @@ class ChatbotService
     }
 
     /**
+     * Quitar fences ``` y etiquetas como ```json del contexto, y espacios raros
+     */
+    private function sanitizeContext(?string $text): string
+    {
+        if ($text === null) return '';
+        $clean = trim($text);
+        // Remover fences triple backticks con o sin lenguaje
+        $clean = preg_replace('/```[a-zA-Z]*\n?/u', '', $clean ?? '');
+        $clean = str_replace('```', '', $clean);
+        // Normalizar saltos de línea
+        $clean = preg_replace("/\r\n|\r/", "\n", $clean);
+        return trim($clean);
+    }
+
+    /**
+     * Exponer un preview del contexto (para consola / debug)
+     */
+    public function getContextPreview(Comercio $comercio, int $limit = 1500): array
+    {
+        $context = $this->buildMenuContext($comercio);
+        $menus = $comercio->menus()
+            ->where('procesado', true)
+            ->whereNotNull('contexto_gpt')
+            ->get(['id', 'formato']);
+
+        return [
+            'comercio_id' => $comercio->id,
+            'comercio' => $comercio->nombre,
+            'context_length' => mb_strlen($context, 'UTF-8'),
+            'context_preview' => mb_substr($context, 0, $limit, 'UTF-8'),
+            'menus' => $menus,
+        ];
+    }
+
+    /**
+     * Detalle por menú con preview del texto sanitizado
+     */
+    public function getMenusPreview(Comercio $comercio, int $perMenuLimit = 800): array
+    {
+        $result = [];
+        $menus = $comercio->menus()
+            ->where('procesado', true)
+            ->whereNotNull('contexto_gpt')
+            ->get();
+
+        foreach ($menus as $menu) {
+            $clean = $this->sanitizeContext($menu->contexto_gpt);
+            $result[] = [
+                'menu_id' => $menu->id,
+                'formato' => $menu->formato,
+                'length' => mb_strlen($clean, 'UTF-8'),
+                'preview' => mb_substr($clean, 0, $perMenuLimit, 'UTF-8')
+            ];
+        }
+        return $result;
+    }
+
+    /**
      * Crear prompt para OpenAI
      */
     private function createPrompt(Comercio $comercio, string $contexto, string $message): string
     {
         return "Eres un asistente virtual especializado en restaurantes. Tu trabajo es ayudar a los clientes con información sobre el menú y el restaurante.
 
-INFORMACIÓN DEL RESTAURANTE:
+INFORMACIÓN DEL RESTAURANTE Y MENÚ:
 {$contexto}
 
-INSTRUCCIONES:
-- Responde de manera profesional y directa, SIN saludos como \"Hola\" o \"¡Hola!\"
-- Ve directo al punto con la información solicitada
-- PRIORIZA las respuestas de las preguntas frecuentes cuando sean relevantes
-- Si la pregunta del cliente es similar a una pregunta frecuente, adapta esa respuesta
-- Usa la información del menú para responder preguntas sobre platos, precios, ingredientes
-- Si no tienes información específica, sé honesto y sugiere contactar al restaurante
-- Mantén las respuestas concisas pero útiles
-- Responde en español
-- Si alguien pregunta sobre algo que está en las preguntas frecuentes (como 'comida árabe', 'café', etc.), usa la respuesta correspondiente como base
-- NO uses expresiones como \"¡Hola!\", \"Bienvenido\", \"Te damos la bienvenida\" - ve directo a la información
+INSTRUCCIONES IMPORTANTES:
+- Responde de manera profesional y directa, SIN saludos como \"Hola\" o \"¡Hola!\"; ve directo al punto.
+- El contexto puede incluir MENÚS en formato JSON (por ejemplo con claves como 'categorías', 'platos', 'precio', 'descripción'). Debes INTERPRETAR ese JSON y convertirlo en texto legible.
+- Si el usuario pide \"listar/mostrar el menú\", DEVUELVE un listado por CATEGORÍAS con cada PLATO y su PRECIO (y descripción si está disponible). No inventes categorías ni platos: usa solo lo que esté en el contexto.
+- Si la pregunta del cliente es similar a una pregunta frecuente, adapta esa respuesta priorizándola.
+- Usa la información del menú para responder preguntas sobre platos, precios e ingredientes. Si un dato no está en el contexto, indícalo.
+- Mantén las respuestas concisas pero útiles y SIEMPRE en español.
+- NO uses expresiones como \"¡Hola!\", \"Bienvenido\", \"Te damos la bienvenida\".
 
 PREGUNTA DEL CLIENTE: {$message}
 
@@ -141,8 +222,8 @@ RESPUESTA:";
                     'content' => $prompt
                 ]
             ],
-            'max_tokens' => 300,
-            'temperature' => 0.7,
+            'max_tokens' => 800,
+            'temperature' => 0.2,
         ]);
 
         if ($response->successful()) {

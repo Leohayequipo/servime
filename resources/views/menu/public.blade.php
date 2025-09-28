@@ -77,7 +77,7 @@
         <!-- Header fijo -->
         <div class="app-header">
             <div class="max-w-md mx-auto flex items-center">
-                <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-16 h-16 rounded-full object-cover mr-3 shadow-2xl neon-glow">
+                <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover mr-3 shadow-2xl neon-glow">
                 <div>
                     <h4 class="text-text-primary font-semibold text-lg leading-tight">{{ $comercio->nombre }}</h4>
                     <p class="text-text-secondary text-sm">Menú Digital</p>
