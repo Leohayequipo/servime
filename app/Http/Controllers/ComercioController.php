@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Comercio;
+use Illuminate\Support\Str;
 class ComercioController extends Controller
 {
     /**
@@ -41,15 +42,14 @@ class ComercioController extends Controller
         $comercio = new Comercio();
         $comercio->user_id = auth()->id();
         $comercio->nombre = $validated['nombre'];
-        $comercio->slug = \Str::slug($validated['nombre']);
+        $comercio->slug = Str::slug($validated['nombre']);
         $comercio->descripcion = $validated['descripcion'];
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
 
         // Procesar logo si se subió
         if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('logos', 'public');
-            $comercio->logo_url = $logoPath;
+            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512);
         }
 
         $comercio->save();
@@ -90,7 +90,7 @@ class ComercioController extends Controller
         ]);
 
         $comercio->nombre = $validated['nombre'];
-        $comercio->slug = \Str::slug($validated['nombre']);
+        $comercio->slug = Str::slug($validated['nombre']);
         $comercio->descripcion = $validated['descripcion'];
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
@@ -109,13 +109,76 @@ class ComercioController extends Controller
             if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
                 \Storage::disk('public')->delete($comercio->logo_url);
             }
-            $logoPath = $request->file('logo')->store('logos', 'public');
-            $comercio->logo_url = $logoPath;
+            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512);
         }
 
         $comercio->save();
 
         return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
+    }
+
+    /**
+     * Guardar el logo en un tamaño cuadrado fijo (recorte centrado + resize)
+     */
+    private function saveSquareLogo(\Illuminate\Http\UploadedFile $file, int $size = 512): string
+    {
+        $path = storage_path('app/public/logos');
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
+
+        // Si no está disponible la librería GD, hacer fallback al almacenamiento directo
+        if (!function_exists('imagecreatetruecolor')) {
+            return $file->store('logos', 'public');
+        }
+
+        // Determinar tipo y crear resource
+        $srcPath = $file->getRealPath();
+        [$w, $h, $type] = \getimagesize($srcPath);
+        switch ($type) {
+            case IMAGETYPE_JPEG:
+                $src = \imagecreatefromjpeg($srcPath);
+                break;
+            case IMAGETYPE_PNG:
+                $src = \imagecreatefrompng($srcPath);
+                break;
+            case IMAGETYPE_GIF:
+                $src = \imagecreatefromgif($srcPath);
+                break;
+            default:
+                // fallback: usar el almacenamiento directo
+                return $file->store('logos', 'public');
+        }
+
+        // Recorte cuadrado centrado
+        $side = min($w, $h);
+        $srcX = (int)(($w - $side) / 2);
+        $srcY = (int)(($h - $side) / 2);
+
+        // Lienzo destino
+        $dst = \imagecreatetruecolor($size, $size);
+        // Preservar transparencia para PNG/GIF
+        if (in_array($type, [IMAGETYPE_PNG, IMAGETYPE_GIF])) {
+            \imagealphablending($dst, false);
+            \imagesavealpha($dst, true);
+            $transparent = \imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            \imagefilledrectangle($dst, 0, 0, $size, $size, $transparent);
+        } else {
+            $white = \imagecolorallocate($dst, 255, 255, 255);
+            \imagefilledrectangle($dst, 0, 0, $size, $size, $white);
+        }
+
+        \imagecopyresampled($dst, $src, 0, 0, $srcX, $srcY, $size, $size, $side, $side);
+
+        // Guardar siempre como PNG para consistencia
+        $filename = 'logo_' . Str::random(16) . '.png';
+        $full = $path . DIRECTORY_SEPARATOR . $filename;
+        \imagepng($dst, $full, 6);
+
+        \imagedestroy($src);
+        \imagedestroy($dst);
+
+        return 'logos/' . $filename;
     }
 
     /**
