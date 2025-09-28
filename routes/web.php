@@ -64,10 +64,6 @@ Route::middleware('auth')->group(function () {
 // Rutas públicas (sin autenticación)
 Route::get('/menu/{comercio}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
 Route::post('/api/chat/{comercio}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
-// DEBUG: endpoint para ver el contexto que se envía a la IA
-Route::get('/api/chat/{comercio}/context', [App\Http\Controllers\ChatbotController::class, 'context'])->name('chat.context');
-// DEBUG: ver prompt/ctx sin llamar a la API
-Route::get('/api/chat/{comercio}/debug', [App\Http\Controllers\ChatbotController::class, 'debug'])->name('chat.debug');
 
 // Rutas de Analytics (requieren autenticación)
 Route::middleware(['auth'])->group(function () {

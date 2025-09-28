@@ -103,35 +103,6 @@ class ChatbotController extends Controller
         }
     }
 
-    /**
-     * DEBUG: Obtener preview del contexto que se envía a la IA
-     */
-    public function context($comercioId): JsonResponse
-    {
-        try {
-            $comercio = Comercio::findOrFail($comercioId);
-            $preview = $this->chatbotService->getContextPreview($comercio, 2000);
-            $menus = $this->chatbotService->getMenusPreview($comercio, 800);
-            return response()->json([
-                'context' => $preview,
-                'menus_detail' => $menus
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error obteniendo contexto de chatbot: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * DEBUG: ver prompt/ctx sin llamar a la API
-     */
-    public function debug($comercioId): JsonResponse
-    {
-        $comercio = Comercio::findOrFail($comercioId);
-        $message = request('message', 'Listá el menú por categorías con precios');
-        $data = $this->chatbotService->debugBuild($comercio, $message);
-        return response()->json($data);
-    }
 
     /**
      * Respuesta de fallback si OpenAI no está disponible
