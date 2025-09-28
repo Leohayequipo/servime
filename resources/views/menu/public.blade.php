@@ -27,10 +27,12 @@
             --accent-gray: #6b7280;
         }
         
+        html, body { height: 100%; }
         body {
-            background: #000000; /* Fondo negro para igualar la vista previa */
+            background: #000000;
             color: var(--text-primary);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overscroll-behavior-y: contain;
         }
         /* Mapeo de clases usadas en la vista previa del administrador */
         .bg-background { background: #000000 !important; }
@@ -43,6 +45,14 @@
         .border-accent-gray { border-color: rgba(255, 255, 255, 0.2) !important; }
         .placeholder-text-secondary::placeholder { color: var(--text-secondary) !important; }
         .focus\:ring-accent-blue:focus { box-shadow: 0 0 0 2px var(--accent-blue) !important; outline: none; }
+        
+        /* Fullscreen mobile app layout */
+        .app { min-height: 100dvh; display: flex; flex-direction: column; }
+        .app-header { position: sticky; top: 0; z-index: 10; padding: 12px 16px; background: #000000; }
+        .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; padding-bottom: 96px; }
+        .input-fixed { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #000000; border-top: 1px solid rgba(255,255,255,0.1); }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chips-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
         
         .neon-glow {
             box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
@@ -62,71 +72,72 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 bg-background">
-    <div class="bg-background border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto">
-        <!-- Header del comercio -->
-        <div class="flex items-center mb-4">
-            <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-16 h-16 rounded-full object-cover mr-3 shadow-2xl neon-glow">
-            <div>
-                <h4 class="text-text-primary font-semibold text-sm">{{ $comercio->nombre }}</h4>
-                <p class="text-text-secondary text-xs">Menú Digital</p>
-            </div>
-        </div>
-        
-        <!-- Chatbot header -->
-        <div class="bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl p-3 mb-4 neon-glow" style="background: linear-gradient(to right, {{ $comercio->primary_color ?? '#3b82f6' }}, {{ $comercio->secondary_color ?? '#334155' }});">
-            <div class="flex items-center">
-                <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
-                    <span class="text-white text-xs">🤖</span>
-                </div>
-                <span class="text-white font-medium text-sm" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
-            </div>
-        </div>
-        
-        <!-- Mensajes de ejemplo -->
-        <div class="space-y-3 mb-4" id="chatMessages">
-            <div class="bg-secondary-dark rounded-lg p-3">
-                <p class="text-text-secondary text-xs" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
-            </div>
-            <div class="flex justify-end">
-                <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
-                    <p class="text-white text-xs">¿Qué platos tienen?</p>
+<body class="bg-background">
+    <div class="app">
+        <!-- Header fijo -->
+        <div class="app-header">
+            <div class="max-w-md mx-auto flex items-center">
+                <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-16 h-16 rounded-full object-cover mr-3 shadow-2xl neon-glow">
+                <div>
+                    <h4 class="text-text-primary font-semibold text-base leading-tight">{{ $comercio->nombre }}</h4>
+                    <p class="text-text-secondary text-xs">Menú Digital</p>
                 </div>
             </div>
-            <div class="bg-secondary-dark rounded-lg p-3">
-                <p class="text-text-secondary text-xs">Tenemos una variedad de platos deliciosos...</p>
+            <div class="max-w-md mx-auto mt-3">
+                <div class="bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl p-3 neon-glow" style="background: linear-gradient(to right, {{ $comercio->primary_color ?? '#3b82f6' }}, {{ $comercio->secondary_color ?? '#334155' }});">
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
+                            <span class="text-white text-xs">🤖</span>
+                        </div>
+                        <span class="text-white font-medium text-sm" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <!-- Input del chat -->
-        <div class="flex">
-            <input type="text" 
-                   id="messageInput"
-                   placeholder="Escribe tu mensaje..." 
-                   class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-xs placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-            <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-3 py-2 rounded-r-lg text-white text-xs font-medium transition-colors duration-200">
-                Enviar
-            </button>
+
+        <!-- Área de conversación -->
+        <div id="chatScroll" class="chat-scroll">
+            <div id="chatMessages" class="max-w-md mx-auto space-y-3">
+                <div class="bg-secondary-dark rounded-lg p-3">
+                    <p class="text-text-secondary text-xs" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Input fijo abajo -->
+        <div class="input-fixed">
+            <div class="max-w-md mx-auto flex">
+                <input type="text" 
+                       id="messageInput"
+                       placeholder="Escribe tu mensaje..." 
+                       class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-sm placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-4 py-2 rounded-r-lg text-white text-sm font-medium transition-colors duration-200">
+                    Enviar
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Preguntas Rápidas Flotantes -->
-    <div style="position: fixed; bottom: 80px; right: 16px; z-index: 50;">
-        <div id="quickQuestions" style="display: none;">
-            <div style="background: var(--secondary-color); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 12px; max-width: 280px; margin-bottom: 8px;">
-                <h4 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px 0;">Preguntas frecuentes:</h4>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    @foreach($comercio->quick_questions as $quickQuestion)
-                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: var(--background-color); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; font-size: 13px; color: var(--text-primary); cursor: pointer; transition: background-color 0.2s;">
-                        {{ $quickQuestion['icon'] }} {{ $quickQuestion['question'] }}
+    <!-- FAB Preguntas Rápidas -->
+    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50;">
+        <button id="fabFaq" title="Preguntas rápidas" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+            <span style="font-size: 22px;">💡</span>
+        </button>
+    </div>
+
+    <!-- Panel de Preguntas Rápidas -->
+    <div id="faqPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
+        <div style="background: var(--secondary-color); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.35); padding: 12px;">
+            <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px 0;">Preguntas rápidas</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 240px; overflow-y: auto;">
+                @foreach($comercio->quick_questions as $quickQuestion)
+                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}'); hideFaq();" style="padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); color: var(--text-primary); font-size: 12px; cursor: pointer;">
+                        {{ $quickQuestion['icon'] ?? '❓' }} {{ $quickQuestion['question'] }}
                     </button>
-                    @endforeach
-                </div>
+                @endforeach
             </div>
         </div>
-        <button onclick="toggleQuickQuestions()" style="width: 48px; height: 48px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s;">
-            <span style="font-size: 18px;">💡</span>
-        </button>
     </div>
 
     <script>
@@ -227,25 +238,23 @@
         // Scroll al final
         function scrollToBottom() {
             setTimeout(() => {
-                const chatMessages = document.getElementById('chatMessages');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                const chatScroll = document.getElementById('chatScroll');
+                if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
             }, 100);
         }
 
-        // Toggle preguntas rápidas
-        function toggleQuickQuestions() {
-            const quickQuestions = document.getElementById('quickQuestions');
-            if (quickQuestions.style.display === 'none') {
-                quickQuestions.style.display = 'block';
-            } else {
-                quickQuestions.style.display = 'none';
-            }
-        }
+        // FAB FAQ
+        const fab = document.getElementById('fabFaq');
+        const faqPanel = document.getElementById('faqPanel');
+        function showFaq(){ faqPanel.style.display = 'block'; }
+        function hideFaq(){ faqPanel.style.display = 'none'; }
+        function toggleFaq(){ faqPanel.style.display = faqPanel.style.display === 'block' ? 'none' : 'block'; }
+        if (fab) fab.addEventListener('click', toggleFaq);
 
         // Hacer pregunta rápida
         function askQuestion(question) {
             sendMessage(question);
-            document.getElementById('quickQuestions').style.display = 'none';
+            hideFaq();
         }
 
         // Event listeners
