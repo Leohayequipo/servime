@@ -39,6 +39,9 @@ class ChatbotService
                 // no romper si falla el log
             }
             
+            // Recortar contexto si es demasiado largo (seguridad)
+            $contexto = $this->trimContext($contexto, 48000); // ~aprox 12-15k tokens
+
             // Crear prompt para OpenAI
             $prompt = $this->createPrompt($comercio, $contexto, $message);
             
@@ -135,6 +138,38 @@ class ChatbotService
     }
 
     /**
+     * Recortar contexto para no exceder límites del modelo
+     */
+    private function trimContext(string $text, int $maxChars = 48000): string
+    {
+        $length = mb_strlen($text, 'UTF-8');
+        if ($length <= $maxChars) {
+            return $text;
+        }
+        // Mantener el comienzo (metadatos + FAQs) y una parte final
+        $head = mb_substr($text, 0, (int)($maxChars * 0.6), 'UTF-8');
+        $tail = mb_substr($text, - (int)($maxChars * 0.4), null, 'UTF-8');
+        return $head."\n\n...\n\n".$tail;
+    }
+
+    /**
+     * DEBUG: construir contexto y prompt sin llamar a la API
+     */
+    public function debugBuild(Comercio $comercio, string $message): array
+    {
+        $contexto = $this->buildMenuContext($comercio);
+        $contextoRecortado = $this->trimContext($contexto, 48000);
+        $prompt = $this->createPrompt($comercio, $contextoRecortado, $message);
+
+        return [
+            'comercio_id' => $comercio->id,
+            'context_length' => mb_strlen($contextoRecortado, 'UTF-8'),
+            'context_preview' => mb_substr($contextoRecortado, 0, 1500, 'UTF-8'),
+            'prompt_preview' => mb_substr($prompt, 0, 1500, 'UTF-8'),
+        ];
+    }
+
+    /**
      * Exponer un preview del contexto (para consola / debug)
      */
     public function getContextPreview(Comercio $comercio, int $limit = 1500): array
@@ -191,6 +226,11 @@ INSTRUCCIONES IMPORTANTES:
 - Responde de manera profesional y directa, SIN saludos como \"Hola\" o \"¡Hola!\"; ve directo al punto.
 - El contexto puede incluir MENÚS en formato JSON (por ejemplo con claves como 'categorías', 'platos', 'precio', 'descripción'). Debes INTERPRETAR ese JSON y convertirlo en texto legible.
 - Si el usuario pide \"listar/mostrar el menú\", DEVUELVE un listado por CATEGORÍAS con cada PLATO y su PRECIO (y descripción si está disponible). No inventes categorías ni platos: usa solo lo que esté en el contexto.
+- Formatea con SALTOS DE LÍNEA. Usa viñetas simples (-) para cada plato y encabezados en mayúsculas para cada categoría. Ejemplo:
+
+CATEGORÍA
+- Plato 1 — \$Precio
+- Plato 2 — \$Precio (descripción)
 - Si la pregunta del cliente es similar a una pregunta frecuente, adapta esa respuesta priorizándola.
 - Usa la información del menú para responder preguntas sobre platos, precios e ingredientes. Si un dato no está en el contexto, indícalo.
 - Mantén las respuestas concisas pero útiles y SIEMPRE en español.
@@ -211,20 +251,33 @@ RESPUESTA:";
             throw new \Exception('OpenAI API key no configurada');
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->openaiApiKey,
-            'Content-Type' => 'application/json',
-        ])->timeout(30)->post($this->openaiBaseUrl . '/chat/completions', [
-            'model' => 'gpt-3.5-turbo',
+        $payload = [
+            'model' => 'gpt-4o-mini',
             'messages' => [
                 [
                     'role' => 'user',
                     'content' => $prompt
                 ]
             ],
-            'max_tokens' => 800,
+            'max_tokens' => 700,
             'temperature' => 0.2,
-        ]);
+        ];
+
+        // DEBUG: activar volcando payload con ?debug=1
+        try {
+            if (function_exists('request') && request() && request()->query('debug') == '1') {
+                dd([
+                    'base_url' => $this->openaiBaseUrl,
+                    'payload' => $payload,
+                    'api_key_set' => !empty($this->openaiApiKey),
+                ]);
+            }
+        } catch (\Throwable $e) {}
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->openaiApiKey,
+            'Content-Type' => 'application/json',
+        ])->timeout(60)->post($this->openaiBaseUrl . '/chat/completions', $payload);
 
         if ($response->successful()) {
             $data = $response->json();
@@ -237,6 +290,17 @@ RESPUESTA:";
             'body' => $response->body(),
             'headers' => $response->headers()
         ]);
+
+        // DEBUG: si ?debug=1, volcar respuesta fallida
+        try {
+            if (function_exists('request') && request() && request()->query('debug') == '1') {
+                dd([
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'headers' => $response->headers(),
+                ]);
+            }
+        } catch (\Throwable $e) {}
 
         throw new \Exception('Error al conectar con OpenAI: ' . $response->body());
     }

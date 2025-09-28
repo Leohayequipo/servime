@@ -191,14 +191,14 @@
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end">
-                        <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
+                        <div class="bg-accent-blue rounded-lg p-3 max-w-xs whitespace-pre-line">
                             <p class="text-white text-xs">${text}</p>
                         </div>
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="bg-secondary-dark rounded-lg p-3">
+                    <div class="bg-secondary-dark rounded-lg p-3 whitespace-pre-line">
                         <p class="text-text-secondary text-xs">${text}</p>
                     </div>
                 `;

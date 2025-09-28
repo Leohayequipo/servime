@@ -123,6 +123,17 @@ class ChatbotController extends Controller
     }
 
     /**
+     * DEBUG: ver prompt/ctx sin llamar a la API
+     */
+    public function debug($comercioId): JsonResponse
+    {
+        $comercio = Comercio::findOrFail($comercioId);
+        $message = request('message', 'Listá el menú por categorías con precios');
+        $data = $this->chatbotService->debugBuild($comercio, $message);
+        return response()->json($data);
+    }
+
+    /**
      * Respuesta de fallback si OpenAI no está disponible
      */
     private function generateFallbackResponse(Comercio $comercio, string $message): string
