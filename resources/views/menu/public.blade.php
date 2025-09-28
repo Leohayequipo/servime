@@ -79,8 +79,8 @@
             <div class="max-w-md mx-auto flex items-center">
                 <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-16 h-16 rounded-full object-cover mr-3 shadow-2xl neon-glow">
                 <div>
-                    <h4 class="text-text-primary font-semibold text-base leading-tight">{{ $comercio->nombre }}</h4>
-                    <p class="text-text-secondary text-xs">Menú Digital</p>
+                    <h4 class="text-text-primary font-semibold text-lg leading-tight">{{ $comercio->nombre }}</h4>
+                    <p class="text-text-secondary text-sm">Menú Digital</p>
                 </div>
             </div>
             <div class="max-w-md mx-auto mt-3">
@@ -89,7 +89,7 @@
                         <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
                             <span class="text-white text-xs">🤖</span>
                         </div>
-                        <span class="text-white font-medium text-sm" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
+                        <span class="text-white font-medium text-base" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
                     </div>
                 </div>
             </div>
@@ -99,7 +99,7 @@
         <div id="chatScroll" class="chat-scroll">
             <div id="chatMessages" class="max-w-md mx-auto space-y-3">
                 <div class="bg-secondary-dark rounded-lg p-3">
-                    <p class="text-text-secondary text-xs" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+                    <p class="text-text-secondary text-sm" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
                 </div>
                 
             </div>
@@ -111,8 +111,8 @@
                 <input type="text" 
                        id="messageInput"
                        placeholder="Escribe tu mensaje..." 
-                       class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-sm placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-4 py-2 rounded-r-lg text-white text-sm font-medium transition-colors duration-200">
+                       class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
                     Enviar
                 </button>
             </div>
@@ -128,11 +128,11 @@
 
     <!-- Panel de Preguntas Rápidas -->
     <div id="faqPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
-        <div style="background: var(--secondary-color); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.35); padding: 12px;">
+        <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
             <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px 0;">Preguntas rápidas</h4>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 240px; overflow-y: auto;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
                 @foreach($comercio->quick_questions as $quickQuestion)
-                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}'); hideFaq();" style="padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); color: var(--text-primary); font-size: 12px; cursor: pointer;">
+                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}'); hideFaq();" style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer;">
                         {{ $quickQuestion['icon'] ?? '❓' }} {{ $quickQuestion['question'] }}
                     </button>
                 @endforeach
