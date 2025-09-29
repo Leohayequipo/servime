@@ -329,14 +329,15 @@
                                         
                                         <!-- Categoría -->
                                         <div class="col-span-2">
+                                            @php($cat = $question['category'] ?? 'general')
                                             <select name="quick_questions[{{ $index }}][category]" 
                                                     class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                                <option value="menu" {{ $question['category'] === 'menu' ? 'selected' : '' }}>Menú</option>
-                                                <option value="precios" {{ $question['category'] === 'precios' ? 'selected' : '' }}>Precios</option>
-                                                <option value="horarios" {{ $question['category'] === 'horarios' ? 'selected' : '' }}>Horarios</option>
-                                                <option value="ubicacion" {{ $question['category'] === 'ubicacion' ? 'selected' : '' }}>Ubicación</option>
-                                                <option value="contacto" {{ $question['category'] === 'contacto' ? 'selected' : '' }}>Contacto</option>
-                                                <option value="general" {{ $question['category'] === 'general' ? 'selected' : '' }}>General</option>
+                                                <option value="menu" {{ $cat === 'menu' ? 'selected' : '' }}>Menú</option>
+                                                <option value="precios" {{ $cat === 'precios' ? 'selected' : '' }}>Precios</option>
+                                                <option value="horarios" {{ $cat === 'horarios' ? 'selected' : '' }}>Horarios</option>
+                                                <option value="ubicacion" {{ $cat === 'ubicacion' ? 'selected' : '' }}>Ubicación</option>
+                                                <option value="contacto" {{ $cat === 'contacto' ? 'selected' : '' }}>Contacto</option>
+                                                <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>General</option>
                                             </select>
                                         </div>
                                         
@@ -359,13 +360,13 @@
                                         
                                         <!-- Botones -->
                                         <div class="col-span-1 flex flex-col space-y-2">
-                                            <input type="hidden" name="quick_questions[{{ $index }}][auto_generated]" value="{{ $question['auto_generated'] ? '1' : '0' }}">
+                                            <input type="hidden" name="quick_questions[{{ $index }}][auto_generated]" value="{{ ($question['auto_generated'] ?? false) ? '1' : '0' }}">
                                             <button type="button" 
                                                     onclick="removeQuestion({{ $index }})"
                                                     class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg text-sm transition-colors duration-200">
                                                 🗑️
                                             </button>
-                                            @if($question['auto_generated'])
+                                            @if($question['auto_generated'] ?? false)
                                                 <span class="text-xs text-accent-blue text-center">IA</span>
                                             @endif
                                         </div>

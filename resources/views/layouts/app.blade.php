@@ -733,6 +733,28 @@
             border-color: var(--accent-blue) !important;
             box-shadow: 0 0 0 3px rgba(0, 196, 255, 0.1) !important;
         }
+        
+        /* Input field class for consistent styling */
+        .input-field {
+            background: var(--secondary-dark) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--accent-gray) !important;
+            border-radius: 0.75rem !important;
+            padding: 0.75rem 1rem !important;
+            font-size: 0.875rem !important;
+            line-height: 1.5 !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .input-field:focus {
+            border-color: var(--accent-blue) !important;
+            box-shadow: 0 0 0 3px rgba(0, 196, 255, 0.1) !important;
+            outline: none !important;
+        }
+        
+        .input-field::placeholder {
+            color: var(--text-secondary) !important;
+        }
     </style>
     </head>
 <body class="bg-background text-text-primary min-h-screen">
