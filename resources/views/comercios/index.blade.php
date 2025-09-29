@@ -100,10 +100,11 @@
                                 
                                 <!-- Botones de acción -->
                                 <div class="space-y-3">
+                                    @php($hasMenus = $comercio->menus && $comercio->menus->count() > 0)
                                     <a href="{{ route('menus.index', $comercio) }}" 
                                        class="w-full btn-primary text-center block">
                                         <span class="mr-2">📋</span>
-                                        Ver Menús
+                                        {{ $hasMenus ? 'Ver Menús' : 'Crear Menú' }}
                                         <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                                     </a>
                                     
