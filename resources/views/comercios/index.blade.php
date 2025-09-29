@@ -44,10 +44,12 @@
                                         </div>
                                     </div>
                                 @endif
-                                <div class="absolute top-4 right-4">
-                                    <div class="w-8 h-8 bg-accent-blue/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow">
-                                        <span class="text-accent-blue text-sm">🏪</span>
-                                    </div>
+                                <div class="edit-button-container" style="position: absolute; top: 1rem; right: 1rem;">
+                                    <a href="{{ route('comercios.edit', $comercio) }}" 
+                                       class="edit-button w-8 h-8 bg-gray-800/60 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-accent-blue hover:scale-110 transition-all duration-300 group/edit"
+                                       style="background: rgba(31, 41, 55, 0.6) !important; border: none !important; border-radius: 50% !important;">
+                                        <span class="text-accent-blue text-sm group-hover/edit:text-white">✏️</span>
+                                    </a>
                                 </div>
                             </div>
                             
@@ -77,12 +79,12 @@
                                                 <span>{{ $comercio->telefono }}</span>
                                             </div>
                                 @endif
-                                        @if($comercio->horario)
+                                @if($comercio->horario)
                                             <div class="flex items-center justify-center">
                                                 <span class="w-4 h-4 mr-2 text-accent-blue">🕒</span>
                                                 <span>{{ $comercio->horario }}</span>
                                             </div>
-                                        @endif
+                                @endif
                                     </div>
                                 </div>
                                 
@@ -122,12 +124,7 @@
                                         </a>
                                     </div>
                                     
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <a href="{{ route('comercios.edit', $comercio) }}" 
-                                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                            <span class="mr-1">✏️</span>
-                                            Editar
-                                        </a>
+                                    <div class="grid grid-cols-1 gap-2">
                                         <form method="POST" action="{{ route('comercios.destroy', $comercio) }}" 
                                               onsubmit="return confirm('¿Estás seguro de que quieres eliminar este comercio?')"
                                               class="inline">
