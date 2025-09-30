@@ -777,9 +777,20 @@
         .input-field::placeholder {
             color: var(--text-secondary) !important;
         }
+        
+        /* Dark input fields */
+        .dark-input {
+            background: rgba(15, 23, 42, 0.9) !important;
+            color: white !important;
+            border-color: rgba(75, 85, 99, 0.5) !important;
+        }
+        
+        .dark-input::placeholder {
+            color: rgba(156, 163, 175, 0.8) !important;
+        }
     </style>
     </head>
-<body class="bg-background text-text-primary min-h-screen">
+<body class="text-text-primary min-h-screen">
     <div class="min-h-screen flex flex-col">
         <!-- Navigation -->
         <nav class="bg-background border-b border-accent-gray sticky top-0 z-50">

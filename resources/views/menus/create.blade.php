@@ -1,5 +1,18 @@
 <x-app-layout>
-    <div class="min-h-screen bg-background">
+    <style>
+        /* Forzar estilos para inputs - mismo color que el contenedor */
+        input, select, textarea {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
+            color: white !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        
+        /* Forzar gradiente en FAQ */
+        .faq-container {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 51, 234, 0.4) 100%) !important;
+        }
+    </style>
+    <div class="min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             
             <!-- Header Section -->
@@ -265,7 +278,7 @@
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
-                        <div class="bg-background border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto">
+                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto" style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;">
                             <!-- Header del comercio -->
                             <div class="flex items-center mb-4">
                                 @if($comercio->logo_url)
@@ -324,7 +337,7 @@
 
             <!-- Preguntas Frecuentes - Sección de ancho completo -->
             <div class="mt-12">
-                <div class="metric-card flex flex-col min-h-[500px]">
+                <div class="flex flex-col min-h-[500px] faq-container" style="border: 1px solid rgba(59, 130, 246, 0.5) !important; border-radius: 1rem !important; padding: 1.5rem !important; backdrop-filter: blur(10px) !important;">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
                             <div class="w-10 h-10 bg-gradient-to-r from-accent-blue to-purple-600 rounded-xl flex items-center justify-center mr-3 neon-glow">
@@ -341,14 +354,14 @@
                     
                     <div id="quick-questions-container" class="space-y-4 flex-grow overflow-y-auto pr-2">
                         @foreach($comercio->quick_questions as $index => $question)
-                            <div class="bg-secondary-dark border border-accent-gray rounded-xl p-4 question-item" data-index="{{ $index }}">
+                            <div class="question-item" data-index="{{ $index }}" style="background: rgba(75, 85, 99, 0.4) !important; border: 1px solid rgba(107, 114, 128, 0.6) !important; border-radius: 0.75rem !important; padding: 1rem !important; margin-bottom: 1rem !important;">
                                 <div class="grid grid-cols-12 gap-4 items-start">
                                     <!-- Ícono -->
                                     <div class="col-span-1">
                                         <input type="text" 
                                                name="quick_questions[{{ $index }}][icon]" 
                                                value="{{ $question['icon'] }}"
-                                               class="w-full px-2 py-2 bg-background border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                     </div>
                                     
                                     <!-- Pregunta -->
@@ -358,14 +371,14 @@
                                                name="quick_questions[{{ $index }}][question]" 
                                                value="{{ $question['question'] }}"
                                                placeholder="¿Pregunta frecuente?"
-                                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                               class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                     </div>
                                     
                                     <!-- Categoría -->
                                     <div class="col-span-2">
                                         @php($cat = $question['category'] ?? 'general')
                                         <select name="quick_questions[{{ $index }}][category]" 
-                                                class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                                class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                             <option value="menu" {{ $cat === 'menu' ? 'selected' : '' }}>Menú</option>
                                             <option value="precios" {{ $cat === 'precios' ? 'selected' : '' }}>Precios</option>
                                             <option value="horarios" {{ $cat === 'horarios' ? 'selected' : '' }}>Horarios</option>
@@ -382,7 +395,7 @@
                                                       id="answer_{{ $index }}"
                                                       rows="2"
                                                       placeholder="Respuesta automática..."
-                                                      class="flex-1 px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
+                                                      class="flex-1 px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
                                             <button type="button" 
                                                     onclick="improveAnswerWithAI({{ $index }})"
                                                     class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
@@ -521,7 +534,12 @@
         function addNewQuestion() {
             const container = document.getElementById('quick-questions-container');
             const newQuestion = document.createElement('div');
-            newQuestion.className = 'bg-secondary-dark border border-accent-gray rounded-xl p-4 question-item';
+            newQuestion.className = 'question-item';
+            newQuestion.style.setProperty('background', 'rgba(75, 85, 99, 0.4)', 'important');
+            newQuestion.style.setProperty('border', '1px solid rgba(107, 114, 128, 0.6)', 'important');
+            newQuestion.style.setProperty('border-radius', '0.75rem', 'important');
+            newQuestion.style.setProperty('padding', '1rem', 'important');
+            newQuestion.style.setProperty('margin-bottom', '1rem', 'important');
             newQuestion.setAttribute('data-index', questionIndex);
             
             newQuestion.innerHTML = `
@@ -531,7 +549,7 @@
                         <input type="text" 
                                name="quick_questions[${questionIndex}][icon]" 
                                value="❓"
-                               class="w-full px-2 py-2 bg-background border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
                     </div>
                     
                     <!-- Pregunta -->
@@ -541,13 +559,13 @@
                                name="quick_questions[${questionIndex}][question]" 
                                value=""
                                placeholder="¿Pregunta frecuente?"
-                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                               class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                     </div>
                     
                     <!-- Categoría -->
                     <div class="col-span-2">
                         <select name="quick_questions[${questionIndex}][category]" 
-                                class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                             <option value="menu">Menú</option>
                             <option value="precios">Precios</option>
                             <option value="horarios">Horarios</option>
@@ -564,7 +582,7 @@
                                       id="answer_${questionIndex}"
                                       rows="2"
                                       placeholder="Respuesta automática..."
-                                      class="flex-1 px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
+                                      class="flex-1 px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
                             <button type="button" 
                                     onclick="improveAnswerWithAI(${questionIndex})"
                                     class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
