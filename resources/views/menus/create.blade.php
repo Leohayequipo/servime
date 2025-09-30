@@ -242,6 +242,32 @@
                                         </div>
                                     </div>
                                 </div>
+                            @else
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-5 mb-6 opacity-50">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
+                                                <span class="text-blue-400 text-xl">📷</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-text-primary font-medium">Menú Actual</h4>
+                                                <p class="text-text-secondary text-sm">-</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-3">
+                                            <button type="button" 
+                                                    disabled
+                                                    class="bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                                                Ver
+                                            </button>
+                                            <button type="button" 
+                                                    disabled
+                                                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                                                Descargar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             @endif
 
                             <!-- Archivo del Menú -->
@@ -292,7 +318,7 @@
                                 </a>
                                 <button type="submit" 
                                         class="btn-primary text-lg px-6 py-3 rounded-xl">
-                                    📋 {{ $isEdit ? 'Actualizar Menú' : 'Subir Menú' }}
+                                    📋 Actualizar Menú
                                 </button>
                             </div>
                         </form>
@@ -421,6 +447,50 @@
                                         <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #FFFBEB;"></div>
                                     </div>
                                     <p class="text-sm font-medium text-text-secondary text-center">Energético</p>
+                                </div>
+                                
+                                <!-- Combinación 5: Noche Azul -->
+                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="midnight-blue">
+                                    <div class="flex space-x-2 mb-3">
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1E293B;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #334155;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #06B6D4;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0F172A;"></div>
+                                    </div>
+                                    <p class="text-sm font-medium text-text-secondary text-center">Noche Azul</p>
+                                </div>
+                                
+                                <!-- Combinación 6: Oro Oscuro -->
+                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="dark-gold">
+                                    <div class="flex space-x-2 mb-3">
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1C1917;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #292524;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #FBBF24;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0C0A09;"></div>
+                                    </div>
+                                    <p class="text-sm font-medium text-text-secondary text-center">Oro Oscuro</p>
+                                </div>
+                                
+                                <!-- Combinación 7: Púrpura Profundo -->
+                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="deep-purple">
+                                    <div class="flex space-x-2 mb-3">
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1E1B4B;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #312E81;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #A78BFA;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0F0D2B;"></div>
+                                    </div>
+                                    <p class="text-sm font-medium text-text-secondary text-center">Púrpura Profundo</p>
+                                </div>
+                                
+                                <!-- Combinación 8: Obsidiana -->
+                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="obsidian">
+                                    <div class="flex space-x-2 mb-3">
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #111827;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #1F2937;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #14B8A6;"></div>
+                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #030712;"></div>
+                                    </div>
+                                    <p class="text-sm font-medium text-text-secondary text-center">Obsidiana</p>
                                 </div>
                             </div>
                         </div>
@@ -645,6 +715,30 @@
                         secondary: '#EF4444',
                         accent: '#F59E0B',
                         background: '#FFFBEB'
+                    },
+                    'midnight-blue': {
+                        primary: '#1E293B',
+                        secondary: '#334155',
+                        accent: '#06B6D4',
+                        background: '#0F172A'
+                    },
+                    'dark-gold': {
+                        primary: '#1C1917',
+                        secondary: '#292524',
+                        accent: '#FBBF24',
+                        background: '#0C0A09'
+                    },
+                    'deep-purple': {
+                        primary: '#1E1B4B',
+                        secondary: '#312E81',
+                        accent: '#A78BFA',
+                        background: '#0F0D2B'
+                    },
+                    obsidian: {
+                        primary: '#111827',
+                        secondary: '#1F2937',
+                        accent: '#14B8A6',
+                        background: '#030712'
                     }
                 };
                 
