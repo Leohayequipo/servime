@@ -52,13 +52,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
     
-    // Rutas de personalización
-    Route::get('/comercios/{comercio}/customize', [App\Http\Controllers\CustomizationController::class, 'show'])->name('comercios.customize');
-    Route::put('/comercios/{comercio}/customize', [App\Http\Controllers\CustomizationController::class, 'update'])->name('comercios.customize.update');
-    Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\CustomizationController::class, 'preview'])->name('comercios.preview');
-    Route::post('/comercios/{comercio}/reset', [App\Http\Controllers\CustomizationController::class, 'reset'])->name('comercios.customize.reset');
-    Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\CustomizationController::class, 'generateQuestions'])->name('comercios.generate.questions');
-    Route::post('/comercios/{comercio}/improve-answer', [App\Http\Controllers\CustomizationController::class, 'improveAnswer'])->name('comercios.improve.answer');
+    // Rutas de personalización (ahora integradas en editar)
+    Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');
+    Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\ComercioController::class, 'generateQuestions'])->name('comercios.generate.questions');
+    Route::post('/comercios/{comercio}/improve-answer', [App\Http\Controllers\ComercioController::class, 'improveAnswer'])->name('comercios.improve.answer');
 });
 
 // Rutas públicas (sin autenticación)

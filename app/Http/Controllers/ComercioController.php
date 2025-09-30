@@ -82,18 +82,57 @@ class ComercioController extends Controller
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
         
         $validated = $request->validate([
+            // Información básica del comercio
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            
+            // Configuración de personalización
+            'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'accent_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'background_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'welcome_message' => 'nullable|string|max:500',
+            'menu_description' => 'nullable|string|max:1000',
+            'contact_info' => 'nullable|string|max:500',
+            'chatbot_name' => 'required|string|max:50',
+            'show_contact_info' => 'boolean',
+            'enable_ai_responses' => 'boolean',
+            'page_title' => 'nullable|string|max:100',
+            'page_description' => 'nullable|string|max:500',
+            'favicon_url' => 'nullable|string|max:255',
+            'quick_questions' => 'nullable|array',
+            'quick_questions.*.icon' => 'required|string|max:10',
+            'quick_questions.*.question' => 'required|string|max:255',
+            'quick_questions.*.category' => 'required|string|in:menu,precios,horarios,ubicacion,contacto,general',
+            'quick_questions.*.answer' => 'nullable|string|max:1000',
+            'quick_questions.*.auto_generated' => 'boolean'
         ]);
 
+        // Actualizar información básica
         $comercio->nombre = $validated['nombre'];
         $comercio->slug = Str::slug($validated['nombre']);
         $comercio->descripcion = $validated['descripcion'];
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
+
+        // Actualizar configuración de personalización
+        $comercio->primary_color = $validated['primary_color'];
+        $comercio->secondary_color = $validated['secondary_color'];
+        $comercio->accent_color = $validated['accent_color'];
+        $comercio->background_color = $validated['background_color'];
+        $comercio->welcome_message = $validated['welcome_message'];
+        $comercio->menu_description = $validated['menu_description'];
+        $comercio->contact_info = $validated['contact_info'];
+        $comercio->chatbot_name = $validated['chatbot_name'];
+        $comercio->show_contact_info = $validated['show_contact_info'] ?? false;
+        $comercio->enable_ai_responses = $validated['enable_ai_responses'] ?? false;
+        $comercio->page_title = $validated['page_title'];
+        $comercio->page_description = $validated['page_description'];
+        $comercio->favicon_url = $validated['favicon_url'];
+        $comercio->quick_questions = $validated['quick_questions'] ?? [];
 
         // Manejar eliminación de logo
         if ($request->has('delete_logo') && $request->delete_logo == '1') {
@@ -115,6 +154,42 @@ class ComercioController extends Controller
         $comercio->save();
 
         return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
+    }
+
+    /**
+     * Generar preguntas frecuentes con IA
+     */
+    public function generateQuestions(Request $request, string $id)
+    {
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        
+        // Llamar al método del CustomizationController
+        $customizationController = new \App\Http\Controllers\CustomizationController();
+        return $customizationController->generateQuestions($request, $id);
+    }
+
+    /**
+     * Mejorar respuesta con IA
+     */
+    public function improveAnswer(Request $request, string $id)
+    {
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        
+        // Llamar al método del CustomizationController
+        $customizationController = new \App\Http\Controllers\CustomizationController();
+        return $customizationController->improveAnswer($request, $id);
+    }
+
+    /**
+     * Vista previa del comercio
+     */
+    public function preview(string $id)
+    {
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        
+        // Llamar al método del CustomizationController
+        $customizationController = new \App\Http\Controllers\CustomizationController();
+        return $customizationController->preview($id);
     }
 
     /**

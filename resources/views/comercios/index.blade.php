@@ -111,10 +111,10 @@
                                     </a>
                                     
                                     <div class="grid grid-cols-2 gap-2">
-                                        <a href="{{ route('comercios.customize', $comercio) }}" 
+                                        <a href="{{ route('menus.create', $comercio) }}" 
                                            class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                            <span class="mr-1">🎨</span>
-                                            Personalizar
+                                            <span class="mr-1">📋</span>
+                                            Crear Menú
                                         </a>
                                         <a href="{{ route('comercios.preview', $comercio) }}" 
                                            target="_blank"

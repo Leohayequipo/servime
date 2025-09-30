@@ -22,9 +22,9 @@
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
                     </a>
-                    <a href="{{ route('comercios.customize', $comercio) }}" 
+                    <a href="{{ route('comercios.edit', $comercio) }}" 
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                        🎨 Personalizar
+                        ✏️ Editar
                     </a>
                 </div>
             </div>
