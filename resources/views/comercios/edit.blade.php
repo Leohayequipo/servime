@@ -434,12 +434,11 @@
                                             @php($cat = $question['category'] ?? 'general')
                                             <select name="quick_questions[{{ $index }}][category]" 
                                                     class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                                <option value="menu" {{ $cat === 'menu' ? 'selected' : '' }}>Menú</option>
-                                                <option value="precios" {{ $cat === 'precios' ? 'selected' : '' }}>Precios</option>
-                                                <option value="horarios" {{ $cat === 'horarios' ? 'selected' : '' }}>Horarios</option>
-                                                <option value="ubicacion" {{ $cat === 'ubicacion' ? 'selected' : '' }}>Ubicación</option>
-                                                <option value="contacto" {{ $cat === 'contacto' ? 'selected' : '' }}>Contacto</option>
-                                                <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>General</option>
+                                                @foreach($categories as $category)
+                                                    <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
+                                                        {{ $category->name }}
+                                                    </option>
+                                                @endforeach
                                             </select>
                                         </div>
                                         
@@ -647,12 +646,11 @@
                     <div class="col-span-2">
                         <select name="quick_questions[${questionIndex}][category]" 
                                 class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                            <option value="menu">Menú</option>
-                            <option value="precios">Precios</option>
-                            <option value="horarios">Horarios</option>
-                            <option value="ubicacion">Ubicación</option>
-                            <option value="contacto">Contacto</option>
-                            <option value="general" selected>General</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->slug }}" {{ $category->slug === 'general' ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
                     

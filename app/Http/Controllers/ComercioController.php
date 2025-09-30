@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Comercio;
+use App\Models\QuestionCategory;
 use Illuminate\Support\Str;
 class ComercioController extends Controller
 {
@@ -72,7 +73,8 @@ class ComercioController extends Controller
     public function edit(string $id)
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
-        return view('comercios.edit', compact('comercio'));
+        $categories = QuestionCategory::active()->ordered()->get();
+        return view('comercios.edit', compact('comercio', 'categories'));
     }
     /**
      * Update the specified resource in storage.

@@ -41,7 +41,9 @@ class MenuController extends Controller
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
         $categories = QuestionCategory::active()->ordered()->get();
-        return view('menus.create', compact('comercio', 'categories'));
+        $menu = null; // No hay menú para crear
+        $isEdit = false;
+        return view('menus.create', compact('comercio', 'categories', 'menu', 'isEdit'));
     }
 
     /**
@@ -105,8 +107,10 @@ class MenuController extends Controller
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
         $menu = $comercio->menus()->findOrFail($menuId);
+        $categories = QuestionCategory::active()->ordered()->get();
+        $isEdit = true;
         
-        return view('menus.edit', compact('comercio', 'menu'));
+        return view('menus.create', compact('comercio', 'menu', 'categories', 'isEdit'));
     }
 
     /**

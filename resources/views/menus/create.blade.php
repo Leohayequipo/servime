@@ -76,6 +76,59 @@
             border-color: rgba(59, 130, 246, 0.5) !important;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
         }
+        
+        /* Modal de archivos */
+        .file-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .file-modal-content {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(147, 51, 234, 0.95) 100%);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            position: relative;
+        }
+        
+        .file-modal-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .file-modal-body {
+            max-height: 70vh;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .file-modal-body img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 0.5rem;
+        }
+        
+        .file-modal-body iframe {
+            width: 100%;
+            height: 70vh;
+            border: none;
+            border-radius: 0.5rem;
+        }
     </style>
     <div class="min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -84,7 +137,7 @@
             <div class="flex items-center justify-between mb-12">
                 <div>
                     <h1 class="text-5xl font-bold text-text-primary mb-2">
-                        📋 Crear Menú
+                        📋 {{ $isEdit ? 'Editar Menú' : 'Crear Menú' }}
                     </h1>
                     <p class="text-xl text-text-secondary">{{ $comercio->nombre }}</p>
                     <p class="text-sm text-text-secondary mt-1">Sube tu menú y personaliza la experiencia</p>
@@ -142,8 +195,11 @@
                             <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
                         </div>
                         
-                        <form method="POST" action="{{ route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6">
+                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6">
                             @csrf
+                            @if($isEdit)
+                                @method('PUT')
+                            @endif
                             
                             <!-- Información del Comercio -->
                             <div class="bg-secondary-dark p-4 rounded-xl mb-6">
@@ -153,20 +209,59 @@
                                 @endif
                             </div>
 
+                            <!-- Menú Actual (solo en edición) -->
+                            @if($isEdit && $menu && $menu->archivo_original)
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-5 mb-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            @if($menu->formato === 'pdf')
+                                                <div class="w-12 h-12 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center justify-center">
+                                                    <span class="text-red-400 text-xl">📄</span>
+                                                </div>
+                                            @else
+                                                <div class="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
+                                                    <span class="text-blue-400 text-xl">📷</span>
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <h4 class="text-text-primary font-medium">Menú Actual</h4>
+                                                <p class="text-text-secondary text-sm">{{ $menu->created_at->format('d/m/Y H:i') }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-3">
+                                            <button type="button" 
+                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
+                                                    class="bg-accent-blue hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+                                                Ver
+                                            </button>
+                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
+                                               download
+                                               class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+                                                Descargar
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
                             <!-- Archivo del Menú -->
                             <div>
                                 <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Archivo del Menú
+                                    {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
                                 </label>
                                 <input type="file" 
                                        id="archivo" 
                                        name="archivo" 
                                        accept=".pdf,.jpeg,.jpg,.png,.gif" 
-                                       required 
+                                       {{ $isEdit ? '' : 'required' }} 
                                        class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
                                 <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
                                 <p class="mt-2 text-sm text-text-secondary">
-                                    Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                                    @if($isEdit)
+                                        Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                                    @else
+                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                                    @endif
                                 </p>
                             </div>
 
@@ -197,7 +292,7 @@
                                 </a>
                                 <button type="submit" 
                                         class="btn-primary text-lg px-6 py-3 rounded-xl">
-                                    📋 Subir Menú
+                                    📋 {{ $isEdit ? 'Actualizar Menú' : 'Subir Menú' }}
                                 </button>
                             </div>
                         </form>
@@ -220,6 +315,7 @@
                                 </label>
                                 <input type="text" 
                                        id="chatbot_name" 
+                                       name="chatbot_name"
                                        value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}"
                                        class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
                             </div>
@@ -230,6 +326,7 @@
                                     Mensaje de Bienvenida
                                 </label>
                                 <textarea id="welcome_message" 
+                                          name="welcome_message"
                                           rows="4"
                                           maxlength="500"
                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</textarea>
@@ -241,6 +338,7 @@
                                 <div class="flex items-center">
                                     <input type="checkbox" 
                                            id="enable_ai_responses" 
+                                           name="enable_ai_responses"
                                            {{ $comercio->enable_ai_responses ? 'checked' : '' }}
                                            class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
                                     <label for="enable_ai_responses" class="ml-3 text-sm text-text-secondary">
@@ -251,6 +349,7 @@
                                 <div class="flex items-center">
                                     <input type="checkbox" 
                                            id="show_contact_info" 
+                                           name="show_contact_info"
                                            {{ $comercio->show_contact_info ? 'checked' : '' }}
                                            class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
                                     <label for="show_contact_info" class="ml-3 text-sm text-text-secondary">
@@ -327,10 +426,10 @@
                         </div>
                         
                         <!-- Campos ocultos para mantener los valores -->
-                        <input type="hidden" id="primary_color" value="{{ $comercio->primary_color }}">
-                        <input type="hidden" id="secondary_color" value="{{ $comercio->secondary_color }}">
-                        <input type="hidden" id="accent_color" value="{{ $comercio->accent_color }}">
-                        <input type="hidden" id="background_color" value="{{ $comercio->background_color }}">
+                        <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
+                        <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
+                        <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
+                        <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
                     </div>
                     
                     <!-- 👁️ Vista Previa del Tema -->
@@ -859,11 +958,38 @@
         
         // Cerrar modal al hacer click fuera
         document.addEventListener('click', function(event) {
-            const modal = document.getElementById('iconModal');
-            if (event.target === modal) {
+            const iconModal = document.getElementById('iconModal');
+            const fileModal = document.getElementById('fileModal');
+            if (event.target === iconModal) {
                 closeIconModal();
             }
+            if (event.target === fileModal) {
+                closeFileModal();
+            }
         });
+        
+        // Funciones para el modal de archivos
+        function openFileModal(fileUrl, fileType) {
+            const modal = document.getElementById('fileModal');
+            const modalBody = document.getElementById('fileModalBody');
+            
+            modalBody.innerHTML = '';
+            
+            if (fileType === 'pdf') {
+                // Para PDFs usar iframe
+                modalBody.innerHTML = `<iframe src="${fileUrl}" title="Vista previa del PDF"></iframe>`;
+            } else {
+                // Para imágenes usar img
+                modalBody.innerHTML = `<img src="${fileUrl}" alt="Vista previa del archivo" />`;
+            }
+            
+            modal.style.display = 'flex';
+        }
+        
+        function closeFileModal() {
+            const modal = document.getElementById('fileModal');
+            modal.style.display = 'none';
+        }
     </script>
 
     <!-- Modal de selección de iconos -->
@@ -952,6 +1078,20 @@
                 <div class="icon-option" onclick="selectIcon('💡')">💡</div>
                 <div class="icon-option" onclick="selectIcon('❤️')">❤️</div>
                 <div class="icon-option" onclick="selectIcon('👍')">👍</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de visualización de archivos -->
+    <div id="fileModal" class="file-modal">
+        <div class="file-modal-content">
+            <div class="file-modal-header">
+                <h3 class="text-xl font-semibold text-white">Vista Previa del Archivo</h3>
+                <button onclick="closeFileModal()" class="text-white hover:text-gray-300 text-2xl ml-4">&times;</button>
+            </div>
+            
+            <div class="file-modal-body" id="fileModalBody">
+                <!-- El contenido se carga dinámicamente aquí -->
             </div>
         </div>
     </div>
