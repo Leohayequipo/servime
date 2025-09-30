@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\QuestionCategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -62,13 +63,16 @@ Route::middleware('auth')->group(function () {
 Route::get('/menu/{comercio}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
 Route::post('/api/chat/{comercio}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
-// Rutas de Analytics (requieren autenticación)
-Route::middleware(['auth'])->group(function () {
-    Route::prefix('analytics')->name('analytics.')->group(function () {
-        Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
-        Route::get('/comercio/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
-        Route::get('/export/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+    // Rutas de Categorías de Preguntas
+    Route::resource('question-categories', QuestionCategoryController::class);
+    
+    // Rutas de Analytics (requieren autenticación)
+    Route::middleware(['auth'])->group(function () {
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
+            Route::get('/comercio/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
+            Route::get('/export/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+        });
     });
-});
 
 require __DIR__.'/auth.php';

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Menu;
 use App\Models\Comercio;
+use App\Models\QuestionCategory;
 use App\Services\MenuProcessorService;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,7 +40,8 @@ class MenuController extends Controller
     public function create($comercioId)
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        return view('menus.create', compact('comercio'));
+        $categories = QuestionCategory::active()->ordered()->get();
+        return view('menus.create', compact('comercio', 'categories'));
     }
 
     /**

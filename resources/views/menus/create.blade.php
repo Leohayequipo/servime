@@ -11,6 +11,71 @@
         .faq-container {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 51, 234, 0.4) 100%) !important;
         }
+        
+        /* Modal de iconos */
+        .icon-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .icon-modal-content {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+        
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .icon-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.5rem;
+        }
+        
+        .icon-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        /* Estilos para select y options */
+        select {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
+            color: white !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        
+        select option {
+            background-color: #1e293b !important;
+            color: white !important;
+        }
+        
+        select:focus {
+            outline: none !important;
+            border-color: rgba(59, 130, 246, 0.5) !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
     </style>
     <div class="min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -361,7 +426,8 @@
                                         <input type="text" 
                                                name="quick_questions[{{ $index }}][icon]" 
                                                value="{{ $question['icon'] }}"
-                                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                               onclick="openIconModal(this)"
+                                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
                                     </div>
                                     
                                     <!-- Pregunta -->
@@ -379,12 +445,11 @@
                                         @php($cat = $question['category'] ?? 'general')
                                         <select name="quick_questions[{{ $index }}][category]" 
                                                 class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                            <option value="menu" {{ $cat === 'menu' ? 'selected' : '' }}>Menú</option>
-                                            <option value="precios" {{ $cat === 'precios' ? 'selected' : '' }}>Precios</option>
-                                            <option value="horarios" {{ $cat === 'horarios' ? 'selected' : '' }}>Horarios</option>
-                                            <option value="ubicacion" {{ $cat === 'ubicacion' ? 'selected' : '' }}>Ubicación</option>
-                                            <option value="contacto" {{ $cat === 'contacto' ? 'selected' : '' }}>Contacto</option>
-                                            <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>General</option>
+                                            @foreach($categories as $category)
+                                                <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     
@@ -549,7 +614,8 @@
                         <input type="text" 
                                name="quick_questions[${questionIndex}][icon]" 
                                value="❓"
-                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                               onclick="openIconModal(this)"
+                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
                     </div>
                     
                     <!-- Pregunta -->
@@ -566,12 +632,11 @@
                     <div class="col-span-2">
                         <select name="quick_questions[${questionIndex}][category]" 
                                 class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                            <option value="menu">Menú</option>
-                            <option value="precios">Precios</option>
-                            <option value="horarios">Horarios</option>
-                            <option value="ubicacion">Ubicación</option>
-                            <option value="contacto">Contacto</option>
-                            <option value="general" selected>General</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->slug }}" {{ $category->slug === 'general' ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
                     
@@ -770,5 +835,124 @@
             input.value = value;
             return input;
         }
+        
+        // Variables globales para el modal de iconos
+        let currentIconInput = null;
+        
+        // Funciones para el modal de iconos
+        function openIconModal(inputElement) {
+            currentIconInput = inputElement;
+            document.getElementById('iconModal').style.display = 'flex';
+        }
+        
+        function closeIconModal() {
+            document.getElementById('iconModal').style.display = 'none';
+            currentIconInput = null;
+        }
+        
+        function selectIcon(icon) {
+            if (currentIconInput) {
+                currentIconInput.value = icon;
+                closeIconModal();
+            }
+        }
+        
+        // Cerrar modal al hacer click fuera
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('iconModal');
+            if (event.target === modal) {
+                closeIconModal();
+            }
+        });
     </script>
+
+    <!-- Modal de selección de iconos -->
+    <div id="iconModal" class="icon-modal">
+        <div class="icon-modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-white">Seleccionar Icono</h3>
+                <button onclick="closeIconModal()" class="text-white hover:text-gray-300 text-2xl">&times;</button>
+            </div>
+            
+            <div class="icon-grid" id="iconGrid">
+                <!-- Menú y comida -->
+                <div class="icon-option" onclick="selectIcon('📋')">📋</div>
+                <div class="icon-option" onclick="selectIcon('🍽️')">🍽️</div>
+                <div class="icon-option" onclick="selectIcon('🍴')">🍴</div>
+                <div class="icon-option" onclick="selectIcon('🥘')">🥘</div>
+                <div class="icon-option" onclick="selectIcon('🍳')">🍳</div>
+                <div class="icon-option" onclick="selectIcon('🥗')">🥗</div>
+                <div class="icon-option" onclick="selectIcon('🥙')">🥙</div>
+                <div class="icon-option" onclick="selectIcon('🌯')">🌯</div>
+                
+                <!-- Platos específicos -->
+                <div class="icon-option" onclick="selectIcon('🍕')">🍕</div>
+                <div class="icon-option" onclick="selectIcon('🍔')">🍔</div>
+                <div class="icon-option" onclick="selectIcon('🌮')">🌮</div>
+                <div class="icon-option" onclick="selectIcon('🍜')">🍜</div>
+                <div class="icon-option" onclick="selectIcon('🍲')">🍲</div>
+                <div class="icon-option" onclick="selectIcon('🍱')">🍱</div>
+                <div class="icon-option" onclick="selectIcon('🥟')">🥟</div>
+                <div class="icon-option" onclick="selectIcon('🍤')">🍤</div>
+                
+                <!-- Bebidas -->
+                <div class="icon-option" onclick="selectIcon('🍺')">🍺</div>
+                <div class="icon-option" onclick="selectIcon('🍻')">🍻</div>
+                <div class="icon-option" onclick="selectIcon('🍷')">🍷</div>
+                <div class="icon-option" onclick="selectIcon('🥂')">🥂</div>
+                <div class="icon-option" onclick="selectIcon('🍸')">🍸</div>
+                <div class="icon-option" onclick="selectIcon('🥃')">🥃</div>
+                <div class="icon-option" onclick="selectIcon('☕')">☕</div>
+                <div class="icon-option" onclick="selectIcon('🥤')">🥤</div>
+                
+                <!-- Postres y snacks -->
+                <div class="icon-option" onclick="selectIcon('🍰')">🍰</div>
+                <div class="icon-option" onclick="selectIcon('🧁')">🧁</div>
+                <div class="icon-option" onclick="selectIcon('🍪')">🍪</div>
+                <div class="icon-option" onclick="selectIcon('🍩')">🍩</div>
+                <div class="icon-option" onclick="selectIcon('🍫')">🍫</div>
+                <div class="icon-option" onclick="selectIcon('🍭')">🍭</div>
+                <div class="icon-option" onclick="selectIcon('🍬')">🍬</div>
+                <div class="icon-option" onclick="selectIcon('🍯')">🍯</div>
+                
+                <!-- Precios y pagos -->
+                <div class="icon-option" onclick="selectIcon('💰')">💰</div>
+                <div class="icon-option" onclick="selectIcon('💵')">💵</div>
+                <div class="icon-option" onclick="selectIcon('💳')">💳</div>
+                <div class="icon-option" onclick="selectIcon('💸')">💸</div>
+                <div class="icon-option" onclick="selectIcon('💴')">💴</div>
+                <div class="icon-option" onclick="selectIcon('🏷️')">🏷️</div>
+                
+                <!-- Promociones y descuentos -->
+                <div class="icon-option" onclick="selectIcon('🎯')">🎯</div>
+                <div class="icon-option" onclick="selectIcon('🎪')">🎪</div>
+                <div class="icon-option" onclick="selectIcon('🎊')">🎊</div>
+                <div class="icon-option" onclick="selectIcon('🎉')">🎉</div>
+                <div class="icon-option" onclick="selectIcon('🏆')">🏆</div>
+                <div class="icon-option" onclick="selectIcon('🥇')">🥇</div>
+                <div class="icon-option" onclick="selectIcon('⭐')">⭐</div>
+                <div class="icon-option" onclick="selectIcon('🔥')">🔥</div>
+                
+                <!-- Horarios y ubicación -->
+                <div class="icon-option" onclick="selectIcon('🕐')">🕐</div>
+                <div class="icon-option" onclick="selectIcon('⏰')">⏰</div>
+                <div class="icon-option" onclick="selectIcon('📅')">📅</div>
+                <div class="icon-option" onclick="selectIcon('📍')">📍</div>
+                <div class="icon-option" onclick="selectIcon('🏪')">🏪</div>
+                <div class="icon-option" onclick="selectIcon('🏬')">🏬</div>
+                
+                <!-- Contacto -->
+                <div class="icon-option" onclick="selectIcon('📞')">📞</div>
+                <div class="icon-option" onclick="selectIcon('📱')">📱</div>
+                <div class="icon-option" onclick="selectIcon('✉️')">✉️</div>
+                <div class="icon-option" onclick="selectIcon('💬')">💬</div>
+                
+                <!-- General -->
+                <div class="icon-option" onclick="selectIcon('❓')">❓</div>
+                <div class="icon-option" onclick="selectIcon('💡')">💡</div>
+                <div class="icon-option" onclick="selectIcon('❤️')">❤️</div>
+                <div class="icon-option" onclick="selectIcon('👍')">👍</div>
+            </div>
+        </div>
+    </div>
 </x-app-layout>
