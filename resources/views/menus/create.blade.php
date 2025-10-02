@@ -12,6 +12,13 @@
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 51, 234, 0.4) 100%) !important;
         }
         
+        /* Espaciado personalizado para alineación perfecta */
+        .space-y-custom > :not([hidden]) ~ :not([hidden]) {
+            --tw-space-y-reverse: 0 !important;
+            margin-top: calc(1.0rem * calc(1 - var(--tw-space-y-reverse))) !important;
+            margin-bottom: calc(1.0rem * var(--tw-space-y-reverse)) !important;
+        }
+        
         /* Modal de iconos */
         .icon-modal {
             position: fixed;
@@ -333,7 +340,7 @@
                             <h3 class="text-xl font-semibold text-text-primary">Chatbot</h3>
                         </div>
                         
-                        <div class="space-y-6">
+                        <div class="space-y-custom">
                             <!-- Nombre del Chatbot -->
                             <div>
                                 <label for="chatbot_name" class="block text-sm font-medium text-text-secondary mb-3">
@@ -360,7 +367,7 @@
                             </div>
                             
                             <!-- Configuraciones -->
-                            <div class="space-y-4">
+                            <div class="space-y-3">
                                 <div class="flex items-center">
                                     <input type="checkbox" 
                                            id="enable_ai_responses" 
@@ -512,7 +519,7 @@
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
-                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto" style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;">
+                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto min-h-[500px] flex flex-col" style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;">
                             <!-- Header del comercio -->
                             <div class="flex items-center mb-4">
                                 @if($comercio->logo_url)
@@ -539,7 +546,7 @@
                             </div>
                             
                             <!-- Mensajes de ejemplo -->
-                            <div class="space-y-3 mb-4">
+                            <div class="space-y-3 mb-4 flex-grow">
                                 <div class="bg-secondary-dark rounded-lg p-3">
                                     <p class="text-text-secondary text-xs" id="preview-welcome-message">
                                         {{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual...' }}
@@ -553,10 +560,27 @@
                                 <div class="bg-secondary-dark rounded-lg p-3">
                                     <p class="text-text-secondary text-xs">Tenemos una variedad de platos deliciosos...</p>
                                 </div>
+                                <!-- Mensajes adicionales para llenar espacio -->
+                                <div class="flex justify-end">
+                                    <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
+                                        <p class="text-white text-xs">¿Cuáles son los precios?</p>
+                                    </div>
+                                </div>
+                                <div class="bg-secondary-dark rounded-lg p-3">
+                                    <p class="text-text-secondary text-xs">Los precios van desde $50 hasta $115, dependiendo del plato...</p>
+                                </div>
+                                <div class="flex justify-end">
+                                    <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
+                                        <p class="text-white text-xs">¿Tienen opciones vegetarianas?</p>
+                                    </div>
+                                </div>
+                                <div class="bg-secondary-dark rounded-lg p-3">
+                                    <p class="text-text-secondary text-xs">Sí, tenemos varias opciones vegetarianas disponibles...</p>
+                                </div>
                             </div>
                             
                             <!-- Input del chat -->
-                            <div class="flex">
+                            <div class="flex mt-auto">
                                 <input type="text" 
                                        placeholder="Escribe tu mensaje..." 
                                        class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-xs placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
@@ -568,6 +592,127 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 📋 Contenido Extraído del Menú - Sección de ancho completo -->
+            @if($menu && $menu->procesado && ($menu->texto_extraido || $menu->contexto_gpt))
+                <div class="mt-12">
+                    <div class="metric-card">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                <span class="text-white text-lg">📋</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
+                        </div>
+                        
+                        @php
+                            // Obtener el contenido JSON desde contexto_gpt o texto_extraido
+                            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+                            
+                            // Limpiar el contenido: remover ```json y ``` si están presentes
+                            $jsonContent = $rawContent;
+                            if (strpos($jsonContent, '```json') !== false) {
+                                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+                            }
+                            
+                            // Decodificar el JSON
+                            $contenido = json_decode(trim($jsonContent), true);
+                        @endphp
+                        
+                        @if($contenido && is_array($contenido))
+                            <div class="space-y-6">
+                                <!-- Categorías y platos -->
+                                @if(isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos']))
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        @foreach($contenido['categorías_de_platos'] as $categoria => $platos)
+                                            <div class="bg-secondary-dark rounded-lg p-6">
+                                                <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
+                                                    {{ $categoria }}
+                                                </h4>
+                                                <div class="space-y-3">
+                                                    @if(is_array($platos))
+                                                        @foreach($platos as $plato)
+                                                            <div class="flex justify-between items-center py-2 border-b border-accent-gray last:border-b-0">
+                                                                <span class="text-text-secondary font-medium">
+                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
+                                                                </span>
+                                                                <span class="text-accent-blue font-bold">
+                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
+                                                                </span>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-center py-8">
+                                        <p class="text-text-secondary">No se encontraron categorías de platos en el menú procesado.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <!-- Fallback: mostrar JSON si no se puede parsear -->
+                            <div class="bg-secondary-dark rounded-lg p-6">
+                                <pre class="whitespace-pre-wrap text-sm text-text-secondary">{{ $rawContent }}</pre>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @elseif($menu && $menu->procesado)
+                <div class="mt-12">
+                    <div class="metric-card">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                <span class="text-white text-lg">📋</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
+                        </div>
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span class="text-text-secondary text-2xl">📄</span>
+                            </div>
+                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay contenido procesado</h4>
+                            <p class="text-text-secondary">El menú fue procesado pero no se extrajo contenido estructurado.</p>
+                        </div>
+                    </div>
+                </div>
+            @elseif($menu)
+                <div class="mt-12">
+                    <div class="metric-card">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                <span class="text-white text-lg">📋</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
+                        </div>
+                        <div class="text-center py-12">
+                            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-accent-blue mx-auto mb-6"></div>
+                            <h4 class="text-xl font-medium text-text-primary mb-3">Procesando menú...</h4>
+                            <p class="text-text-secondary">El menú se está procesando automáticamente. Vuelve más tarde para ver el contenido extraído.</p>
+                        </div>
+                    </div>
+                </div>
+            @else
+                <div class="mt-12">
+                    <div class="metric-card">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                <span class="text-white text-lg">📋</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
+                        </div>
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span class="text-text-secondary text-2xl">📝</span>
+                            </div>
+                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay menú cargado</h4>
+                            <p class="text-text-secondary">Sube un archivo de menú para ver el contenido extraído aquí.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <!-- Preguntas Frecuentes - Sección de ancho completo -->
             <div class="mt-12">
