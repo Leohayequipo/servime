@@ -134,8 +134,9 @@ class MenuController extends Controller
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',
             'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
-            'formato' => 'required|in:pdf,image'
+            'formato' => 'nullable|in:pdf,image'
         ]);
+        
 
         // Si se sube un nuevo archivo
         if ($request->hasFile('archivo')) {
@@ -149,8 +150,13 @@ class MenuController extends Controller
         }
 
         $menu->nombre = $request->nombre;
-        $menu->formato = $validated['formato'];
-        $menu->procesado = false; // Marcar como no procesado si se actualiza
+        
+        // Solo actualizar formato si se envía
+        if ($request->has('formato') && $request->formato) {
+            $menu->formato = $validated['formato'];
+            $menu->procesado = false; // Marcar como no procesado si se actualiza
+        }
+        
         $menu->save();
 
         // Reprocesar con OpenAI

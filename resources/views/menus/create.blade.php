@@ -332,16 +332,6 @@
                             </div>
 
                             <!-- Botones de Subir Menú -->
-                            <div class="flex items-center justify-end space-x-4">
-                                <a href="{{ route('menus.index', $comercio) }}" 
-                                   class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                                    Cancelar
-                                </a>
-                                <button type="submit" 
-                                        class="btn-primary text-lg px-6 py-3 rounded-xl">
-                                    📋 Actualizar Menú
-                                </button>
-                            </div>
                         </form>
                     </div>
 
@@ -643,9 +633,21 @@
                                 @endif
                                 
                                 <!-- Categorías y platos -->
-                                @if(isset($contenido['categorias']) && is_array($contenido['categorias']))
+                                @php
+                                    // Buscar categorías en diferentes formatos
+                                    $categorias = null;
+                                    if (isset($contenido['categorías']) && is_array($contenido['categorías'])) {
+                                        $categorias = $contenido['categorías'];
+                                    } elseif (isset($contenido['categorias']) && is_array($contenido['categorias'])) {
+                                        $categorias = $contenido['categorias'];
+                                    } elseif (isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos'])) {
+                                        $categorias = $contenido['categorías_de_platos'];
+                                    }
+                                @endphp
+                                
+                                @if($categorias)
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        @foreach($contenido['categorias'] as $categoria => $platos)
+                                        @foreach($categorias as $categoria => $platos)
                                             <div class="bg-secondary-dark rounded-lg p-6">
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
                                                     {{ $categoria }}
@@ -872,12 +874,13 @@
                 </div>
             </div>
 
-            <!-- Botón Guardar Personalización -->
-            <div class="flex justify-center mt-12">
+            <!-- Botón Flotante Guardar Cambios -->
+            <div class="fixed bottom-6 right-6 z-50">
                 <button type="button" 
                         onclick="saveCustomization()"
-                        class="btn-primary text-lg px-8 py-4 rounded-xl">
-                    💾 Guardar Personalización
+                        class="btn-primary text-lg px-6 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2">
+                    <span>💾</span>
+                    <span>Guardar Cambios</span>
                 </button>
             </div>
         </div>
@@ -1162,7 +1165,15 @@
 
         // Función para guardar personalización
         function saveCustomization() {
-            // Crear formulario temporal para enviar POST
+            // Primero, enviar el formulario del menú directamente
+            const menuForm = document.querySelector('form[action*="menus"]');
+            if (menuForm) {
+                // Simplemente enviar el formulario original
+                menuForm.submit();
+                return;
+            }
+            
+            // Crear formulario temporal para enviar POST de personalización
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route("comercios.update", $comercio) }}';

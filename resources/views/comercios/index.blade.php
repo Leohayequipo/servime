@@ -150,11 +150,6 @@
                     </div>
                     <h3 class="text-3xl font-bold text-text-primary mb-4">No tienes comercios aún</h3>
                     <p class="text-xl text-text-secondary mb-8">Crea tu primer comercio para comenzar a gestionar menús digitales</p>
-                    <a href="{{ route('comercios.create') }}" 
-                       class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
-                        <span class="mr-2">➕</span>
-                        Crear mi primer comercio
-                    </a>
                 </div>
             @endif
         </div>
