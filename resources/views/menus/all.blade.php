@@ -22,7 +22,13 @@
                                     <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
                                         <img src="{{ asset('storage/' . $menu->comercio->logo_url) }}" alt="Logo de {{ $menu->comercio->nombre }}" class="w-full h-full object-cover">
                                     </div>
-                                @elseif($menu->archivo_original && $menu->formato !== 'pdf')
+                                @else
+                                    <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
+                                        <img src="{{ asset('images/logo_empresa_default.png') }}" alt="Logo por defecto de {{ $menu->comercio->nombre }}" class="w-full h-full object-cover">
+                                    </div>
+                                @endif
+                                
+                                @if($menu->archivo_original && $menu->formato !== 'pdf')
                                     <div class="w-full h-32 mb-4 rounded-lg overflow-hidden shadow-lg">
                                         <img src="{{ asset('storage/' . $menu->archivo_original) }}" alt="Menú de {{ $menu->comercio->nombre }}" class="w-full h-full object-cover">
                                     </div>

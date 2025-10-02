@@ -9,6 +9,10 @@
                         <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
                              alt="{{ $comercio->nombre }}" 
                              class="w-12 h-12 rounded-full object-cover mr-4">
+                    @else
+                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                             alt="Logo por defecto de {{ $comercio->nombre }}" 
+                             class="w-12 h-12 rounded-full object-cover mr-4">
                     @endif
                     <div>
                         <h1 class="text-5xl font-bold text-text-primary mb-2">
@@ -64,9 +68,9 @@
                                          alt="Logo de {{ $comercio->nombre }}" 
                                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                 @else
-                                    <div class="w-full h-full bg-gradient-to-br from-accent-blue to-accent-green flex items-center justify-center">
-                                        <span class="text-6xl">📋</span>
-                                    </div>
+                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                 @endif
                                 
                                 <!-- Estado del procesamiento -->

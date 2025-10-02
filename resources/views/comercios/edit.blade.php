@@ -340,6 +340,10 @@
                                         <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                              alt="{{ $comercio->nombre }}" 
                                              class="w-8 h-8 rounded-full object-cover mr-3">
+                                    @else
+                                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                             alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                             class="w-8 h-8 rounded-full object-cover mr-3">
                                     @endif
                         <div>
                                         <h4 class="text-text-primary font-semibold text-sm">{{ $comercio->nombre }}</h4>

@@ -90,15 +90,11 @@
                                          style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;"
                                          onload="console.log('Image loaded successfully:', this.src);">
                                 @else
-                                    <!-- Placeholder cuando no hay logo -->
-                                    <div class="w-full h-full flex items-center justify-center">
-                                        <div class="text-center">
-                                            <div class="w-16 h-16 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center mx-auto mb-4 neon-glow">
-                                                <span class="text-3xl">🏪</span>
-                                            </div>
-                                            <p class="text-text-secondary text-sm">{{ $comercio->nombre }}</p>
-                                        </div>
-                                    </div>
+                                    <!-- Logo por defecto cuando no hay logo -->
+                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;">
                                 @endif
                                 <div class="edit-button-container" style="position: absolute; top: 1rem; right: 1rem;">
                                     <a href="{{ route('comercios.edit', $comercio) }}" 
