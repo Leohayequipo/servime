@@ -111,31 +111,24 @@
                                 
                                 <!-- Botones de acción -->
                                 <div class="space-y-3">
-                                    <a href="{{ route('menus.show', [$comercio, $menu]) }}" 
+                                    <a href="{{ route('menus.edit', [$comercio, $menu]) }}" 
                                        class="w-full btn-primary text-center block">
-                                        <span class="mr-2">👁️</span>
-                                        Ver Detalles
+                                        <span class="mr-2">✏️</span>
+                                        Editar Menú
                                         <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                                     </a>
                                     
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <a href="{{ route('menus.edit', [$comercio, $menu]) }}" 
-                                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                            <span class="mr-1">✏️</span>
-                                            Editar
-                                        </a>
-                                        <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
-                                              onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
-                                              class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                                <span class="mr-1">🗑️</span>
-                                                Eliminar
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
+                                          onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
+                                          class="w-full">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
+                                            <span class="mr-1">🗑️</span>
+                                            Eliminar
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>

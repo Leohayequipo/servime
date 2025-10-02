@@ -91,13 +91,15 @@ class MenuController extends Controller
 
     /**
      * Display the specified resource.
+     * Redirige a la página de edición ya que la funcionalidad está integrada ahí.
      */
     public function show($comercioId, $menuId)
     {
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
         $menu = $comercio->menus()->findOrFail($menuId);
         
-        return view('menus.show', compact('comercio', 'menu'));
+        // Redirigir a la página de edición donde está integrada toda la funcionalidad
+        return redirect()->route('menus.edit', [$comercio, $menu]);
     }
 
     /**
