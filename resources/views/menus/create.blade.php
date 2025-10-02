@@ -216,6 +216,20 @@
                                 @endif
                             </div>
 
+                            <!-- Nombre del Menú -->
+                            <div>
+                                <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
+                                    Nombre del Menú
+                                </label>
+                                <input type="text" 
+                                       id="nombre" 
+                                       name="nombre"
+                                       value="{{ $menu->nombre ?? '' }}"
+                                       placeholder="Ej: Menú Principal, Menú de Temporada, etc."
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
+                            </div>
+
                             <!-- Menú Actual (solo en edición) -->
                             @if($isEdit && $menu && $menu->archivo_original)
                                 <div class="bg-secondary-dark border border-accent-gray rounded-xl p-5 mb-6">
@@ -621,8 +635,40 @@
                         
                         @if($contenido && is_array($contenido))
                             <div class="space-y-6">
+                                <!-- Información del restaurante -->
+                                @if(isset($contenido['nombre_del_restaurante']) && $contenido['nombre_del_restaurante'] !== 'No especificado')
+                                    <div class="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-lg p-4">
+                                        <h3 class="text-lg font-semibold text-blue-300 mb-2">🏪 {{ $contenido['nombre_del_restaurante'] }}</h3>
+                                    </div>
+                                @endif
+                                
                                 <!-- Categorías y platos -->
-                                @if(isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos']))
+                                @if(isset($contenido['categorias']) && is_array($contenido['categorias']))
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        @foreach($contenido['categorias'] as $categoria => $platos)
+                                            <div class="bg-secondary-dark rounded-lg p-6">
+                                                <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
+                                                    {{ $categoria }}
+                                                </h4>
+                                                <div class="space-y-3">
+                                                    @if(is_array($platos))
+                                                        @foreach($platos as $plato)
+                                                            <div class="flex justify-between items-center py-2 border-b border-accent-gray last:border-b-0">
+                                                                <span class="text-text-secondary font-medium">
+                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
+                                                                </span>
+                                                                <span class="text-accent-blue font-bold">
+                                                                    ${{ $plato['precio'] ?? 'Sin precio' }}
+                                                                </span>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @elseif(isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos']))
+                                    <!-- Fallback para la estructura anterior -->
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         @foreach($contenido['categorías_de_platos'] as $categoria => $platos)
                                             <div class="bg-secondary-dark rounded-lg p-6">
@@ -637,7 +683,7 @@
                                                                     {{ $plato['nombre'] ?? 'Sin nombre' }}
                                                                 </span>
                                                                 <span class="text-accent-blue font-bold">
-                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
+                                                                    ${{ $plato['precio'] ?? 'Sin precio' }}
                                                                 </span>
                                                             </div>
                                                         @endforeach
@@ -649,6 +695,15 @@
                                 @else
                                     <div class="text-center py-8">
                                         <p class="text-text-secondary">No se encontraron categorías de platos en el menú procesado.</p>
+                                        <p class="text-text-secondary text-sm mt-2">Claves disponibles: {{ implode(', ', array_keys($contenido)) }}</p>
+                                    </div>
+                                @endif
+                                
+                                <!-- Información adicional -->
+                                @if(isset($contenido['informacion_adicional']) && !empty($contenido['informacion_adicional']))
+                                    <div class="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg p-4">
+                                        <h4 class="text-lg font-semibold text-green-300 mb-2">ℹ️ Información Adicional</h4>
+                                        <p class="text-green-200">{{ $contenido['informacion_adicional'] }}</p>
                                     </div>
                                 @endif
                             </div>

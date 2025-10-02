@@ -54,6 +54,7 @@ class MenuController extends Controller
         $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
         
         $validated = $request->validate([
+            'nombre' => 'nullable|string|max:255',
             'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB max
         ]);
 
@@ -63,6 +64,7 @@ class MenuController extends Controller
         // Crear menú
         $menu = new Menu();
         $menu->comercio_id = $comercio->id;
+        $menu->nombre = $request->nombre;
         $menu->archivo_original = $archivoPath;
         
         // Detectar formato automáticamente
@@ -124,6 +126,7 @@ class MenuController extends Controller
         $menu = $comercio->menus()->findOrFail($menuId);
         
         $validated = $request->validate([
+            'nombre' => 'nullable|string|max:255',
             'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
             'formato' => 'required|in:pdf,image'
         ]);
@@ -139,6 +142,7 @@ class MenuController extends Controller
             $menu->archivo_original = $archivoPath;
         }
 
+        $menu->nombre = $request->nombre;
         $menu->formato = $validated['formato'];
         $menu->procesado = false; // Marcar como no procesado si se actualiza
         $menu->save();
