@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
     Route::put('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
+    Route::post('/comercios/{comercio}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
     
     // Rutas de personalización (ahora integradas en editar)
     Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');

@@ -72,6 +72,12 @@ class MenuController extends Controller
         $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
         
         $menu->procesado = false;
+        
+        // Si es el primer menú del comercio, marcarlo como activo
+        if ($comercio->menus()->count() === 0) {
+            $menu->activo = true;
+        }
+        
         $menu->save();
 
         // Procesar con OpenAI
@@ -177,5 +183,23 @@ class MenuController extends Controller
         
         return redirect()->route('menus.index', $comercio)
             ->with('success', 'Menú eliminado exitosamente.');
+    }
+
+    /**
+     * Activar un menú (desactivar otros del mismo comercio)
+     */
+    public function activar($comercioId, $menuId)
+    {
+        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
+        $menu = $comercio->menus()->findOrFail($menuId);
+        
+        // Desactivar todos los menús del comercio
+        $comercio->menus()->update(['activo' => false]);
+        
+        // Activar el menú seleccionado
+        $menu->update(['activo' => true]);
+        
+        return redirect()->route('menus.index', $comercio)
+            ->with('success', 'Menú activado exitosamente.');
     }
 }

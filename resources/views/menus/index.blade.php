@@ -86,9 +86,17 @@
                             <!-- Contenido de la tarjeta -->
                             <div class="p-6">
                                 <div class="mb-4">
-                                    <h3 class="text-xl font-bold text-text-primary mb-2 group-hover:text-accent-blue transition-colors duration-300">
-                                        {{ $menu->nombre ?? 'Menú sin nombre' }}
-                                    </h3>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="text-xl font-bold text-text-primary group-hover:text-accent-blue transition-colors duration-300">
+                                            {{ $menu->nombre ?? 'Menú sin nombre' }}
+                                        </h3>
+                                        @if($menu->activo)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                                Activo
+                                            </span>
+                                        @endif
+                                    </div>
                                     
                                     @if($menu->descripcion)
                                         <p class="text-text-secondary text-sm line-clamp-2">{{ $menu->descripcion }}</p>
@@ -118,17 +126,30 @@
                                         <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                                     </a>
                                     
-                                    <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
-                                          onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
-                                          class="w-full">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                            <span class="mr-1">🗑️</span>
-                                            Eliminar
-                                        </button>
-                                    </form>
+                                    <div class="space-y-2">
+                                        @if(!$menu->activo)
+                                            <form method="POST" action="{{ route('menus.activar', [$comercio, $menu]) }}" class="w-full">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm">
+                                                    <span class="mr-1">⭐</span>
+                                                    Activar Menú
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
+                                              onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
+                                              class="w-full">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
+                                                <span class="mr-1">🗑️</span>
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>

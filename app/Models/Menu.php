@@ -13,11 +13,13 @@ class Menu extends Model
         'texto_extraido',
         'contexto_gpt',
         'formato',
-        'procesado'
+        'procesado',
+        'activo'
     ];
 
     protected $casts = [
-        'procesado' => 'boolean'
+        'procesado' => 'boolean',
+        'activo' => 'boolean'
     ];
 
     public function comercio()
