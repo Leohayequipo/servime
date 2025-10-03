@@ -10,6 +10,8 @@
 - 🧠 **Procesamiento de IA** - Extracción automática de contenido de menús
 - 🎨 **Branding personalizado** - Logo y colores del comercio
 - 📊 **Panel de administración** - Gestión completa de menús y comercios
+- 🔄 **Sistema de activación** - Solo un menú activo por comercio
+- 💾 **Guardado inteligente** - Botón flotante para guardar cambios
 
 ## 🚀 Funcionalidades Implementadas
 
@@ -25,7 +27,16 @@
 - Interfaz de chat optimizada
 - Procesamiento en tiempo real
 
-### 🔄 **FASE 3: Análisis y Métricas** (En desarrollo)
+### ✅ **FASE 3: Gestión Avanzada de Menús**
+- Sistema de activación de menús (uno activo por comercio)
+- Indicadores visuales de menú activo
+- Botón flotante "Guardar Cambios"
+- Mensajes de éxito/error modernos
+- Logo por defecto para comercios sin logo
+- Campo de nombre para menús
+- Integración de "Contenido Extraído" en create/edit
+
+### 🔄 **FASE 4: Análisis y Métricas** (En desarrollo)
 - Historial de conversaciones
 - Preguntas más frecuentes
 - Estadísticas de uso
@@ -70,7 +81,7 @@ DB_PASSWORD=
 ### 5. Configurar OpenAI
 ```env
 OPENAI_API_KEY=tu_api_key_aqui
-OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### 6. Ejecutar migraciones
@@ -87,11 +98,13 @@ php artisan serve
 ## 📱 Uso del Sistema
 
 ### **Para Administradores:**
-1. **Crear comercio** - Registrar restaurante/bar
-2. **Subir menús** - PDF o imágenes
-3. **Procesar con IA** - Extracción automática de contenido
-4. **Generar QR** - Código para acceso público
-5. **Ver métricas** - Estadísticas de uso
+1. **Crear comercio** - Registrar restaurante/bar con logo personalizado
+2. **Subir menús** - PDF o imágenes con nombre personalizado
+3. **Activar menús** - Solo un menú activo por comercio
+4. **Procesar con IA** - Extracción automática de contenido
+5. **Generar QR** - Código para acceso público
+6. **Personalizar chatbot** - Colores, FAQ, configuraciones
+7. **Ver métricas** - Estadísticas de uso
 
 ### **Para Clientes:**
 1. **Escanear QR** - Acceso directo al menú
@@ -112,6 +125,12 @@ php artisan serve --host=TU_IP_LOCAL --port=8000
 - Hacer clic en "Generar QR"
 - Descargar código QR
 
+### **Gestión de Menús:**
+- **Crear menú**: Subir archivo + nombre personalizado
+- **Activar menú**: Hacer clic en "⭐ Activar Menú"
+- **Editar menú**: Modificar nombre, archivo, personalización
+- **Guardar cambios**: Botón flotante azul en esquina inferior derecha
+
 ## 📊 Estructura del Proyecto
 
 ```
@@ -123,7 +142,7 @@ app/
 │   └── ChatbotController.php
 ├── Models/
 │   ├── Comercio.php
-│   ├── Menu.php
+│   ├── Menu.php (con campos: nombre, activo)
 │   └── User.php
 └── Services/
     ├── MenuProcessorService.php
@@ -131,10 +150,40 @@ app/
 
 resources/views/
 ├── comercios/
+│   ├── index.blade.php (con mensajes modernos)
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── customize.blade.php
 ├── menus/
+│   ├── index.blade.php (con indicadores de activo)
+│   ├── create.blade.php (con botón flotante)
+│   ├── edit.blade.php (integrado con contenido extraído)
+│   └── all.blade.php
 └── menu/
     └── public.blade.php
+
+database/migrations/
+├── add_nombre_to_menus_table.php
+└── add_activo_to_menus_table.php
 ```
+
+## 🎨 Características de UI/UX
+
+### **Mensajes Modernos:**
+- Animaciones CSS personalizadas
+- Gradientes y efectos glassmorphism
+- Indicadores de progreso animados
+- Diseño responsivo
+
+### **Botón Flotante:**
+- Posición fija en esquina inferior derecha
+- Efectos hover y transformaciones
+- Guarda todos los cambios del formulario
+
+### **Indicadores Visuales:**
+- Badge verde para menú activo
+- Botón "⭐ Activar Menú" para menús inactivos
+- Logo por defecto cuando no hay logo personalizado
 
 ## 🎯 Próximas Funcionalidades
 
@@ -143,6 +192,7 @@ resources/views/
 - **Integración WhatsApp** - Chat directo
 - **Análisis avanzado** - Métricas de conversación
 - **Temas personalizados** - Branding específico
+- **Procesamiento de PDFs** - Mejoras en extracción de texto
 
 ## 🤝 Contribución
 
