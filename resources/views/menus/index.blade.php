@@ -33,6 +33,62 @@
                 </div>
             </div>
 
+            <!-- Success Messages -->
+            @if(session('success'))
+                <div class="mb-8 animate-fade-in-down">
+                    <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                        <!-- Animated background -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
+                        
+                        <div class="relative flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                                    <span class="text-white text-xl">✨</span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-lg font-bold text-green-100 mb-1">¡Éxito!</h3>
+                                <p class="text-green-200 font-medium">{{ session('success') }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-progress-bar"></div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Error Messages -->
+            @if(session('error'))
+                <div class="mb-8 animate-fade-in-down">
+                    <div class="relative overflow-hidden bg-gradient-to-r from-red-900/30 to-rose-900/30 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                        <!-- Animated background -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-rose-500/10 animate-pulse"></div>
+                        
+                        <div class="relative flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg animate-shake">
+                                    <span class="text-white text-xl">⚠️</span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-lg font-bold text-red-100 mb-1">Error</h3>
+                                <p class="text-red-200 font-medium">{{ session('error') }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-red-500 to-rose-500 rounded-full animate-progress-bar"></div>
+                    </div>
+                </div>
+            @endif
+
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-4 mb-8">
                 <a href="{{ route('menus.create', $comercio) }}" 
