@@ -134,8 +134,18 @@ class MenuController extends Controller
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',
             'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
-            'formato' => 'nullable|in:pdf,image'
+            'formato' => 'nullable|in:pdf,image',
+            // Campos del chatbot
+            'chatbot_name' => 'nullable|string|max:50',
+            'welcome_message' => 'nullable|string|max:500',
+            // Campos de colores
+            'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/'
         ]);
+
+
         
 
         // Si se sube un nuevo archivo
@@ -147,6 +157,11 @@ class MenuController extends Controller
             
             $archivoPath = $request->file('archivo')->store('menus', 'public');
             $menu->archivo_original = $archivoPath;
+            
+            // Detectar formato automáticamente
+            $extension = $request->file('archivo')->getClientOriginalExtension();
+            $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
+            $menu->procesado = false; // Marcar como no procesado
         }
 
         $menu->nombre = $request->nombre;
@@ -158,6 +173,51 @@ class MenuController extends Controller
         }
         
         $menu->save();
+
+        // Actualizar campos del chatbot y colores en el comercio
+        $needsUpdate = false;
+        
+        // Campos del chatbot
+        if ($request->has('chatbot_name')) {
+            $comercio->chatbot_name = $request->chatbot_name;
+            $needsUpdate = true;
+        }
+        if ($request->has('welcome_message')) {
+            $comercio->welcome_message = $request->welcome_message;
+            $needsUpdate = true;
+        }
+        
+        // Campos de colores
+        if ($request->has('primary_color')) {
+            $comercio->primary_color = $request->primary_color;
+            $needsUpdate = true;
+        }
+        if ($request->has('secondary_color')) {
+            $comercio->secondary_color = $request->secondary_color;
+            $needsUpdate = true;
+        }
+        if ($request->has('accent_color')) {
+            $comercio->accent_color = $request->accent_color;
+            $needsUpdate = true;
+        }
+        if ($request->has('background_color')) {
+            $comercio->background_color = $request->background_color;
+            $needsUpdate = true;
+        }
+        
+        if ($needsUpdate) {
+            \Log::info('Actualizando campos del comercio', [
+                'chatbot_name' => $request->input('chatbot_name'),
+                'welcome_message' => $request->input('welcome_message'),
+                'primary_color' => $request->input('primary_color'),
+                'secondary_color' => $request->input('secondary_color'),
+                'accent_color' => $request->input('accent_color'),
+                'background_color' => $request->input('background_color')
+            ]);
+            
+            $comercio->save();
+            \Log::info('Campos del comercio guardados exitosamente');
+        }
 
         // Reprocesar con OpenAI
         $processor = new MenuProcessorService();

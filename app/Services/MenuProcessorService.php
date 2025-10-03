@@ -14,7 +14,7 @@ class MenuProcessorService
     public function __construct()
     {
         $this->openaiApiKey = env('OPENAI_API_KEY');
-        $this->openaiModel = env('OPENAI_MODEL', 'gpt-3.5-turbo');
+        $this->openaiModel = env('OPENAI_MODEL', 'gpt-4o-mini');
     }
 
     /**

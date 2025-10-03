@@ -206,7 +206,19 @@
                             @csrf
                             @if($isEdit)
                                 @method('PUT')
+                <!-- Campo oculto para mantener el formato actual -->
+                <input type="hidden" name="formato" value="{{ $menu->formato }}">
                             @endif
+            
+            <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
+            <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
+            <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
+            
+            <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
+            <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
+            <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
+            <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
+            <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
                             
                             <!-- Información del Comercio -->
                             <div class="bg-secondary-dark p-4 rounded-xl mb-6">
@@ -371,29 +383,6 @@
                             </div>
                             
                             <!-- Configuraciones -->
-                            <div class="space-y-3">
-                                <div class="flex items-center">
-                                    <input type="checkbox" 
-                                           id="enable_ai_responses" 
-                                           name="enable_ai_responses"
-                                           {{ $comercio->enable_ai_responses ? 'checked' : '' }}
-                                           class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
-                                    <label for="enable_ai_responses" class="ml-3 text-sm text-text-secondary">
-                                        Habilitar respuestas con IA
-                                    </label>
-                                </div>
-                                
-                                <div class="flex items-center">
-                                    <input type="checkbox" 
-                                           id="show_contact_info" 
-                                           name="show_contact_info"
-                                           {{ $comercio->show_contact_info ? 'checked' : '' }}
-                                           class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
-                                    <label for="show_contact_info" class="ml-3 text-sm text-text-secondary">
-                                        Mostrar información de contacto
-                                    </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -506,11 +495,6 @@
                             </div>
                         </div>
                         
-                        <!-- Campos ocultos para mantener los valores -->
-                        <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
-                        <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
-                        <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
-                        <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
                     </div>
                     
                     <!-- 👁️ Vista Previa del Tema -->
@@ -951,10 +935,18 @@
                 
                 const selectedTheme = themes[theme];
                 if (selectedTheme) {
+                    console.log('Aplicando tema:', theme, selectedTheme);
                     document.getElementById('primary_color').value = selectedTheme.primary;
                     document.getElementById('secondary_color').value = selectedTheme.secondary;
                     document.getElementById('accent_color').value = selectedTheme.accent;
                     document.getElementById('background_color').value = selectedTheme.background;
+                    
+                    console.log('Valores actualizados:', {
+                        primary: document.getElementById('primary_color').value,
+                        secondary: document.getElementById('secondary_color').value,
+                        accent: document.getElementById('accent_color').value,
+                        background: document.getElementById('background_color').value
+                    });
                     
                     updatePreview();
                 }
@@ -1169,6 +1161,29 @@
 
         // Función para guardar personalización
         function saveCustomization() {
+            // Sincronizar campos del chatbot con los campos ocultos
+            const chatbotName = document.getElementById('chatbot_name');
+            const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
+            if (chatbotName && chatbotNameHidden) {
+                chatbotNameHidden.value = chatbotName.value;
+            }
+            
+            const welcomeMessage = document.getElementById('welcome_message');
+            const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
+            if (welcomeMessage && welcomeMessageHidden) {
+                welcomeMessageHidden.value = welcomeMessage.value;
+            }
+            
+            // Los campos de colores ya están sincronizados por el JavaScript de los temas
+            
+            // Debug: verificar valores de colores antes de enviar
+            console.log('Valores de colores antes de enviar:', {
+                primary: document.getElementById('primary_color').value,
+                secondary: document.getElementById('secondary_color').value,
+                accent: document.getElementById('accent_color').value,
+                background: document.getElementById('background_color').value
+            });
+            
             // Primero, enviar el formulario del menú directamente
             const menuForm = document.querySelector('form[action*="menus"]');
             if (menuForm) {
@@ -1199,7 +1214,7 @@
             // Agregar todos los campos de personalización
             const fields = [
                 'primary_color', 'secondary_color', 'accent_color', 'background_color',
-                'chatbot_name', 'welcome_message', 'enable_ai_responses', 'show_contact_info'
+                'chatbot_name', 'welcome_message'
             ];
             
             fields.forEach(fieldName => {

@@ -157,16 +157,32 @@ class CustomizationController extends Controller
                 'quick_questions' => $generatedQuestions
             ]);
 
-            return redirect()
-                ->route('comercios.customize', $comercio)
-                ->with('success', 'Preguntas frecuentes generadas con IA exitosamente.');
+            // Redirigir a la página de edición de menús o a crear uno nuevo
+            $firstMenu = $comercio->menus()->first();
+            if ($firstMenu) {
+                return redirect()
+                    ->route('menus.edit', [$comercio, $firstMenu])
+                    ->with('success', 'Preguntas frecuentes generadas con IA exitosamente.');
+            } else {
+                return redirect()
+                    ->route('menus.create', $comercio)
+                    ->with('success', 'Preguntas frecuentes generadas con IA exitosamente.');
+            }
 
         } catch (\Exception $e) {
             \Log::error('Error generating questions with AI: ' . $e->getMessage());
             
-            return redirect()
-                ->route('comercios.customize', $comercio)
-                ->with('error', 'Error al generar preguntas con IA. Por favor, inténtalo de nuevo.');
+            // Redirigir a la página de edición de menús o a crear uno nuevo
+            $firstMenu = $comercio->menus()->first();
+            if ($firstMenu) {
+                return redirect()
+                    ->route('menus.edit', [$comercio, $firstMenu])
+                    ->with('error', 'Error al generar preguntas con IA. Por favor, inténtalo de nuevo.');
+            } else {
+                return redirect()
+                    ->route('menus.create', $comercio)
+                    ->with('error', 'Error al generar preguntas con IA. Por favor, inténtalo de nuevo.');
+            }
         }
     }
 
