@@ -124,6 +124,25 @@ class AdminController extends Controller
         return view('admin.comercios.show', compact('comercio'));
     }
 
+    public function editComercio(Comercio $comercio)
+    {
+        // Obtener categorías de preguntas como en el MenuController
+        $categories = \App\Models\QuestionCategory::active()->ordered()->get();
+        
+        // Si no hay categorías, crear una colección vacía para evitar errores
+        if ($categories->isEmpty()) {
+            $categories = collect();
+        }
+        
+        return view('comercios.edit', compact('comercio', 'categories'));
+    }
+
+    public function updateComercio(Request $request, Comercio $comercio)
+    {
+        // Redirigir al método update del ComercioController con los parámetros correctos
+        return redirect()->route('comercios.update', $comercio);
+    }
+
     /**
      * Lista de todos los menús
      */

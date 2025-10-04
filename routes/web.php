@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/comercios/create', [App\Http\Controllers\AdminController::class, 'createComercio'])->name('comercios.create');
         Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('comercios.store');
         Route::get('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
+        Route::get('/comercios/{comercio}/edit', [App\Http\Controllers\AdminController::class, 'editComercio'])->name('comercios.edit');
+        Route::put('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
         
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');

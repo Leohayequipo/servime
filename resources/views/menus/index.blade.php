@@ -22,14 +22,25 @@
                     </div>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('comercios.index') }}" 
-                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                        ← Volver
-                    </a>
-                    <a href="{{ route('comercios.edit', $comercio) }}" 
-                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                        ✏️ Editar
-                    </a>
+                    @if(auth()->user()->isSuperAdmin())
+                        <a href="{{ route('admin.comercios.index') }}" 
+                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                            ← Volver
+                        </a>
+                        <a href="{{ route('admin.comercios.edit', $comercio) }}" 
+                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                            ✏️ Editar Comercio
+                        </a>
+                    @else
+                        <a href="{{ route('comercios.index') }}" 
+                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                            ← Volver
+                        </a>
+                        <a href="{{ route('comercios.edit', $comercio) }}" 
+                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                            ✏️ Editar
+                        </a>
+                    @endif
                 </div>
             </div>
 
