@@ -129,10 +129,10 @@ class ComercioController extends Controller
         
         if ($user->isSuperAdmin()) {
             // Super Admin puede editar cualquier comercio
-            $comercio = Comercio::findOrFail($id);
+            $comercio = Comercio::with('user')->findOrFail($id);
         } else {
             // Usuario común solo puede editar sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+            $comercio = Comercio::with('user')->where('user_id', $user->id)->findOrFail($id);
         }
         
         // Obtener categorías de preguntas

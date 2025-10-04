@@ -169,11 +169,11 @@
                             <div class="space-y-4 text-sm text-text-secondary">
                                 <div class="flex items-center">
                                     <span class="w-5 h-5 mr-3 text-accent-blue">📞</span>
-                                    <span>{{ $comercio->telefono ?? 'No especificado' }}</span>
+                                    <span>{{ $comercio->user->whatsapp ?? 'No especificado' }}</span>
                                 </div>
                                 <div class="flex items-center">
                                     <span class="w-5 h-5 mr-3 text-accent-blue">✉️</span>
-                                    <span>{{ $comercio->email ?? 'No especificado' }}</span>
+                                    <span>{{ $comercio->user->email ?? 'No especificado' }}</span>
                                 </div>
                                 <div class="flex items-center">
                                     <span class="w-5 h-5 mr-3 text-accent-blue">📍</span>
