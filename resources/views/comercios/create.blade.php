@@ -1,12 +1,18 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Crear Comercio') }}
-            </h2>
-            <a href="{{ route('comercios.index') }}" class="btn-secondary">
-                {{ __('Volver') }}
-            </a>
+            <div>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                    {{ __('Crear Comercio') }}
+                </h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Crear un nuevo comercio para gestionar menús digitales</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{{ route('comercios.index') }}" 
+                   class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                    🔄 Cancelar
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -88,14 +94,13 @@
                     </div>
                 </div>
 
-                <!-- Botones de Acción -->
-                <div class="flex justify-center space-x-4">
-                    <a href="{{ route('comercios.index') }}" class="btn-secondary">
-                        {{ __('Cancelar') }}
-                    </a>
-                    <x-primary-button>
-                        {{ __('Crear Comercio') }}
-                    </x-primary-button>
+                <!-- Botón Flotante Guardar Cambios -->
+                <div class="fixed bottom-6 right-6 z-50">
+                    <button type="submit" 
+                            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-3">
+                        <span class="text-2xl">💾</span>
+                        <span>Guardar Cambios</span>
+                    </button>
                 </div>
             </form>
         </div>
