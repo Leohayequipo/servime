@@ -188,17 +188,31 @@
                                     </div>
                                     
                                     <div class="grid grid-cols-1 gap-2">
-                                        <form method="POST" action="{{ route('comercios.destroy', $comercio) }}" 
-                                              onsubmit="return confirm('¿Estás seguro de que quieres eliminar este comercio?')"
-                                              class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                                <span class="mr-1">🗑️</span>
-                                                Eliminar
-                                            </button>
-                                        </form>
+                                        @if(auth()->user()->isSuperAdmin())
+                                            <form method="POST" action="{{ route('admin.comercios.destroy', $comercio) }}" 
+                                                  onsubmit="return confirm('¿Estás seguro de que quieres eliminar este comercio?')"
+                                                  class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" 
+                                                        class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
+                                                    <span class="mr-1">🗑️</span>
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('comercios.destroy', $comercio) }}" 
+                                                  onsubmit="return confirm('¿Estás seguro de que quieres eliminar este comercio?')"
+                                                  class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" 
+                                                        class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
+                                                    <span class="mr-1">🗑️</span>
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

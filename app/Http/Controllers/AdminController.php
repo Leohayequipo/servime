@@ -298,4 +298,22 @@ class AdminController extends Controller
         $comercioController = new \App\Http\Controllers\ComercioController();
         return $comercioController->generateQuestions($request, $comercioId);
     }
+
+    /**
+     * Eliminar comercio (Super Admin)
+     */
+    public function destroyComercio(string $id)
+    {
+        $comercio = Comercio::findOrFail($id);
+        
+        // Eliminar logo del storage si existe
+        if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
+            \Storage::disk('public')->delete($comercio->logo_url);
+        }
+        
+        // Eliminar el comercio (esto también eliminará los menús asociados por la relación)
+        $comercio->delete();
+        
+        return redirect()->route('admin.comercios.index')->with('success', 'Comercio eliminado exitosamente');
+    }
 }
