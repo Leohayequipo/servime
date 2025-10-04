@@ -68,14 +68,16 @@
                 </div>
             @endif
 
-            <!-- Create Button -->
-            <div class="text-center mb-12">
-                <a href="{{ route('comercios.create') }}" 
-                   class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
-                    <span class="mr-2">➕</span>
-                    Crear Comercio
-            </a>
-        </div>
+            <!-- Create Button (Solo para Super Admin o usuarios sin comercio) -->
+            @if(auth()->user()->isSuperAdmin() || $comercios->count() === 0)
+                <div class="text-center mb-12">
+                    <a href="{{ route('comercios.create') }}" 
+                       class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
+                        <span class="mr-2">➕</span>
+                        Crear Comercio
+                    </a>
+                </div>
+            @endif
         
             @if($comercios->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -173,6 +175,15 @@
                                            class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
                                             <span class="mr-1">👁️</span>
                                             Vista Previa
+                                        </a>
+                                    </div>
+                                    
+                                    <!-- Botón Editar -->
+                                    <div class="grid grid-cols-1 gap-2">
+                                        <a href="{{ route('comercios.edit', $comercio) }}" 
+                                           class="bg-accent-blue hover:bg-blue-600 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm">
+                                            <span class="mr-1">✏️</span>
+                                            Editar Comercio
                                         </a>
                                     </div>
                                     

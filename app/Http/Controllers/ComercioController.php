@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Comercio;
+use App\Models\User;
 use App\Models\QuestionCategory;
 use Illuminate\Support\Str;
 class ComercioController extends Controller
@@ -124,8 +125,24 @@ class ComercioController extends Controller
      */
     public function edit(string $id)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede editar cualquier comercio
+            $comercio = Comercio::findOrFail($id);
+        } else {
+            // Usuario común solo puede editar sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+        }
+        
+        // Obtener categorías de preguntas
         $categories = QuestionCategory::active()->ordered()->get();
+        
+        // Si no hay categorías, crear una colección vacía para evitar errores
+        if ($categories->isEmpty()) {
+            $categories = collect();
+        }
+        
         return view('comercios.edit', compact('comercio', 'categories'));
     }
     /**
@@ -239,7 +256,15 @@ class ComercioController extends Controller
      */
     public function preview(string $id)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede ver cualquier comercio
+            $comercio = Comercio::findOrFail($id);
+        } else {
+            // Usuario común solo puede ver sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+        }
         
         // Llamar al método del CustomizationController
         $customizationController = new \App\Http\Controllers\CustomizationController();
