@@ -179,12 +179,21 @@
                                 
                                 <!-- Botones de acción -->
                                 <div class="space-y-3">
-                                    <a href="{{ route('menus.edit', [$comercio, $menu]) }}" 
-                                       class="w-full btn-primary text-center block">
-                                        <span class="mr-2">✏️</span>
-                                        Editar Menú
-                                        <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
-                                    </a>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('admin.menus.edit', $menu) }}" 
+                                           class="w-full btn-primary text-center block">
+                                            <span class="mr-2">✏️</span>
+                                            Editar Menú
+                                            <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('menus.edit', [$comercio, $menu]) }}" 
+                                           class="w-full btn-primary text-center block">
+                                            <span class="mr-2">✏️</span>
+                                            Editar Menú
+                                            <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
+                                        </a>
+                                    @endif
                                     
                                     <div class="space-y-2">
                                         @if(!$menu->activo)

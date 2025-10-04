@@ -196,36 +196,61 @@
                 @else
                     <!-- Acciones para Usuario Común -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Crear Nuevo Comercio -->
-                        <a href="{{ route('comercios.create') }}" 
-                           class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
-                            <div class="flex items-center">
-                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
-                                    <span class="text-2xl">➕</span>
+                        @if(auth()->user()->comercios()->count() === 0)
+                            <!-- Crear Nuevo Comercio (solo si no tiene comercios) -->
+                            <a href="{{ route('comercios.create') }}" 
+                               class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                        <span class="text-2xl">➕</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Nuevo Comercio</h3>
+                                        <p class="text-text-secondary">Agrega un nuevo comercio a tu cuenta</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Nuevo Comercio</h3>
-                                    <p class="text-text-secondary">Agrega un nuevo comercio a tu cuenta</p>
+                            </a>
+                        @else
+                            <!-- Comercio ya creado - Botón deshabilitado -->
+                            <div class="group bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 opacity-60 cursor-not-allowed relative">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                                        <span class="text-2xl">✅</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-gray-300 mb-2">Comercio Creado</h3>
+                                        <p class="text-gray-400">Ya tienes un comercio registrado</p>
+                                    </div>
+                                </div>
+                                <!-- Badge de "Completado" -->
+                                <div class="absolute top-4 right-4">
+                                    <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                                        <span class="w-2 h-2 bg-white rounded-full mr-2"></span>
+                                        Completado
+                                    </span>
                                 </div>
                             </div>
-                        </a>
+                        @endif
 
-                        <!-- Gestionar Comercios -->
-                        <a href="{{ route('comercios.index') }}" 
-                           class="group bg-gradient-to-r from-accent-green to-green-600 hover:from-green-500 hover:to-accent-green rounded-xl p-6 transition-all duration-300 hover-lift neon-glow-green">
-                            <div class="flex items-center">
-                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
-                                    <span class="text-2xl">📊</span>
+                        @if(auth()->user()->comercios()->count() > 0)
+                            <!-- Gestionar Menús (solo si tiene comercio) -->
+                            <a href="{{ route('menus.index', auth()->user()->comercios->first()) }}" 
+                               class="group bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-500 hover:to-purple-700 rounded-xl p-6 transition-all duration-300 hover-lift">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                        <span class="text-2xl">📋</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-text-primary mb-2">Gestionar Menús</h3>
+                                        <p class="text-text-secondary">Crea y administra los menús de tu comercio</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Gestionar Comercios</h3>
-                                    <p class="text-text-secondary">Ve y edita tus comercios existentes</p>
-                                </div>
-                            </div>
-                        </a>
+                            </a>
+                        @endif
                     </div>
                 @endif
             </div>
+
 
             <!-- Recent Activity -->
             @if($conversaciones->count() > 0)

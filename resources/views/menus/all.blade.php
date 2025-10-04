@@ -77,9 +77,15 @@
                                 </div>
 
                                 <div class="flex flex-wrap gap-2">
-                                    <a href="{{ route('menus.edit', [$menu->comercio, $menu]) }}" class="inline-flex items-center px-3 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        {{ __('Editar') }}
-                                    </a>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('admin.menus.edit', $menu) }}" class="inline-flex items-center px-3 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                            {{ __('Editar') }}
+                                        </a>
+                                    @else
+                                        <a href="{{ route('menus.edit', [$menu->comercio, $menu]) }}" class="inline-flex items-center px-3 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                            {{ __('Editar') }}
+                                        </a>
+                                    @endif
                                     <a href="{{ route('menus.index', $menu->comercio) }}" class="inline-flex items-center px-3 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 focus:bg-purple-700 active:bg-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                         {{ __('Ver Comercio') }}
                                     </a>

@@ -142,6 +142,36 @@ class AdminController extends Controller
         return view('admin.menus.show', compact('menu'));
     }
 
+    public function editMenu(Menu $menu)
+    {
+        // Cargar las relaciones necesarias
+        $menu->load(['comercio.user']);
+        
+        // Obtener categorías de preguntas como en el MenuController
+        $categories = \App\Models\QuestionCategory::active()->ordered()->get();
+        
+        // Si no hay categorías, crear una colección vacía para evitar errores
+        if ($categories->isEmpty()) {
+            $categories = collect();
+        }
+        
+        return view('menus.create', [
+            'comercio' => $menu->comercio, 
+            'menu' => $menu,
+            'isEdit' => true,
+            'categories' => $categories
+        ]);
+    }
+
+    public function updateMenu(Request $request, Menu $menu)
+    {
+        // Redirigir al método update del MenuController con los parámetros correctos
+        return redirect()->route('menus.update', [
+            'comercio' => $menu->comercio,
+            'menu' => $menu
+        ]);
+    }
+
     /**
      * Mostrar formulario para crear comercio
      */

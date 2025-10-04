@@ -2,106 +2,154 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                🏪 Crear Comercio (Administración)
+                🏪 Crear Comercio
             </h2>
-            <a href="{{ route('admin.comercios.index') }}" class="btn-secondary">
-                {{ __('Volver') }}
-            </a>
+            <div class="flex space-x-3">
+                <a href="{{ route('admin.comercios.index') }}" class="btn-secondary">
+                    Volver a Comercios
+                </a>
+            </div>
         </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            
+            <!-- Error Messages -->
+            @if($errors->any())
+                <div class="mb-8 animate-fade-in-down">
+                    <div class="relative overflow-hidden bg-gradient-to-r from-red-900/30 to-rose-900/30 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                        <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-rose-500/10 animate-pulse"></div>
+                        
+                        <div class="relative flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg animate-shake">
+                                    <span class="text-white text-xl">⚠️</span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-lg font-bold text-red-100 mb-1">Error</h3>
+                                <ul class="text-red-200 font-medium space-y-1">
+                                    @foreach($errors->all() as $error)
+                                        <li>• {{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-red-500 to-rose-500 rounded-full animate-progress-bar"></div>
+                    </div>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('admin.comercios.store') }}" enctype="multipart/form-data" class="space-y-8">
                 @csrf
                 
-                <!-- 🧾 Información del Comercio -->
+                <!-- Información del Comercio -->
                 <div class="glass-effect rounded-2xl p-6">
                     <div class="flex items-center mb-6">
                         <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-lg">🧾</span>
+                            <span class="text-white text-lg">🏪</span>
                         </div>
                         <h3 class="text-xl font-bold text-text-primary">Información del Comercio</h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Selección de Usuario -->
-                        <div class="md:col-span-2">
-                            <x-input-label for="user_id" :value="__('Asignar a Usuario')" class="text-text-primary font-medium mb-2" />
-                            <select id="user_id" name="user_id" class="input-field w-full" required>
-                                <option value="">Seleccionar usuario...</option>
+                        <div>
+                            <label for="nombre" class="block text-sm font-medium text-text-secondary mb-2">
+                                Nombre del comercio <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" 
+                                   id="nombre" 
+                                   name="nombre" 
+                                   value="{{ old('nombre') }}"
+                                   required
+                                   class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                            <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <label for="user_id" class="block text-sm font-medium text-text-secondary mb-2">
+                                Asignar a usuario <span class="text-red-500">*</span>
+                            </label>
+                            <select id="user_id" 
+                                    name="user_id" 
+                                    required
+                                    class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                <option value="">Selecciona un usuario</option>
                                 @foreach($users as $user)
                                     <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }} ({{ $user->email }})
-                                        @if($user->comercios()->count() > 0)
-                                            - Ya tiene comercio
-                                        @endif
                                     </option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
-                            <p class="text-sm text-text-secondary mt-1">Solo se muestran usuarios que no tienen comercio asignado</p>
                         </div>
 
-                        <!-- Nombre del Comercio -->
                         <div class="md:col-span-2">
-                            <x-input-label for="nombre" :value="__('Nombre del Comercio')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="nombre" class="input-field w-full" type="text" name="nombre" :value="old('nombre')" required autofocus />
-                            <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                        </div>
-
-                        <!-- Descripción -->
-                        <div class="md:col-span-2">
-                            <x-input-label for="descripcion" :value="__('Descripción')" class="text-text-primary font-medium mb-2" />
-                            <textarea id="descripcion" name="descripcion" rows="3" class="input-field w-full resize-none">{{ old('descripcion') }}</textarea>
+                            <label for="descripcion" class="block text-sm font-medium text-text-secondary mb-2">
+                                Descripción
+                            </label>
+                            <textarea id="descripcion" 
+                                      name="descripcion" 
+                                      rows="3"
+                                      class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">{{ old('descripcion') }}</textarea>
                             <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
                         </div>
 
-                        <!-- Dirección -->
                         <div>
-                            <x-input-label for="direccion" :value="__('Dirección')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="direccion" class="input-field w-full" type="text" name="direccion" :value="old('direccion')" />
+                            <label for="direccion" class="block text-sm font-medium text-text-secondary mb-2">
+                                Dirección
+                            </label>
+                            <input type="text" 
+                                   id="direccion" 
+                                   name="direccion" 
+                                   value="{{ old('direccion') }}"
+                                   class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
                             <x-input-error :messages="$errors->get('direccion')" class="mt-2" />
                         </div>
 
-                        <!-- Horario -->
                         <div>
-                            <x-input-label for="horario" :value="__('Horario')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="horario" class="input-field w-full" type="text" name="horario" :value="old('horario')" placeholder="Ej: Lun-Dom 9:00-22:00" />
+                            <label for="horario" class="block text-sm font-medium text-text-secondary mb-2">
+                                Horario de atención
+                            </label>
+                            <input type="text" 
+                                   id="horario" 
+                                   name="horario" 
+                                   value="{{ old('horario') }}"
+                                   placeholder="Ej: Lun-Vie 9:00-18:00"
+                                   class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
                             <x-input-error :messages="$errors->get('horario')" class="mt-2" />
                         </div>
-                    </div>
-                </div>
 
-                <!-- 🖼️ Logo del Comercio -->
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center mb-6">
-                        <div class="w-10 h-10 bg-accent-green rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-lg">🖼️</span>
-                        </div>
-                        <h3 class="text-xl font-bold text-text-primary">Logo del Comercio</h3>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <x-input-label for="logo" :value="__('Logo (Opcional)')" class="text-text-primary font-medium mb-2" />
-                            <input type="file" id="logo" name="logo" accept="image/*" class="input-field w-full">
+                        <div class="md:col-span-2">
+                            <label for="logo" class="block text-sm font-medium text-text-secondary mb-2">
+                                Logo del comercio
+                            </label>
+                            <input type="file" 
+                                   id="logo" 
+                                   name="logo" 
+                                   accept="image/*"
+                                   class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                            <p class="text-xs text-text-secondary mt-2">Formatos permitidos: JPG, PNG, GIF. Máximo 2MB.</p>
                             <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                            <p class="text-sm text-text-secondary mt-1">Formatos permitidos: JPEG, PNG, JPG, GIF. Tamaño máximo: 2MB</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Botones de Acción -->
+                <!-- Botones de acción -->
                 <div class="flex justify-end space-x-4">
-                    <a href="{{ route('admin.comercios.index') }}" class="btn-secondary">
+                    <a href="{{ route('admin.comercios.index') }}" 
+                       class="btn-secondary">
                         Cancelar
                     </a>
-                    <button type="submit" class="btn-primary">
-                        Crear Comercio
+                    <button type="submit" 
+                            class="btn-primary">
+                        🏪 Crear Comercio
                     </button>
                 </div>
             </form>
+
         </div>
     </div>
 </x-app-layout>

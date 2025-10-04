@@ -804,11 +804,17 @@
                                         @php($cat = $question['category'] ?? 'general')
                                         <select name="quick_questions[{{ $index }}][category]" 
                                                 class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                            @foreach($categories as $category)
-                                                <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
-                                                    {{ $category->name }}
+                                            @if(isset($categories) && $categories->count() > 0)
+                                                @foreach($categories as $category)
+                                                    <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
+                                                        {{ $category->name }}
+                                                    </option>
+                                                @endforeach
+                                            @else
+                                                <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>
+                                                    General
                                                 </option>
-                                            @endforeach
+                                            @endif
                                         </select>
                                     </div>
                                     
