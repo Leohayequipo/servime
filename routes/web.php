@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('comercios.store');
         Route::get('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
+        Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\AdminController::class, 'generateQuestions'])->name('comercios.generate.questions');
         
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');

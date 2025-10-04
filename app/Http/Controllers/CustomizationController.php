@@ -157,6 +157,15 @@ class CustomizationController extends Controller
                 'quick_questions' => $generatedQuestions
             ]);
 
+            // Si es una petición AJAX, devolver JSON
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Preguntas frecuentes generadas con IA exitosamente.',
+                    'questions' => $generatedQuestions
+                ]);
+            }
+
             // Redirigir a la página de edición de menús o a crear uno nuevo
             $firstMenu = $comercio->menus()->first();
             if ($firstMenu) {
@@ -171,6 +180,14 @@ class CustomizationController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Error generating questions with AI: ' . $e->getMessage());
+            
+            // Si es una petición AJAX, devolver JSON con error
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al generar preguntas con IA. Por favor, inténtalo de nuevo.'
+                ], 500);
+            }
             
             // Redirigir a la página de edición de menús o a crear uno nuevo
             $firstMenu = $comercio->menus()->first();

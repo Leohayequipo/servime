@@ -285,4 +285,17 @@ class AdminController extends Controller
                 ->with('warning', 'Menú creado pero hubo un problema en el procesamiento.');
         }
     }
+
+    /**
+     * Generar preguntas frecuentes con IA para Super Admin
+     */
+    public function generateQuestions(Request $request, $comercioId)
+    {
+        // Super Admin puede generar preguntas para cualquier comercio
+        $comercio = Comercio::findOrFail($comercioId);
+        
+        // Llamar al método del ComercioController
+        $comercioController = new \App\Http\Controllers\ComercioController();
+        return $comercioController->generateQuestions($request, $comercioId);
+    }
 }

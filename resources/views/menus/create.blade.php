@@ -805,11 +805,11 @@
                                         <select name="quick_questions[{{ $index }}][category]" 
                                                 class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                             @if(isset($categories) && $categories->count() > 0)
-                                                @foreach($categories as $category)
-                                                    <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
-                                                        {{ $category->name }}
-                                                    </option>
-                                                @endforeach
+                                            @foreach($categories as $category)
+                                                <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
                                             @else
                                                 <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>
                                                     General
@@ -1086,21 +1086,36 @@
                 button.innerHTML = '⏳ Generando...';
                 button.disabled = true;
                 
-                // Crear formulario temporal para enviar POST
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ route("comercios.generate.questions", $comercio) }}';
-                
-                // Agregar CSRF token
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                form.appendChild(csrfToken);
-                
-                // Agregar al DOM y enviar
-                document.body.appendChild(form);
-                form.submit();
+                // Enviar petición AJAX
+                fetch('{{ route("comercios.generate.questions", $comercio) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mostrar mensaje de éxito
+                        alert('Preguntas generadas exitosamente: ' + data.message);
+                        // Recargar la página para mostrar las nuevas preguntas
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar preguntas con IA');
+                })
+                .finally(() => {
+                    // Restaurar botón
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
             }
         }
         

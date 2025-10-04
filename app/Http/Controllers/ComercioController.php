@@ -256,7 +256,15 @@ class ComercioController extends Controller
      */
     public function generateQuestions(Request $request, string $id)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede generar preguntas para cualquier comercio
+            $comercio = Comercio::findOrFail($id);
+        } else {
+            // Usuario común solo puede generar preguntas para sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+        }
         
         // Llamar al método del CustomizationController
         $customizationController = new \App\Http\Controllers\CustomizationController();
