@@ -12,9 +12,14 @@
                     <p class="text-sm text-text-secondary mt-1">Configurar información, tema, colores y branding</p>
                 </div>
                 <div class="flex space-x-3">
+                    <button type="submit" form="comercio-form"
+                            onclick="console.log('Botón Guardar Cambios clickeado'); return true;"
+                            class="btn-primary text-lg px-6 py-3 rounded-xl">
+                        💾 Guardar Cambios
+                    </button>
                     <a href="{{ route('comercios.index') }}" 
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                        ← Volver
+                        🔄 Cancelar
                     </a>
                 </div>
             </div>
@@ -45,28 +50,31 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('comercios.update', $comercio) }}" enctype="multipart/form-data">
+            <form id="comercio-form" method="POST" action="{{ route('comercios.update', $comercio) }}" enctype="multipart/form-data"
+                  onsubmit="console.log('Formulario enviándose...', this); return true;">
                         @csrf
                         @method('PUT')
                 
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <!-- Layout principal con 2 columnas -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
-                    <!-- Columna Izquierda: Información del Comercio -->
-                    <div class="xl:col-span-1 space-y-6">
+                    <!-- Columna principal: Información básica -->
+                    <div class="lg:col-span-2 space-y-6">
                         
-                        <!-- 🧾 Información del Comercio -->
+                        <!-- Información del Comercio -->
                         <div class="metric-card">
                             <div class="flex items-center mb-6">
-                                <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                    <span class="text-white text-lg">🧾</span>
+                                <div class="w-8 h-8 bg-accent-blue rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">🧾</span>
                                 </div>
-                                <h3 class="text-xl font-semibold text-text-primary">Información del Comercio</h3>
+                                <h3 class="text-lg font-semibold text-text-primary">Información del Comercio</h3>
                             </div>
                             
-                            <div class="space-y-6">
-                        <!-- Nombre del Comercio -->
-                        <div>
-                                    <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
+                            <!-- Grid de 2 columnas para inputs -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Nombre -->
+                                <div class="md:col-span-2">
+                                    <label for="nombre" class="block text-sm font-medium text-text-secondary mb-2">
                                         Nombre del Comercio
                                     </label>
                                     <input type="text" 
@@ -74,38 +82,26 @@
                                            name="nombre" 
                                            value="{{ old('nombre', $comercio->nombre) }}"
                                            required
-                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                            <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                        </div>
-
-                        <!-- Descripción -->
-                        <div>
-                                    <label for="descripcion" class="block text-sm font-medium text-text-secondary mb-3">
-                                        Descripción
-                                    </label>
-                                    <textarea id="descripcion" 
-                                              name="descripcion" 
-                                              rows="3"
-                                              class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ old('descripcion', $comercio->descripcion) }}</textarea>
-                            <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
+                                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <x-input-error :messages="$errors->get('nombre')" class="mt-1" />
                                 </div>
 
                                 <!-- Dirección -->
                                 <div>
-                                    <label for="direccion" class="block text-sm font-medium text-text-secondary mb-3">
+                                    <label for="direccion" class="block text-sm font-medium text-text-secondary mb-2">
                                         Dirección
                                     </label>
                                     <input type="text" 
                                            id="direccion" 
                                            name="direccion" 
                                            value="{{ old('direccion', $comercio->direccion) }}"
-                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                                    <x-input-error :messages="$errors->get('direccion')" class="mt-2" />
+                                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <x-input-error :messages="$errors->get('direccion')" class="mt-1" />
                                 </div>
 
                                 <!-- Horario -->
                                 <div>
-                                    <label for="horario" class="block text-sm font-medium text-text-secondary mb-3">
+                                    <label for="horario" class="block text-sm font-medium text-text-secondary mb-2">
                                         Horario de Atención
                                     </label>
                                     <input type="text" 
@@ -113,97 +109,142 @@
                                            name="horario" 
                                            value="{{ old('horario', $comercio->horario) }}"
                                            placeholder="Ej: Lunes a Viernes 9:00 - 18:00"
-                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                                    <x-input-error :messages="$errors->get('horario')" class="mt-2" />
+                                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <x-input-error :messages="$errors->get('horario')" class="mt-1" />
+                                </div>
+
+                                <!-- Descripción -->
+                                <div class="md:col-span-2">
+                                    <label for="descripcion" class="block text-sm font-medium text-text-secondary mb-2">
+                                        Descripción
+                                    </label>
+                                    <textarea id="descripcion" 
+                                              name="descripcion" 
+                                              rows="2"
+                                              class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">{{ old('descripcion', $comercio->descripcion) }}</textarea>
+                                    <x-input-error :messages="$errors->get('descripcion')" class="mt-1" />
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- 🖼️ Logo del Comercio -->
+                    <!-- Sidebar derecho: Logo, Contacto e Info adicional -->
+                    <div class="space-y-4">
+                        
+                        <!-- Logo del Comercio -->
                         <div class="metric-card">
-                            <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center justify-between mb-4">
                                 <div class="flex items-center">
-                                <div class="w-10 h-10 bg-accent-green rounded-xl flex items-center justify-center mr-3 neon-glow-green">
-                                    <span class="text-white text-lg">🖼️</span>
-                                </div>
-                                <h3 class="text-xl font-semibold text-text-primary">Logo del Comercio</h3>
+                                    <div class="w-6 h-6 bg-accent-green rounded-lg flex items-center justify-center mr-2">
+                                        <span class="text-white text-xs">🖼️</span>
+                                    </div>
+                                    <h3 class="text-sm font-semibold text-text-primary">Logo</h3>
                                 </div>
                                 @if($comercio->logo_url)
-                                    <button type="button" onclick="confirmDeleteLogo()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200">
-                                        🗑️ Eliminar Logo
+                                    <button type="button" onclick="confirmDeleteLogo()" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs font-medium transition-all duration-200">
+                                        🗑️
                                     </button>
                                 @endif
                             </div>
                             
                             @if($comercio->logo_url)
-                                <div class="mb-6">
-                                    <div class="p-4 bg-secondary-dark rounded-xl">
-                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo actual" class="w-20 h-20 object-cover rounded-lg border border-accent-gray">
-                                    </div>
+                                <div class="mb-4">
+                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo actual" class="w-16 h-16 object-cover rounded-lg border border-accent-gray mx-auto">
                                 </div>
                             @endif
                             
                             <div>
-                                <label for="logo" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Subir Nuevo Logo
-                                </label>
                                 <input type="file" 
                                        id="logo" 
                                        name="logo" 
-                                       accept="image/*" 
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
-                            <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                                <p class="mt-2 text-sm text-text-secondary">Formatos permitidos: JPEG, PNG, JPG, GIF. Tamaño máximo: 2MB</p>
+                                       accept="image/*"
+                                       class="w-full px-2 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200">
+                                <p class="text-xs text-text-secondary mt-1">JPEG, PNG, JPG, GIF. Máx: 2MB</p>
+                                <x-input-error :messages="$errors->get('logo')" class="mt-1" />
                             </div>
                         </div>
 
-
-                        <!-- 📞 Información de Contacto -->
+                        <!-- Contacto -->
                         <div class="metric-card">
-                            <div class="flex items-center mb-6">
-                                <div class="w-10 h-10 bg-gradient-to-r from-accent-green to-green-600 rounded-xl flex items-center justify-center mr-3 neon-glow-green">
-                                    <span class="text-white text-lg">📞</span>
+                            <div class="flex items-center mb-4">
+                                <div class="w-6 h-6 bg-gradient-to-r from-accent-green to-green-600 rounded-lg flex items-center justify-center mr-2">
+                                    <span class="text-white text-xs">📞</span>
                                 </div>
-                                <h3 class="text-xl font-semibold text-text-primary">Contacto</h3>
+                                <h3 class="text-sm font-semibold text-text-primary">Contacto</h3>
+                                <span class="ml-2 bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded">Público</span>
                             </div>
                             
-                            <div class="space-y-4 text-sm text-text-secondary">
-                                <div class="flex items-center">
-                                    <span class="w-5 h-5 mr-3 text-accent-blue">📞</span>
-                                    <span>{{ $comercio->user->whatsapp ?? 'No especificado' }}</span>
+                            <div class="space-y-2 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-text-secondary flex items-center">
+                                        <span class="mr-2">📞</span>
+                                        WhatsApp
+                                    </span>
+                                    <span class="text-text-primary font-medium">{{ $comercio->user->whatsapp ?? 'N/A' }}</span>
                                 </div>
-                                <div class="flex items-center">
-                                    <span class="w-5 h-5 mr-3 text-accent-blue">✉️</span>
-                                    <span>{{ $comercio->user->email ?? 'No especificado' }}</span>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-text-secondary flex items-center">
+                                        <span class="mr-2">✉️</span>
+                                        Email
+                                    </span>
+                                    <span class="text-text-primary font-medium text-xs">{{ $comercio->user->email ?? 'N/A' }}</span>
                                 </div>
-                                <div class="flex items-center">
-                                    <span class="w-5 h-5 mr-3 text-accent-blue">📍</span>
-                                    <span>{{ $comercio->direccion ?? 'No especificado' }}</span>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-text-secondary flex items-center">
+                                        <span class="mr-2">📍</span>
+                                        Dirección
+                                    </span>
+                                    <span class="text-text-primary font-medium text-xs">{{ $comercio->direccion ?? 'N/A' }}</span>
                                 </div>
                             </div>
-                            <p class="text-xs text-text-secondary mt-4">Información que se mostrará en la página pública</p>
                         </div>
-                    </div>
 
-                    <!-- Columna Derecha: Personalización -->
-                    <div class="xl:col-span-2 space-y-6">
-                        
-
+                        <!-- Información del Sistema -->
+                        <div class="metric-card">
+                            <div class="flex items-center mb-4">
+                                <div class="w-6 h-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center mr-2">
+                                    <span class="text-white text-xs">ℹ️</span>
+                                </div>
+                                <h3 class="text-sm font-semibold text-text-primary">Sistema</h3>
+                            </div>
+                            
+                            <div class="space-y-2 text-xs">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-text-secondary">ID:</span>
+                                    <span class="text-text-primary font-mono bg-secondary-dark px-2 py-1 rounded">{{ $comercio->id }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-text-secondary">Creado:</span>
+                                    <span class="text-text-primary">{{ $comercio->created_at->format('d/m/Y') }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-text-secondary">Actualizado:</span>
+                                    <span class="text-text-primary">{{ $comercio->updated_at->format('d/m') }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-text-secondary">Menús:</span>
+                                    <span class="text-text-primary bg-accent-blue/20 text-accent-blue px-2 py-1 rounded">{{ $comercio->menus->count() }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Campos ocultos requeridos por el controlador -->
+                <input type="hidden" name="primary_color" value="{{ $comercio->primary_color ?? '#3B82F6' }}">
+                <input type="hidden" name="secondary_color" value="{{ $comercio->secondary_color ?? '#1E40AF' }}">
+                <input type="hidden" name="accent_color" value="{{ $comercio->accent_color ?? '#F59E0B' }}">
+                <input type="hidden" name="background_color" value="{{ $comercio->background_color ?? '#FFFFFF' }}">
+                <input type="hidden" name="chatbot_name" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
+                <input type="hidden" name="welcome_message" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual.' }}">
+                <input type="hidden" name="menu_description" value="{{ $comercio->menu_description ?? '' }}">
+                <input type="hidden" name="contact_info" value="{{ $comercio->contact_info ?? '' }}">
+                <input type="hidden" name="page_title" value="{{ $comercio->page_title ?? '' }}">
+                <input type="hidden" name="page_description" value="{{ $comercio->page_description ?? '' }}">
+                <input type="hidden" name="favicon_url" value="{{ $comercio->favicon_url ?? '' }}">
+                <input type="hidden" name="show_contact_info" value="{{ $comercio->show_contact_info ? '1' : '0' }}">
+                <input type="hidden" name="enable_ai_responses" value="{{ $comercio->enable_ai_responses ? '1' : '0' }}">
 
-                <!-- Botones de Acción -->
-                <div class="flex justify-center space-x-4 mt-12">
-                    <button type="submit" 
-                            class="btn-primary text-lg px-8 py-4 rounded-xl">
-                        💾 Guardar Cambios
-                    </button>
-                    <a href="{{ route('comercios.index') }}" 
-                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 border border-accent-gray">
-                        🔄 Cancelar
-                    </a>
-                        </div>
                     </form>
         </div>
     </div>

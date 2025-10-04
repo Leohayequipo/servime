@@ -150,7 +150,16 @@ class ComercioController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede editar cualquier comercio
+            $comercio = Comercio::findOrFail($id);
+        } else {
+            // Usuario común solo puede editar sus comercios
+            $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        }
+
         
         $validated = $request->validate([
             // Información básica del comercio
@@ -232,7 +241,14 @@ class ComercioController extends Controller
             ]);
         }
 
-        return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
+        // Redirigir según el tipo de usuario
+        $user = auth()->user();
+        if ($user->isSuperAdmin()) {
+            // Para Super Admin, usar la ruta de admin sin el prefijo admin.
+            return redirect()->route('admin.dashboard')->with('success', 'Comercio actualizado exitosamente');
+        } else {
+            return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
+        }
     }
 
     /**
