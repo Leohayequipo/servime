@@ -11,17 +11,6 @@
                     <p class="text-xl text-text-secondary">{{ $comercio->nombre }}</p>
                     <p class="text-sm text-text-secondary mt-1">Configurar información, tema, colores y branding</p>
                 </div>
-                <div class="flex space-x-3">
-                    <button type="submit" form="comercio-form"
-                            onclick="console.log('Botón Guardar Cambios clickeado'); return true;"
-                            class="btn-primary text-lg px-6 py-3 rounded-xl">
-                        💾 Guardar Cambios
-                    </button>
-                    <a href="{{ route('comercios.index') }}" 
-                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                        🔄 Cancelar
-                    </a>
-                </div>
             </div>
 
             @if (session('success'))
@@ -611,4 +600,14 @@
             });
         }
     </script>
+
+    <!-- Botón Flotante Guardar Cambios -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button type="submit" 
+                form="comercio-form"
+                class="btn-primary text-lg px-6 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2">
+            <span>💾</span>
+            <span>Guardar Cambios</span>
+        </button>
+    </div>
 </x-app-layout>
