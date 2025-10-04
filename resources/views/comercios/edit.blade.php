@@ -121,23 +121,24 @@
 
                         <!-- 🖼️ Logo del Comercio -->
                         <div class="metric-card">
-                            <div class="flex items-center mb-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center">
                                 <div class="w-10 h-10 bg-accent-green rounded-xl flex items-center justify-center mr-3 neon-glow-green">
                                     <span class="text-white text-lg">🖼️</span>
                                 </div>
                                 <h3 class="text-xl font-semibold text-text-primary">Logo del Comercio</h3>
+                                </div>
+                                @if($comercio->logo_url)
+                                    <button type="button" onclick="confirmDeleteLogo()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200">
+                                        🗑️ Eliminar Logo
+                                    </button>
+                                @endif
                             </div>
                             
                             @if($comercio->logo_url)
                                 <div class="mb-6">
-                                    <div class="flex items-center space-x-4 p-4 bg-secondary-dark rounded-xl">
+                                    <div class="p-4 bg-secondary-dark rounded-xl">
                                         <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo actual" class="w-20 h-20 object-cover rounded-lg border border-accent-gray">
-                                        <div>
-                                            <p class="text-sm text-text-secondary mb-2">Logo actual</p>
-                                            <button type="button" onclick="confirmDeleteLogo()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200">
-                                                🗑️ Eliminar Logo
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -282,9 +283,13 @@
             
             // Actualizar vista previa
             function updatePreview() {
-                const primaryColor = document.getElementById('primary_color').value;
-                const chatbotName = document.getElementById('chatbot_name').value;
-                const welcomeMessage = document.getElementById('welcome_message').value;
+                const primaryColorElement = document.getElementById('primary_color');
+                const chatbotNameElement = document.getElementById('chatbot_name');
+                const welcomeMessageElement = document.getElementById('welcome_message');
+                
+                const primaryColor = primaryColorElement ? primaryColorElement.value : '#3B82F6';
+                const chatbotName = chatbotNameElement ? chatbotNameElement.value : 'Asistente IA';
+                const welcomeMessage = welcomeMessageElement ? welcomeMessageElement.value : '¡Hola! Soy tu asistente virtual.';
                 
                 // Actualizar colores
                 const previewElements = document.querySelectorAll('#preview-chatbot-name, .bg-gradient-to-r');
@@ -294,9 +299,16 @@
                     }
                 });
                 
-                // Actualizar texto
-                document.getElementById('preview-chatbot-name').textContent = chatbotName;
-                document.getElementById('preview-welcome-message').textContent = welcomeMessage;
+                // Actualizar texto (solo si los elementos existen)
+                const previewChatbotName = document.getElementById('preview-chatbot-name');
+                const previewWelcomeMessage = document.getElementById('preview-welcome-message');
+                
+                if (previewChatbotName) {
+                    previewChatbotName.textContent = chatbotName;
+                }
+                if (previewWelcomeMessage) {
+                    previewWelcomeMessage.textContent = welcomeMessage;
+                }
             }
             
             // Event listeners
@@ -308,8 +320,16 @@
                 });
             });
             
-            document.getElementById('chatbot_name').addEventListener('input', updatePreview);
-            document.getElementById('welcome_message').addEventListener('input', updatePreview);
+            // Solo agregar event listeners si los elementos existen
+            const chatbotNameElement = document.getElementById('chatbot_name');
+            const welcomeMessageElement = document.getElementById('welcome_message');
+            
+            if (chatbotNameElement) {
+                chatbotNameElement.addEventListener('input', updatePreview);
+            }
+            if (welcomeMessageElement) {
+                welcomeMessageElement.addEventListener('input', updatePreview);
+            }
             
             // Inicializar vista previa
             setTimeout(updatePreview, 100);
@@ -491,47 +511,63 @@
         }
 
         function deleteLogo() {
-            // Crear un formulario oculto para eliminar el logo
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("comercios.update", $comercio) }}';
+            console.log('deleteLogo() called');
             
-            // Agregar token CSRF
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            form.appendChild(csrfToken);
+            // Crear FormData para enviar datos como formulario
+            const formData = new FormData();
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('_method', 'PUT');
+            formData.append('delete_logo', '1');
+            formData.append('nombre', document.querySelector('input[name="nombre"]')?.value || '{{ $comercio->nombre }}');
+            formData.append('descripcion', document.querySelector('textarea[name="descripcion"]')?.value || '{{ $comercio->descripcion }}');
+            formData.append('direccion', document.querySelector('input[name="direccion"]')?.value || '{{ $comercio->direccion }}');
+            formData.append('horario', document.querySelector('input[name="horario"]')?.value || '{{ $comercio->horario }}');
             
-            // Agregar método PUT
-            const methodField = document.createElement('input');
-            methodField.type = 'hidden';
-            methodField.name = '_method';
-            methodField.value = 'PUT';
-            form.appendChild(methodField);
+            // Agregar campos requeridos por el controlador
+            formData.append('primary_color', '{{ $comercio->primary_color ?? "#3B82F6" }}');
+            formData.append('secondary_color', '{{ $comercio->secondary_color ?? "#1E40AF" }}');
+            formData.append('accent_color', '{{ $comercio->accent_color ?? "#F59E0B" }}');
+            formData.append('background_color', '{{ $comercio->background_color ?? "#FFFFFF" }}');
+            formData.append('chatbot_name', '{{ $comercio->chatbot_name ?? "Asistente IA" }}');
+            formData.append('welcome_message', '{{ $comercio->welcome_message ?? "¡Hola! Soy tu asistente virtual." }}');
             
-            // Agregar campo para eliminar logo
-            const deleteLogoField = document.createElement('input');
-            deleteLogoField.type = 'hidden';
-            deleteLogoField.name = 'delete_logo';
-            deleteLogoField.value = '1';
-            form.appendChild(deleteLogoField);
+            // Agregar campos opcionales del controlador
+            formData.append('menu_description', '{{ $comercio->menu_description ?? "" }}');
+            formData.append('contact_info', '{{ $comercio->contact_info ?? "" }}');
+            formData.append('page_title', '{{ $comercio->page_title ?? "" }}');
+            formData.append('page_description', '{{ $comercio->page_description ?? "" }}');
+            formData.append('favicon_url', '{{ $comercio->favicon_url ?? "" }}');
+            formData.append('show_contact_info', '{{ $comercio->show_contact_info ? "1" : "0" }}');
+            formData.append('enable_ai_responses', '{{ $comercio->enable_ai_responses ? "1" : "0" }}');
             
-            // Agregar todos los campos del formulario original
-            const originalForm = document.querySelector('form');
-            const inputs = originalForm.querySelectorAll('input:not([type="file"]), textarea');
-            inputs.forEach(input => {
-                if (input.name !== '_token' && input.name !== '_method') {
-                    const newInput = document.createElement('input');
-                    newInput.type = 'hidden';
-                    newInput.name = input.name;
-                    newInput.value = input.value;
-                    form.appendChild(newInput);
+            // Usar fetch para hacer la petición AJAX
+            fetch('{{ route("comercios.update", $comercio) }}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (response.ok) {
+                    console.log('Logo eliminado exitosamente');
+                    // Cerrar modal
+                    closeDeleteModal();
+                    // Recargar página para mostrar cambios
+                    window.location.reload();
+                } else {
+                    console.error('Error al eliminar logo:', response.statusText);
+                    response.text().then(text => {
+                        console.error('Response body:', text);
+                        alert('Error al eliminar el logo: ' + response.statusText);
+                    });
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar el logo: ' + error.message);
             });
-            
-            document.body.appendChild(form);
-            form.submit();
         }
     </script>
 </x-app-layout>

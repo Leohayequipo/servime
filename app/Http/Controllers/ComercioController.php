@@ -224,6 +224,14 @@ class ComercioController extends Controller
 
         $comercio->save();
 
+        // Si es una petición AJAX, devolver JSON
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Comercio actualizado exitosamente'
+            ]);
+        }
+
         return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
     }
 
