@@ -110,39 +110,121 @@
                 </div>
             </div>
 
+            @if(auth()->user()->isSuperAdmin())
+                <!-- Panel de Administración -->
+                <div class="bg-gradient-to-r from-orange-900/30 to-red-900/30 border border-orange-500/30 rounded-2xl p-8 mb-12">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-4">
+                            <span class="text-white text-2xl">🛡️</span>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-orange-100">Panel de Super Administración</h2>
+                            <p class="text-orange-200">Gestiona usuarios, comercios y menús del sistema</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Gestión de Usuarios -->
+                        <div class="bg-secondary-dark/50 rounded-xl p-6 hover:bg-secondary-dark/70 transition-all duration-300 cursor-pointer" onclick="window.location.href='{{ route('admin.users.index') }}'">
+                            <div class="flex items-center mb-4">
+                                <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-lg">👥</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-text-primary">Usuarios</h3>
+                            </div>
+                            <p class="text-text-secondary text-sm mb-4">Gestiona usuarios y roles del sistema</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-text-secondary">Ver, editar, cambiar roles</span>
+                                <span class="text-accent-blue">→</span>
+                            </div>
+                        </div>
+
+                        <!-- Gestionar -->
+                        <div class="bg-secondary-dark/50 rounded-xl p-6 hover:bg-secondary-dark/70 transition-all duration-300 cursor-pointer" onclick="window.location.href='{{ route('comercios.index') }}'">
+                            <div class="flex items-center mb-4">
+                                <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-lg">⚙️</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-text-primary">Gestionar</h3>
+                            </div>
+                            <p class="text-text-secondary text-sm mb-4">Comercios y Menús</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-text-secondary">Ver, crear, gestionar</span>
+                                <span class="text-accent-blue">→</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            @endif
+
             <!-- Quick Actions Section -->
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8">
                 <h2 class="text-2xl font-bold text-text-primary mb-8 text-center">Acciones Rápidas</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Crear Nuevo Comercio -->
-                    <a href="{{ route('comercios.create') }}" 
-                       class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
-                                <span class="text-2xl">➕</span>
+                @if(auth()->user()->isSuperAdmin())
+                    <!-- Acciones para Super Administrador -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Crear Comercio (Admin) -->
+                        <a href="{{ route('admin.comercios.create') }}" 
+                           class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                    <span class="text-2xl">🏪</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Comercio</h3>
+                                    <p class="text-text-secondary">Asignar a Usuario</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Nuevo Comercio</h3>
-                                <p class="text-text-secondary">Agrega un nuevo comercio a tu cuenta</p>
-                            </div>
-                        </div>
-                    </a>
+                        </a>
 
-                    <!-- Gestionar Comercios -->
-                    <a href="{{ route('comercios.index') }}" 
-                       class="group bg-gradient-to-r from-accent-green to-green-600 hover:from-green-500 hover:to-accent-green rounded-xl p-6 transition-all duration-300 hover-lift neon-glow-green">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
-                                <span class="text-2xl">📊</span>
+                        <!-- Crear Menú (Admin) -->
+                        <a href="{{ route('admin.menus.create') }}" 
+                           class="group bg-gradient-to-r from-accent-green to-green-600 hover:from-green-500 hover:to-accent-green rounded-xl p-6 transition-all duration-300 hover-lift neon-glow-green">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                    <span class="text-2xl">📋</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Menú</h3>
+                                    <p class="text-text-secondary">En cualquier Comercio</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-semibold text-text-primary mb-2">Gestionar Comercios</h3>
-                                <p class="text-text-secondary">Ve y edita tus comercios existentes</p>
+                        </a>
+                    </div>
+                @else
+                    <!-- Acciones para Usuario Común -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Crear Nuevo Comercio -->
+                        <a href="{{ route('comercios.create') }}" 
+                           class="group bg-gradient-to-r from-accent-blue to-blue-600 hover:from-blue-500 hover:to-accent-blue rounded-xl p-6 transition-all duration-300 hover-lift neon-glow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                    <span class="text-2xl">➕</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Crear Nuevo Comercio</h3>
+                                    <p class="text-text-secondary">Agrega un nuevo comercio a tu cuenta</p>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
+                        </a>
+
+                        <!-- Gestionar Comercios -->
+                        <a href="{{ route('comercios.index') }}" 
+                           class="group bg-gradient-to-r from-accent-green to-green-600 hover:from-green-500 hover:to-accent-green rounded-xl p-6 transition-all duration-300 hover-lift neon-glow-green">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                                    <span class="text-2xl">📊</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-text-primary mb-2">Gestionar Comercios</h3>
+                                    <p class="text-text-secondary">Ve y edita tus comercios existentes</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                @endif
             </div>
 
             <!-- Recent Activity -->

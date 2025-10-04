@@ -28,7 +28,16 @@ class MenuController extends Controller
      */
     public function index($comercioId)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede ver cualquier comercio
+            $comercio = Comercio::with('user')->findOrFail($comercioId);
+        } else {
+            // Usuario común solo puede ver sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        }
+        
         $menus = $comercio->menus()->orderBy('created_at', 'desc')->get();
         
         return view('menus.index', compact('comercio', 'menus'));
@@ -39,7 +48,16 @@ class MenuController extends Controller
      */
     public function create($comercioId)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede crear menús en cualquier comercio
+            $comercio = Comercio::with('user')->findOrFail($comercioId);
+        } else {
+            // Usuario común solo puede crear menús en sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        }
+        
         $categories = QuestionCategory::active()->ordered()->get();
         $menu = null; // No hay menú para crear
         $isEdit = false;
@@ -51,7 +69,15 @@ class MenuController extends Controller
      */
     public function store(Request $request, $comercioId)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede crear menús en cualquier comercio
+            $comercio = Comercio::findOrFail($comercioId);
+        } else {
+            // Usuario común solo puede crear menús en sus comercios
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        }
         
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',
@@ -128,8 +154,17 @@ class MenuController extends Controller
      */
     public function update(Request $request, $comercioId, $menuId)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        $menu = $comercio->menus()->findOrFail($menuId);
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede editar cualquier menú
+            $comercio = Comercio::findOrFail($comercioId);
+            $menu = $comercio->menus()->findOrFail($menuId);
+        } else {
+            // Usuario común solo puede editar sus menús
+            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+            $menu = $comercio->menus()->findOrFail($menuId);
+        }
         
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',

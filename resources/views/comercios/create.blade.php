@@ -25,6 +25,22 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @if(auth()->user()->isSuperAdmin() && isset($users))
+                            <!-- Selección de Usuario (Solo para Super Admin) -->
+                            <div class="md:col-span-2">
+                                <x-input-label for="user_id" :value="__('Asignar a Usuario')" class="text-text-primary font-medium mb-2" />
+                                <select id="user_id" name="user_id" class="input-field w-full" required>
+                                    <option value="">Seleccionar usuario...</option>
+                                    @foreach($users as $user)
+                                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
+                                            {{ $user->name }} ({{ $user->email }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
+                            </div>
+                        @endif
+
                         <!-- Nombre del Comercio -->
                         <div class="md:col-span-2">
                             <x-input-label for="nombre" :value="__('Nombre del Comercio')" class="text-text-primary font-medium mb-2" />

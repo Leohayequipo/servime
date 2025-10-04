@@ -808,6 +808,8 @@
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('dashboard') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Dashboard
                                 </a>
+                                
+                                <!-- Navegación común para todos los usuarios -->
                                 <a href="{{ route('comercios.index') }}" 
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('comercios.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Comercios
@@ -816,6 +818,7 @@
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Menús
                                 </a>
+                                
                                 <a href="{{ route('analytics.dashboard') }}" 
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('analytics.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Analytics

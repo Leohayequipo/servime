@@ -35,6 +35,31 @@ Route::middleware('auth')->group(function () {
     // Help
     Route::get('/help', [HelpController::class, 'index'])->name('help.index');
     
+    // Rutas de Administración (Solo Super Administradores)
+    Route::middleware('super_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
+        
+        // Gestión de Usuarios
+        Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])->name('users.index');
+        Route::get('/users/create', [App\Http\Controllers\AdminController::class, 'createUser'])->name('users.create');
+        Route::post('/users', [App\Http\Controllers\AdminController::class, 'storeUser'])->name('users.store');
+        Route::get('/users/{user}', [App\Http\Controllers\AdminController::class, 'showUser'])->name('users.show');
+        Route::get('/users/{user}/edit', [App\Http\Controllers\AdminController::class, 'editUser'])->name('users.edit');
+        Route::put('/users/{user}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
+        
+        // Gestión de Comercios
+        Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
+        Route::get('/comercios/create', [App\Http\Controllers\AdminController::class, 'createComercio'])->name('comercios.create');
+        Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('comercios.store');
+        Route::get('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
+        
+        // Gestión de Menús
+        Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');
+        Route::get('/menus/create', [App\Http\Controllers\AdminController::class, 'createMenu'])->name('menus.create');
+        Route::post('/menus', [App\Http\Controllers\AdminController::class, 'storeMenu'])->name('menus.store');
+        Route::get('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'showMenu'])->name('menus.show');
+    });
+    
     // Rutas de Comercios
     Route::get('/comercios/create', [ComercioController::class, 'create'])->name('comercios.create');
     Route::post('/comercios', [ComercioController::class, 'store'])->name('comercios.store');

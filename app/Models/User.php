@@ -20,7 +20,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'whatsapp',
         'password',
+        'role',
     ];
 
     /**
@@ -48,5 +50,32 @@ class User extends Authenticatable
     public function comercios()
     {
         return $this->hasMany(Comercio::class);
+    }
+
+    /**
+     * Verificar si el usuario es Super Administrador
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /**
+     * Verificar si el usuario es usuario común
+     */
+    public function isRegularUser(): bool
+    {
+        return $this->role === 'user';
+    }
+
+    /**
+     * Obtener el comercio del usuario (solo para usuarios comunes)
+     */
+    public function getComercio()
+    {
+        if ($this->isRegularUser()) {
+            return $this->comercios()->first();
+        }
+        return null;
     }
 }

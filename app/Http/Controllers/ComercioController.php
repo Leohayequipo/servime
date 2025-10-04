@@ -13,7 +13,16 @@ class ComercioController extends Controller
      */
     public function index()
     {
-        $comercios = Comercio::where('user_id', auth()->id())->get();
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin ve todos los comercios
+            $comercios = Comercio::with('user')->latest()->get();
+        } else {
+            // Usuario común solo ve sus comercios
+            $comercios = Comercio::where('user_id', $user->id)->get();
+        }
+        
         return view('comercios.index', compact('comercios'));
     }
 
@@ -22,7 +31,21 @@ class ComercioController extends Controller
      */
     public function create()
     {
-        return view('comercios.create');
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede crear comercios para cualquier usuario
+            $users = User::where('role', 'user')->get();
+            return view('comercios.create', compact('users'));
+        } else {
+            // Usuario común: verificar si ya tiene un comercio
+            if ($user->comercios()->count() > 0) {
+                return redirect()->route('comercios.index')
+                    ->with('warning', 'Ya tienes un comercio. Solo puedes tener uno.');
+            }
+            
+            return view('comercios.create');
+        }
     }
 
     /**
@@ -30,18 +53,47 @@ class ComercioController extends Controller
      */
     public function store(Request $request)
     {
-            // Validar los datos
-        $validated = $request->validate([
+        $user = auth()->user();
+        
+        // Validar los datos
+        $validationRules = [
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
-        ]);
-
-        // Crear el comercio
-        $comercio = new Comercio();
-        $comercio->user_id = auth()->id();
+        ];
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede asignar el comercio a cualquier usuario
+            $validationRules['user_id'] = 'required|exists:users,id';
+        }
+        
+        $validated = $request->validate($validationRules);
+        
+        if ($user->isSuperAdmin()) {
+            // Super Admin puede crear comercios para cualquier usuario
+            $targetUser = User::findOrFail($validated['user_id']);
+            
+            // Verificar si el usuario ya tiene un comercio
+            if ($targetUser->comercios()->count() > 0) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'El usuario ya tiene un comercio. Solo puede tener uno.');
+            }
+            
+            $comercio = new Comercio();
+            $comercio->user_id = $validated['user_id'];
+        } else {
+            // Usuario común: verificar si ya tiene un comercio
+            if ($user->comercios()->count() > 0) {
+                return redirect()->route('comercios.index')
+                    ->with('warning', 'Ya tienes un comercio. Solo puedes tener uno.');
+            }
+            
+            $comercio = new Comercio();
+            $comercio->user_id = auth()->id();
+        }
         $comercio->nombre = $validated['nombre'];
         $comercio->slug = Str::slug($validated['nombre']);
         $comercio->descripcion = $validated['descripcion'];
