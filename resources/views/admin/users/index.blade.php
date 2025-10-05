@@ -207,12 +207,4 @@
         </div>
     </div>
 
-    <!-- Botón Flotante Crear Usuario -->
-    <div class="fixed bottom-6 right-6 z-50">
-        <a href="{{ route('admin.users.create') }}" 
-           class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2">
-            <span class="text-xl">➕</span>
-            <span class="font-medium">Crear Usuario</span>
-        </a>
-    </div>
 </x-app-layout>
