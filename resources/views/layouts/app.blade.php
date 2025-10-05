@@ -789,6 +789,9 @@
             color: rgba(156, 163, 175, 0.8) !important;
         }
     </style>
+    
+    <!-- SweetAlert2 CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     </head>
 <body class="text-text-primary min-h-screen">
     <div class="min-h-screen flex flex-col">
@@ -927,6 +930,100 @@
                 this.classList.remove('neon-glow');
             });
         });
+    </script>
+    
+    <!-- SweetAlert2 Helper Functions -->
+    <script>
+        // Configuración global de SweetAlert2 para tema dark
+        const swalConfig = {
+            background: '#1A2A44',
+            color: '#ffffff',
+            customClass: {
+                popup: 'dark-modal',
+                title: 'text-white',
+                content: 'text-gray-300',
+                confirmButton: 'bg-green-600 hover:bg-green-700',
+                cancelButton: 'bg-red-600 hover:bg-red-700'
+            }
+        };
+
+        // Reemplazar alerts nativos con SweetAlert2
+        window.originalAlert = window.alert;
+        window.alert = function(message) {
+            Swal.fire({
+                ...swalConfig,
+                title: 'Información',
+                text: message,
+                icon: 'info',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3B82F6'
+            });
+        };
+
+        // Función para confirms con SweetAlert2 (asíncrona)
+        function showConfirm(message, callback) {
+            Swal.fire({
+                ...swalConfig,
+                title: 'Confirmar',
+                text: message,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#EF4444',
+                confirmButtonText: 'Sí',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                callback(result.isConfirmed);
+            });
+        }
+
+        // Mantener confirm nativo para formularios (síncrono)
+        window.originalConfirm = window.confirm;
+
+        // Helper functions para usar SweetAlert2 fácilmente
+        function showSuccess(message, title = '¡Éxito!') {
+            Swal.fire({
+                ...swalConfig,
+                title: title,
+                text: message,
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#10B981'
+            });
+        }
+
+        function showError(message, title = 'Error') {
+            Swal.fire({
+                ...swalConfig,
+                title: title,
+                text: message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#EF4444'
+            });
+        }
+
+        function showWarning(message, title = 'Advertencia') {
+            Swal.fire({
+                ...swalConfig,
+                title: title,
+                text: message,
+                icon: 'warning',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#F59E0B'
+            });
+        }
+
+        function showInfo(message, title = 'Información') {
+            Swal.fire({
+                ...swalConfig,
+                title: title,
+                text: message,
+                icon: 'info',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3B82F6'
+            });
+        }
     </script>
     </body>
 </html>

@@ -119,7 +119,7 @@
 
                     <!-- Sidebar derecho: Logo, Contacto e Info adicional -->
                     <div class="space-y-4">
-                        
+
                         <!-- Logo del Comercio -->
                         <div class="metric-card">
                             <div class="flex items-center justify-between mb-4">
@@ -146,7 +146,7 @@
                                 <input type="file" 
                                        id="logo" 
                                        name="logo" 
-                                       accept="image/*"
+                                       accept="image/*" 
                                        class="w-full px-2 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200">
                                 <p class="text-xs text-text-secondary mt-1">JPEG, PNG, JPG, GIF. Máx: 2MB</p>
                                 <x-input-error :messages="$errors->get('logo')" class="mt-1" />
@@ -445,7 +445,8 @@
         }
         
         function generateQuestionsWithAI() {
-            if (confirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.')) {
+            showConfirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.', function(result) {
+                if (result) {
                 // Mostrar indicador de carga
                 const button = document.querySelector('button[onclick="generateQuestionsWithAI()"]');
                 const originalText = button.innerHTML;
@@ -467,7 +468,8 @@
                 // Agregar al DOM y enviar
                 document.body.appendChild(form);
                 form.submit();
-            }
+                }
+            });
         }
         
         function improveAnswerWithAI(questionIndex) {
@@ -486,7 +488,8 @@
                 return;
             }
             
-            if (confirm('¿Quieres mejorar esta respuesta con IA?')) {
+            showConfirm('¿Quieres mejorar esta respuesta con IA?', function(result) {
+                if (result) {
                 // Mostrar indicador de carga en el botón
                 const button = document.querySelector(`button[onclick="improveAnswerWithAI(${questionIndex})"]`);
                 const originalText = button.innerHTML;
@@ -528,7 +531,8 @@
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
-            }
+                }
+            });
         }
 
         // Funciones para manejar logo

@@ -1079,7 +1079,8 @@
         }
         
         function generateQuestionsWithAI() {
-            if (confirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.')) {
+            showConfirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.', function(result) {
+                if (result) {
                 // Mostrar indicador de carga
                 const button = document.querySelector('button[onclick="generateQuestionsWithAI()"]');
                 const originalText = button.innerHTML;
@@ -1116,7 +1117,8 @@
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
-            }
+                }
+            });
         }
         
         function improveAnswerWithAI(questionIndex) {
@@ -1135,7 +1137,8 @@
                 return;
             }
             
-            if (confirm('¿Quieres mejorar esta respuesta con IA?')) {
+            showConfirm('¿Quieres mejorar esta respuesta con IA?', function(result) {
+                if (result) {
                 // Mostrar indicador de carga en el botón
                 const button = document.querySelector(`button[onclick="improveAnswerWithAI(${questionIndex})"]`);
                 const originalText = button.innerHTML;
@@ -1177,7 +1180,8 @@
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
-            }
+                }
+            });
         }
 
         // Función para guardar personalización
