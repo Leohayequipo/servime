@@ -202,7 +202,7 @@
                             <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
                         </div>
                         
-                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6">
+                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6" id="menu-form" onsubmit="LoadingManager.showFormLoader(this, '{{ $isEdit ? "Actualizando menú..." : "Creando menú..." }}')">
                             @csrf
                             @if($isEdit)
                                 @method('PUT')
@@ -1081,11 +1081,9 @@
         function generateQuestionsWithAI() {
             showConfirm('¿Estás seguro de que quieres generar nuevas preguntas con IA? Esto reemplazará las preguntas actuales.', function(result) {
                 if (result) {
-                // Mostrar indicador de carga
+                // Mostrar indicador de carga usando LoadingManager
                 const button = document.querySelector('button[onclick="generateQuestionsWithAI()"]');
-                const originalText = button.innerHTML;
-                button.innerHTML = '⏳ Generando...';
-                button.disabled = true;
+                LoadingManager.showButtonLoader(button, 'Generando...');
                 
                 // Enviar petición AJAX
                 fetch('{{ route("comercios.generate.questions", $comercio) }}', {
@@ -1113,9 +1111,8 @@
                     alert('Error al generar preguntas con IA');
                 })
                 .finally(() => {
-                    // Restaurar botón
-                    button.innerHTML = originalText;
-                    button.disabled = false;
+                    // Restaurar botón usando LoadingManager
+                    LoadingManager.hideButtonLoader(button);
                 });
                 }
             });
@@ -1139,11 +1136,9 @@
             
             showConfirm('¿Quieres mejorar esta respuesta con IA?', function(result) {
                 if (result) {
-                // Mostrar indicador de carga en el botón
+                // Mostrar indicador de carga en el botón usando LoadingManager
                 const button = document.querySelector(`button[onclick="improveAnswerWithAI(${questionIndex})"]`);
-                const originalText = button.innerHTML;
-                button.innerHTML = '⏳';
-                button.disabled = true;
+                LoadingManager.showButtonLoader(button, 'Mejorando...');
                 
                 // Preparar datos para envío
                 const formData = new FormData();
@@ -1176,9 +1171,8 @@
                     alert('Error al mejorar la respuesta con IA.');
                 })
                 .finally(() => {
-                    // Restaurar botón
-                    button.innerHTML = originalText;
-                    button.disabled = false;
+                    // Restaurar botón usando LoadingManager
+                    LoadingManager.hideButtonLoader(button);
                 });
                 }
             });

@@ -190,7 +190,7 @@
                                     <div class="grid grid-cols-1 gap-2">
                                         @if(auth()->user()->isSuperAdmin())
                                             <form method="POST" action="{{ route('admin.comercios.destroy', $comercio) }}" 
-                                                  onsubmit="event.preventDefault(); const form = this; showConfirm('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) form.submit(); });"
+                                                  onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) { form.submit(); } }, 'Eliminando comercio...');"
                                                   class="inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -202,7 +202,7 @@
                                             </form>
                                         @else
                                             <form method="POST" action="{{ route('comercios.destroy', $comercio) }}" 
-                                                  onsubmit="event.preventDefault(); const form = this; showConfirm('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) form.submit(); });"
+                                                  onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) { form.submit(); } }, 'Eliminando comercio...');"
                                                   class="inline">
                                                 @csrf
                                                 @method('DELETE')

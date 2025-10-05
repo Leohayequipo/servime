@@ -40,7 +40,7 @@
             @endif
 
             <form id="comercio-form" method="POST" action="{{ route('comercios.update', $comercio) }}" enctype="multipart/form-data"
-                  onsubmit="console.log('Formulario enviándose...', this); return true;">
+                  onsubmit="LoadingManager.showFormLoader(this, 'Guardando cambios...')">
                         @csrf
                         @method('PUT')
                 
@@ -468,7 +468,7 @@
                 // Agregar al DOM y enviar
                 document.body.appendChild(form);
                 form.submit();
-                }
+            }
             });
         }
         
@@ -531,7 +531,7 @@
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
-                }
+            }
             });
         }
 
@@ -546,6 +546,10 @@
 
         function deleteLogo() {
             console.log('deleteLogo() called');
+            
+            // Mostrar indicador de carga
+            const deleteButton = document.querySelector('button[onclick="deleteLogo()"]');
+            LoadingManager.showButtonLoader(deleteButton, 'Eliminando...');
             
             // Crear FormData para enviar datos como formulario
             const formData = new FormData();
@@ -601,6 +605,10 @@
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error al eliminar el logo: ' + error.message);
+            })
+            .finally(() => {
+                // Restaurar botón usando LoadingManager
+                LoadingManager.hideButtonLoader(deleteButton);
             });
         }
     </script>

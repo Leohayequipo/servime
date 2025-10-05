@@ -18,8 +18,8 @@
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <form method="POST" action="{{ route('comercios.store') }}" enctype="multipart/form-data" class="space-y-8">
-                @csrf
+    <form method="POST" action="{{ route('comercios.store') }}" enctype="multipart/form-data" class="space-y-8" id="comercio-form" onsubmit="LoadingManager.showFormLoader(this, 'Creando comercio...')">
+        @csrf
                 
                 <!-- 🧾 Información del Comercio -->
                 <div class="glass-effect rounded-2xl p-6">

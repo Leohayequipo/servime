@@ -822,10 +822,11 @@
                                     Menús
                                 </a>
                                 
-                                <a href="{{ route('analytics.dashboard') }}" 
+                                <!-- Analytics oculto temporalmente -->
+                                {{-- <a href="{{ route('analytics.dashboard') }}" 
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('analytics.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Analytics
-                                </a>
+                                </a> --}}
                             </div>
                         </div>
                     </div>
@@ -977,6 +978,29 @@
             });
         }
 
+        // Función para confirms con indicador de carga
+        function showConfirmWithLoader(message, callback, loadingMessage = 'Procesando...') {
+            Swal.fire({
+                ...swalConfig,
+                title: 'Confirmar',
+                text: message,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#EF4444',
+                confirmButtonText: 'Sí',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Mostrar loader global
+                    LoadingManager.showGlobalLoader(loadingMessage);
+                    callback(true);
+                } else {
+                    callback(false);
+                }
+            });
+        }
+
         // Mantener confirm nativo para formularios (síncrono)
         window.originalConfirm = window.confirm;
 
@@ -1024,6 +1048,111 @@
                 confirmButtonColor: '#3B82F6'
             });
         }
+
+        // Sistema de indicadores de carga
+        const LoadingManager = {
+            // Indicadores de carga globales
+            showGlobalLoader: function(message = 'Cargando...') {
+                Swal.fire({
+                    ...swalConfig,
+                    title: message,
+                    html: `
+                        <div class="flex flex-col items-center space-y-4">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                            <p class="text-gray-300">Por favor espera...</p>
+                        </div>
+                    `,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            },
+
+            hideGlobalLoader: function() {
+                Swal.close();
+            },
+
+            // Indicadores de carga para botones
+            showButtonLoader: function(button, text = 'Cargando...') {
+                if (!button) return;
+                
+                // Guardar el contenido original
+                button.setAttribute('data-original-text', button.innerHTML);
+                button.setAttribute('data-original-disabled', button.disabled);
+                
+                // Mostrar loader
+                button.innerHTML = `
+                    <div class="flex items-center justify-center space-x-2">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>${text}</span>
+                    </div>
+                `;
+                button.disabled = true;
+                button.classList.add('opacity-75', 'cursor-not-allowed');
+            },
+
+            hideButtonLoader: function(button) {
+                if (!button) return;
+                
+                // Restaurar contenido original
+                const originalText = button.getAttribute('data-original-text');
+                const originalDisabled = button.getAttribute('data-original-disabled');
+                
+                if (originalText) {
+                    button.innerHTML = originalText;
+                    button.removeAttribute('data-original-text');
+                }
+                if (originalDisabled !== null) {
+                    button.disabled = originalDisabled === 'true';
+                    button.removeAttribute('data-original-disabled');
+                }
+                
+                button.classList.remove('opacity-75', 'cursor-not-allowed');
+            },
+
+            // Indicador de carga para formularios
+            showFormLoader: function(form, message = 'Enviando...') {
+                if (!form) return;
+                
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    this.showButtonLoader(submitButton, message);
+                }
+                
+                // Deshabilitar todos los inputs del formulario
+                const inputs = form.querySelectorAll('input, select, textarea, button');
+                inputs.forEach(input => {
+                    if (!input.disabled) {
+                        input.disabled = true;
+                        input.classList.add('opacity-75');
+                    }
+                });
+            },
+
+            hideFormLoader: function(form) {
+                if (!form) return;
+                
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    this.hideButtonLoader(submitButton);
+                }
+                
+                // Habilitar todos los inputs del formulario
+                const inputs = form.querySelectorAll('input, select, textarea, button');
+                inputs.forEach(input => {
+                    if (!input.disabled || input.getAttribute('data-original-disabled') === 'false') {
+                        input.disabled = false;
+                        input.classList.remove('opacity-75');
+                    }
+                });
+            }
+        };
+
+        // Hacer disponible globalmente
+        window.LoadingManager = LoadingManager;
     </script>
     </body>
 </html>

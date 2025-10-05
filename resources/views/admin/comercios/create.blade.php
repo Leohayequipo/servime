@@ -42,7 +42,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('admin.comercios.store') }}" enctype="multipart/form-data" onsubmit="event.preventDefault(); const form = this; showConfirm('¿Estás seguro de que quieres crear este comercio?', function(result) { if(result) form.submit(); });" class="space-y-8">
+            <form method="POST" action="{{ route('admin.comercios.store') }}" enctype="multipart/form-data" onsubmit="event.preventDefault(); const form = this; showConfirm('¿Estás seguro de que quieres crear este comercio?', function(result) { if(result) { LoadingManager.showFormLoader(form, 'Creando comercio...'); form.submit(); } });" class="space-y-8" id="admin-comercio-form">
                 @csrf
                 
                 <!-- Información del Comercio -->

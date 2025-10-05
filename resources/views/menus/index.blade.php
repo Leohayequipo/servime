@@ -211,7 +211,7 @@
                                         @endif
                                         
                                         <form method="POST" action="{{ route('menus.destroy', [$comercio, $menu]) }}" 
-                                              onsubmit="return confirm('¿Estás seguro de que quieres eliminar este menú?')"
+                                              onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar este menú?', function(result) { if(result) { form.submit(); } }, 'Eliminando menú...');"
                                               class="w-full">
                                             @csrf
                                             @method('DELETE')

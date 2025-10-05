@@ -149,6 +149,17 @@
             
             isLoading = true;
             
+            // Mostrar indicador de carga en el botón de envío
+            const sendButton = document.getElementById('sendButton');
+            const originalContent = sendButton.innerHTML;
+            sendButton.innerHTML = `
+                <div class="flex items-center justify-center space-x-1">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span class="text-xs">Enviando...</span>
+                </div>
+            `;
+            sendButton.disabled = true;
+            
             // Agregar mensaje del usuario
             addMessage(message, 'user');
             
@@ -180,6 +191,9 @@
             })
             .finally(() => {
                 isLoading = false;
+                // Restaurar botón de envío
+                sendButton.innerHTML = originalContent;
+                sendButton.disabled = false;
             });
         }
 
@@ -214,11 +228,14 @@
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
-                <div class="bg-secondary-dark rounded-lg p-3">
-                    <div class="flex items-center space-x-1">
-                        <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full" style="animation-delay: 0.2s"></div>
-                        <div class="typing-indicator w-2 h-2 bg-gray-400 rounded-full" style="animation-delay: 0.4s"></div>
+                <div class="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-3">
+                    <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-1">
+                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                        </div>
+                        <span class="text-blue-300 text-xs">IA está escribiendo...</span>
                     </div>
                 </div>
             `;
