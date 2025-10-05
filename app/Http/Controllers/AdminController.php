@@ -184,7 +184,10 @@ class AdminController extends Controller
      */
     public function createComercio()
     {
-        $users = User::where('role', 'user')->get();
+        // Solo mostrar usuarios que NO tengan comercio asignado
+        $users = User::where('role', 'user')
+                    ->whereDoesntHave('comercios')
+                    ->get();
         return view('admin.comercios.create', compact('users'));
     }
 
@@ -203,13 +206,6 @@ class AdminController extends Controller
         ]);
 
         $targetUser = User::findOrFail($validated['user_id']);
-        
-        // Verificar si el usuario ya tiene un comercio
-        if ($targetUser->comercios()->count() > 0) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'El usuario ya tiene un comercio. Solo puede tener uno.');
-        }
 
         $comercio = new Comercio();
         $comercio->user_id = $validated['user_id'];

@@ -77,12 +77,19 @@
                                     required
                                     class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
                                 <option value="">Selecciona un usuario</option>
-                                @foreach($users as $user)
+                                @forelse($users as $user)
                                     <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }} ({{ $user->email }})
                                     </option>
-                                @endforeach
+                                @empty
+                                    <option value="" disabled>No hay usuarios disponibles (todos ya tienen comercio)</option>
+                                @endforelse
                             </select>
+                            @if($users->isEmpty())
+                                <p class="mt-2 text-sm text-yellow-400">
+                                    ℹ️ Todos los usuarios ya tienen un comercio asignado. Solo se muestran usuarios disponibles.
+                                </p>
+                            @endif
                             <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
                         </div>
 

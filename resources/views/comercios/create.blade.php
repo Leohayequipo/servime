@@ -37,12 +37,19 @@
                                 <x-input-label for="user_id" :value="__('Asignar a Usuario')" class="text-text-primary font-medium mb-2" />
                                 <select id="user_id" name="user_id" class="input-field w-full" required>
                                     <option value="">Seleccionar usuario...</option>
-                                    @foreach($users as $user)
+                                    @forelse($users as $user)
                                         <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
                                             {{ $user->name }} ({{ $user->email }})
                                         </option>
-                                    @endforeach
+                                    @empty
+                                        <option value="" disabled>No hay usuarios disponibles (todos ya tienen comercio)</option>
+                                    @endforelse
                                 </select>
+                                @if($users->isEmpty())
+                                    <p class="mt-2 text-sm text-yellow-400">
+                                        ℹ️ Todos los usuarios ya tienen un comercio asignado. Solo se muestran usuarios disponibles.
+                                    </p>
+                                @endif
                                 <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
                             </div>
                         @endif

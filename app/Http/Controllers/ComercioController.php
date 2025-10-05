@@ -35,8 +35,10 @@ class ComercioController extends Controller
         $user = auth()->user();
         
         if ($user->isSuperAdmin()) {
-            // Super Admin puede crear comercios para cualquier usuario
-            $users = User::where('role', 'user')->get();
+            // Super Admin puede crear comercios para cualquier usuario (solo los que no tengan comercio)
+            $users = User::where('role', 'user')
+                        ->whereDoesntHave('comercios')
+                        ->get();
             return view('comercios.create', compact('users'));
         } else {
             // Usuario común: verificar si ya tiene un comercio
@@ -75,13 +77,6 @@ class ComercioController extends Controller
         if ($user->isSuperAdmin()) {
             // Super Admin puede crear comercios para cualquier usuario
             $targetUser = User::findOrFail($validated['user_id']);
-            
-            // Verificar si el usuario ya tiene un comercio
-            if ($targetUser->comercios()->count() > 0) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'El usuario ya tiene un comercio. Solo puede tener uno.');
-            }
             
             $comercio = new Comercio();
             $comercio->user_id = $validated['user_id'];
