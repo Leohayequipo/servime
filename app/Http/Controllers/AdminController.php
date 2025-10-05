@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeEmail;
 use App\Models\User;
 use App\Models\Comercio;
 use App\Models\Menu;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
 {
@@ -75,6 +78,14 @@ class AdminController extends Controller
             'role' => $validated['role'],
             'email_verified_at' => now()
         ]);
+
+        // Enviar email de bienvenida con contraseña
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user, $validated['password']));
+        } catch (\Exception $e) {
+            // Log del error pero no interrumpir la creación
+            \Log::error('Error enviando email de bienvenida: ' . $e->getMessage());
+        }
 
         return redirect()->route('admin.users.show', $user)
             ->with('success', 'Usuario creado exitosamente.');
