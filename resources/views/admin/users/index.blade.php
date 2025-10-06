@@ -182,6 +182,18 @@
                                                class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
                                                 Editar
                                             </a>
+                                            @if($user->id !== auth()->id())
+                                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" 
+                                                      onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar al usuario {{ $user->name }}? Esta acción no se puede deshacer.', function(result) { if(result) { form.submit(); } }, 'Eliminando usuario...');"
+                                                      class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" 
+                                                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                                                        Eliminar
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

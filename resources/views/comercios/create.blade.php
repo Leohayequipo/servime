@@ -18,7 +18,7 @@
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-    <form method="POST" action="{{ route('comercios.store') }}" enctype="multipart/form-data" class="space-y-8" id="comercio-form" onsubmit="LoadingManager.showFormLoader(this, 'Creando comercio...')">
+    <form method="POST" action="{{ route('comercios.store') }}" enctype="multipart/form-data" class="space-y-8" id="comercio-form">
         @csrf
                 
                 <!-- 🧾 Información del Comercio -->
@@ -104,6 +104,7 @@
                 <!-- Botón Flotante Guardar Cambios -->
                 <div class="fixed bottom-6 right-6 z-50">
                     <button type="submit" 
+                            onclick="this.disabled=true; this.innerHTML='<span class=\'text-2xl\'>⏳</span><span>Creando...</span>'; this.form.submit();"
                             class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-3">
                         <span class="text-2xl">💾</span>
                         <span>Guardar Cambios</span>

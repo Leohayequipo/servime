@@ -46,11 +46,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}', [App\Http\Controllers\AdminController::class, 'showUser'])->name('users.show');
         Route::get('/users/{user}/edit', [App\Http\Controllers\AdminController::class, 'editUser'])->name('users.edit');
         Route::put('/users/{user}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
         
         // Gestión de Comercios
         Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
         Route::get('/comercios/create', [App\Http\Controllers\AdminController::class, 'createComercio'])->name('comercios.create');
-        Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('comercios.store');
+        Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('admin.comercios.store');
         Route::get('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
         Route::delete('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');

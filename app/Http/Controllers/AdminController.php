@@ -323,4 +323,33 @@ class AdminController extends Controller
         
         return redirect()->route('admin.comercios.index')->with('success', 'Comercio eliminado exitosamente');
     }
+
+    /**
+     * Eliminar usuario (Super Admin)
+     */
+    public function destroyUser(string $id)
+    {
+        $user = User::findOrFail($id);
+        
+        // No permitir eliminar al usuario actual
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users.index')->with('error', 'No puedes eliminar tu propia cuenta');
+        }
+        
+        // Si el usuario tiene comercios, eliminarlos también (esto eliminará los menús asociados)
+        if ($user->comercios->count() > 0) {
+            foreach ($user->comercios as $comercio) {
+                // Eliminar logo del storage si existe
+                if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
+                    \Storage::disk('public')->delete($comercio->logo_url);
+                }
+                $comercio->delete();
+            }
+        }
+        
+        // Eliminar el usuario
+        $user->delete();
+        
+        return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado exitosamente');
+    }
 }
