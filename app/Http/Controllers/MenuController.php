@@ -26,17 +26,17 @@ class MenuController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index($comercioId)
+    public function index(Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede ver cualquier comercio
-            $comercio = Comercio::with('user')->findOrFail($comercioId);
-        } else {
-            // Usuario común solo puede ver sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para ver los menús de este comercio.');
         }
+        
+        // Cargar relación de usuario
+        $comercio->load('user');
         
         $menus = $comercio->menus()->orderBy('created_at', 'desc')->get();
         
@@ -46,17 +46,17 @@ class MenuController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create($comercioId)
+    public function create(Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede crear menús en cualquier comercio
-            $comercio = Comercio::with('user')->findOrFail($comercioId);
-        } else {
-            // Usuario común solo puede crear menús en sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
+        
+        // Cargar relación de usuario
+        $comercio->load('user');
         
         $categories = QuestionCategory::active()->ordered()->get();
         $menu = null; // No hay menú para crear
@@ -67,16 +67,13 @@ class MenuController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, $comercioId)
+    public function store(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede crear menús en cualquier comercio
-            $comercio = Comercio::findOrFail($comercioId);
-        } else {
-            // Usuario común solo puede crear menús en sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
+        // Validar permisos: Super Admin puede crear en cualquiera, usuario común solo en sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
         
         $validated = $request->validate([
@@ -127,10 +124,18 @@ class MenuController extends Controller
      * Display the specified resource.
      * Redirige a la página de edición ya que la funcionalidad está integrada ahí.
      */
-    public function show($comercioId, $menuId)
+    public function show(Comercio $comercio, Menu $menu)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        $menu = $comercio->menus()->findOrFail($menuId);
+        $user = auth()->user();
+        
+        // Validar permisos y que el menú pertenezca al comercio
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para ver este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
         
         // Redirigir a la página de edición donde está integrada toda la funcionalidad
         return redirect()->route('menus.edit', [$comercio, $menu]);
@@ -139,10 +144,19 @@ class MenuController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($comercioId, $menuId)
+    public function edit(Comercio $comercio, Menu $menu)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        $menu = $comercio->menus()->findOrFail($menuId);
+        $user = auth()->user();
+        
+        // Validar permisos y que el menú pertenezca al comercio
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para editar este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
+        
         $categories = QuestionCategory::active()->ordered()->get();
         $isEdit = true;
         
@@ -152,18 +166,17 @@ class MenuController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $comercioId, $menuId)
+    public function update(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede editar cualquier menú
-            $comercio = Comercio::findOrFail($comercioId);
-            $menu = $comercio->menus()->findOrFail($menuId);
-        } else {
-            // Usuario común solo puede editar sus menús
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($comercioId);
-            $menu = $comercio->menus()->findOrFail($menuId);
+        // Validar permisos y que el menú pertenezca al comercio
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para actualizar este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
         }
         
         $validated = $request->validate([
@@ -270,10 +283,18 @@ class MenuController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($comercioId, $menuId)
+    public function destroy(Comercio $comercio, Menu $menu)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        $menu = $comercio->menus()->findOrFail($menuId);
+        $user = auth()->user();
+        
+        // Validar permisos y que el menú pertenezca al comercio
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para eliminar este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
         
         // Eliminar archivo del storage
         if ($menu->archivo_original && Storage::disk('public')->exists($menu->archivo_original)) {
@@ -289,10 +310,18 @@ class MenuController extends Controller
     /**
      * Activar un menú (desactivar otros del mismo comercio)
      */
-    public function activar($comercioId, $menuId)
+    public function activar(Comercio $comercio, Menu $menu)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($comercioId);
-        $menu = $comercio->menus()->findOrFail($menuId);
+        $user = auth()->user();
+        
+        // Validar permisos y que el menú pertenezca al comercio
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para activar este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
         
         // Desactivar todos los menús del comercio
         $comercio->menus()->update(['activo' => false]);

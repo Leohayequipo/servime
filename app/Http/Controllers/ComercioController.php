@@ -118,17 +118,17 @@ class ComercioController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede editar cualquier comercio
-            $comercio = Comercio::with('user')->findOrFail($id);
-        } else {
-            // Usuario común solo puede editar sus comercios
-            $comercio = Comercio::with('user')->where('user_id', $user->id)->findOrFail($id);
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para acceder a este comercio.');
         }
+        
+        // Cargar relación de usuario
+        $comercio->load('user');
         
         // Obtener categorías de preguntas
         $categories = QuestionCategory::active()->ordered()->get();
@@ -143,16 +143,13 @@ class ComercioController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede editar cualquier comercio
-            $comercio = Comercio::findOrFail($id);
-        } else {
-            // Usuario común solo puede editar sus comercios
-            $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        // Validar permisos: Super Admin puede editar cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para editar este comercio.');
         }
 
         
@@ -249,53 +246,52 @@ class ComercioController extends Controller
     /**
      * Generar preguntas frecuentes con IA
      */
-    public function generateQuestions(Request $request, string $id)
+    public function generateQuestions(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede generar preguntas para cualquier comercio
-            $comercio = Comercio::findOrFail($id);
-        } else {
-            // Usuario común solo puede generar preguntas para sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para generar preguntas para este comercio.');
         }
         
         // Llamar al método del CustomizationController
         $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->generateQuestions($request, $id);
+        return $customizationController->generateQuestions($request, $comercio->id);
     }
 
     /**
      * Mejorar respuesta con IA
      */
-    public function improveAnswer(Request $request, string $id)
+    public function improveAnswer(Request $request, Comercio $comercio)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para mejorar respuestas en este comercio.');
+        }
         
         // Llamar al método del CustomizationController
         $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->improveAnswer($request, $id);
+        return $customizationController->improveAnswer($request, $comercio->id);
     }
 
     /**
      * Vista previa del comercio
      */
-    public function preview(string $id)
+    public function preview(Comercio $comercio)
     {
         $user = auth()->user();
         
-        if ($user->isSuperAdmin()) {
-            // Super Admin puede ver cualquier comercio
-            $comercio = Comercio::findOrFail($id);
-        } else {
-            // Usuario común solo puede ver sus comercios
-            $comercio = Comercio::where('user_id', $user->id)->findOrFail($id);
+        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para ver la vista previa de este comercio.');
         }
         
         // Llamar al método del CustomizationController
         $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->preview($id);
+        return $customizationController->preview($comercio->id);
     }
 
     /**
@@ -365,9 +361,14 @@ class ComercioController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Comercio $comercio)
     {
-        $comercio = Comercio::where('user_id', auth()->id())->findOrFail($id);
+        $user = auth()->user();
+        
+        // Validar permisos: Super Admin puede eliminar cualquiera, usuario común solo sus comercios
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para eliminar este comercio.');
+        }
         
         // Eliminar logo del storage si existe
         if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {

@@ -8,11 +8,10 @@ use Illuminate\Http\Request;
 class PublicMenuController extends Controller
 {
     /**
-     * Mostrar menús públicos de un comercio
+     * Mostrar menús públicos de un comercio (solo slug)
      */
-    public function show($comercioId)
+    public function show(Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($comercioId);
         $menus = $comercio->menus()
             ->where('procesado', true)
             ->orderBy('created_at', 'desc')

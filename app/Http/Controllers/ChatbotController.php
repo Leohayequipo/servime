@@ -18,15 +18,14 @@ class ChatbotController extends Controller
     }
 
     /**
-     * Procesar mensaje del chatbot con OpenAI
+     * Procesar mensaje del chatbot con OpenAI (usando slug)
      */
-    public function chat(Request $request, $comercioId): JsonResponse
+    public function chat(Request $request, Comercio $comercio): JsonResponse
     {
         $request->validate([
             'message' => 'required|string|max:500'
         ]);
 
-        $comercio = Comercio::findOrFail($comercioId);
         $message = $request->input('message');
         $startTime = microtime(true);
         

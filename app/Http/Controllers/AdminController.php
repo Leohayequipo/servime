@@ -296,23 +296,20 @@ class AdminController extends Controller
     /**
      * Generar preguntas frecuentes con IA para Super Admin
      */
-    public function generateQuestions(Request $request, $comercioId)
+    public function generateQuestions(Request $request, Comercio $comercio)
     {
-        // Super Admin puede generar preguntas para cualquier comercio
-        $comercio = Comercio::findOrFail($comercioId);
+        // Super Admin puede generar preguntas para cualquier comercio (sin validación adicional)
         
         // Llamar al método del ComercioController
         $comercioController = new \App\Http\Controllers\ComercioController();
-        return $comercioController->generateQuestions($request, $comercioId);
+        return $comercioController->generateQuestions($request, $comercio);
     }
 
     /**
      * Eliminar comercio (Super Admin)
      */
-    public function destroyComercio(string $id)
+    public function destroyComercio(Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($id);
-        
         // Eliminar logo del storage si existe
         if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
             \Storage::disk('public')->delete($comercio->logo_url);

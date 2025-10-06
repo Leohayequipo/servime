@@ -48,14 +48,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
         
-        // Gestión de Comercios
+        // Gestión de Comercios (usando slug)
         Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
         Route::get('/comercios/create', [App\Http\Controllers\AdminController::class, 'createComercio'])->name('comercios.create');
         Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('admin.comercios.store');
-        Route::get('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
-        Route::put('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
-        Route::delete('/comercios/{comercio}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
-        Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\AdminController::class, 'generateQuestions'])->name('comercios.generate.questions');
+        Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
+        Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
+        Route::delete('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
+        Route::post('/comercios/{comercio:slug}/generate-questions', [App\Http\Controllers\AdminController::class, 'generateQuestions'])->name('comercios.generate.questions');
         
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');
@@ -66,44 +66,44 @@ Route::middleware('auth')->group(function () {
         Route::put('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'updateMenu'])->name('menus.update');
     });
     
-    // Rutas de Comercios
+    // Rutas de Comercios (usando slug)
     Route::get('/comercios/create', [ComercioController::class, 'create'])->name('comercios.create');
     Route::post('/comercios', [ComercioController::class, 'store'])->name('comercios.store');
     Route::get('/comercios', [ComercioController::class, 'index'])->name('comercios.index');
-    Route::get('/comercios/{comercio}/edit', [ComercioController::class, 'edit'])->name('comercios.edit');
-    Route::put('/comercios/{comercio}', [ComercioController::class, 'update'])->name('comercios.update');
-    Route::delete('/comercios/{comercio}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
+    Route::get('/comercios/{comercio:slug}/edit', [ComercioController::class, 'edit'])->name('comercios.edit');
+    Route::put('/comercios/{comercio:slug}', [ComercioController::class, 'update'])->name('comercios.update');
+    Route::delete('/comercios/{comercio:slug}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
     
-    // Rutas de Menús
+    // Rutas de Menús (usando slug para comercio)
     Route::get('/menus', [App\Http\Controllers\MenuController::class, 'all'])->name('menus.all');
-    Route::get('/comercios/{comercio}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
-    Route::get('/comercios/{comercio}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
-    Route::post('/comercios/{comercio}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store');
-    Route::get('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'show'])->name('menus.show');
-    Route::get('/comercios/{comercio}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
-    Route::put('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
-    Route::delete('/comercios/{comercio}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
-    Route::post('/comercios/{comercio}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
+    Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
+    Route::get('/comercios/{comercio:slug}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
+    Route::post('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store');
+    Route::get('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'show'])->name('menus.show');
+    Route::get('/comercios/{comercio:slug}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
+    Route::put('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
+    Route::delete('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
     
-    // Rutas de personalización (ahora integradas en editar)
-    Route::get('/comercios/{comercio}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');
-    Route::post('/comercios/{comercio}/generate-questions', [App\Http\Controllers\ComercioController::class, 'generateQuestions'])->name('comercios.generate.questions');
-    Route::post('/comercios/{comercio}/improve-answer', [App\Http\Controllers\ComercioController::class, 'improveAnswer'])->name('comercios.improve.answer');
+    // Rutas de personalización (ahora integradas en editar, usando slug)
+    Route::get('/comercios/{comercio:slug}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');
+    Route::post('/comercios/{comercio:slug}/generate-questions', [App\Http\Controllers\ComercioController::class, 'generateQuestions'])->name('comercios.generate.questions');
+    Route::post('/comercios/{comercio:slug}/improve-answer', [App\Http\Controllers\ComercioController::class, 'improveAnswer'])->name('comercios.improve.answer');
 });
 
-// Rutas públicas (sin autenticación)
-Route::get('/menu/{comercio}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
-Route::post('/api/chat/{comercio}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
+// Rutas públicas (sin autenticación, usando slug)
+Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
+Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
     // Rutas de Categorías de Preguntas
     Route::resource('question-categories', QuestionCategoryController::class);
     
-    // Rutas de Analytics (requieren autenticación)
+    // Rutas de Analytics (requieren autenticación, usando slug)
     Route::middleware(['auth'])->group(function () {
         Route::prefix('analytics')->name('analytics.')->group(function () {
             Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
-            Route::get('/comercio/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
-            Route::get('/export/{comercio}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+            Route::get('/comercio/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
+            Route::get('/export/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
         });
     });
 
