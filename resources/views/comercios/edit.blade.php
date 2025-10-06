@@ -39,8 +39,7 @@
                 </div>
             @endif
 
-            <form id="comercio-form" method="POST" action="{{ route('comercios.update', $comercio) }}" enctype="multipart/form-data"
-                  onsubmit="LoadingManager.showFormLoader(this, 'Guardando cambios...')">
+            <form id="comercio-form" method="POST" action="{{ route('comercios.update', $comercio) }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                 

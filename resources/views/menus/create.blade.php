@@ -202,7 +202,7 @@
                             <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
                         </div>
                         
-                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6" id="menu-form" onsubmit="LoadingManager.showFormLoader(this, '{{ $isEdit ? "Actualizando menú..." : "Creando menú..." }}')">
+                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6" id="menu-form">
                             @csrf
                             @if($isEdit)
                                 @method('PUT')
