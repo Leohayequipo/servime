@@ -108,7 +108,12 @@
                 <button onclick="generateQR()" 
                         class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
                     <span class="mr-2">📱</span>
-                    Generar QR
+                    QR Simple
+                </button>
+                <button onclick="generateQRWithLogo()" 
+                        class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                    <span class="mr-2">🎨</span>
+                    QR con Logo
                 </button>
             </div>
 
@@ -246,49 +251,27 @@
     </div>
 
     <!-- Modal para QR -->
-    <div id="qrModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
-        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8 max-w-md mx-4">
+    <div id="qrModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8 max-w-lg mx-4">
             <div class="text-center">
-                <h3 class="text-2xl font-bold text-text-primary mb-4">Código QR Generado</h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-text-primary">📱 Código QR</h3>
+                    <button onclick="closeQR()" class="text-text-secondary hover:text-text-primary transition-colors">
+                        <span class="text-2xl">✕</span>
+                    </button>
+                </div>
                 <div id="qrCode" class="mb-6"></div>
                 <p class="text-text-secondary mb-6">Escanea este código para acceder al menú digital</p>
                 <div class="flex space-x-3">
                     <button onclick="downloadQR()" 
-                            class="btn-primary">
+                            class="flex-1 btn-primary">
                         📥 Descargar
                     </button>
                     <button onclick="closeQR()" 
-                            class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                            class="flex-1 bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         Cerrar
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de QR -->
-    <div id="qrModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="glass-effect rounded-2xl p-8 max-w-sm w-full text-center">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold gradient-text">📱 Código QR</h3>
-                <button onclick="closeQR()" class="text-secondary hover:text-primary transition-colors">
-                    <span class="text-2xl">✕</span>
-                </button>
-            </div>
-            
-            <div class="mb-6">
-                <div id="qrCode" class="flex justify-center mb-4"></div>
-                <p class="text-sm text-secondary mb-2">{{ $comercio->nombre }}</p>
-                <p class="text-xs text-secondary">Escanea para acceder al chatbot</p>
-            </div>
-            
-            <div class="flex space-x-3">
-                <button onclick="downloadQR()" class="flex-1 btn-primary py-2 px-4 rounded-lg">
-                    📥 Descargar
-                </button>
-                <button onclick="closeQR()" class="flex-1 bg-secondary-dark hover:bg-accent-gray text-text-primary py-2 px-4 rounded-lg transition-all duration-300">
-                    Cerrar
-                </button>
             </div>
         </div>
     </div>
@@ -357,5 +340,114 @@
                 closeQR();
             }
         });
+
+        // Nueva función para generar QR con Logo
+        function generateQRWithLogo() {
+            LoadingManager.showGlobalLoader('Generando QR con logo...');
+            
+            const url = '{{ route("menu.public", $comercio) }}';
+            const comercioNombre = '{{ $comercio->nombre }}';
+            const logoUrl = '{{ $comercio->logo_url ? asset("storage/" . $comercio->logo_url) : asset("images/logo_empresa_default.png") }}';
+            
+            // Configuración fija: Tarjeta 105x148mm a 300 DPI
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Dimensiones: 1240x1748px (105x148mm a 300 DPI)
+            canvas.width = 1240;
+            canvas.height = 1748;
+            
+            // Fondo blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Cargar logo
+            const logo = new Image();
+            logo.crossOrigin = 'anonymous';
+            logo.src = logoUrl;
+            
+            logo.onload = function() {
+                // Dibujar logo centrado (80px de alto)
+                const logoHeight = 160;
+                const logoAspectRatio = logo.width / logo.height;
+                const logoWidth = logoHeight * logoAspectRatio;
+                const logoX = (canvas.width - logoWidth) / 2;
+                const logoY = 100;
+                
+                ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+                
+                // Dibujar nombre del comercio
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(comercioNombre, canvas.width / 2, logoY + logoHeight + 80);
+                
+                // Generar QR
+                const qrSize = 800;
+                const qrY = logoY + logoHeight + 150;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(url)}&color=000000&bgcolor=ffffff&margin=0&ecc=H&format=png`;
+                
+                const qrImg = new Image();
+                qrImg.crossOrigin = 'anonymous';
+                qrImg.src = qrUrl;
+                
+                qrImg.onload = function() {
+                    // Dibujar QR centrado
+                    const qrX = (canvas.width - qrSize) / 2;
+                    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                    
+                    // Texto inferior
+                    ctx.font = '32px Arial';
+                    ctx.fillText('Escanea para ver nuestro', canvas.width / 2, qrY + qrSize + 80);
+                    ctx.font = 'bold 36px Arial';
+                    ctx.fillText('menú digital', canvas.width / 2, qrY + qrSize + 130);
+                    
+                    // Convertir canvas a imagen
+                    const finalImage = canvas.toDataURL('image/png');
+                    
+                    // Mostrar en modal
+                    const qrCodeDiv = document.getElementById('qrCode');
+                    const modal = document.getElementById('qrModal');
+                    
+                    qrCodeDiv.innerHTML = `<img src="${finalImage}" alt="QR con Logo" class="mx-auto" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+                    
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    
+                    LoadingManager.hideGlobalLoader();
+                    
+                    // Actualizar función de descarga
+                    window.currentQRData = finalImage;
+                };
+                
+                qrImg.onerror = function() {
+                    LoadingManager.hideGlobalLoader();
+                    alert('Error al generar el código QR. Verifica tu conexión a internet.');
+                };
+            };
+            
+            logo.onerror = function() {
+                LoadingManager.hideGlobalLoader();
+                alert('Error al cargar el logo del comercio.');
+            };
+        }
+        
+        // Actualizar función de descarga para soportar ambos tipos
+        const originalDownloadQR = downloadQR;
+        downloadQR = function() {
+            if (window.currentQRData) {
+                // Descargar QR con logo
+                const link = document.createElement('a');
+                link.download = 'qr-con-logo-{{ $comercio->slug }}.png';
+                link.href = window.currentQRData;
+                link.click();
+                
+                // Limpiar
+                window.currentQRData = null;
+            } else {
+                // Descargar QR simple (función original)
+                originalDownloadQR();
+            }
+        };
     </script>
 </x-app-layout>
