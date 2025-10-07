@@ -102,16 +102,127 @@ class MenuProcessorService
         } catch (\Exception $e) {
             Log::error('Error procesando PDF: ' . $e->getMessage());
             
-            // Fallback: intentar como imagen si es un PDF escaneado o con formato no soportado
+            // Fallback: intentar convertir PDF a imagen y procesar
             try {
-                Log::info('Intentando procesar PDF como imagen...');
-                $result = $this->processImageWithOpenAI($filePath);
-                Log::info('PDF procesado exitosamente como imagen');
-                return $result;
+                Log::info('Intentando convertir PDF a imagen...');
+                $pdfToImage = new \App\Services\PdfToImageService();
+                $imagePath = $pdfToImage->convertPdfToImage($filePath);
+                
+                if ($imagePath && file_exists($imagePath)) {
+                    Log::info('PDF preparado para procesamiento, enviando a OpenAI...');
+                    $result = $this->processPdfAsImageWithOpenAI($imagePath);
+                    
+                    // Limpiar archivo temporal
+                    $pdfToImage->cleanupTempFile($imagePath);
+                    
+                    Log::info('PDF procesado exitosamente como imagen');
+                    return $result;
+                } else {
+                    throw new \Exception('No se pudo preparar el PDF para procesamiento');
+                }
             } catch (\Exception $imageError) {
                 Log::error('Error procesando PDF como imagen: ' . $imageError->getMessage());
+                
+                // Si es un PDF escaneado, dar instrucciones claras al usuario
+                if (strpos($imageError->getMessage(), 'PDFs escaneados requieren conversión') !== false) {
+                    throw new \Exception('PDFs escaneados no pueden ser procesados directamente. Por favor, convierte el PDF a imagen (PNG/JPG) usando cualquier herramienta online y súbelo como imagen.');
+                }
+                
                 throw new \Exception('No se pudo procesar el PDF. Error de extracción de texto: ' . $e->getMessage() . ' | Error procesando como imagen: ' . $imageError->getMessage());
             }
+        }
+    }
+
+    /**
+     * Procesa PDFs como imágenes con OpenAI Vision (método especial)
+     */
+    protected function processPdfAsImageWithOpenAI($filePath)
+    {
+        if (empty($this->openaiApiKey) || $this->openaiApiKey === 'your_openai_api_key_here') {
+            throw new \Exception('OpenAI API key no configurada');
+        }
+
+        try {
+            // Leer el PDF y convertir a base64
+            $pdfData = file_get_contents($filePath);
+            $base64Pdf = base64_encode($pdfData);
+            
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o',
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => 'Analiza este PDF escaneado de un menú de restaurante y extráelo en formato JSON estructurado.
+
+INSTRUCCIONES:
+- Identifica las categorías (entradas, platos principales, postres, bebidas, etc.)
+- Para cada plato, extrae: nombre, precio, descripción (si existe)
+- Usa el formato JSON exacto que se muestra abajo
+- Si no hay precio visible, pon "Precio no especificado"
+- Mantén los nombres de platos tal como aparecen en el PDF
+- Si hay información del restaurante, inclúyela al inicio
+
+FORMATO JSON REQUERIDO:
+{
+  "restaurante": {
+    "nombre": "Nombre del restaurante",
+    "descripcion": "Descripción si existe"
+  },
+  "categorias": [
+    {
+      "nombre": "Nombre de la categoría",
+      "platos": [
+        {
+          "nombre": "Nombre del plato",
+          "precio": "Precio",
+          "descripcion": "Descripción del plato"
+        }
+      ]
+    }
+  ]
+}
+
+Responde SOLO con el JSON, sin texto adicional.'
+                            ],
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => 'data:application/pdf;base64,' . $base64Pdf
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'max_tokens' => 2000,
+                'temperature' => 0.3
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $content = $data['choices'][0]['message']['content'] ?? null;
+                
+                if ($content) {
+                    Log::info('PDF procesado exitosamente con OpenAI Vision');
+                    return $content;
+                }
+            }
+
+            Log::error('Error en respuesta de OpenAI', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            throw new \Exception('Error al procesar con OpenAI: ' . $response->body());
+
+        } catch (\Exception $e) {
+            Log::error('Error procesando PDF con OpenAI: ' . $e->getMessage());
+            throw $e;
         }
     }
 

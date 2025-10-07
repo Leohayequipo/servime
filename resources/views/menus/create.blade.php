@@ -319,7 +319,7 @@
                                     @if($isEdit)
                                         Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
                                     @else
-                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB. <strong>Los PDFs se convertirán automáticamente a imagen.</strong>
                                     @endif
                                 </p>
                             </div>
@@ -851,12 +851,87 @@
         </div>
     </div>
 
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configurar PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
         // Variables globales para preguntas frecuentes
         let questionIndex = {{ count($comercio->quick_questions) }};
         
+        // Variable global para almacenar el archivo convertido
+        let convertedImageFile = null;
+        
         document.addEventListener('DOMContentLoaded', function() {
+            // Interceptar el input de archivo para procesar PDFs
+            const fileInput = document.getElementById('archivo');
+            if (fileInput) {
+                fileInput.addEventListener('change', handleFileSelection);
+            }
+            
+            // Interceptar el envío del formulario
+            const menuForm = document.getElementById('menu-form');
+            if (menuForm) {
+                menuForm.addEventListener('submit', function(event) {
+                    return handleFormSubmit(event);
+                });
+            }
+            
+            // También interceptar el botón de guardar cambios
+            const saveButton = document.querySelector('button[onclick="saveCustomization()"]');
+            if (saveButton) {
+                // Remover el onclick original para evitar doble ejecución
+                saveButton.removeAttribute('onclick');
+                
+                saveButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    
+                    // Prevenir doble envío
+                    if (saveButton.disabled) {
+                        return;
+                    }
+                    
+                    saveButton.disabled = true;
+                    saveButton.textContent = 'Procesando...';
+                    
+                    // Verificar si hay archivo convertido
+                    if (convertedImageFile) {
+                        
+                        // Crear FormData manualmente
+                        const formData = new FormData();
+                        formData.append('_token', document.querySelector('input[name="_token"]').value);
+                        formData.append('nombre', document.getElementById('nombre').value);
+                        formData.append('archivo', convertedImageFile);
+                        
+                        // Enviar con fetch
+                        
+                        fetch('{{ route("menus.store", $comercio) }}', {
+                            method: 'POST',
+                            body: formData
+                        }).then(response => {
+                            if (response.ok) {
+                                window.location.href = '{{ route("menus.index", $comercio) }}';
+                            } else {
+                                saveButton.disabled = false;
+                                saveButton.textContent = 'Guardar Cambios';
+                            }
+                        }).catch(error => {
+                            saveButton.disabled = false;
+                            saveButton.textContent = 'Guardar Cambios';
+                        });
+                    } else {
+                        // Enviar el formulario del menú
+                        const menuForm = document.getElementById('menu-form');
+                        if (menuForm) {
+                            menuForm.submit();
+                        }
+                    }
+                });
+            }
             // Aplicar tema predefinido
             function applyTheme(theme) {
                 const themes = {
@@ -1303,6 +1378,135 @@
         function closeFileModal() {
             const modal = document.getElementById('fileModal');
             modal.style.display = 'none';
+        }
+        
+        // ========================================
+        // FUNCIONES PARA PROCESAR PDFs CON PDF.JS
+        // ========================================
+        
+        async function handleFileSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Si es un PDF, convertirlo a imagen
+            if (file.type === 'application/pdf') {
+                LoadingManager.showGlobalLoader('Procesando PDF (todas las páginas)...');
+                
+                try {
+                    const imageFile = await pdfToSingleImage(file);
+                    convertedImageFile = imageFile;
+                    
+                    // IMPORTANTE: Reemplazar el archivo en el input
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(imageFile);
+                    event.target.files = dataTransfer.files;
+                    
+                    LoadingManager.hideGlobalLoader();
+                    
+                    // Crear URL temporal para mostrar la imagen
+                    const imageUrl = URL.createObjectURL(imageFile);
+                    
+                    // Mostrar mensaje de éxito con URL
+                    Swal.fire({
+                        title: '✅ PDF Procesado',
+                        html: `El PDF se ha convertido a imagen exitosamente.<br><strong>Páginas procesadas: ${imageFile.pageCount}</strong><br><strong>Archivo: ${imageFile.name} (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)</strong><br><br><strong>URL temporal:</strong><br><small style="word-break: break-all;">${imageUrl}</small><br><br><em>Ahora completa el formulario y haz clic en "Guardar Cambios"</em>`,
+                        icon: 'success',
+                        confirmButtonText: 'Entendido',
+                        width: '600px'
+                    });
+                } catch (error) {
+                    LoadingManager.hideGlobalLoader();
+                    console.error('Error procesando PDF:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'No se pudo procesar el PDF: ' + error.message,
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                    // Limpiar el input
+                    event.target.value = '';
+                }
+            } else {
+                // Si es una imagen, dejar que se suba normalmente
+                convertedImageFile = null;
+            }
+        }
+        
+        function handleFormSubmit(event) {
+            // Verificar si hay archivo convertido
+            if (convertedImageFile) {
+                // Mostrar loader
+                LoadingManager.showGlobalLoader('Subiendo menú...');
+                
+                // Permitir que el formulario se envíe normalmente
+                return true;
+            } else {
+                return true;
+            }
+        }
+        
+        async function pdfToSingleImage(pdfFile) {
+            // 1. Cargar el PDF
+            const arrayBuffer = await pdfFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            const numPages = pdf.numPages;
+            
+            LoadingManager.showGlobalLoader(`Procesando PDF: 0/${numPages} páginas...`);
+            
+            // 2. Renderizar cada página en canvas separados
+            const canvases = [];
+            let totalHeight = 0;
+            let maxWidth = 0;
+            
+            for (let i = 1; i <= numPages; i++) {
+                LoadingManager.showGlobalLoader(`Procesando PDF: ${i}/${numPages} páginas...`);
+                
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 1.5 }); // Reducido de 2.0 a 1.5 para archivos más pequeños
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                await page.render({
+                    canvasContext: canvas.getContext('2d'),
+                    viewport: viewport
+                }).promise;
+                
+                canvases.push(canvas);
+                totalHeight += viewport.height;
+                maxWidth = Math.max(maxWidth, viewport.width);
+            }
+            
+            LoadingManager.showGlobalLoader('Combinando páginas...');
+            
+            // 3. Combinar todos los canvas en uno solo (vertical)
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = maxWidth;
+            finalCanvas.height = totalHeight;
+            const ctx = finalCanvas.getContext('2d');
+            
+            // Fondo blanco
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, maxWidth, totalHeight);
+            
+            // Pegar cada página una debajo de la otra
+            let currentY = 0;
+            for (const canvas of canvases) {
+                ctx.drawImage(canvas, 0, currentY);
+                currentY += canvas.height;
+            }
+            
+            // 4. Convertir a imagen JPEG (más comprimido que PNG)
+            const blob = await new Promise(resolve => 
+                finalCanvas.toBlob(resolve, 'image/jpeg', 0.85) // JPEG con 85% de calidad
+            );
+            
+            // Crear un nuevo archivo de imagen
+            const imageFile = new File([blob], 'menu.jpg', { type: 'image/jpeg' });
+            imageFile.pageCount = numPages; // Agregar información de páginas procesadas
+            
+            return imageFile;
         }
     </script>
 

@@ -8,6 +8,7 @@ use App\Models\Comercio;
 use App\Models\QuestionCategory;
 use App\Services\MenuProcessorService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class MenuController extends Controller
 {
@@ -69,12 +70,23 @@ class MenuController extends Controller
      */
     public function store(Request $request, Comercio $comercio)
     {
+        
         $user = auth()->user();
         
         // Validar permisos: Super Admin puede crear en cualquiera, usuario común solo en sus comercios
         if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
+        
+        // DEBUG: Ver información del archivo recibido
+        $file = $request->file('archivo');
+        Log::info('DEBUG - Archivo recibido en store:', [
+            'original_name' => $file->getClientOriginalName(),
+            'extension' => $file->getClientOriginalExtension(),
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'is_valid' => $file->isValid()
+        ]);
         
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',
@@ -90,9 +102,17 @@ class MenuController extends Controller
         $menu->nombre = $request->nombre;
         $menu->archivo_original = $archivoPath;
         
-        // Detectar formato automáticamente
+        // Detectar formato automáticamente basándose en MIME type (más confiable)
+        $mimeType = $request->file('archivo')->getMimeType();
         $extension = $request->file('archivo')->getClientOriginalExtension();
-        $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
+        
+        Log::info('DEBUG - Detectando formato:', [
+            'mime_type' => $mimeType,
+            'extension' => $extension
+        ]);
+        
+        // Usar MIME type en lugar de extensión para mayor precisión
+        $menu->formato = ($mimeType === 'application/pdf') ? 'pdf' : 'image';
         
         $menu->procesado = false;
         
