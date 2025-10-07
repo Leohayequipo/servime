@@ -197,24 +197,32 @@
             });
         }
 
+        // Convertir Markdown básico a HTML
+        function parseMarkdown(text) {
+            // Convertir **texto** a <strong>texto</strong>
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Convertir *texto* a <em>texto</em>
+            text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            return text;
+        }
+
         // Agregar mensaje al chat
         function addMessage(text, sender) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             
+            // Parsear Markdown para el bot
+            const parsedText = sender === 'bot' ? parseMarkdown(text) : text;
+            
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end">
-                        <div class="bg-accent-blue rounded-lg p-3 max-w-xs whitespace-pre-line">
-                            <p class="text-white text-xs">${text}</p>
-                        </div>
+                        <div class="bg-accent-blue rounded-lg p-3 max-w-xs text-white text-xs" style="white-space: pre-wrap;">${parsedText}</div>
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="bg-secondary-dark rounded-lg p-3 whitespace-pre-line">
-                        <p class="text-text-secondary text-xs">${text}</p>
-                    </div>
+                    <div class="bg-secondary-dark rounded-lg p-3 text-text-secondary text-xs" style="white-space: pre-wrap;">${parsedText}</div>
                 `;
             }
             
