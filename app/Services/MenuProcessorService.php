@@ -78,13 +78,41 @@ class MenuProcessorService
     }
 
     /**
-     * Procesa PDFs con OpenAI (requiere conversión a imagen)
+     * Procesa PDFs extrayendo texto y enviándolo a OpenAI
      */
     protected function processPDFWithOpenAI($filePath)
     {
-        // Para PDFs, necesitaríamos convertirlos a imagen primero
-        // Por ahora, retornamos un mensaje indicando que necesitamos implementar esto
-        return "PDF detectado: " . basename($filePath) . ". Funcionalidad de procesamiento de PDFs pendiente de implementar.";
+        try {
+            $pdfProcessor = new PdfProcessorService();
+            
+            // Verificar si es un PDF válido
+            if (!$pdfProcessor->isValidPdf($filePath)) {
+                throw new \Exception('El archivo no es un PDF válido');
+            }
+            
+            // Procesar PDF y extraer menú
+            $result = $pdfProcessor->processPdfToMenu($filePath);
+            
+            if ($result['success']) {
+                return $result['menu_data'];
+            } else {
+                throw new \Exception($result['message'] . ' ' . ($result['suggestion'] ?? ''));
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error procesando PDF: ' . $e->getMessage());
+            
+            // Fallback: intentar como imagen si es un PDF escaneado o con formato no soportado
+            try {
+                Log::info('Intentando procesar PDF como imagen...');
+                $result = $this->processImageWithOpenAI($filePath);
+                Log::info('PDF procesado exitosamente como imagen');
+                return $result;
+            } catch (\Exception $imageError) {
+                Log::error('Error procesando PDF como imagen: ' . $imageError->getMessage());
+                throw new \Exception('No se pudo procesar el PDF. Error de extracción de texto: ' . $e->getMessage() . ' | Error procesando como imagen: ' . $imageError->getMessage());
+            }
+        }
     }
 
     /**
@@ -103,6 +131,11 @@ class MenuProcessorService
             
             // Determinar el tipo de imagen
             $imageInfo = getimagesize($filePath);
+            
+            if ($imageInfo === false) {
+                throw new \Exception('No se pudo leer la información de la imagen');
+            }
+            
             $mimeType = $imageInfo['mime'];
             
             // La imagen está lista para enviar a OpenAI
@@ -118,7 +151,37 @@ class MenuProcessorService
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Analiza esta imagen de un menú de restaurante y extrae todo el texto que veas. Organiza la información en formato JSON con: nombre del restaurante, categorías de platos, platos con precios, descripciones, y cualquier información relevante que encuentres.'
+                                'text' => 'Analiza esta imagen de un menú de restaurante y extráelo en formato JSON estructurado.
+
+INSTRUCCIONES:
+- Identifica las categorías (entradas, platos principales, postres, bebidas, etc.)
+- Para cada plato, extrae: nombre, precio, descripción (si existe)
+- Usa el formato JSON exacto que se muestra abajo
+- Si no hay precio visible, pon "Precio no especificado"
+- Mantén los nombres de platos tal como aparecen en la imagen
+- Si hay información del restaurante, inclúyela al inicio
+
+FORMATO JSON REQUERIDO:
+{
+  "restaurante": {
+    "nombre": "Nombre del restaurante",
+    "descripcion": "Descripción si existe"
+  },
+  "categorias": [
+    {
+      "nombre": "Nombre de la categoría",
+      "platos": [
+        {
+          "nombre": "Nombre del plato",
+          "precio": "Precio",
+          "descripcion": "Descripción del plato"
+        }
+      ]
+    }
+  ]
+}
+
+Responde SOLO con el JSON, sin texto adicional.'
                             ],
                             [
                                 'type' => 'image_url',

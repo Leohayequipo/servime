@@ -614,66 +614,37 @@
                         @if($contenido && is_array($contenido))
                             <div class="space-y-6">
                                 <!-- Información del restaurante -->
-                                @if(isset($contenido['nombre_del_restaurante']) && $contenido['nombre_del_restaurante'] !== 'No especificado')
+                                @if(isset($contenido['restaurante']['nombre']) && $contenido['restaurante']['nombre'] !== 'No especificado')
                                     <div class="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-lg p-4">
-                                        <h3 class="text-lg font-semibold text-blue-300 mb-2">🏪 {{ $contenido['nombre_del_restaurante'] }}</h3>
+                                        <h3 class="text-lg font-semibold text-blue-300 mb-2">🏪 {{ $contenido['restaurante']['nombre'] }}</h3>
+                                        @if(isset($contenido['restaurante']['descripcion']) && !empty($contenido['restaurante']['descripcion']))
+                                            <p class="text-blue-200">{{ $contenido['restaurante']['descripcion'] }}</p>
+                                        @endif
                                     </div>
                                 @endif
                                 
                                 <!-- Categorías y platos -->
                                 @php
-                                    // Buscar categorías en diferentes formatos
-                                    $categorias = null;
-                                    if (isset($contenido['categorías']) && is_array($contenido['categorías'])) {
-                                        $categorias = $contenido['categorías'];
-                                    } elseif (isset($contenido['categorias']) && is_array($contenido['categorias'])) {
-                                        $categorias = $contenido['categorias'];
-                                    } elseif (isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos'])) {
-                                        $categorias = $contenido['categorías_de_platos'];
-                                    }
+                                    // Obtener categorías del formato unificado
+                                    $categorias = $contenido['categorias'] ?? null;
                                 @endphp
                                 
-                                @if($categorias)
+                                @if($categorias && is_array($categorias))
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        @foreach($categorias as $categoria => $platos)
+                                        @foreach($categorias as $categoria)
                                             <div class="bg-secondary-dark rounded-lg p-6">
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
-                                                    {{ $categoria }}
+                                                    {{ $categoria['nombre'] ?? 'Sin nombre' }}
                                                 </h4>
                                                 <div class="space-y-3">
-                                                    @if(is_array($platos))
-                                                        @foreach($platos as $plato)
+                                                    @if(isset($categoria['platos']) && is_array($categoria['platos']))
+                                                        @foreach($categoria['platos'] as $plato)
                                                             <div class="flex justify-between items-center py-2 border-b border-accent-gray last:border-b-0">
                                                                 <span class="text-text-secondary font-medium">
                                                                     {{ $plato['nombre'] ?? 'Sin nombre' }}
                                                                 </span>
                                                                 <span class="text-accent-blue font-bold">
-                                                                    ${{ $plato['precio'] ?? 'Sin precio' }}
-                                                                </span>
-                                                            </div>
-                                                        @endforeach
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @elseif(isset($contenido['categorías_de_platos']) && is_array($contenido['categorías_de_platos']))
-                                    <!-- Fallback para la estructura anterior -->
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        @foreach($contenido['categorías_de_platos'] as $categoria => $platos)
-                                            <div class="bg-secondary-dark rounded-lg p-6">
-                                                <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
-                                                    {{ $categoria }}
-                                                </h4>
-                                                <div class="space-y-3">
-                                                    @if(is_array($platos))
-                                                        @foreach($platos as $plato)
-                                                            <div class="flex justify-between items-center py-2 border-b border-accent-gray last:border-b-0">
-                                                                <span class="text-text-secondary font-medium">
-                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
-                                                                </span>
-                                                                <span class="text-accent-blue font-bold">
-                                                                    ${{ $plato['precio'] ?? 'Sin precio' }}
+                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
                                                                 </span>
                                                             </div>
                                                         @endforeach

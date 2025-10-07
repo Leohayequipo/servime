@@ -108,7 +108,9 @@ class MenuController extends Controller
             $processor = new MenuProcessorService();
             $processed = $processor->processMenu($menu);
         } catch (\Exception $e) {
-            dd('Error al procesar:', $e->getMessage(), $e->getTraceAsString());
+            Log::error('Error al procesar menú: ' . $e->getMessage());
+            return redirect()->route('menus.index', $comercio)
+                ->with('error', 'Error al procesar el menú: ' . $e->getMessage());
         }
 
         if ($processed) {
