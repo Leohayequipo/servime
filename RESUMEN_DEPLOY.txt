@@ -1,0 +1,283 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                          ║
+║          🚀 GUÍA DE DEPLOY - SERVIME EN HOSTINGER 🚀                    ║
+║                                                                          ║
+║                     Sistema de Menús con IA                              ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+📁 ARCHIVOS CREADOS PARA EL DEPLOY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 📖 README_DEPLOY.md           ← EMPIEZA AQUÍ (Índice general)
+2. ⚡ QUICK_START.md             ← Guía rápida (5 minutos)
+3. 📚 DEPLOY_HOSTINGER.md        ← Guía completa y detallada
+4. ⚙️  hostinger-config.txt       ← Configuraciones y comandos útiles
+5. 🤖 deploy-hostinger.sh        ← Script automatizado para deploys
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                         ¿POR DÓNDE EMPIEZO?                              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  🎯 SI ES TU PRIMERA VEZ:                                               │
+│                                                                          │
+│     1️⃣  Lee → README_DEPLOY.md (para orientarte)                        │
+│     2️⃣  Sigue → QUICK_START.md (pasos simples)                          │
+│     3️⃣  ¡Listo! Tu sitio estará en producción                           │
+│                                                                          │
+│     ⏱️ Tiempo estimado: 5-10 minutos                                    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  📖 SI QUIERES ENTENDER TODO EL PROCESO:                                │
+│                                                                          │
+│     1️⃣  Lee → DEPLOY_HOSTINGER.md (completo)                            │
+│     2️⃣  Consulta → hostinger-config.txt (cuando lo necesites)           │
+│                                                                          │
+│     ⏱️ Tiempo de lectura: 20-30 minutos                                │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  🔄 SI YA HICISTE DEPLOY Y QUIERES ACTUALIZAR:                          │
+│                                                                          │
+│     Conecta por SSH y ejecuta:                                          │
+│                                                                          │
+│     $ cd ~/servime                                                      │
+│     $ bash deploy-hostinger.sh                                          │
+│                                                                          │
+│     ⏱️ Tiempo: 2-3 minutos automático                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                       PROCESO DE DEPLOY VISUAL                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+  TU PC                     GITHUB               HOSTINGER
+  ╔═══╗                    ╔═══╗                 ╔═══╗
+  ║ 💻 ║  ─git push─────>  ║ 📦 ║  ─git pull──>  ║ 🌐 ║
+  ╚═══╝                    ╚═══╝                 ╚═══╝
+    │                                               │
+    │ Desarrollo                              Producción
+    │                                               │
+    ├─ resources/                            ├─ servime/
+    ├─ app/                                  │  ├─ app/
+    ├─ routes/                               │  ├─ config/
+    ├─ .env (local)                          │  └─ .env (producción)
+    └─ ...                                   │
+                                              └─ public_html/
+                                                 ├─ index.php
+                                                 ├─ css/
+                                                 └─ js/
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                         REQUISITOS PREVIOS                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+EN HOSTINGER:
+  ✅ Hosting Premium activo
+  ✅ SSH habilitado (hPanel → Advanced → SSH)
+  ✅ Base de datos MySQL creada
+  ✅ PHP 8.1+ configurado
+  ✅ Extensiones PHP habilitadas (especialmente nd_pdo_mysql)
+  ✅ Dominio configurado (o usar temporal)
+
+EN TU CÓDIGO:
+  ✅ Proyecto en GitHub/GitLab
+  ✅ Código funcionando localmente
+  ✅ Migraciones probadas
+  ✅ .env configurado
+
+CREDENCIALES LISTAS:
+  ✅ Usuario y password SSH
+  ✅ Datos de MySQL (nombre, usuario, password)
+  ✅ API Key de OpenAI
+  ✅ URL del dominio
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                       COMANDOS MÁS USADOS                                ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+🔐 CONECTAR POR SSH:
+   $ ssh u123456@tu-dominio.com
+
+📦 ACTUALIZAR CÓDIGO:
+   $ cd ~/servime
+   $ git pull origin main
+
+🧹 LIMPIAR CACHÉS:
+   $ php artisan cache:clear
+   $ php artisan config:clear
+   $ php artisan route:clear
+   $ php artisan view:clear
+
+⚡ OPTIMIZAR:
+   $ php artisan config:cache
+   $ php artisan route:cache
+   $ php artisan view:cache
+
+🗄️ MIGRACIONES:
+   $ php artisan migrate --force
+
+🔗 STORAGE LINK:
+   $ php artisan storage:link
+
+📊 VER LOGS:
+   $ tail -f ~/servime/storage/logs/laravel.log
+
+🔄 DEPLOY COMPLETO:
+   $ bash ~/servime/deploy-hostinger.sh
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                     PROBLEMAS COMUNES Y SOLUCIONES                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+❌ ERROR 500:
+   → Ver logs: tail -f ~/servime/storage/logs/laravel.log
+   → Verificar permisos: chmod -R 755 storage bootstrap/cache
+   → Limpiar cachés: php artisan cache:clear
+
+❌ BASE DE DATOS NO CONECTA:
+   → Verificar .env tiene DB_HOST=localhost
+   → Verificar credenciales en hPanel
+   → Probar: php artisan migrate:status
+
+❌ CSS/JS NO CARGAN:
+   → Verificar index.php apunta a ../servime/
+   → Copiar public: cp -r ~/servime/public/* ~/public_html/
+   → Verificar .htaccess en public_html
+
+❌ IMÁGENES NO SE VEN:
+   → Recrear symlink: php artisan storage:link
+   → Verificar permisos: chmod -R 755 ~/servime/storage/app/public
+
+❌ "NO APPLICATION ENCRYPTION KEY":
+   → Generar key: php artisan key:generate
+   → Verificar .env tiene APP_KEY
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                         ESTRUCTURA EN HOSTINGER                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+/home/u123456/
+├── public_html/              ← Directorio público (lo que ve el mundo)
+│   ├── .htaccess            ← Reglas de Apache
+│   ├── index.php            ← MODIFICADO para apuntar a ../servime/
+│   ├── css/                 ← Copiado desde servime/public/css/
+│   ├── js/                  ← Copiado desde servime/public/js/
+│   └── storage/             ← Symlink a ../servime/storage/app/public/
+│
+└── servime/                  ← Tu proyecto Laravel completo (privado)
+    ├── app/
+    ├── bootstrap/
+    ├── config/
+    ├── database/
+    ├── public/              ← Su contenido se copia a public_html/
+    ├── resources/
+    ├── routes/
+    ├── storage/
+    │   ├── app/
+    │   │   └── public/      ← Imágenes de platos
+    │   ├── framework/
+    │   └── logs/            ← Logs de errores
+    ├── vendor/
+    ├── .env                 ← Configuración de producción
+    ├── artisan
+    └── composer.json
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                           CHECKLIST FINAL                                ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+ANTES DEL DEPLOY:
+  [ ] Código pusheado a GitHub
+  [ ] .env.example actualizado (sin datos sensibles)
+  [ ] Migraciones probadas localmente
+  [ ] API de OpenAI funcionando
+
+DURANTE EL DEPLOY:
+  [ ] PHP 8.1+ configurado en Hostinger
+  [ ] Base de datos creada
+  [ ] .env configurado con datos de producción
+  [ ] APP_KEY generada
+  [ ] Migraciones ejecutadas
+  [ ] Storage link creado
+  [ ] public/ copiado a public_html/
+  [ ] index.php editado correctamente
+
+DESPUÉS DEL DEPLOY:
+  [ ] Sitio accesible en el navegador
+  [ ] SSL/HTTPS funcionando
+  [ ] Chatbot responde correctamente
+  [ ] Se pueden crear comercios
+  [ ] Se pueden subir menús PDF
+  [ ] Imágenes de platos cargan bien
+  [ ] Logs sin errores críticos
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                          SOPORTE Y AYUDA                                 ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📚 DOCUMENTACIÓN:
+   • README_DEPLOY.md      → Índice general
+   • QUICK_START.md        → Guía rápida
+   • DEPLOY_HOSTINGER.md   → Guía completa
+   • hostinger-config.txt  → Referencia de comandos
+
+🆘 SOPORTE HOSTINGER:
+   • Chat 24/7 en hPanel (esquina inferior derecha)
+   • Tickets: hPanel → Help → Support
+   • Docs: https://support.hostinger.com
+
+📖 LARAVEL:
+   • https://laravel.com/docs/10.x/deployment
+
+🐛 DEBUGGING:
+   • Logs Laravel: ~/servime/storage/logs/laravel.log
+   • Logs PHP: ~/logs/error_log
+   • Logs Apache: ~/logs/access_log
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                          ¡LISTO PARA DEPLOY!                             ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+                           🚀 PASO 1:
+               Lee README_DEPLOY.md o QUICK_START.md
+
+                           🛠️ PASO 2:
+                  Sigue los pasos del deploy
+
+                           ✅ PASO 3:
+         ¡Tu aplicación estará en https://tu-dominio.com!
+
+
+═══════════════════════════════════════════════════════════════════════════
+
+        Proyecto: Servime - Sistema de Menús con IA
+        Hosting: Hostinger Premium Web Hosting
+        Framework: Laravel 10.x
+        Versión: 1.0
+        Fecha: Octubre 2025
+
+═══════════════════════════════════════════════════════════════════════════
+
+                          ¡Éxito con tu deploy! 🎉
+
+═══════════════════════════════════════════════════════════════════════════
+

@@ -1,0 +1,299 @@
+# ========================================
+# CONFIGURACIONES PARA HOSTINGER
+# Servime - Sistema de Menús con IA
+# ========================================
+
+## 📋 DATOS QUE NECESITARÁS
+
+### 1️⃣ CREDENCIALES SSH
+   Host: _______________________
+   User: u______________________
+   Port: 22
+   Pass: _______________________
+
+### 2️⃣ BASE DE DATOS MYSQL
+   Database: u________servime
+   Username: u________servime_user
+   Password: _______________________
+   Host: localhost
+   Port: 3306
+
+### 3️⃣ API KEYS
+   OpenAI: sk-proj-_______________________
+
+### 4️⃣ DOMINIO
+   URL: https://_______________________
+
+### 5️⃣ EMAIL (Opcional)
+   SMTP: smtp.hostinger.com
+   Port: 587
+   User: _______________________@tu-dominio.com
+   Pass: _______________________
+
+## ========================================
+## 🔧 CONFIGURACIÓN DE PHP EN HOSTINGER
+## ========================================
+
+### Versión recomendada:
+   PHP 8.1 o superior
+
+### Extensiones requeridas:
+   ✅ PDO
+   ✅ nd_pdo_mysql         ⚠️ IMPORTANTE: En Hostinger se llama "nd_pdo_mysql", NO "pdo_mysql"
+   ✅ OpenSSL
+   ✅ Mbstring
+   ✅ Tokenizer
+   ✅ XML
+   ✅ Ctype
+   ✅ JSON
+   ✅ BCMath
+   ✅ Fileinfo
+   ✅ cURL
+   ✅ GD (para imágenes)
+   ✅ Zip
+
+### php.ini recomendado:
+   upload_max_filesize = 20M
+   post_max_size = 25M
+   max_execution_time = 300
+   memory_limit = 256M
+
+## ========================================
+## 📂 ESTRUCTURA DE DIRECTORIOS
+## ========================================
+
+/home/u123456/
+├── public_html/              ← Raíz web (público)
+│   ├── .htaccess
+│   ├── index.php            ← EDITADO para apuntar a ../servime/
+│   ├── css/
+│   ├── js/
+│   ├── images/
+│   └── storage → ../servime/storage/app/public
+│
+└── servime/                  ← Proyecto Laravel completo
+    ├── app/
+    ├── bootstrap/
+    ├── config/
+    ├── database/
+    ├── public/              ← Su contenido se copia a public_html
+    ├── resources/
+    ├── routes/
+    ├── storage/             ← Permisos 755
+    │   ├── app/
+    │   │   └── public/     ← Imágenes accesibles vía web
+    │   ├── framework/
+    │   └── logs/
+    ├── vendor/
+    ├── .env                 ← IMPORTANTE: Configurar correctamente
+    ├── artisan
+    ├── composer.json
+    └── composer.lock
+
+## ========================================
+## 🔐 PERMISOS NECESARIOS
+## ========================================
+
+chmod -R 755 ~/servime/storage
+chmod -R 755 ~/servime/bootstrap/cache
+chmod 644 ~/servime/.env
+
+## ========================================
+## 🚀 COMANDOS INICIALES (Solo primera vez)
+## ========================================
+
+cd ~/servime
+composer install --no-dev --optimize-autoloader
+php artisan key:generate
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+## ========================================
+## 🔄 COMANDOS DE ACTUALIZACIÓN (Despliegues)
+## ========================================
+
+cd ~/servime
+php artisan down
+git pull origin main
+composer install --no-dev
+php artisan migrate --force
+php artisan cache:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+cp -r public/* ~/public_html/
+php artisan up
+
+## ========================================
+## 🐛 DEBUGGING
+## ========================================
+
+# Ver logs de Laravel
+tail -f ~/servime/storage/logs/laravel.log
+
+# Ver logs de PHP
+tail -f ~/logs/error_log
+
+# Ver información de PHP
+php -i
+
+# Verificar extensiones
+php -m
+
+# Limpiar todos los cachés
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+## ========================================
+## ⚙️ CRONJOBS (Si usas tareas programadas)
+## ========================================
+
+# En hPanel → Advanced → Cron Jobs
+# Agregar:
+
+Comando: cd /home/u123456/servime && php artisan schedule:run >> /dev/null 2>&1
+Frecuencia: Cada minuto (*/1 * * * *)
+
+## ========================================
+## 📊 QUEUES (Si procesas trabajos en cola)
+## ========================================
+
+# Opción 1: Via Cron (Recomendado para Hostinger)
+# En .env:
+QUEUE_CONNECTION=database
+
+# Crear cronjob:
+*/5 * * * * cd /home/u123456/servime && php artisan queue:work --stop-when-empty
+
+# Opción 2: Supervisor (Solo si tienes VPS)
+# No disponible en hosting compartido
+
+## ========================================
+## 🔒 SEGURIDAD
+## ========================================
+
+# .env DEBE tener:
+APP_ENV=production
+APP_DEBUG=false
+APP_KEY=[generado con php artisan key:generate]
+
+# Verificar que .git NO esté en public_html
+ls -la ~/public_html/.git  # Debe decir "No such file"
+
+# SSL/HTTPS (Hostinger lo da gratis)
+# Activar en: hPanel → SSL → Instalar SSL Gratis
+
+# Firewall
+# Activar en: hPanel → Security → Web Application Firewall
+
+## ========================================
+## 📈 MONITOREO
+## ========================================
+
+# Espacio en disco
+df -h
+
+# Uso de inodos (archivos)
+df -i
+
+# Tamaño del proyecto
+du -sh ~/servime
+
+# Tamaño del storage
+du -sh ~/servime/storage
+
+# Verificar conexiones a la base de datos
+mysql -u u123456_servime_user -p -e "SHOW PROCESSLIST;"
+
+## ========================================
+## 🆘 PROBLEMAS COMUNES
+## ========================================
+
+### ERROR 500:
+1. Revisar logs: tail -f ~/servime/storage/logs/laravel.log
+2. Verificar permisos: chmod -R 755 storage bootstrap/cache
+3. Regenerar caches: php artisan cache:clear && php artisan config:cache
+
+### BASE DE DATOS NO CONECTA:
+1. Verificar .env tiene DB_HOST=localhost
+2. Verificar nombre de BD en hPanel
+3. Probar conexión: php artisan migrate:status
+
+### CSS/JS NO CARGAN:
+1. Verificar index.php apunta a ../servime/
+2. Copiar public: cp -r ~/servime/public/* ~/public_html/
+3. Verificar .htaccess en public_html
+
+### IMÁGENES NO SE VEN:
+1. Recrear symlink: php artisan storage:link
+2. Verificar permisos: chmod -R 755 ~/servime/storage/app/public
+3. Verificar ruta en .env: FILESYSTEM_DISK=local
+
+### "NO APPLICATION ENCRYPTION KEY":
+1. Generar key: cd ~/servime && php artisan key:generate
+2. Verificar .env tiene APP_KEY con valor
+
+## ========================================
+## 📞 SOPORTE
+## ========================================
+
+Hostinger Soporte 24/7:
+- Chat en hPanel (esquina inferior derecha)
+- Tickets en hPanel → Help → Support
+- Base de conocimiento: https://support.hostinger.com
+
+Documentación Laravel:
+- https://laravel.com/docs/10.x/deployment
+
+## ========================================
+## ✅ CHECKLIST PRE-DEPLOY
+## ========================================
+
+ANTES DE HACER DEPLOY, VERIFICA:
+
+Backend:
+[ ] .env.example actualizado (sin datos sensibles)
+[ ] Migraciones probadas localmente
+[ ] Seeders funcionan (si los usas)
+[ ] API de OpenAI funciona con tu key
+[ ] Storage configurado correctamente
+[ ] Queues configuradas (si las usas)
+
+Frontend:
+[ ] Assets compilados (npm run build)
+[ ] Rutas públicas funcionan
+[ ] Imágenes se cargan
+[ ] Formularios envían correctamente
+
+Hostinger:
+[ ] PHP 8.1+ configurado
+[ ] Base de datos creada
+[ ] SSL instalado
+[ ] SSH habilitado
+[ ] Extensiones PHP requeridas activas
+
+Seguridad:
+[ ] APP_DEBUG=false
+[ ] APP_ENV=production
+[ ] .env con valores de producción
+[ ] Claves API seguras
+[ ] Permisos correctos
+
+## ========================================
+## 🎉 ¡LISTO PARA DEPLOY!
+## ========================================
+
+Sigue los pasos en:
+1. QUICK_START.md (versión rápida)
+2. DEPLOY_HOSTINGER.md (versión completa)
+
+Usa el script:
+   bash deploy-hostinger.sh
+
+¡Éxito! 🚀
+
