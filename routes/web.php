@@ -1,5 +1,7 @@
 <?php
 
+// Auto-deploy test - <?php echo date('Y-m-d H:i:s'); ?>
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\DashboardController;
