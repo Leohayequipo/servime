@@ -256,7 +256,7 @@
         <!-- Footer -->
         <div class="text-center mt-8">
             <p class="text-text-secondary text-sm">
-                © {{ date('Y') }} ServiMe. Todos los derechos reservados.
+                © {{ date('Y') }} ServiMe!. Todos los derechos reservados.
             </p>
         </div>
     </div>
