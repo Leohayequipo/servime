@@ -256,7 +256,7 @@
         <!-- Footer -->
         <div class="text-center mt-8">
             <p class="text-text-secondary text-sm">
-                © 2024 ServiMe. Todos los derechos reservados.
+                © {{ date('Y') }} ServiMe. Todos los derechos reservados.
             </p>
         </div>
     </div>
