@@ -25,4 +25,10 @@ jobs:
           php artisan route:cache
           php artisan view:cache
           php artisan queue:restart
+          # Copiar archivos de public/ a public_html/
+          cp -r ~/servime/public/* ~/domains/servime.net/public_html/
+          # Crear symlink de storage si no existe
+          if [ ! -L ~/domains/servime.net/public_html/storage ]; then
+            ln -sf ~/servime/storage/app/public ~/domains/servime.net/public_html/storage
+          fi
 
