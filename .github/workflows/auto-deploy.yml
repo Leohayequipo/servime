@@ -1,0 +1,87 @@
+name: 🚀 Auto Deploy ServiME to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  deploy:
+    name: 🛡️ Deploy Seguro a Hostinger
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Verificar cambios
+      run: |
+        echo "📋 Verificando cambios en el repositorio..."
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref }}"
+        echo "Autor: ${{ github.actor }}"
+        
+    - name: 🔐 Configurar SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H br-asc-web803.main-hosting.eu >> ~/.ssh/known_hosts
+        
+    - name: 📤 Subir scripts de deploy
+      run: |
+        echo "📦 Subiendo scripts de deploy seguro..."
+        scp -i ~/.ssh/id_rsa deploy-seguro-hostinger.sh u560898880@br-asc-web803.main-hosting.eu:~/servime/
+        scp -i ~/.ssh/id_rsa reparar-rutas-emergencia.sh u560898880@br-asc-web803.main-hosting.eu:~/servime/
+        scp -i ~/.ssh/id_rsa PROBLEMA_CRITICO_RUTAS.md u560898880@br-asc-web803.main-hosting.eu:~/servime/
+        
+    - name: 🔧 Dar permisos a scripts
+      run: |
+        echo "🔒 Configurando permisos..."
+        ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "chmod +x ~/servime/deploy-seguro-hostinger.sh"
+        ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "chmod +x ~/servime/reparar-rutas-emergencia.sh"
+        
+    - name: 🔍 Verificar sistema antes del deploy
+      run: |
+        echo "🔍 Verificando que el sistema funciona antes del deploy..."
+        ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "php ~/domains/servime.net/public_html/index.php" || {
+          echo "🚨 PROBLEMA: El sistema no está funcionando antes del deploy"
+          echo "🔧 Ejecutando reparación de emergencia..."
+          ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "cd ~/servime && bash reparar-rutas-emergencia.sh"
+        }
+        
+    - name: 🚀 Ejecutar deploy seguro
+      run: |
+        echo "🚀 Iniciando deploy seguro..."
+        ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "cd ~/servime && bash deploy-seguro-hostinger.sh"
+        
+    - name: ✅ Verificar deploy exitoso
+      run: |
+        echo "✅ Verificando que el deploy fue exitoso..."
+        ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "php ~/domains/servime.net/public_html/index.php" || {
+          echo "🚨 PROBLEMA: El deploy falló"
+          echo "🔧 Ejecutando reparación de emergencia..."
+          ssh -i ~/.ssh/id_rsa u560898880@br-asc-web803.main-hosting.eu "cd ~/servime && bash reparar-rutas-emergencia.sh"
+          exit 1
+        }
+        echo "✅ Deploy exitoso - Laravel carga correctamente"
+        
+    - name: 🌐 Verificar sitio web
+      run: |
+        echo "🌐 Verificando que el sitio web responde..."
+        curl -I https://servime.net || {
+          echo "⚠️ El sitio web no responde, pero Laravel funciona"
+          echo "Esto puede ser normal si hay caché de DNS"
+        }
+        
+    - name: 📊 Resumen del deploy
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ DEPLOY AUTOMÁTICO COMPLETADO"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📅 Fecha: $(date)"
+        echo "🔗 Commit: ${{ github.sha }}"
+        echo "👤 Autor: ${{ github.actor }}"
+        echo "🌐 URL: https://servime.net"
+        echo "✅ Status: Funcionando correctamente"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

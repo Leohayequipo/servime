@@ -46,7 +46,7 @@ Antes de comenzar, asegúrate de tener:
 3. Guarda estos datos (los necesitarás):
    ```
    Database Name: u123456_servime
-   Database User: u123456_servime_user
+   Database User: u123456_servime
    Database Password: [tu contraseña segura]
    Database Host: localhost
    ```
@@ -138,24 +138,68 @@ nano .env
 Edita estos valores en el `.env`:
 
 ```env
-APP_NAME=Servime
+APP_NAME=ServiME
 APP_ENV=production
-APP_KEY=     # Lo generamos después
+APP_KEY=     # Lo generamos después con php artisan key:generate
 APP_DEBUG=false
-APP_URL=https://tu-dominio.com
+APP_URL=https://servime.net
 
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=error
+
+# Base de datos - ACTUALIZAR CON TUS CREDENCIALES
 DB_CONNECTION=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=u123456_servime
-DB_USERNAME=u123456_servime_user
-DB_PASSWORD=tu_password_de_mysql
+DB_DATABASE=u560898880_servime
+DB_USERNAME=u560898880_servime
+DB_PASSWORD=TU_PASSWORD_MYSQL_AQUI
 
-OPENAI_API_KEY=tu_clave_de_openai
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
 
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+
+# Correo electrónico
 MAIL_MAILER=smtp
-# ... resto de configuración de mail
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=info.motos.aconcagua@gmail.com
+MAIL_PASSWORD=dwthftbibqkqhciz
+MAIL_FROM_ADDRESS=info.motos.aconcagua@gmail.com
+MAIL_FROM_NAME="${APP_NAME}"
+MAIL_ENCRYPTION=tls
+
+# OpenAI API
+OPENAI_API_KEY=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
+OPENAI_MODEL=gpt-4o-mini
+
+# Gmail (opcional, para funcionalidades adicionales)
+GMAIL_USER=info.motos.acon@gmail.com
+GMAIL_APP_PASSWORD=IrkuxoyynwrdIhgo
 ```
+
+**⚠️ IMPORTANTE - Valores a actualizar:**
+- `DB_PASSWORD`: Tu contraseña de MySQL de Hostinger
+- `DB_DATABASE` y `DB_USERNAME`: Verifica en hPanel → Databases
+- `APP_URL`: Tu dominio real (https://servime.net)
 
 Guardar: `Ctrl+X` → `Y` → `Enter`
 
@@ -175,6 +219,35 @@ php artisan migrate --force
 
 ```bash
 php artisan storage:link
+/////////////////
+
+💣 Qué pasó
+
+Laravel usa la función nativa exec() de PHP para crear el symlink (storage:link),
+pero Hostinger (en sus planes compartidos) la tiene deshabilitada por seguridad.
+Por eso te tira:
+
+Call to undefined function Illuminate\Filesystem\exec()
+
+💡 Solución rápida
+
+No podés usar php artisan storage:link,
+pero podés crear el enlace simbólico manualmente desde la consola:
+
+ln -s /home/u560898880/servime/storage/app/public /home/u560898880/servime/public/storage
+
+
+Eso hace exactamente lo mismo que el comando de Laravel.
+Después verificá con:
+
+ls -l /home/u560898880/servime/public/
+
+
+Deberías ver algo así:
+
+storage -> ../storage/app/public
+
+///////
 ```
 
 #### **3.8 Optimizar Laravel**
@@ -232,6 +305,145 @@ Contenido:
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+
+
+🧾 Resumen: Cómo hicimos que Laravel funcione en servime.net (hosting compartido)
+🧩 1. Estructura del hosting
+
+Tu hosting tenía esta estructura:
+
+/home/u560898880/
+ ├── servime/               ← Carpeta del proyecto Laravel completo
+ │    ├── app/
+ │    ├── vendor/
+ │    ├── bootstrap/
+ │    └── ...
+ └── domains/
+      └── servime.net/
+           └── public_html/  ← Carpeta pública del dominio
+
+
+Laravel normalmente usa /public como raíz pública,
+pero en tu hosting la raíz pública es /domains/servime.net/public_html/.
+
+⚙️ 2. Movimos el contenido de public a public_html
+
+Borramos el contenido viejo (si lo había) y copiamos los archivos del public de Laravel:
+
+cd ~/domains/servime.net/public_html
+rm -rf *
+cp -r ~/servime/public/* ./
+
+
+Así, index.php, favicon.ico, robots.txt, etc. quedaron en public_html/.
+
+🪶 3. Editamos las rutas internas de index.php
+
+Como el proyecto Laravel real está en /home/u560898880/servime/,
+ajustamos las rutas de carga de Laravel para que apunten ahí.
+
+Editamos:
+
+nano ~/domains/servime.net/public_html/index.php
+
+
+Y reemplazamos las líneas:
+
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
+
+
+por estas 👇
+
+require __DIR__.'/../../../servime/vendor/autoload.php';
+$app = require_once __DIR__.'/../../../servime/bootstrap/app.php';
+
+
+💡 (Subimos tres niveles porque public_html está dentro de domains/servime.net/.)
+
+🔒 4. Configuramos permisos y estructura del storage
+
+Creamos la carpeta de almacenamiento público:
+
+mkdir -p ~/domains/servime.net/public_html/storage
+
+
+Y copiamos los archivos públicos de Laravel allí:
+
+cp -r ~/servime/storage/app/public/* ~/domains/servime.net/public_html/storage/
+
+
+Luego movimos su contenido (para evitar una carpeta storage/public anidada):
+
+mv ~/domains/servime.net/public_html/storage/public/* ~/domains/servime.net/public_html/storage/
+rm -rf ~/domains/servime.net/public_html/storage/public
+
+🚫 5. Evitamos el error exec() deshabilitado
+
+Como el hosting no permite exec() (necesario para php artisan storage:link),
+no usamos el comando storage:link y en su lugar copiamos manualmente los archivos del storage a public_html/storage/.
+
+🧰 6. Verificamos desde consola
+
+Probamos Laravel con:
+
+php ~/domains/servime.net/public_html/index.php
+
+
+Y el resultado esperado fue:
+
+This script cannot be run from the CLI.
+
+
+✅ Eso significa que Laravel ya carga correctamente.
+
+🌐 7. Probamos en el navegador
+
+Finalmente abrimos:
+
+https://servime.net
+
+
+Y el sitio funcionó correctamente sin error 500 🎉
+
+💾 En resumen
+Paso	Acción	Comando / Archivo clave
+1	Confirmar estructura del hosting	ls /home/u560898880/
+2	Copiar /public → /public_html	cp -r ~/servime/public/* ~/domains/servime.net/public_html/
+3	Editar index.php	Usar ../../../servime/...
+4	Crear y llenar storage	mkdir -p + cp -r
+5	No usar artisan storage:link	Hosting bloquea exec()
+6	Probar en consola	php ~/domains/servime.net/public_html/index.php
+7	Abrir en navegador	https://servime.net
+
+## 🤖 Script Automático de Deploy
+
+✨ **¡Ahora disponible!** Usa el script `deploy-hostinger-auto.sh` que automatiza todo el proceso:
+
+```bash
+# 1. Subir el script al servidor (desde tu PC)
+scp deploy-hostinger-auto.sh u560898880@br-asc-web803.main-hosting.eu:~/servime/
+
+# 2. En el servidor SSH, darle permisos
+chmod +x ~/servime/deploy-hostinger-auto.sh
+
+# 3. Ejecutar el deploy automático
+bash ~/servime/deploy-hostinger-auto.sh
+```
+
+**El script hace automáticamente:**
+- ✅ Backup del `public_html` actual
+- ✅ Copia archivos de `public/` a `public_html/`
+- ✅ Modifica `index.php` con rutas correctas
+- ✅ Configura storage público (sin symlinks)
+- ✅ Ajusta permisos
+- ✅ Instala/actualiza dependencias
+- ✅ Limpia y optimiza cachés
+- ✅ Verifica que Laravel funcione
+
+**Futuras actualizaciones:** Solo ejecuta el script nuevamente después de `git pull` 🚀
+
 ```
 
 ---
