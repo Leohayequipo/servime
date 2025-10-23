@@ -86,7 +86,7 @@ Laravel requiere una estructura especial en hosting compartido:
 
 ## 🔐 **PARTE 3: SUBIR EL PROYECTO**
 
-### **Opción A: Via SSH (RECOMENDADO) 🚀**
+### **Opción A: Via SSH (RECOMENDADO) 🚀****
 
 #### **3.1 Obtener acceso SSH**
 
