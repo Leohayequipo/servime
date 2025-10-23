@@ -50,10 +50,10 @@ jobs:
           echo "El sitio web puede estar funcionando correctamente"
         }
         
-    - name: 🚀 Ejecutar deploy automático
+    - name: 🚀 Ejecutar deploy que SÍ actualiza
       run: |
-        echo "🚀 Iniciando deploy automático..."
-        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash deploy-automatico.sh"
+        echo "🚀 Iniciando deploy que SÍ actualiza..."
+        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash deploy-actualiza.sh"
         
     - name: ✅ Verificar deploy exitoso
       run: |
