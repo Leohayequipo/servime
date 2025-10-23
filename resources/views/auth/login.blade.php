@@ -169,6 +169,10 @@
                  class="w-24 h-24 mx-auto mb-6 logo-glow rounded-2xl">-->
             <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }} POWERED BY OPEN AI</h1>
             <p class="text-text-secondary">Accede a tu panel de administración</p>
+            <div class="bg-accent-blue text-black p-3 rounded-lg mt-4">
+                <strong>🚀 AUTO-DEPLOY FUNCIONANDO!</strong><br>
+                <small>Deploy automático: <?php echo date('Y-m-d H:i:s'); ?></small>
+            </div>
         </div>
 
         <!-- Login Form -->
