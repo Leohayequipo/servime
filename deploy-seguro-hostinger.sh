@@ -170,7 +170,7 @@ echo -e "${YELLOW}🔍 PASO 8: Verificación crítica...${NC}"
 echo "Verificando que Laravel carga correctamente..."
 TEST_OUTPUT=$(php "$PUBLIC_HTML_DIR/index.php" 2>&1 || true)
 
-if echo "$TEST_OUTPUT" | grep -q "This script cannot be run from the CLI"; then
+if echo "$TEST_OUTPUT" | grep -q "This script cannot be run from the CLI\|DOCTYPE html\|Redirecting to"; then
     echo -e "${GREEN}✅ Laravel carga correctamente${NC}"
     echo -e "${GREEN}✅ Las rutas están correctas${NC}"
 else
@@ -184,7 +184,7 @@ else
         echo -e "${GREEN}✅ index.php restaurado desde backup${NC}"
         
         # Verificar nuevamente
-        if php "$PUBLIC_HTML_DIR/index.php" 2>&1 | grep -q "This script cannot be run from the CLI"; then
+        if php "$PUBLIC_HTML_DIR/index.php" 2>&1 | grep -q "This script cannot be run from the CLI\|DOCTYPE html\|Redirecting to"; then
             echo -e "${GREEN}✅ Sistema restaurado y funcionando${NC}"
         else
             echo -e "${RED}❌ CRÍTICO: No se pudo restaurar el sistema${NC}"
