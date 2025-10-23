@@ -167,7 +167,7 @@
             <!-- <img src="{{ asset('images/logo.png') }}" 
                  alt="ServiMe Logo" 
                  class="w-24 h-24 mx-auto mb-6 logo-glow rounded-2xl">-->
-            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }}</h1>
+            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }} POWERED BY OPEN AI</h1>
             <p class="text-text-secondary">Accede a tu panel de administración</p>
         </div>
 
