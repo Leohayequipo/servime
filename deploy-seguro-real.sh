@@ -54,11 +54,13 @@ echo -e "${GREEN}✅ Archivos copiados (index.php preservado)${NC}"
 
 # 5. Configurar storage SIN conflictos
 echo -e "${YELLOW}💿 Configurando storage...${NC}"
-# Solo copiar archivos nuevos, no sobrescribir directorios
+# Eliminar storage existente si es un directorio
+if [ -d "$PUBLIC_HTML_DIR/storage" ]; then
+    rm -rf "$PUBLIC_HTML_DIR/storage"
+fi
+mkdir -p "$PUBLIC_HTML_DIR/storage"
 if [ -d "$PROJECT_DIR/storage/app/public" ]; then
-    mkdir -p "$PUBLIC_HTML_DIR/storage"
-    # Copiar solo archivos, no directorios
-    find "$PROJECT_DIR/storage/app/public" -type f -exec cp {} "$PUBLIC_HTML_DIR/storage/" \; 2>/dev/null || true
+    cp -r "$PROJECT_DIR/storage/app/public/"* "$PUBLIC_HTML_DIR/storage/" 2>/dev/null || true
 fi
 
 # 6. Limpiar cachés
