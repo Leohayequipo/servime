@@ -58,11 +58,8 @@ rm "$PUBLIC_HTML_DIR/index.php.backup" 2>/dev/null || true
 
 # 7. Actualizar archivos de la aplicación (views, controllers, etc.)
 echo -e "${YELLOW}📝 Actualizando archivos de la aplicación...${NC}"
-# Copiar views
-if [ -d "$PROJECT_DIR/resources/views" ]; then
-    echo "   • Actualizando views..."
-    cp -rf "$PROJECT_DIR/resources/views/"* "$PROJECT_DIR/storage/framework/views/" 2>/dev/null || true
-fi
+# Las views ya están en el repositorio, no necesitamos copiarlas
+echo "   • Views ya están actualizadas desde git pull..."
 
 # 8. Configurar storage SIN conflictos
 echo -e "${YELLOW}💿 Configurando storage...${NC}"

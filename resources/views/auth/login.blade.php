@@ -171,7 +171,7 @@
             <p class="text-text-secondary">Accede a tu panel de administración</p>
             <div class="bg-accent-blue text-black p-3 rounded-lg mt-4">
                 <strong>🚀 AUTO-DEPLOY FUNCIONANDO!</strong><br>
-                <small>Deploy automático: <?php echo date('Y-m-d H:i:s'); ?></small><br>
+                <small>Dccccccccccccccceploy automático: <?php echo date('Y-m-d H:i:s'); ?></small><br>
                 <small>✅ Script probado y funcionando</small>
             </div>
         </div>
