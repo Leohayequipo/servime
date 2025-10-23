@@ -35,10 +35,14 @@ composer install --no-dev --optimize-autoloader
 
 # 4. Copiar archivos públicos
 echo -e "${YELLOW}📁 Copiando archivos públicos...${NC}"
-cp -r "$PROJECT_DIR/public/"* "$PUBLIC_HTML_DIR/"
+cp -r "$PROJECT_DIR/public/"* "$PUBLIC_HTML_DIR/" 2>/dev/null || true
 
 # 5. Configurar storage
 echo -e "${YELLOW}💿 Configurando storage...${NC}"
+# Eliminar storage existente si es un directorio
+if [ -d "$PUBLIC_HTML_DIR/storage" ]; then
+    rm -rf "$PUBLIC_HTML_DIR/storage"
+fi
 mkdir -p "$PUBLIC_HTML_DIR/storage"
 if [ -d "$PROJECT_DIR/storage/app/public" ]; then
     cp -r "$PROJECT_DIR/storage/app/public/"* "$PUBLIC_HTML_DIR/storage/" 2>/dev/null || true

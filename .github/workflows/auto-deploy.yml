@@ -50,10 +50,10 @@ jobs:
           echo "El sitio web puede estar funcionando correctamente"
         }
         
-    - name: 🚀 Ejecutar deploy simple
+    - name: 🚀 Ejecutar deploy seguro real
       run: |
-        echo "🚀 Iniciando deploy simple..."
-        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash deploy-simple.sh"
+        echo "🚀 Iniciando deploy seguro real..."
+        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash deploy-seguro-real.sh"
         
     - name: ✅ Verificar deploy exitoso
       run: |
