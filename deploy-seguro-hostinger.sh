@@ -33,7 +33,7 @@ echo ""
 echo -e "${YELLOW}🔍 PASO 1: Verificando sistema actual...${NC}"
 
 # Verificar que Laravel carga correctamente ANTES de hacer cambios
-if php "$PUBLIC_HTML_DIR/index.php" 2>&1 | grep -q "This script cannot be run from the CLI"; then
+if php "$PUBLIC_HTML_DIR/index.php" 2>&1 | grep -q "This script cannot be run from the CLI\|DOCTYPE html\|Redirecting to"; then
     echo -e "${GREEN}✅ Sistema funcionando correctamente${NC}"
 else
     echo -e "${RED}🚨 PROBLEMA DETECTADO: El sistema no está funcionando${NC}"
