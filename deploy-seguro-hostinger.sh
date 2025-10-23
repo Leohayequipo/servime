@@ -81,7 +81,10 @@ fi
 
 # Actualizar desde Git
 echo "Actualizando código desde GitHub..."
-git pull origin main
+git pull origin main || {
+    echo -e "${YELLOW}⚠ No se pudo hacer git pull, continuando con deploy...${NC}"
+    echo -e "${YELLOW}   El código actual se usará para el deploy${NC}"
+}
 echo -e "${GREEN}✅ Código actualizado${NC}"
 
 # Instalar/actualizar dependencias
