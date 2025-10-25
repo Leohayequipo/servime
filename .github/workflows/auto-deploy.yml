@@ -32,14 +32,14 @@ jobs:
     - name: 📤 Subir scripts de deploy
       run: |
         echo "📦 Subiendo scripts de deploy seguro..."
-        scp -i ~/.ssh/id_rsa -P 65002 deploy-seguro-hostinger.sh u560898880@45.152.46.147:~/servime/
+        scp -i ~/.ssh/id_rsa -P 65002 deploy-actualiza.sh u560898880@45.152.46.147:~/servime/
         scp -i ~/.ssh/id_rsa -P 65002 reparar-rutas-emergencia.sh u560898880@45.152.46.147:~/servime/
         scp -i ~/.ssh/id_rsa -P 65002 PROBLEMA_CRITICO_RUTAS.md u560898880@45.152.46.147:~/servime/
         
     - name: 🔧 Dar permisos a scripts
       run: |
         echo "🔒 Configurando permisos..."
-        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "chmod +x ~/servime/deploy-seguro-hostinger.sh"
+        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "chmod +x ~/servime/deploy-actualiza.sh"
         ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "chmod +x ~/servime/reparar-rutas-emergencia.sh"
         
     - name: 🔍 Verificar sistema antes del deploy
