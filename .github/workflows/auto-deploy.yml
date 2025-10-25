@@ -29,18 +29,15 @@ jobs:
         ssh-keyscan -H -p 65002 45.152.46.147 >> ~/.ssh/known_hosts
         chmod 600 ~/.ssh/known_hosts
         
-    - name: 📤 Subir scripts de deploy
+    - name: 📤 Subir script de deploy
       run: |
-        echo "📦 Subiendo scripts de deploy seguro..."
+        echo "📦 Subiendo script de deploy actualizado..."
         scp -i ~/.ssh/id_rsa -P 65002 deploy-actualiza.sh u560898880@45.152.46.147:~/servime/
-        scp -i ~/.ssh/id_rsa -P 65002 reparar-rutas-emergencia.sh u560898880@45.152.46.147:~/servime/
-        scp -i ~/.ssh/id_rsa -P 65002 PROBLEMA_CRITICO_RUTAS.md u560898880@45.152.46.147:~/servime/
         
-    - name: 🔧 Dar permisos a scripts
+    - name: 🔧 Dar permisos a script
       run: |
         echo "🔒 Configurando permisos..."
         ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "chmod +x ~/servime/deploy-actualiza.sh"
-        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "chmod +x ~/servime/reparar-rutas-emergencia.sh"
         
     - name: 🔍 Verificar sistema antes del deploy
       run: |
@@ -60,8 +57,8 @@ jobs:
         echo "✅ Verificando que el deploy fue exitoso..."
         ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "php ~/domains/servime.net/public_html/index.php" || {
           echo "🚨 PROBLEMA: El deploy falló"
-          echo "🔧 Ejecutando reparación de emergencia..."
-          ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash reparar-rutas-emergencia.sh"
+          echo "🔧 Verificando sistema..."
+          ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "cd ~/servime && bash deploy-actualiza.sh"
           exit 1
         }
         echo "✅ Deploy exitoso - Laravel carga correctamente"
