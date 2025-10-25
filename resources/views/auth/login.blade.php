@@ -240,7 +240,7 @@
             </form>
 
             <!-- Register Link -->
-            @if (Route::has('register'))
+            {{-- @if (Route::has('register'))
                 <div class="mt-6 text-center">
                     <p class="text-text-secondary">
                         ¿No tienes cuenta? 
@@ -250,7 +250,7 @@
                         </a>
                     </p>
                 </div>
-            @endif
+            @endif --}}
         </div>
 
         <!-- Footer -->
