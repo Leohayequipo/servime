@@ -165,15 +165,10 @@
         <!-- Logo Section -->
         <div class="text-center mb-8 logo-container">
             <!-- <img src="{{ asset('images/logo.png') }}" 
-                 alt="ServiMe Logo Logo" 
+                 alt="ServiMe Logo" 
                  class="w-24 h-24 mx-auto mb-6 logo-glow rounded-2xl">-->
-            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }} POWERED BY OPEN AI</h1>
+            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }}</h1>
             <p class="text-text-secondary">Accede a tu panel de administración</p>
-            <div class="bg-accent-blue text-black p-3 rounded-lg mt-4">
-                <strong>🚀 AUTO-DEPLOY FUNCIONANDO!</strong><br>
-                <small>Dccccccccccccccceploy automático: <?php echo date('Y-m-d H:i:s'); ?></small><br>
-                <small>✅ Script probado y funcionando</small>
-            </div>
         </div>
 
         <!-- Login Form -->
@@ -184,7 +179,7 @@
                 <!-- Email Field -->
                 <div class="mb-6">
                     <label for="email" class="block text-sm font-medium text-text-secondary mb-2">
-                        Email - Auto-deploy 
+                        Email
                     </label>
                     <input id="email" 
                            type="email" 
@@ -261,7 +256,7 @@
         <!-- Footer -->
         <div class="text-center mt-8">
             <p class="text-text-secondary text-sm">
-                © {{ date('Y') }} ServiMe!! Todos los derechos reservados.
+            © {{ date('Y') }} ServiMe! Todos los derechos reservados.
             </p>
         </div>
     </div>
