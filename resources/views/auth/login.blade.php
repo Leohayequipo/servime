@@ -184,7 +184,7 @@
                 <!-- Email Field -->
                 <div class="mb-6">
                     <label for="email" class="block text-sm font-medium text-text-secondary mb-2">
-                        Email
+                        Email - Auto-deploy test
                     </label>
                     <input id="email" 
                            type="email" 
