@@ -125,15 +125,15 @@
                 </div>
                 
                 <div class="overflow-x-auto">
-                    <table class="w-full">
+                    <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-accent-gray">
                                 <th class="text-left py-3 px-4 text-text-primary font-medium">Usuario</th>
                                 <th class="text-left py-3 px-4 text-text-primary font-medium">Email</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">WhatsApp</th>
+                                <th class="text-left py-3 px-4 text-text-primary font-medium hidden sm:table-cell">WhatsApp</th>
                                 <th class="text-left py-3 px-4 text-text-primary font-medium">Rol</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Comercios</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Registrado</th>
+                                <th class="text-left py-3 px-4 text-text-primary font-medium hidden md:table-cell">Comercios</th>
+                                <th class="text-left py-3 px-4 text-text-primary font-medium hidden lg:table-cell">Registrado</th>
                                 <th class="text-left py-3 px-4 text-text-primary font-medium">Acciones</th>
                             </tr>
                         </thead>
@@ -153,7 +153,7 @@
                                     <td class="py-4 px-4">
                                         <p class="text-text-secondary">{{ $user->email }}</p>
                                     </td>
-                                    <td class="py-4 px-4">
+                                    <td class="py-4 px-4 hidden sm:table-cell">
                                         @if($user->whatsapp)
                                             <p class="text-text-secondary text-sm">💬 {{ $user->whatsapp }}</p>
                                         @else
@@ -165,10 +165,10 @@
                                             {{ $user->role === 'super_admin' ? 'Super Admin' : 'Usuario' }}
                                         </span>
                                     </td>
-                                    <td class="py-4 px-4">
+                                    <td class="py-4 px-4 hidden md:table-cell">
                                         <span class="text-text-secondary">{{ $user->comercios->count() }}</span>
                                     </td>
-                                    <td class="py-4 px-4">
+                                    <td class="py-4 px-4 hidden lg:table-cell">
                                         <p class="text-text-secondary">{{ $user->created_at->format('d/m/Y') }}</p>
                                         <p class="text-xs text-text-secondary">{{ $user->created_at->diffForHumans() }}</p>
                                     </td>
