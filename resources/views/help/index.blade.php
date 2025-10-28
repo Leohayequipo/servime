@@ -1,4 +1,80 @@
-<x-app-layout>
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ config('app.name', 'ServiME') }} - Centro de Ayuda</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-primary': '#0a0a0a',
+                        'bg-secondary': '#1a1a1a',
+                        'bg-tertiary': '#2a2a2a',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#b0b0b0',
+                        'accent-blue': '#00d4ff',
+                        'accent-green': '#00ff88',
+                        'accent-purple': '#8b5cf6',
+                        'border': '#333333',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(26, 26, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-glow {
+            box-shadow: 
+                0 0 20px rgba(0, 212, 255, 0.3),
+                0 0 40px rgba(0, 212, 255, 0.1),
+                inset 0 0 20px rgba(0, 212, 255, 0.05);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hover-lift {
+            transition: transform 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
 <!-- Main Content -->
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Hero Section -->
@@ -189,4 +265,5 @@
         </p>
     </div>
 </div>
-</x-app-layout>
+</body>
+</html>

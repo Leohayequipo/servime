@@ -239,6 +239,15 @@
                 </button>
             </form>
 
+            <!-- Help Button -->
+            <div class="mt-6 text-center">
+                <a href="{{ route('help.index') }}" 
+                   class="inline-flex items-center text-sm text-text-secondary hover:text-accent-blue transition-colors duration-300">
+                    <span class="mr-2">❓</span>
+                    Centro de Ayuda
+                </a>
+            </div>
+
             <!-- Register Link -->
             {{-- @if (Route::has('register'))
                 <div class="mt-6 text-center">
