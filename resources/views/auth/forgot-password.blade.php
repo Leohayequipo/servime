@@ -13,9 +13,6 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
     <!-- Custom Styles -->
     <style>
         :root {
@@ -303,11 +300,11 @@
             <div class="glass-effect rounded-2xl p-8 neon-glow">
                 <!-- Header -->
                 <div class="text-center mb-8">
-                    <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }}</h1>
+                    <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">🚀 ServiME</h1>
                     <p class="text-text-secondary">Recuperar tu contraseña</p>
-                </div>
+    </div>
 
-                <!-- Session Status -->
+    <!-- Session Status -->
                 @if (session('status'))
                     <div class="success-message mb-4">
                         {{ session('status') }}
@@ -315,8 +312,8 @@
                 @endif
 
                 <!-- Form -->
-                <form method="POST" action="{{ route('password.email') }}">
-                    @csrf
+    <form method="POST" action="{{ route('password.email') }}">
+        @csrf
 
                     <!-- Email Field -->
                     <div class="form-group">
@@ -348,7 +345,7 @@
                         ← Volver al login
                     </a>
                 </div>
-            </div>
+        </div>
 
             <!-- Footer -->
             <div class="footer">
