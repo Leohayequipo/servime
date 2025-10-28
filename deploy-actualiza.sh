@@ -33,6 +33,13 @@ git pull origin main 2>/dev/null || echo "⚠️ Git pull falló, continuando...
 echo -e "${YELLOW}📚 Instalando dependencias...${NC}"
 composer install --no-dev --optimize-autoloader 2>/dev/null || echo "⚠️ Composer falló, continuando..."
 
+# 3.1. Instalar dependencias de Node y compilar Vite
+echo -e "${YELLOW}📦 Instalando dependencias de Node...${NC}"
+npm install 2>/dev/null || echo "⚠️ npm install falló, continuando..."
+
+echo -e "${YELLOW}🔨 Compilando assets con Vite...${NC}"
+npm run build 2>/dev/null || echo "⚠️ npm run build falló, continuando..."
+
 # 4. Backup del index.php que funciona
 echo -e "${YELLOW}💾 Haciendo backup del index.php...${NC}"
 cp "$PUBLIC_HTML_DIR/index.php" "$PUBLIC_HTML_DIR/index.php.backup" 2>/dev/null || true
