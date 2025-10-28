@@ -213,7 +213,7 @@
         </div>
 
                 <!-- Remember Me & Forgot Password -->
-                <div class="flex items-center justify-between mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                     <div class="flex items-center">
                         <input id="remember_me" 
                                name="remember" 
@@ -221,12 +221,12 @@
                                class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
                         <label for="remember_me" class="ml-2 text-sm text-text-secondary">
                             Recordarme
-            </label>
-        </div>
+                        </label>
+                    </div>
 
-            @if (Route::has('password.request'))
+                    @if (Route::has('password.request'))
                         <a href="{{ route('password.request') }}" 
-                           class="text-sm text-accent-blue hover:text-accent-green transition-colors duration-300">
+                           class="text-sm text-accent-blue hover:text-accent-green transition-colors duration-300 text-center sm:text-right">
                             ¿Olvidaste tu contraseña?
                         </a>
                     @endif
