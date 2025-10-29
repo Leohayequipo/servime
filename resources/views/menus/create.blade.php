@@ -644,16 +644,26 @@
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
                                                     {{ $categoria['nombre'] ?? 'Sin nombre' }}
                                                 </h4>
-                                                <div class="space-y-3">
+                                                <div class="space-y-4">
                                                     @if(isset($categoria['platos']) && is_array($categoria['platos']))
                                                         @foreach($categoria['platos'] as $plato)
-                                                            <div class="flex justify-between items-center py-2 border-b border-accent-gray last:border-b-0">
-                                                                <span class="text-text-secondary font-medium">
-                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
-                                                                </span>
-                                                                <span class="text-accent-blue font-bold">
-                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
-                                                                </span>
+                                                            <div class="flex justify-between items-start py-2 border-b border-accent-gray/50 last:border-b-0 gap-4">
+                                                                <!-- Información del plato -->
+                                                                <div class="flex-1 min-w-0">
+                                                                    <div class="flex items-start justify-between gap-3 mb-1">
+                                                                        <h5 class="text-text-primary font-semibold text-base leading-tight">
+                                                                            {{ $plato['nombre'] ?? 'Sin nombre' }}
+                                                                        </h5>
+                                                                        <span class="text-accent-blue font-bold text-base whitespace-nowrap flex-shrink-0">
+                                                                            {{ $plato['precio'] ?? 'Sin precio' }}
+                                                                        </span>
+                                                                    </div>
+                                                                    @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
+                                                                        <p class="text-text-secondary text-sm leading-relaxed mt-1.5">
+                                                                            {{ $plato['descripcion'] }}
+                                                                        </p>
+                                                                    @endif
+                                                                </div>
                                                             </div>
                                                         @endforeach
                                                     @endif
