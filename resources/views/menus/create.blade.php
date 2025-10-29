@@ -755,34 +755,118 @@
                         </button>
                     </div>
                     
-                    <div id="quick-questions-container" class="space-y-4 flex-grow overflow-y-auto pr-2">
+                    <div id="quick-questions-container" class="space-y-6 flex-grow overflow-y-auto pr-2">
                         @foreach($comercio->quick_questions as $index => $question)
-                            <div class="question-item" data-index="{{ $index }}" style="background: rgba(75, 85, 99, 0.4) !important; border: 1px solid rgba(107, 114, 128, 0.6) !important; border-radius: 0.75rem !important; padding: 1rem !important; margin-bottom: 1rem !important;">
-                                <div class="grid grid-cols-12 gap-4 items-start">
-                                    <!-- Ícono -->
-                                    <div class="col-span-1">
-                                        <input type="text" 
-                                               name="quick_questions[{{ $index }}][icon]" 
-                                               value="{{ $question['icon'] }}"
-                                               onclick="openIconModal(this)"
-                                               class="w-full px-2 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
+                            <div class="question-item" data-index="{{ $index }}" style="background: rgba(75, 85, 99, 0.4) !important; border: 1px solid rgba(107, 114, 128, 0.6) !important; border-radius: 1rem !important; padding: 1.5rem !important; margin-bottom: 0 !important;">
+                                <!-- Layout móvil: apilado verticalmente -->
+                                <div class="flex flex-col md:hidden space-y-4">
+                                    <!-- Fila 1: Ícono y botones de acción -->
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="flex-1">
+                                            <label class="block text-xs text-text-secondary mb-1.5">Ícono</label>
+                                            <input type="text" 
+                                                   name="quick_questions[{{ $index }}][icon]" 
+                                                   value="{{ $question['icon'] }}"
+                                                   onclick="openIconModal(this)"
+                                                   style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                                   class="w-full px-3 py-3 border border-accent-gray rounded-lg text-text-primary text-center text-xl focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
+                                        </div>
+                                        <div class="flex gap-2 pt-6">
+                                            @if($question['auto_generated'] ?? false)
+                                                <span class="bg-accent-blue/20 text-accent-blue px-2 py-1 rounded-md text-xs font-medium">IA</span>
+                                            @endif
+                                            <button type="button" 
+                                                    onclick="removeQuestion({{ $index }})"
+                                                    class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                                                🗑️
+                                            </button>
+                                        </div>
                                     </div>
                                     
-                                    <!-- Pregunta -->
-                                    <div class="col-span-4">
+                                    <!-- Fila 2: Pregunta -->
+                                    <div>
+                                        <label class="block text-xs text-text-secondary mb-1.5">Pregunta</label>
                                         <input type="text" 
                                                id="question_{{ $index }}"
                                                name="quick_questions[{{ $index }}][question]" 
                                                value="{{ $question['question'] }}"
                                                placeholder="¿Pregunta frecuente?"
-                                               class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                               style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                               class="w-full px-4 py-3 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                    </div>
+                                    
+                                    <!-- Fila 3: Categoría -->
+                                    <div>
+                                        <label class="block text-xs text-text-secondary mb-1.5">Categoría</label>
+                                        @php($cat = $question['category'] ?? 'general')
+                                        <select name="quick_questions[{{ $index }}][category]" 
+                                                style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                               class="w-full px-4 py-3 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                            @if(isset($categories) && $categories->count() > 0)
+                                            @foreach($categories as $category)
+                                                <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
+                                            @else
+                                                <option value="general" {{ $cat === 'general' ? 'selected' : '' }}>
+                                                    General
+                                                </option>
+                                            @endif
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Fila 4: Respuesta -->
+                                    <div>
+                                        <label class="block text-xs text-text-secondary mb-1.5 flex items-center justify-between">
+                                            <span>Respuesta</span>
+                                            <button type="button" 
+                                                    onclick="improveAnswerWithAI({{ $index }})"
+                                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1">
+                                                🤖 IA
+                                            </button>
+                                        </label>
+                                        <textarea name="quick_questions[{{ $index }}][answer]" 
+                                                  id="answer_{{ $index }}"
+                                                  rows="3"
+                                                  placeholder="Escribe la respuesta automática..."
+                                                  style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                                  class="w-full px-4 py-3 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
+                                    </div>
+                                </div>
+                                
+                                <!-- Layout desktop: horizontal (md y superior) -->
+                                <div class="hidden md:grid md:grid-cols-12 md:gap-4 md:items-start">
+                                    <!-- Ícono -->
+                                    <div class="col-span-1">
+                                        <label class="block text-xs text-text-secondary mb-1.5">Ícono</label>
+                                        <input type="text" 
+                                               name="quick_questions[{{ $index }}][icon]" 
+                                               value="{{ $question['icon'] }}"
+                                               onclick="openIconModal(this)"
+                                               style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                               class="w-full px-3 py-2.5 border border-accent-gray rounded-lg text-text-primary text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
+                                    </div>
+                                    
+                                    <!-- Pregunta -->
+                                    <div class="col-span-4">
+                                        <label class="block text-xs text-text-secondary mb-1.5">Pregunta</label>
+                                        <input type="text" 
+                                               id="question_{{ $index }}"
+                                               name="quick_questions[{{ $index }}][question]" 
+                                               value="{{ $question['question'] }}"
+                                               placeholder="¿Pregunta frecuente?"
+                                               style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                               class="w-full px-4 py-2.5 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                     </div>
                                     
                                     <!-- Categoría -->
                                     <div class="col-span-2">
+                                        <label class="block text-xs text-text-secondary mb-1.5">Categoría</label>
                                         @php($cat = $question['category'] ?? 'general')
                                         <select name="quick_questions[{{ $index }}][category]" 
-                                                class="w-full px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                                style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                                class="w-full px-3 py-2.5 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                             @if(isset($categories) && $categories->count() > 0)
                                             @foreach($categories as $category)
                                                 <option value="{{ $category->slug }}" {{ $cat === $category->slug ? 'selected' : '' }}>
@@ -799,32 +883,33 @@
                                     
                                     <!-- Respuesta -->
                                     <div class="col-span-4">
-                                        <div class="flex gap-2">
-                                            <textarea name="quick_questions[{{ $index }}][answer]" 
-                                                      id="answer_{{ $index }}"
-                                                      rows="2"
-                                                      placeholder="Respuesta automática..."
-                                                      class="flex-1 px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
+                                        <label class="block text-xs text-text-secondary mb-1.5 flex items-center justify-between">
+                                            <span>Respuesta</span>
                                             <button type="button" 
                                                     onclick="improveAnswerWithAI({{ $index }})"
-                                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
-                                                    title="Mejorar respuesta con IA">
-                                                🤖
+                                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1">
+                                                🤖 IA
                                             </button>
-                                        </div>
+                                        </label>
+                                        <textarea name="quick_questions[{{ $index }}][answer]" 
+                                                  id="answer_{{ $index }}"
+                                                  rows="2"
+                                                  placeholder="Escribe la respuesta automática..."
+                                                  style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                                  class="w-full px-4 py-2.5 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ $question['answer'] ?? '' }}</textarea>
                                     </div>
                                     
                                     <!-- Botones -->
-                                    <div class="col-span-1 flex flex-col space-y-2">
+                                    <div class="col-span-1 flex flex-col gap-2 pt-6">
                                         <input type="hidden" name="quick_questions[{{ $index }}][auto_generated]" value="{{ ($question['auto_generated'] ?? false) ? '1' : '0' }}">
+                                        @if($question['auto_generated'] ?? false)
+                                            <span class="bg-accent-blue/20 text-accent-blue px-2 py-1 rounded-md text-xs font-medium text-center">IA</span>
+                                        @endif
                                         <button type="button" 
                                                 onclick="removeQuestion({{ $index }})"
-                                                class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg text-sm transition-colors duration-200">
+                                                class="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
                                             🗑️
                                         </button>
-                                        @if($question['auto_generated'] ?? false)
-                                            <span class="text-xs text-accent-blue text-center">IA</span>
-                                        @endif
                                     </div>
                                 </div>
                             </div>
