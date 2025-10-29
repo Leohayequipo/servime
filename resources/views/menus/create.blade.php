@@ -244,33 +244,37 @@
 
                             <!-- Menú Actual (solo en edición) -->
                             @if($isEdit && $menu && $menu->archivo_original)
-                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-5 mb-6">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-4">
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="flex items-center space-x-4 flex-1 min-w-0">
                                             @if($menu->formato === 'pdf')
-                                                <div class="w-12 h-12 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center justify-center">
-                                                    <span class="text-red-400 text-xl">📄</span>
+                                                <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-red-400 text-2xl">📄</span>
                                                 </div>
                                             @else
-                                                <div class="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
-                                                    <span class="text-blue-400 text-xl">📷</span>
+                                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-blue-400 text-2xl">🍽️</span>
                                                 </div>
                                             @endif
-                                            <div>
-                                                <h4 class="text-text-primary font-medium">Menú Actual</h4>
-                                                <p class="text-text-secondary text-sm">{{ $menu->created_at->format('d/m/Y H:i') }}</p>
+                                            <div class="min-w-0 flex-1">
+                                                <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-text-secondary/70 text-xs bg-accent-gray/20 px-2 py-1 rounded-md">{{ $menu->created_at->format('d/m/Y') }}</span>
+                                                    <span class="text-text-secondary/70 text-xs bg-accent-gray/20 px-2 py-1 rounded-md">{{ $menu->created_at->format('H:i') }}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="flex space-x-3">
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
                                             <button type="button" 
                                                     onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
-                                                    class="bg-accent-blue hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
-                                                Ver
+                                                    class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
+                                                👁️ Ver
                                             </button>
                                             <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
                                                download
-                                               class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
-                                                Descargar
+                                               class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                                                <span>📥</span>
+                                                <span>Descargar</span>
                                             </a>
                                         </div>
                                     </div>
@@ -290,12 +294,12 @@
                                         <div class="flex space-x-3">
                                             <button type="button" 
                                                     disabled
-                                                    class="bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                                                    class="bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed opacity-50">
                                                 Ver
                                             </button>
                                             <button type="button" 
                                                     disabled
-                                                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                                                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed opacity-50">
                                                 Descargar
                                             </button>
                                         </div>
@@ -509,19 +513,23 @@
                         <!-- Preview realista del chatbot móvil -->
                         <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto min-h-[500px] flex flex-col" style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;">
                             <!-- Header del comercio -->
-                            <div class="flex items-center mb-4">
-                                @if($comercio->logo_url)
-                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                         alt="{{ $comercio->nombre }}" 
-                                         class="w-8 h-8 rounded-full object-cover mr-3">
-                                @else
-                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                         class="w-8 h-8 rounded-full object-cover mr-3">
-                                @endif
-                                <div>
-                                    <h4 class="text-text-primary font-semibold text-sm">{{ $comercio->nombre }}</h4>
-                                    <p class="text-text-secondary text-xs">Menú Digital</p>
+                            <div class="mb-4">
+                                <!-- Logo centrado -->
+                                <div class="flex justify-center mb-3">
+                                    @if($comercio->logo_url)
+                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
+                                             alt="{{ $comercio->nombre }}" 
+                                             class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                    @else
+                                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                             alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                             class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                    @endif
+                                </div>
+                                <!-- Nombre del comercio centrado -->
+                                <div class="text-center">
+                                    <h4 class="text-text-primary font-semibold text-base leading-tight mb-1">{{ $comercio->nombre }}</h4>
+                                    <p class="text-text-secondary text-sm">Menú Digital</p>
                                 </div>
                             </div>
                             

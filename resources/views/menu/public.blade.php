@@ -27,6 +27,34 @@
             --accent-gray: #6b7280;
         }
         
+        /* Animaciones personalizadas */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slide-in-left {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slide-in-right {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out;
+        }
+
+        .animate-slide-in-left {
+            animation: slide-in-left 0.4s ease-out;
+        }
+
+        .animate-slide-in-right {
+            animation: slide-in-right 0.4s ease-out;
+        }
+        
         html, body { height: 100%; }
         body {
             background: #000000;
@@ -76,11 +104,15 @@
     <div class="app">
         <!-- Header fijo -->
         <div class="app-header">
-            <div class="max-w-md mx-auto flex items-center">
-                <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover mr-3 shadow-2xl neon-glow">
-                <div>
-                    <h4 class="text-text-primary font-semibold text-lg leading-tight">{{ $comercio->nombre }}</h4>
-                    <p class="text-text-secondary text-sm">Menú Digital</p>
+            <div class="max-w-md mx-auto px-4">
+                <!-- Logo centrado -->
+                <div class="flex justify-center mb-3">
+                    <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow">
+                </div>
+                <!-- Nombre del comercio centrado -->
+                <div class="text-center">
+                    <h4 class="text-text-primary font-semibold text-xl leading-tight mb-1">{{ $comercio->nombre }}</h4>
+                    <p class="text-text-secondary text-base">Menú Digital</p>
                 </div>
             </div>
             <div class="max-w-md mx-auto mt-3">
@@ -97,9 +129,16 @@
 
         <!-- Área de conversación -->
         <div id="chatScroll" class="chat-scroll">
-            <div id="chatMessages" class="max-w-md mx-auto space-y-3">
-                <div class="bg-secondary-dark rounded-lg p-3">
-                    <p class="text-text-secondary text-sm" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+            <div id="chatMessages" class="max-w-md mx-auto space-y-4 px-4">
+                <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-fade-in">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                            <span class="text-white text-sm">🤖</span>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-text-primary text-base leading-relaxed" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+                        </div>
+                    </div>
                 </div>
                 
             </div>
@@ -216,13 +255,22 @@
             
             if (sender === 'user') {
                 messageDiv.innerHTML = `
-                    <div class="flex justify-end">
-                        <div class="bg-accent-blue rounded-lg p-3 max-w-xs text-white text-base" style="white-space: pre-wrap;">${parsedText}</div>
+                    <div class="flex justify-end animate-slide-in-right">
+                        <div class="bg-gradient-to-r from-accent-blue to-blue-500 rounded-xl p-4 max-w-xs text-white text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105" style="white-space: pre-wrap;">${parsedText}</div>
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="bg-secondary-dark rounded-lg p-3 text-text-secondary text-base" style="white-space: pre-wrap;">${parsedText}</div>
+                    <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                                <span class="text-white text-sm">🤖</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-text-primary text-base leading-relaxed" style="white-space: pre-wrap;">${parsedText}</p>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
             
@@ -236,14 +284,21 @@
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
-                <div class="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-3">
-                    <div class="flex items-center space-x-2">
-                        <div class="flex items-center space-x-1">
-                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
-                            <div class="typing-indicator w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                            <span class="text-white text-sm">🤖</span>
                         </div>
-                        <span class="text-blue-300 text-xs">IA está escribiendo...</span>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex space-x-1">
+                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce"></div>
+                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                </div>
+                                <span class="text-text-primary text-sm font-medium">Escribiendo...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;

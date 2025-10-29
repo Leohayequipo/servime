@@ -801,9 +801,11 @@
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <h1 class="text-2xl font-bold text-text-primary">
-                                {{ config('app.name', 'ServiME') }}
-                            </h1>
+                            <a href="{{ route('dashboard') }}" class="hover:opacity-80 transition-opacity duration-200">
+                                <h1 class="text-2xl font-bold text-text-primary">
+                                    {{ config('app.name', 'ServiME') }}
+                                </h1>
+                            </a>
                         </div>
                         <div class="hidden md:block ml-10">
                             <div class="flex items-baseline space-x-4">

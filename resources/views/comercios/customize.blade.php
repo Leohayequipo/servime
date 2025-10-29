@@ -233,19 +233,23 @@
                             <!-- Preview realista del chatbot móvil -->
                             <div class="bg-background border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto">
                                 <!-- Header del comercio -->
-                                <div class="flex items-center mb-4">
-                                    @if($comercio->logo_url)
-                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                             alt="{{ $comercio->nombre }}" 
-                                             class="w-8 h-8 rounded-full object-cover mr-3">
-                                    @else
-                                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                             alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                             class="w-8 h-8 rounded-full object-cover mr-3">
-                                    @endif
-                                    <div>
-                                        <h4 class="text-text-primary font-semibold text-sm">{{ $comercio->nombre }}</h4>
-                                        <p class="text-text-secondary text-xs">Menú Digital</p>
+                                <div class="mb-4">
+                                    <!-- Logo centrado -->
+                                    <div class="flex justify-center mb-3">
+                                        @if($comercio->logo_url)
+                                            <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
+                                                 alt="{{ $comercio->nombre }}" 
+                                                 class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                        @else
+                                            <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                                 alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                                 class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                        @endif
+                                    </div>
+                                    <!-- Nombre del comercio centrado -->
+                                    <div class="text-center">
+                                        <h4 class="text-text-primary font-semibold text-base leading-tight mb-1">{{ $comercio->nombre }}</h4>
+                                        <p class="text-text-secondary text-sm">Menú Digital</p>
                                     </div>
                                 </div>
                                 
