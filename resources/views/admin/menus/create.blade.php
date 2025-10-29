@@ -93,11 +93,13 @@
                 </div>
 
                 <!-- Botones de Acción -->
-                <div class="flex justify-end space-x-4">
-                    <a href="{{ route('admin.menus.index') }}" class="btn-secondary">
+                <div class="flex flex-col sm:flex-row justify-center items-center sm:justify-center gap-4 mt-6">
+                    <a href="{{ route('admin.menus.index') }}" 
+                       class="btn-secondary w-auto max-w-[320px] sm:max-w-none sm:w-auto px-8 py-3 text-base text-center">
                         Cancelar
                     </a>
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" 
+                            class="btn-primary w-auto max-w-[320px] sm:max-w-none sm:w-auto px-8 py-3 text-base text-center">
                         Crear Menú
                     </button>
                 </div>

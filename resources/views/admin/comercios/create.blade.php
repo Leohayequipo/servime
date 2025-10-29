@@ -145,13 +145,13 @@
                 </div>
 
                 <!-- Botones de acción -->
-                <div class="flex justify-end space-x-4">
+                <div class="flex flex-col sm:flex-row justify-center items-center sm:justify-center gap-4 mt-6">
                     <a href="{{ route('admin.comercios.index') }}" 
-                       class="btn-secondary">
+                       class="btn-secondary w-auto max-w-[320px] sm:max-w-none sm:w-auto px-8 py-3 text-base text-center">
                         Cancelar
                     </a>
                     <button type="submit" 
-                            class="btn-primary">
+                            class="btn-primary w-auto max-w-[320px] sm:max-w-none sm:w-auto px-8 py-3 text-base text-center">
                         🏪 Crear Comercio
                     </button>
                 </div>

@@ -9,10 +9,13 @@
         </p>
     </header>
 
-    <x-danger-button
-        x-data=""
-        x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-    >Eliminar Cuenta</x-danger-button>
+    <div class="flex justify-center mt-6">
+        <x-danger-button
+            x-data=""
+            x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+            class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base"
+        >Eliminar Cuenta</x-danger-button>
+    </div>
 
     <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
         <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
@@ -41,12 +44,13 @@
                 <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
             </div>
 
-            <div class="mt-6 flex justify-end">
-                <x-secondary-button x-on:click="$dispatch('close')">
+            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <x-secondary-button x-on:click="$dispatch('close')" 
+                                    class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base">
                     Cancelar
                 </x-secondary-button>
 
-                <x-danger-button class="ms-3">
+                <x-danger-button class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base">
                     Eliminar Cuenta
                 </x-danger-button>
             </div>

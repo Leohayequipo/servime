@@ -47,8 +47,8 @@
             @endif
         </div>
 
-        <div class="flex items-center gap-4">
-            <x-primary-button>Guardar</x-primary-button>
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
+            <x-primary-button class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base">Guardar</x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
