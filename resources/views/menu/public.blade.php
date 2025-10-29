@@ -236,19 +236,32 @@
             });
         }
 
-        // Convertir Markdown básico a HTML con soporte para imágenes
+        // Convertir Markdown básico a HTML con soporte para imágenes y saltos de línea
         function parseMarkdown(text) {
-            // Primero procesar imágenes en formato [IMAGEN:url]
-            text = text.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
-                return `<div class="mt-2 mb-2"><img src="${url}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
-            });
-            
-            // Convertir **texto** a <strong>texto</strong>
+            // Convertir **texto** a <strong>texto</strong> (antes de procesar saltos)
             text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            // Convertir *texto* a <em>texto</em>
+            // Convertir *texto* a <em>texto</em> (antes de procesar saltos)
             text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
             
-            return text;
+            // Dividir en párrafos (doble salto de línea)
+            const paragraphs = text.split(/\n\n+/);
+            
+            // Procesar cada párrafo
+            const processedParagraphs = paragraphs.map(paragraph => {
+                if (paragraph.trim() === '') return '';
+                
+                // Procesar imágenes en formato [IMAGEN:url] dentro del párrafo
+                paragraph = paragraph.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
+                    return `<div class="mt-2 mb-2"><img src="${url}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
+                });
+                
+                // Convertir saltos de línea simples en <br>
+                paragraph = paragraph.replace(/\n/g, '<br>');
+                
+                return `<p class="mb-3 last:mb-0">${paragraph}</p>`;
+            }).filter(p => p !== '');
+            
+            return processedParagraphs.join('');
         }
 
         // Agregar mensaje al chat
@@ -273,7 +286,7 @@
                                 <span class="text-white text-sm">🤖</span>
                             </div>
                             <div class="flex-1">
-                                <p class="text-text-primary text-base leading-relaxed" style="white-space: pre-wrap;">${parsedText}</p>
+                                <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
                             </div>
                         </div>
                     </div>
