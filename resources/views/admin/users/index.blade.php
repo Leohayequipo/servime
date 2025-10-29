@@ -110,7 +110,8 @@
 
             <!-- Lista de Usuarios -->
             <div class="glass-effect rounded-2xl p-6">
-                <div class="flex items-center justify-between mb-6">
+                <!-- Header responsive: apilado en móvil, horizontal en desktop -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-4">
                             <span class="text-white text-lg">👥</span>
@@ -118,14 +119,15 @@
                         <h3 class="text-xl font-bold text-text-primary">Lista de Usuarios</h3>
                     </div>
                     <a href="{{ route('admin.users.create') }}" 
-                       class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl">
+                       class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center sm:justify-start space-x-2 shadow-lg hover:shadow-xl w-full sm:w-auto">
                         <span class="text-lg">➕</span>
                         <span class="font-medium">Crear Usuario</span>
                     </a>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[800px]">
+                <!-- Vista Desktop: Tabla -->
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full">
                         <thead>
                             <tr class="border-b border-accent-gray">
                                 <th class="text-left py-3 px-4 text-text-primary font-medium">Usuario</th>
@@ -151,7 +153,7 @@
                                         </div>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <p class="text-text-secondary">{{ $user->email }}</p>
+                                        <p class="text-text-secondary break-words">{{ $user->email }}</p>
                                     </td>
                                     <td class="py-4 px-4 hidden sm:table-cell">
                                         @if($user->whatsapp)
@@ -206,6 +208,85 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Vista Móvil: Cards -->
+                <div class="md:hidden space-y-4">
+                    @forelse($users as $user)
+                        <div class="bg-secondary-dark/50 rounded-xl p-4 border border-accent-gray/30 hover:border-accent-blue/50 transition-all">
+                            <!-- Header del card: Avatar + Nombre + Rol -->
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center space-x-3 flex-1 min-w-0">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white font-bold text-lg">{{ substr($user->name, 0, 1) }}</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-semibold text-text-primary text-base truncate">{{ $user->name }}</p>
+                                        <span class="inline-block mt-1 px-2.5 py-0.5 text-xs rounded-full {{ $user->role === 'super_admin' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' }}">
+                                            {{ $user->role === 'super_admin' ? 'Super Admin' : 'Usuario' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Información del usuario -->
+                            <div class="space-y-2 mb-4">
+                                <!-- Email completo, sin truncar -->
+                                <div class="flex items-start">
+                                    <span class="text-text-secondary text-sm mr-2 flex-shrink-0">📧</span>
+                                    <p class="text-text-secondary text-sm break-words">{{ $user->email }}</p>
+                                </div>
+                                
+                                <!-- WhatsApp -->
+                                @if($user->whatsapp)
+                                    <div class="flex items-start">
+                                        <span class="text-text-secondary text-sm mr-2 flex-shrink-0">💬</span>
+                                        <p class="text-text-secondary text-sm">{{ $user->whatsapp }}</p>
+                                    </div>
+                                @endif
+                                
+                                <!-- Comercios -->
+                                <div class="flex items-center">
+                                    <span class="text-text-secondary text-sm mr-2">🏪</span>
+                                    <p class="text-text-secondary text-sm">{{ $user->comercios->count() }} comercio(s)</p>
+                                </div>
+                                
+                                <!-- Fecha de registro -->
+                                <div class="flex items-center">
+                                    <span class="text-text-secondary text-sm mr-2">📅</span>
+                                    <p class="text-text-secondary text-sm">{{ $user->created_at->format('d/m/Y') }}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div class="flex flex-col sm:flex-row gap-2 pt-3 border-t border-accent-gray/30">
+                                <a href="{{ route('admin.users.show', $user) }}" 
+                                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center">
+                                    👁️ Ver
+                                </a>
+                                <a href="{{ route('admin.users.edit', $user) }}" 
+                                   class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center">
+                                    ✏️ Editar
+                                </a>
+                                @if($user->id !== auth()->id())
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" 
+                                          onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar al usuario {{ $user->name }}? Esta acción no se puede deshacer.', function(result) { if(result) { form.submit(); } }, 'Eliminando usuario...');"
+                                          class="inline flex-1">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8 text-text-secondary">
+                            No hay usuarios registrados
+                        </div>
+                    @endforelse
                 </div>
 
                 <!-- Paginación -->
