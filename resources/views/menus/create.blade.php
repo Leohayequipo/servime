@@ -639,15 +639,15 @@
                                 
                                 @if($categorias && is_array($categorias))
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        @foreach($categorias as $categoria)
+                                        @foreach($categorias as $categoriaIndex => $categoria)
                                             <div class="bg-secondary-dark rounded-lg p-6">
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
                                                     {{ $categoria['nombre'] ?? 'Sin nombre' }}
                                                 </h4>
                                                 <div class="space-y-4">
                                                     @if(isset($categoria['platos']) && is_array($categoria['platos']))
-                                                        @foreach($categoria['platos'] as $plato)
-                                                            <div class="flex justify-between items-start py-2 border-b border-accent-gray/50 last:border-b-0 gap-4">
+                                                        @foreach($categoria['platos'] as $platoIndex => $plato)
+                                                            <div class="flex justify-between items-start py-3 border-b border-accent-gray/50 last:border-b-0 gap-4">
                                                                 <!-- Información del plato -->
                                                                 <div class="flex-1 min-w-0">
                                                                     <div class="flex items-start justify-between gap-3 mb-1">
@@ -663,6 +663,44 @@
                                                                             {{ $plato['descripcion'] }}
                                                                         </p>
                                                                     @endif
+                                                                    
+                                                                    <!-- Imagen del plato -->
+                                                                    <div class="mt-3" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        @if(isset($plato['imagen']) && !empty($plato['imagen']))
+                                                                            <div class="relative inline-block">
+                                                                                <img src="{{ asset($plato['imagen']) }}" 
+                                                                                     alt="{{ $plato['nombre'] ?? 'Plato' }}"
+                                                                                     class="w-24 h-24 object-cover rounded-lg border border-accent-gray shadow-md"
+                                                                                     id="plato-imagen-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                <button type="button"
+                                                                                        onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
+                                                                                        class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors"
+                                                                                        title="Eliminar imagen">
+                                                                                    ×
+                                                                                </button>
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden"
+                                                                                 id="plato-imagen-placeholder-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                Sin imagen
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <!-- Botón de subir imagen -->
+                                                                <div class="flex-shrink-0">
+                                                                    <label class="cursor-pointer">
+                                                                        <input type="file" 
+                                                                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                               class="hidden"
+                                                                               onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                                                            <span class="mr-2">📷</span>
+                                                                            {{ isset($plato['imagen']) && !empty($plato['imagen']) ? 'Cambiar' : 'Subir' }}
+                                                                        </span>
+                                                                    </label>
                                                                 </div>
                                                             </div>
                                                         @endforeach
@@ -1720,4 +1758,189 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Función para subir imagen de plato
+        async function uploadPlatoImagen(event, categoriaIndex, platoIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validar tamaño (2MB máximo)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('La imagen no puede ser mayor a 2MB');
+                event.target.value = '';
+                return;
+            }
+
+            // Validar tipo
+            if (!file.type.match('image.*')) {
+                alert('Solo se permiten archivos de imagen (JPEG, PNG, GIF)');
+                event.target.value = '';
+                return;
+            }
+
+            // Preview inmediato (antes de subir)
+            const container = document.getElementById(`plato-imagen-container-${categoriaIndex}-${platoIndex}`);
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // Eliminar placeholder si existe
+                const placeholder = document.getElementById(`plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`);
+                if (placeholder) placeholder.remove();
+
+                // Crear o actualizar imagen
+                let img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                if (!img) {
+                    const imgContainer = document.createElement('div');
+                    imgContainer.className = 'relative inline-block';
+                    imgContainer.id = `plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`;
+                    
+                    img = document.createElement('img');
+                    img.id = `plato-imagen-${categoriaIndex}-${platoIndex}`;
+                    img.className = 'w-24 h-24 object-cover rounded-lg border border-accent-gray shadow-md';
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors';
+                    removeBtn.title = 'Eliminar imagen';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.onclick = () => removePlatoImagen(categoriaIndex, platoIndex, null);
+                    
+                    imgContainer.appendChild(img);
+                    imgContainer.appendChild(removeBtn);
+                    container.appendChild(imgContainer);
+                }
+                
+                img.src = e.target.result;
+                img.alt = 'Vista previa';
+                
+                // Agregar indicador de carga
+                img.style.opacity = '0.6';
+            };
+            
+            reader.readAsDataURL(file);
+
+            // Preparar FormData
+            const formData = new FormData();
+            formData.append('imagen', file);
+            formData.append('categoria_index', categoriaIndex);
+            formData.append('plato_index', platoIndex);
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            // Mostrar loader
+            const button = event.target.closest('label').querySelector('span');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="mr-2">⏳</span>Subiendo...';
+            button.style.opacity = '0.7';
+            button.style.cursor = 'not-allowed';
+            event.target.disabled = true;
+
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    alert('Error: El menú no está disponible');
+                    return;
+                }
+                
+                const uploadUrl = `{{ url('/') }}/comercios/{{ $comercio->slug }}/menus/${menuId}/upload-plato-imagen`;
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Actualizar imagen con URL del servidor
+                    const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                    if (img) {
+                        img.src = data.imagen_url;
+                        img.style.opacity = '1';
+                    }
+                    
+                    // Actualizar texto del botón
+                    button.innerHTML = '<span class="mr-2">📷</span>Cambiar';
+                    
+                    // Mostrar mensaje de éxito (opcional)
+                    showSuccessMessage('Imagen subida exitosamente');
+                } else {
+                    throw new Error(data.error || 'Error al subir la imagen');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al subir la imagen: ' + error.message);
+                
+                // Remover preview si falló
+                const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                if (img) {
+                    const wrapper = img.closest(`#plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`);
+                    if (wrapper) wrapper.remove();
+                    
+                    // Restaurar placeholder
+                    const placeholder = document.createElement('div');
+                    placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
+                    placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
+                    placeholder.textContent = 'Sin imagen';
+                    container.appendChild(placeholder);
+                }
+            } finally {
+                // Restaurar botón
+                button.innerHTML = originalText;
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
+                event.target.disabled = false;
+                event.target.value = '';
+            }
+        }
+
+        // Función para eliminar imagen de plato
+        async function removePlatoImagen(categoriaIndex, platoIndex, imagenPath) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) {
+                return;
+            }
+
+            try {
+                // Nota: Para eliminar completamente necesitarías otra ruta API
+                // Por ahora solo eliminamos del DOM y el usuario puede subir otra
+                const container = document.getElementById(`plato-imagen-container-${categoriaIndex}-${platoIndex}`);
+                const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                
+                if (img) {
+                    const wrapper = img.closest(`#plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`);
+                    if (wrapper) {
+                        wrapper.remove();
+                    }
+                }
+
+                // Restaurar placeholder
+                let placeholder = document.getElementById(`plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`);
+                if (!placeholder) {
+                    placeholder = document.createElement('div');
+                    placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
+                    placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
+                    placeholder.textContent = 'Sin imagen';
+                    container.appendChild(placeholder);
+                }
+
+                // Actualizar texto del botón
+                const button = document.querySelector(`#imagen-input-${categoriaIndex}-${platoIndex}`).closest('label').querySelector('span');
+                button.innerHTML = '<span class="mr-2">📷</span>Subir';
+
+                showSuccessMessage('Imagen eliminada');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la imagen');
+            }
+        }
+
+        // Función helper para mensajes de éxito
+        function showSuccessMessage(message) {
+            // Puedes usar tu sistema de notificaciones existente
+            // Por ahora un simple log
+            console.log('✅', message);
+        }
+    </script>
 </x-app-layout>

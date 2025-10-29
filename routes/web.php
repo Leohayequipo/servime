@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-plato-imagen', [App\Http\Controllers\MenuController::class, 'uploadPlatoImagen'])->name('menus.upload.plato.imagen');
     
     // Rutas de personalización (ahora integradas en editar, usando slug)
     Route::get('/comercios/{comercio:slug}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');

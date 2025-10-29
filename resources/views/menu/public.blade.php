@@ -236,12 +236,18 @@
             });
         }
 
-        // Convertir Markdown básico a HTML
+        // Convertir Markdown básico a HTML con soporte para imágenes
         function parseMarkdown(text) {
+            // Primero procesar imágenes en formato [IMAGEN:url]
+            text = text.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
+                return `<div class="mt-2 mb-2"><img src="${url}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
+            });
+            
             // Convertir **texto** a <strong>texto</strong>
             text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             // Convertir *texto* a <em>texto</em>
             text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            
             return text;
         }
 

@@ -98,9 +98,49 @@ class ChatbotService
         if (!$menus->isEmpty()) {
             $contexto .= "\nMenús disponibles:\n";
             foreach ($menus as $menu) {
-                $contextoMenu = $this->sanitizeContext($menu->contexto_gpt);
-                $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
-                $contexto .= $contextoMenu . "\n\n";
+                // Procesar JSON para extraer información estructurada con imágenes
+                $jsonContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+                $menuData = $this->parseMenuJson($jsonContent);
+                
+                if ($menuData) {
+                    $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
+                    
+                    // Información del restaurante
+                    if (isset($menuData['restaurante'])) {
+                        $nombreRest = $menuData['restaurante']['nombre'] ?? 'N/A';
+                        $contexto .= "Restaurante: {$nombreRest}\n";
+                        if (isset($menuData['restaurante']['descripcion'])) {
+                            $contexto .= "Descripción: {$menuData['restaurante']['descripcion']}\n";
+                        }
+                    }
+                    
+                    // Categorías y platos con imágenes
+                    if (isset($menuData['categorias']) && is_array($menuData['categorias'])) {
+                        foreach ($menuData['categorias'] as $categoria) {
+                            $contexto .= "\nCATEGORÍA: {$categoria['nombre']}\n";
+                            if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                                foreach ($categoria['platos'] as $plato) {
+                                    $contexto .= "- {$plato['nombre']} — {$plato['precio']}";
+                                    if (isset($plato['descripcion']) && !empty($plato['descripcion'])) {
+                                        $contexto .= "\n  Descripción: {$plato['descripcion']}";
+                                    }
+                                    // INCLUIR URL DE IMAGEN si existe
+                                    if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+                                        $imagenUrl = url($plato['imagen']);
+                                        $contexto .= "\n  [IMAGEN:{$imagenUrl}]";
+                                    }
+                                    $contexto .= "\n";
+                                }
+                            }
+                        }
+                    }
+                    $contexto .= "\n";
+                } else {
+                    // Fallback: usar sanitizeContext si no se puede parsear
+                    $contextoMenu = $this->sanitizeContext($menu->contexto_gpt);
+                    $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
+                    $contexto .= $contextoMenu . "\n\n";
+                }
 
                 // DEBUG: Log por menú para inspección
                 try {
@@ -120,6 +160,28 @@ class ChatbotService
         }
 
         return $contexto;
+    }
+
+    /**
+     * Parsear JSON del menú para extraer información estructurada
+     */
+    private function parseMenuJson(?string $jsonContent): ?array
+    {
+        if ($jsonContent === null) return null;
+        
+        // Limpiar el contenido JSON
+        $clean = trim($jsonContent);
+        if (strpos($clean, '```json') !== false) {
+            $clean = preg_replace('/```json\s*/', '', $clean);
+            $clean = preg_replace('/```\s*$/', '', $clean);
+        }
+        
+        try {
+            $data = json_decode(trim($clean), true);
+            return is_array($data) ? $data : null;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -244,12 +306,14 @@ FORMATO DE RESPUESTAS:
 - ORGANIZA por CATEGORÍAS con emojis temáticos
 - USA SALTOS DE LÍNEA dobles entre secciones para claridad visual
 - DESTACA PRECIOS en **NEGRITA** con formato: **\$precio**
+- SIEMPRE incluye imágenes cuando estén disponibles usando el formato [IMAGEN:url] que aparece en el contexto
 - FORMATO de menú:
   
 🍽️ **CATEGORÍA NOMBRE**
   
 - **Nombre del Plato** — **\$precio**
   *Descripción gourmet tentadora*
+  [IMAGEN:url_de_la_imagen_si_existe]
   
 - **Otro Plato** — **\$precio**
   *Descripción gourmet tentadora*
@@ -258,7 +322,9 @@ FORMATO DE RESPUESTAS:
 
 - **Plato** — **\$precio**
   *Descripción*
+  [IMAGEN:url_si_existe]
 
+- IMPORTANTE: Cuando un plato tiene imagen disponible en el formato [IMAGEN:url], SIEMPRE inclúyela en tu respuesta usando exactamente ese formato [IMAGEN:url]
 - Usa emojis estratégicamente: 🍽️ 🥘 🍷 🧀 🍰 🍕 🥗 🍝 🍖 🍤
 - Incluye llamadas a la acción: \"¡No te lo pierdas!\", \"¡Imperdible!\", \"¡Pruébalo ya!\", \"¡Atrévete ahora!\", \"¡Disfrútalo hoy!\", \"¡Saborea esto!\"
 - Mantén un tono cálido y acogedor

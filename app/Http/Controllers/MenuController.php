@@ -354,4 +354,86 @@ class MenuController extends Controller
         return redirect()->route('menus.index', $comercio)
             ->with('success', 'Menú activado exitosamente.');
     }
+
+    /**
+     * Subir imagen de un plato específico y actualizar el JSON
+     */
+    public function uploadPlatoImagen(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            // Obtener y decodificar JSON actual
+            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+            
+            if (empty($rawContent)) {
+                return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
+            }
+
+            // Limpiar el contenido JSON
+            $jsonContent = $rawContent;
+            if (strpos($jsonContent, '```json') !== false) {
+                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+            }
+            
+            $contenido = json_decode(trim($jsonContent), true);
+            
+            if (!$contenido || !isset($contenido['categorias'])) {
+                return response()->json(['error' => 'Formato de menú inválido.'], 400);
+            }
+
+            // Validar índices
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex]) || !isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            // Guardar imagen
+            $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+            
+            // Si ya existía una imagen, eliminar la anterior
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+                $oldImagePath = str_replace('/storage/', '', $plato['imagen']);
+                if (Storage::disk('public')->exists($oldImagePath)) {
+                    Storage::disk('public')->delete($oldImagePath);
+                }
+            }
+
+            // Actualizar JSON con la nueva ruta de imagen
+            $plato['imagen'] = '/storage/' . $imagenPath;
+
+            // Guardar JSON actualizado
+            $menu->contexto_gpt = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            $menu->save();
+
+            return response()->json([
+                'success' => true,
+                'imagen_url' => asset('storage/' . $imagenPath),
+                'imagen_path' => $plato['imagen']
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al subir imagen de plato: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar la imagen: ' . $e->getMessage()], 500);
+        }
+    }
 }
