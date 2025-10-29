@@ -771,10 +771,16 @@
                                                    style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
                                                    class="w-full px-3 py-3 border border-accent-gray rounded-lg text-text-primary text-center text-xl focus:outline-none focus:ring-2 focus:ring-accent-blue cursor-pointer">
                                         </div>
-                                        <div class="flex gap-2 pt-6">
+                                        <div class="flex flex-col gap-2 pt-6">
                                             @if($question['auto_generated'] ?? false)
-                                                <span class="bg-accent-blue/20 text-accent-blue px-2 py-1 rounded-md text-xs font-medium">IA</span>
+                                                <span class="bg-accent-blue/20 text-accent-blue px-2 py-1 rounded-md text-xs font-medium text-center">IA</span>
                                             @endif
+                                            <button type="button" 
+                                                    onclick="improveAnswerWithAI({{ $index }})"
+                                                    class="bg-accent-green hover:bg-green-600 text-white p-3 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                                    title="Mejorar respuesta con IA">
+                                                🤖
+                                            </button>
                                             <button type="button" 
                                                     onclick="removeQuestion({{ $index }})"
                                                     class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -818,13 +824,8 @@
                                     
                                     <!-- Fila 4: Respuesta -->
                                     <div>
-                                        <label class="block text-xs text-text-secondary mb-1.5 flex items-center justify-between">
-                                            <span>Respuesta</span>
-                                            <button type="button" 
-                                                    onclick="improveAnswerWithAI({{ $index }})"
-                                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1">
-                                                🤖 IA
-                                            </button>
+                                        <label class="block text-xs text-text-secondary mb-1.5">
+                                            Respuesta
                                         </label>
                                         <textarea name="quick_questions[{{ $index }}][answer]" 
                                                   id="answer_{{ $index }}"
@@ -883,13 +884,8 @@
                                     
                                     <!-- Respuesta -->
                                     <div class="col-span-4">
-                                        <label class="block text-xs text-text-secondary mb-1.5 flex items-center justify-between">
-                                            <span>Respuesta</span>
-                                            <button type="button" 
-                                                    onclick="improveAnswerWithAI({{ $index }})"
-                                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1">
-                                                🤖 IA
-                                            </button>
+                                        <label class="block text-xs text-text-secondary mb-1.5">
+                                            Respuesta
                                         </label>
                                         <textarea name="quick_questions[{{ $index }}][answer]" 
                                                   id="answer_{{ $index }}"
@@ -905,6 +901,12 @@
                                         @if($question['auto_generated'] ?? false)
                                             <span class="bg-accent-blue/20 text-accent-blue px-2 py-1 rounded-md text-xs font-medium text-center">IA</span>
                                         @endif
+                                        <button type="button" 
+                                                onclick="improveAnswerWithAI({{ $index }})"
+                                                class="bg-accent-green hover:bg-green-600 text-white p-2.5 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                                title="Mejorar respuesta con IA">
+                                            🤖
+                                        </button>
                                         <button type="button" 
                                                 onclick="removeQuestion({{ $index }})"
                                                 class="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -1179,27 +1181,29 @@
                     
                     <!-- Respuesta -->
                     <div class="col-span-4">
-                        <div class="flex gap-2">
-                            <textarea name="quick_questions[${questionIndex}][answer]" 
-                                      id="answer_${questionIndex}"
-                                      rows="2"
-                                      placeholder="Respuesta automática..."
-                                      class="flex-1 px-3 py-2 style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;" border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
-                            <button type="button" 
-                                    onclick="improveAnswerWithAI(${questionIndex})"
-                                    class="bg-accent-green hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow-green flex-shrink-0"
-                                    title="Mejorar respuesta con IA">
-                                🤖
-                            </button>
-                        </div>
+                        <label class="block text-xs text-text-secondary mb-1.5">
+                            Respuesta
+                        </label>
+                        <textarea name="quick_questions[${questionIndex}][answer]" 
+                                  id="answer_${questionIndex}"
+                                  rows="2"
+                                  placeholder="Escribe la respuesta automática..."
+                                  style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;"
+                                  class="w-full px-4 py-2.5 border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
                     </div>
                     
                     <!-- Botones -->
-                    <div class="col-span-1 flex flex-col space-y-2">
+                    <div class="col-span-1 flex flex-col gap-2 pt-6">
                         <input type="hidden" name="quick_questions[${questionIndex}][auto_generated]" value="0">
                         <button type="button" 
+                                onclick="improveAnswerWithAI(${questionIndex})"
+                                class="bg-accent-green hover:bg-green-600 text-white p-2.5 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                title="Mejorar respuesta con IA">
+                            🤖
+                        </button>
+                        <button type="button" 
                                 onclick="removeQuestion(${questionIndex})"
-                                class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg text-sm transition-colors duration-200">
+                                class="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
                             🗑️
                         </button>
                     </div>
