@@ -301,10 +301,10 @@
                          
                          <!-- Filtros por tiempo -->
                          <div class="flex gap-2">
-                             <button onclick="filterByTime('today')" id="filter-today" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
+                             <button onclick="filterByTime('today')" id="filter-today" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
                                  Hoy
                              </button>
-                             <button onclick="filterByTime('week')" id="filter-week" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                             <button onclick="filterByTime('week')" id="filter-week" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
                                  📅 Esta semana
                              </button>
                              <button onclick="filterByTime('month')" id="filter-month" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
@@ -676,6 +676,11 @@
                      chat.style.display = 'block';
                  });
              }
+            </script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    filterByTime('week');
+                });
             </script>
         </div>
     </div>
