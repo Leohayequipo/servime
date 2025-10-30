@@ -98,6 +98,21 @@
                 transform: scale(1);
             }
         }
+
+        /* Botón "Lo quiero" dentro de mensajes */
+        .btn-lo-quiero {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            font-size: 12px;
+            border-radius: 9999px;
+            color: #ffffff;
+            background: #3b82f6;
+            border: 1px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            transition: opacity .15s ease;
+        }
+        .btn-lo-quiero:hover { opacity: .9; }
     </style>
 </head>
 <body class="bg-background">
@@ -158,11 +173,29 @@
         </div>
     </div>
 
-    <!-- FAB Preguntas Rápidas -->
-    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50;">
+    <!-- FAB Preguntas Rápidas + Pre‑pedido -->
+    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px;">
+        <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+            <span style="font-size: 22px;">🧾</span>
+        </button>
         <button id="fabFaq" title="Preguntas rápidas" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
             <span style="font-size: 22px;">💡</span>
         </button>
+    </div>
+
+    <!-- Panel Resumen para el mozo -->
+    <div id="wishPanel" style="display:none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;">
+        <div style="background:#0b0b0b; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,0.45); padding:12px; max-width:520px; margin:0 auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                <h4 style="font-size:14px; font-weight:700; color:#fff; margin:0;">Resumen para el mozo</h4>
+                <div style="display:flex; gap:8px;">
+                    <button id="wishCopy" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Copiar</button>
+                    <button id="wishClear" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#221111; color:#ffb4b4; font-size:12px; cursor:pointer;">Vaciar</button>
+                    <button id="wishClose" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Cerrar</button>
+                </div>
+            </div>
+            <div id="wishList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
+        </div>
     </div>
 
     <!-- Panel de Preguntas Rápidas -->
@@ -266,29 +299,88 @@
             const paragraphs = text.split(/\n\n+/);
             
             // Procesar cada párrafo
-            const processedParagraphs = paragraphs.map(paragraph => {
-                if (paragraph.trim() === '') return '';
-                
-                // Procesar imágenes en formato [IMAGEN:url] dentro del párrafo
-                paragraph = paragraph.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
+            const processedBlocks = [];
+            let currentPlato = null;
+
+            paragraphs.forEach(paragraph => {
+                if (paragraph.trim() === '') return;
+
+                // Marcar imágenes [IMAGEN:url] pero NO renderizarlas todavía
+                // Las adjuntaremos sólo si pertenecen al plato actual (evita imágenes coladas)
+                let p = paragraph.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
                     const clean = (url || '').trim();
-                    // Validar URL: evitar vacíos, null/undefined y exigir rutas http(s) o absolutas del sitio
-                    const isValid = clean &&
-                        clean.toLowerCase() !== 'null' &&
-                        clean.toLowerCase() !== 'undefined' &&
-                        clean !== '-' &&
-                        (/^https?:\/\//.test(clean) || clean.startsWith('/'));
+                    const isValid = clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '-' && (/^https?:\/\//.test(clean) || clean.startsWith('/'));
                     if (!isValid) return '';
-                    return `<div class="mt-2 mb-2"><img src="${clean}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
+                    return `[[IMG::${clean}]]`;
                 });
-                
-                // Convertir saltos de línea simples en <br>
-                paragraph = paragraph.replace(/\n/g, '<br>');
-                
-                return `<p class="mb-3 last:mb-0">${paragraph}</p>`;
-            }).filter(p => p !== '');
-            
-            return processedParagraphs.join('');
+                // Saltos simples a <br>
+                p = p.replace(/\n/g, '<br>');
+
+                // ¿Es inicio de plato? Buscar - <strong>nombre</strong> — precio (precio puede venir en <strong>...> o texto plano)
+                const platoMatch = p.match(/^\s*-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/);
+                if (platoMatch) {
+                    // Siguiente bloque de plato
+                    if (currentPlato) processedBlocks.push(currentPlato);
+                    currentPlato = {
+                        nombre: platoMatch[1].trim(),
+                        precio: (platoMatch[2]||'').trim(),
+                        parrafos: [ `<p class=\"mb-1 last:mb-0\">${p}</p>` ],
+                        tieneBoton: true,
+                        _imgTaken: false,
+                        _linesSinceStart: 0
+                    };
+                    return;
+                }
+
+                // ¿Es cabecera de categoría? Si hay un plato abierto, ciérralo antes
+                const textOnly = p.replace(/<[^>]+>/g,'').trim();
+                const isCategoria = (/^[🍽️🥘🍕🍝🥗🍖🍤🍷🧀🍰☕🍺]/.test(textOnly)) ||
+                                    (/^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+$/.test(textOnly) && !textOnly.includes('€') && !textOnly.startsWith('-'));
+                if (isCategoria) {
+                    if (currentPlato) { processedBlocks.push(currentPlato); currentPlato = null; }
+                    // Añadir un margen superior suave para separar categorías
+                    processedBlocks.push({ nombre: null, parrafos: [`<p class=\"mb-2 last:mb-0\" style=\"margin-top:14px;\">${p}</p>`], tieneBoton: false });
+                    return;
+                }
+                // Si hay marcador de imagen, asociarla sólo si es inmediatamente cercana al plato
+                if (p.includes('[[IMG::') && currentPlato) {
+                    // Asociar imagen solo si aparece inmediatamente tras el encabezado
+                    if (!currentPlato._imgTaken && currentPlato._linesSinceStart <= 1) {
+                        const htmlImg = p.replace(/\[\[IMG::([^\]]+)\]\]/g, (m,u)=>`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                        currentPlato.parrafos.push(htmlImg);
+                        currentPlato._imgTaken = true;
+                        return;
+                    }
+                    // si no corresponde, eliminar el marcador (no renderizar imagen)
+                    p = p.replace(/\[\[IMG::[^\]]+\]\]/g,'');
+                }
+                // Si es descripción, y hay un plato en curso
+                if (currentPlato) {
+                    currentPlato.parrafos.push(`<p class=\"mb-2 last:mb-0\">${p}</p>`);
+                    currentPlato._linesSinceStart += 1;
+                    return;
+                }
+                // Si no, es texto libre (categoría u otro)
+                processedBlocks.push({ nombre: null, parrafos: [`<p class=\"mb-2 last:mb-0\">${p}</p>`], tieneBoton: false });
+            });
+            if (currentPlato) processedBlocks.push(currentPlato);
+
+            const html = processedBlocks.map(b => {
+                const join = b.parrafos.join('\n');
+                // Caso normal: ya detectamos plato
+                if (b.tieneBoton && b.nombre) {
+                    return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${b.nombre.replace(/\"/g,'\\\"')}\" data-price=\"${(b.precio||'').replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                }
+                // Fallback: detectar línea de plato en el bloque
+                const m = join.match(/^-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
+                if (m) {
+                    const nombre = (m[1]||'').trim();
+                    const precio = (m[2]||'').trim();
+                    return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                }
+                return join;
+            }).join('');
+            return html;
         }
 
         // Agregar mensaje al chat
@@ -322,6 +414,56 @@
             
             chatMessages.appendChild(messageDiv);
             scrollToBottom();
+        }
+
+        // ===== Wishlist (pre‑pedido simple con "Lo quiero") =====
+        const WISH_KEY_BASE = 'servime_wish_{{ $comercio->id }}_';
+        const wishKey = () => WISH_KEY_BASE + getOrCreateSessionId();
+        function loadWish(){ try{ const r=localStorage.getItem(wishKey()); return r?JSON.parse(r):[];}catch{return [];} }
+        function saveWish(arr){ localStorage.setItem(wishKey(), JSON.stringify(arr)); renderWish(); }
+        function parsePriceToCents(txt){ if(!txt) return null; const m=String(txt).replace(/[^0-9,\.]/g,'').replace(',', '.'); const v=parseFloat(m); return isNaN(v)?null:Math.round(v*100); }
+        function addWish(nombre, priceText){
+            const clean=(nombre||'').trim(); if(!clean) return;
+            const w=loadWish();
+            const i=w.findIndex(x=>x.nombre.toLowerCase()===clean.toLowerCase());
+            const priceTxt = (priceText||'').trim() || null;
+            const priceC = parsePriceToCents(priceTxt);
+            if(i>=0) {
+                w[i].qty+=1;
+                // Si antes no teníamos precio y ahora sí, actualizarlo
+                if((w[i].priceCents==null || isNaN(w[i].priceCents)) && priceC!=null){
+                    w[i].priceCents = priceC;
+                    w[i].priceText = priceTxt;
+                }
+            } else {
+                w.push({nombre:clean, qty:1, priceText: priceTxt, priceCents: priceC});
+            }
+            saveWish(w);
+        }
+        function decWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty=Math.max(0,w[idx].qty-1); if(w[idx].qty===0) w.splice(idx,1); saveWish(w);} }
+        function incWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w);} }
+        function delWish(idx){ const w=loadWish(); w.splice(idx,1); saveWish(w); }
+        function clearWish(){ saveWish([]); }
+        function copyWish(){ const w=loadWish(); const t=w.length?w.map(it=>`- ${it.nombre} x${it.qty}${it.priceText?` — ${it.priceText}`:''}`).join('\n'):'Sin ítems'; navigator.clipboard.writeText(`Resumen para el mozo\n${t}`); }
+        function renderWish(){
+            const list=document.getElementById('wishList'); if(!list) return;
+            const w=loadWish();
+            let anyNoPrecio = false;
+            const htmlItems = w.length
+              ? w.map((it,idx)=>{
+                if(it.priceCents==null) anyNoPrecio=true;
+                return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid rgba(255,255,255,0.08); padding:8px; border-radius:10px;"><div style=\"color:#fff; font-size:14px;\">${it.nombre}${it.priceText?` — ${it.priceText}`:''}</div><div style=\"display:flex; align-items:center; gap:6px;\"><button class=\"wdec\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">-</button><span style=\"min-width:22px; text-align:center; color:#cbd5e1;\">${it.qty}</span><button class=\"winc\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">+</button><button class=\"wdel\" data-idx=\"${idx}\" style=\"margin-left:6px; padding:4px 8px; border-radius:6px; background:#221111; color:#ffb4b4; border:1px solid rgba(255,255,255,0.12);\">Quitar</button></div></div>`;
+              }).join('')
+              : '<div style="color:#94a3b8; font-size:13px;">No hay ítems agregados.</div>';
+            const totalCents=w.reduce((s,it)=>s+((it.priceCents||0)*it.qty),0);
+            const fmtTotal=(totalCents/100).toLocaleString("es-ES",{minimumFractionDigits:2, maximumFractionDigits:2})+' €';
+            let totalHtml = `<div style=\"margin-top:14px; color:#fff; font-size:1.12em;\"><strong>Total estimado:</strong> ${fmtTotal}</div>`;
+            if(anyNoPrecio) totalHtml += `<div style=\"margin-top:2px; color:#bdbdbd; font-size:12px;\">algunos platos no tienen precio confirmado</div>`;
+            list.innerHTML = htmlItems + totalHtml;
+            // binds
+            list.querySelectorAll('.winc').forEach(b=>b.addEventListener('click',()=>incWish(parseInt(b.getAttribute('data-idx'),10))));
+            list.querySelectorAll('.wdec').forEach(b=>b.addEventListener('click',()=>decWish(parseInt(b.getAttribute('data-idx'),10))));
+            list.querySelectorAll('.wdel').forEach(b=>b.addEventListener('click',()=>delWish(parseInt(b.getAttribute('data-idx'),10))));
         }
 
         // Mostrar indicador de escritura
@@ -376,6 +518,31 @@
         function hideFaq(){ faqPanel.style.display = 'none'; }
         function toggleFaq(){ faqPanel.style.display = faqPanel.style.display === 'block' ? 'none' : 'block'; }
         if (fab) fab.addEventListener('click', toggleFaq);
+
+        // Wishlist panel handlers
+        const fabWish = document.getElementById('fabWish');
+        const wishPanel = document.getElementById('wishPanel');
+        if (fabWish) fabWish.addEventListener('click', () => {
+            const shown = wishPanel.style.display === 'block';
+            wishPanel.style.display = shown ? 'none' : 'block';
+            if (!shown) renderWish();
+        });
+        document.getElementById('wishClose')?.addEventListener('click', () => { wishPanel.style.display = 'none'; });
+        document.getElementById('wishClear')?.addEventListener('click', clearWish);
+        document.getElementById('wishCopy')?.addEventListener('click', copyWish);
+
+        // Delegación de eventos para botones "Lo quiero"
+        document.getElementById('chatMessages').addEventListener('click', (e) => {
+            const t = e.target;
+            if (t && t.classList.contains('btn-lo-quiero')) {
+                const nombre = t.getAttribute('data-nombre');
+                const priceText = t.getAttribute('data-price');
+                addWish(nombre, priceText);
+            }
+        });
+
+        // Render inicial por si había selección previa
+        renderWish();
 
         // Hacer pregunta rápida
         function askQuestion(question) {
