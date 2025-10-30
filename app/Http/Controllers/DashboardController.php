@@ -55,6 +55,15 @@ class DashboardController extends Controller
             return $sesion['ultima_conversacion']->created_at;
         })->take(10);
 
-        return view('dashboard', compact('comercios', 'menus', 'sesiones', 'allConversaciones'));
+        // Preparar datos para filtros
+        $comerciosList = $comercios->map(function($comercio) {
+            return [
+                'id' => $comercio->id,
+                'nombre' => $comercio->nombre,
+                'slug' => $comercio->slug,
+            ];
+        });
+
+        return view('dashboard', compact('comercios', 'menus', 'sesiones', 'allConversaciones', 'comerciosList'));
     }
 }

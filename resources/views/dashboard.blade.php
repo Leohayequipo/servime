@@ -284,6 +284,21 @@
                             </p>
                         </div>
                      <div class="flex items-center gap-3">
+                         @if(auth()->user()->isSuperAdmin())
+                         <!-- Filtro por comercio (solo para super admin) -->
+                         <div class="flex gap-2">
+                             <select id="filter-comercio" onchange="filterByComercio(this.value)" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                 <option value="all">🏢 Todos los comercios</option>
+                                 @foreach($comerciosList as $comercio)
+                                     <option value="{{ $comercio['id'] }}">{{ $comercio['nombre'] }}</option>
+                                 @endforeach
+                             </select>
+                         </div>
+                         
+                         <!-- Separador -->
+                         <div class="w-px h-6 bg-accent-gray"></div>
+                         @endif
+                         
                          <!-- Filtros por tiempo -->
                          <div class="flex gap-2">
                              <button onclick="filterByTime('today')" id="filter-today" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
@@ -320,6 +335,7 @@
                              <div class="chat-card group transition-all duration-200" 
                                   data-chat-type="{{ $chatType }}"
                                   data-session-id="{{ $sesion['session_id'] }}"
+                                  data-comercio-id="{{ $comercio->id }}"
                                   data-fecha-primera="{{ $sesion['fecha_primera'] }}"
                                   data-fecha-ultima="{{ $sesion['fecha_ultima'] }}"
                                   data-fecha-primera-timestamp="{{ $sesion['fecha_primera_timestamp'] }}"
@@ -519,15 +535,13 @@
              }
                 
              function filterByTime(period) {
-                 alert(`🔍 DEBUG: Filtrando por tiempo: ${period}`);
                  console.log('Filtrando por tiempo:', period);
                  
                  // Verificar si encuentra los elementos
                  const chats = document.querySelectorAll('.chat-card');
-                 alert(`📊 Total de chats encontrados: ${chats.length}`);
                  
                  if (chats.length === 0) {
-                     alert('❌ ERROR: No se encontraron chats con clase .chat-card');
+                     console.log('No se encontraron chats con clase .chat-card');
                      return;
                  }
                  
@@ -607,9 +621,35 @@
                      if (show) visibleCount++;
                  });
                  
-                 alert(`✅ Filtro aplicado. Chats visibles: ${visibleCount} de ${chats.length}`);
+                 console.log(`Filtro aplicado. Chats visibles: ${visibleCount} de ${chats.length}`);
              }
              
+             
+             function filterByComercio(comercioId) {
+                 console.log('Filtrando por comercio:', comercioId);
+                 
+                 const chats = document.querySelectorAll('.chat-card');
+                 let visibleCount = 0;
+                 
+                 chats.forEach((chat, index) => {
+                     const chatComercioId = chat.getAttribute('data-comercio-id');
+                     
+                     let show = false;
+                     
+                     if (comercioId === 'all') {
+                         show = true;
+                     } else {
+                         show = chatComercioId === comercioId;
+                     }
+                     
+                     console.log(`Chat ${index + 1} - Comercio ID: ${chatComercioId} - Mostrar: ${show}`);
+                     chat.style.display = show ? 'block' : 'none';
+                     
+                     if (show) visibleCount++;
+                 });
+                 
+                 console.log(`Filtro por comercio aplicado. Chats visibles: ${visibleCount} de ${chats.length}`);
+             }
              
              function resetFilters() {
                  // Remover active de todos los filtros de tiempo
@@ -618,6 +658,12 @@
                      btn.classList.add('bg-secondary-dark', 'text-text-secondary');
                      btn.classList.remove('bg-accent-blue', 'text-white');
                  });
+                 
+                 // Resetear filtro de comercio si existe
+                 const comercioSelect = document.getElementById('filter-comercio');
+                 if (comercioSelect) {
+                     comercioSelect.value = 'all';
+                 }
                  
                  // Activar el filtro "Este mes" (mostrar todo)
                  const monthBtn = document.getElementById('filter-month');
