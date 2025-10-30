@@ -47,11 +47,14 @@ class ChatbotController extends Controller
                 'frequent_answer' => $frequentAnswer ? substr($frequentAnswer, 0, 100) . '...' : null
             ]);
             
+            // Obtener session_id persistente ANTES de procesar
+            $sessionId = $this->getSessionId($request, $comercio);
+            
             if ($frequentAnswer) {
                 $responseTime = round((microtime(true) - $startTime) * 1000);
                 
                 // Log de la conversación con respuesta frecuente
-                $this->logConversation($comercio, $message, $frequentAnswer, false, $responseTime, $request);
+                $this->logConversation($comercio, $message, $frequentAnswer, false, $responseTime, $request, $sessionId);
                 
                 return response()->json([
                     'response' => $frequentAnswer,
@@ -69,8 +72,8 @@ class ChatbotController extends Controller
             $response = $this->chatbotService->processMessage($comercio, $message);
             $responseTime = round((microtime(true) - $startTime) * 1000);
             
-            // Log de la conversación
-            $this->logConversation($comercio, $message, $response, true, $responseTime, $request);
+            // Log de la conversación (usar session_id obtenido anteriormente)
+            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId);
             
             return response()->json([
                 'response' => $response,
@@ -90,8 +93,9 @@ class ChatbotController extends Controller
             $fallbackResponse = $this->generateFallbackResponse($comercio, $message);
             $responseTime = round((microtime(true) - $startTime) * 1000);
             
-            // Log de la conversación con fallback
-            $this->logConversation($comercio, $message, $fallbackResponse, false, $responseTime, $request);
+            // Log de la conversación con fallback (generar session_id si no existe)
+            $sessionId = $this->getSessionId($request, $comercio);
+            $this->logConversation($comercio, $message, $fallbackResponse, false, $responseTime, $request, $sessionId);
             
             return response()->json([
                 'response' => $fallbackResponse,
@@ -132,12 +136,17 @@ class ChatbotController extends Controller
     /**
      * Log de conversación en la base de datos
      */
-    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request): void
+    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null): void
     {
         try {
+            // Si no se pasó session_id, obtenerlo
+            if (!$sessionId) {
+                $sessionId = $this->getSessionId($request, $comercio);
+            }
+            
             ChatConversation::create([
                 'comercio_id' => $comercio->id,
-                'session_id' => $this->getSessionId($request),
+                'session_id' => $sessionId,
                 'user_message' => $message,
                 'bot_response' => $response,
                 'used_openai' => $usedOpenAI,
@@ -148,7 +157,8 @@ class ChatbotController extends Controller
                     'comercio_name' => $comercio->nombre,
                     'message_length' => strlen($message),
                     'response_length' => strlen($response),
-                    'timestamp' => now()->toISOString()
+                    'timestamp' => now()->toISOString(),
+                    'session_id_source' => $request->header('X-Session-ID') ? 'header' : 'inferred'
                 ]
             ]);
         } catch (\Exception $e) {
@@ -157,16 +167,37 @@ class ChatbotController extends Controller
     }
 
     /**
-     * Generar o obtener session ID
+     * Generar o obtener session ID persistente
      */
-    private function getSessionId(Request $request): string
+    private function getSessionId(Request $request, Comercio $comercio): string
     {
-        // Intentar obtener session ID del header o generar uno nuevo
+        // 1. Primero intentar obtener del header (lo más confiable)
         $sessionId = $request->header('X-Session-ID');
         
-        if (!$sessionId) {
-            $sessionId = 'session_' . uniqid() . '_' . time();
+        if ($sessionId) {
+            return $sessionId;
         }
+        
+        // 2. Intentar encontrar una sesión reciente basada en IP + User Agent + Comercio
+        // (dentro de los últimos 30 minutos para considerar la misma sesión)
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
+        $thirtyMinutesAgo = now()->subMinutes(30);
+        
+        $recentSession = ChatConversation::where('comercio_id', $comercio->id)
+            ->where('user_ip', $ip)
+            ->where('user_agent', $userAgent)
+            ->where('created_at', '>=', $thirtyMinutesAgo)
+            ->orderBy('created_at', 'desc')
+            ->first();
+        
+        if ($recentSession && $recentSession->session_id) {
+            // Reutilizar session_id de la conversación reciente
+            return $recentSession->session_id;
+        }
+        
+        // 3. Si no hay sesión reciente, generar una nueva
+        $sessionId = 'session_' . uniqid() . '_' . time();
         
         return $sessionId;
     }

@@ -182,11 +182,29 @@
     <script>
         let isLoading = false;
 
+        // Obtener o crear session_id persistente
+        function getOrCreateSessionId() {
+            const storageKey = 'servime_chat_session_{{ $comercio->id }}';
+            let sessionId = localStorage.getItem(storageKey);
+            
+            if (!sessionId) {
+                // Generar nuevo session_id único
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem(storageKey, sessionId);
+                console.log('Nueva sesión creada:', sessionId);
+            }
+            
+            return sessionId;
+        }
+
         // Enviar mensaje
         function sendMessage(message) {
             if (isLoading) return;
             
             isLoading = true;
+            
+            // Obtener session_id persistente
+            const sessionId = getOrCreateSessionId();
             
             // Mostrar indicador de carga en el botón de envío
             const sendButton = document.getElementById('sendButton');
@@ -205,12 +223,13 @@
             // Mostrar indicador de escritura
             showTypingIndicator();
             
-            // Enviar al servidor
+            // Enviar al servidor con session_id
             fetch('{{ route("chat.api", $comercio) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Session-ID': sessionId
                 },
                 body: JSON.stringify({ message: message })
             })

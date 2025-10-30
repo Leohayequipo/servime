@@ -104,7 +104,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-text-primary mb-1">Actividad Reciente</h3>
-                            <p class="text-3xl font-bold text-yellow-400">{{ $conversaciones->count() }}</p>
+                            <p class="text-3xl font-bold text-yellow-400">{{ $allConversaciones->count() ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -252,32 +252,232 @@
             </div>
 
 
-            <!-- Recent Activity -->
-            @if($conversaciones->count() > 0)
+            <!-- Recent Activity - Improved UX (Agrupado por Sesión) -->
+            @if($sesiones->count() > 0)
                 <div class="mt-12">
-                    <h2 class="text-2xl font-bold text-text-primary mb-6">Actividad Reciente</h2>
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-text-primary">Sesiones de Chat Recientes</h2>
+                            <p class="text-text-secondary text-sm mt-1">
+                                {{ $sesiones->count() }} sesiones • {{ $allConversaciones->count() }} mensajes totales
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <!-- Filtros rápidos -->
+                            <button onclick="filterChats('all')" id="filter-all" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
+                                Todas
+                            </button>
+                            <button onclick="filterChats('ai')" id="filter-ai" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                Con IA
+                            </button>
+                            <button onclick="filterChats('faq')" id="filter-faq" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                Solo FAQ
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
-                        <div class="space-y-4">
-                            @foreach($conversaciones->take(5) as $conversacion)
-                                <div class="flex items-center justify-between p-4 bg-primary-dark rounded-lg border border-accent-gray">
-                                    <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center mr-3">
-                                            <span class="text-sm">💬</span>
+                        <div class="space-y-4" id="chats-container">
+                            @foreach($sesiones as $sesion)
+                                @php
+                                    $comercio = $sesion['comercio'];
+                                    $ultimaConv = $sesion['ultima_conversacion'];
+                                    $tieneIA = $sesion['conversaciones']->contains('used_openai', true);
+                                    $chatType = $tieneIA ? 'ai' : 'faq';
+                                @endphp
+                                
+                                <div class="chat-card group transition-all duration-200" 
+                                     data-chat-type="{{ $chatType }}"
+                                     data-session-id="{{ $sesion['session_id'] }}">
+                                    <!-- Header de sesión -->
+                                    <div class="flex items-start justify-between p-4 bg-primary-dark rounded-xl border border-accent-gray hover:border-accent-blue/50 transition-all duration-200 cursor-pointer"
+                                         onclick="toggleSessionExpand('{{ $sesion['session_id'] }}')">
+                                        <div class="flex items-start flex-1 min-w-0">
+                                            <!-- Avatar e indicadores -->
+                                            <div class="relative flex-shrink-0 mr-3">
+                                                <div class="w-12 h-12 bg-gradient-to-br from-accent-blue to-blue-600 rounded-full flex items-center justify-center shadow-md">
+                                                    <span class="text-xl">💬</span>
+                                                </div>
+                                                <!-- Badge de tipo -->
+                                                @if($tieneIA)
+                                                    <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full border-2 border-primary-dark flex items-center justify-center" title="Sesión con IA">
+                                                        <span class="text-xs">🤖</span>
+                                                    </div>
+                                                @else
+                                                    <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full border-2 border-primary-dark flex items-center justify-center" title="Solo FAQ">
+                                                        <span class="text-xs">⚡</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            
+                                            <!-- Contenido principal de la sesión -->
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <p class="text-text-primary font-semibold text-base">
+                                                        {{ $comercio->nombre }}
+                                                    </p>
+                                                    <span class="text-xs text-text-secondary bg-secondary-dark px-2 py-0.5 rounded">
+                                                        {{ $sesion['total_mensajes'] }} {{ $sesion['total_mensajes'] == 1 ? 'mensaje' : 'mensajes' }}
+                                                    </span>
+                                                    @if($tieneIA)
+                                                        <span class="text-xs text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
+                                                            Con IA
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                
+                                                <!-- Preview del último mensaje -->
+                                                <div class="mb-2">
+                                                    <div class="flex items-start gap-2">
+                                                        <span class="text-text-secondary text-xs font-medium mt-0.5">👤</span>
+                                                        <p class="text-text-primary text-sm leading-relaxed flex-1">
+                                                            {{ Str::limit($ultimaConv->user_message, 80) }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Rango de tiempo de la sesión -->
+                                                <div class="text-text-secondary text-xs">
+                                                    <span>{{ $sesion['primera_conversacion']->created_at->format('d/m H:i') }}</span>
+                                                    @if($sesion['primera_conversacion']->id !== $sesion['ultima_conversacion']->id)
+                                                        <span> → </span>
+                                                        <span>{{ $sesion['ultima_conversacion']->created_at->format('H:i') }}</span>
+                                                        <span class="ml-2">({{ $sesion['ultima_conversacion']->created_at->diffForHumans() }})</span>
+                                                    @else
+                                                        <span class="ml-2">({{ $ultimaConv->created_at->diffForHumans() }})</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Timestamp y acciones -->
+                                            <div class="flex flex-col items-end gap-2 ml-3 flex-shrink-0">
+                                                <span class="text-text-secondary text-xs whitespace-nowrap">
+                                                    Última: {{ $ultimaConv->created_at->diffForHumans() }}
+                                                </span>
+                                                <!-- Botón ver chat completo -->
+                                                <a href="{{ route('menu.public', $comercio) }}" 
+                                                   target="_blank"
+                                                   onclick="event.stopPropagation();"
+                                                   class="opacity-0 group-hover:opacity-100 transition-opacity text-accent-blue hover:text-blue-400 text-xs font-medium flex items-center gap-1">
+                                                    Ver chat →
+                                                </a>
                                         </div>
-                                        <div>
-                                            <p class="text-text-primary font-medium">{{ $conversacion->comercio->nombre }}</p>
-                                            <p class="text-text-secondary text-sm">{{ Str::limit($conversacion->user_message, 50) }}</p>
                                         </div>
                                     </div>
-                                    <div class="text-text-secondary text-sm">
-                                        {{ $conversacion->created_at->diffForHumans() }}
+                                    
+                                    <!-- Expandible: Todos los mensajes de la sesión -->
+                                    <div class="session-expanded-content hidden mt-3 pl-4 border-l-2 border-accent-gray/30 space-y-3">
+                                        @foreach($sesion['conversaciones']->sortByDesc('created_at') as $conversacion)
+                                            <div class="bg-background rounded-lg p-3 border border-accent-gray/30">
+                                                <!-- Mensaje del usuario -->
+                                                <div class="mb-3">
+                                                    <div class="flex items-center gap-2 mb-1">
+                                                        <div class="w-6 h-6 bg-gradient-to-br from-accent-blue to-blue-600 rounded-full flex items-center justify-center">
+                                                            <span class="text-xs">👤</span>
+                                                        </div>
+                                                        <span class="text-text-secondary text-xs font-medium">Usuario</span>
+                                                        <span class="text-text-secondary text-xs">•</span>
+                                                        <span class="text-text-secondary text-xs">{{ $conversacion->created_at->format('H:i') }}</span>
+                                                    </div>
+                                                    <p class="text-text-primary text-sm ml-8">{{ Str::limit($conversacion->user_message, 150) }}</p>
+                                                </div>
+                                                
+                                                <!-- Respuesta del bot -->
+                                                @if($conversacion->bot_response)
+                                                    <div>
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <div class="w-6 h-6 bg-gradient-to-br {{ $conversacion->used_openai ? 'from-purple-500 to-purple-600' : 'from-green-500 to-green-600' }} rounded-full flex items-center justify-center">
+                                                                <span class="text-xs">{{ $conversacion->used_openai ? '🤖' : '⚡' }}</span>
+                                                            </div>
+                                                            <span class="text-text-secondary text-xs font-medium">
+                                                                {{ $conversacion->used_openai ? 'IA' : 'FAQ' }}
+                                                            </span>
+                                                            @if($conversacion->response_time_ms)
+                                                                <span class="text-text-secondary text-xs">•</span>
+                                                                <span class="text-text-secondary text-xs">{{ number_format($conversacion->response_time_ms) }}ms</span>
+                                                            @endif
+                                                        </div>
+                                                        <p class="text-text-secondary text-sm ml-8 line-clamp-2">{{ Str::limit(strip_tags($conversacion->bot_response), 150) }}</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
                             @endforeach
                         </div>
+                        
+                        <!-- Ver más -->
+                        @if($allConversaciones->count() > 10)
+                            <div class="mt-6 text-center">
+                                <button class="px-6 py-3 bg-accent-blue hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                                    Ver todas las sesiones ({{ $allConversaciones->count() }} mensajes)
+                                </button>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @endif
+            
+            <style>
+                .session-expanded-content {
+                    animation: slideDown 0.2s ease-out;
+                }
+                
+                @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                .line-clamp-2 {
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
+                .active-filter {
+                    opacity: 1 !important;
+                    border: 2px solid var(--accent-blue) !important;
+                }
+            </style>
+            
+            <script>
+                function toggleSessionExpand(sessionId) {
+                    const card = document.querySelector(`[data-session-id="${sessionId}"]`);
+                    const expandedContent = card.querySelector('.session-expanded-content');
+                    expandedContent.classList.toggle('hidden');
+                }
+                
+                function filterChats(type) {
+                    // Remover active de todos los filtros
+                    document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+                        btn.classList.remove('active-filter');
+                        btn.classList.add('bg-secondary-dark', 'text-text-secondary');
+                        btn.classList.remove('bg-accent-blue', 'text-white');
+                    });
+                    
+                    // Activar el filtro seleccionado
+                    const activeBtn = document.getElementById(`filter-${type}`);
+                    activeBtn.classList.add('active-filter', 'bg-accent-blue', 'text-white');
+                    activeBtn.classList.remove('bg-secondary-dark', 'text-text-secondary');
+                    
+                    // Filtrar chats
+                    const chats = document.querySelectorAll('.chat-card');
+                    chats.forEach(chat => {
+                        if (type === 'all') {
+                            chat.style.display = 'block';
+                        } else {
+                            const chatType = chat.getAttribute('data-chat-type');
+                            chat.style.display = (chatType === type) ? 'block' : 'none';
+                        }
+                    });
+                }
+            </script>
         </div>
     </div>
 </x-app-layout>
