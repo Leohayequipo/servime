@@ -271,7 +271,15 @@
                 
                 // Procesar imágenes en formato [IMAGEN:url] dentro del párrafo
                 paragraph = paragraph.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
-                    return `<div class="mt-2 mb-2"><img src="${url}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
+                    const clean = (url || '').trim();
+                    // Validar URL: evitar vacíos, null/undefined y exigir rutas http(s) o absolutas del sitio
+                    const isValid = clean &&
+                        clean.toLowerCase() !== 'null' &&
+                        clean.toLowerCase() !== 'undefined' &&
+                        clean !== '-' &&
+                        (/^https?:\/\//.test(clean) || clean.startsWith('/'));
+                    if (!isValid) return '';
+                    return `<div class="mt-2 mb-2"><img src="${clean}" alt="Plato" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display='none'"></div>`;
                 });
                 
                 // Convertir saltos de línea simples en <br>
