@@ -324,11 +324,18 @@
                     currentPlato = {
                         nombre: platoMatch[1].trim(),
                         precio: (platoMatch[2]||'').trim(),
-                        parrafos: [ `<p class=\"mb-1 last:mb-0\">${p}</p>` ],
+                        parrafos: [ `<p class=\"mb-1 last:mb-0\">${p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'').trim()}</p>` ],
                         tieneBoton: true,
                         _imgTaken: false,
                         _linesSinceStart: 0
                     };
+                    // Si el propio encabezado trae imagen, insertar SOLO la imagen (sin repetir texto)
+                    const mHead = p.match(/\[{2,}IMG::([\s\S]*?)\]{2,}/);
+                    if (mHead && mHead[1]) {
+                        const u = mHead[1].trim();
+                        currentPlato.parrafos.push(`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                        currentPlato._imgTaken = true;
+                    }
                     return;
                 }
 
@@ -337,6 +344,7 @@
                 const isCategoria = (/^[🍽️🥘🍕🍝🥗🍖🍤🍷🧀🍰☕🍺]/.test(textOnly)) ||
                                     (/^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+$/.test(textOnly) && !textOnly.includes('€') && !textOnly.startsWith('-'));
                 if (isCategoria) {
+                    p = p.replace(/\[\[IMG::[^\]]+\]\]/g,'');
                     if (currentPlato) { processedBlocks.push(currentPlato); currentPlato = null; }
                     // Añadir un margen superior suave para separar categorías
                     processedBlocks.push({ nombre: null, parrafos: [`<p class=\"mb-2 last:mb-0\" style=\"margin-top:14px;\">${p}</p>`], tieneBoton: false });
@@ -345,34 +353,49 @@
                 // Si hay marcador de imagen, asociarla sólo si es inmediatamente cercana al plato
                 if (p.includes('[[IMG::') && currentPlato) {
                     // Asociar imagen solo si aparece inmediatamente tras el encabezado
-                    if (!currentPlato._imgTaken && currentPlato._linesSinceStart <= 1) {
-                        const htmlImg = p.replace(/\[\[IMG::([^\]]+)\]\]/g, (m,u)=>`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                    if (!currentPlato._imgTaken && currentPlato._linesSinceStart <= 3) {
+                        const htmlImg = p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g, (m,u)=>`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
                         currentPlato.parrafos.push(htmlImg);
                         currentPlato._imgTaken = true;
                         return;
                     }
                     // si no corresponde, eliminar el marcador (no renderizar imagen)
-                    p = p.replace(/\[\[IMG::[^\]]+\]\]/g,'');
+                    p = p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'');
                 }
                 // Si es descripción, y hay un plato en curso
                 if (currentPlato) {
+                    p = p.replace(/\[\[IMG::([\s\S]*?)\]\]/g,'');
                     currentPlato.parrafos.push(`<p class=\"mb-2 last:mb-0\">${p}</p>`);
                     currentPlato._linesSinceStart += 1;
                     return;
                 }
                 // Si no, es texto libre (categoría u otro)
+                // Limpiar marcadores de imagen en texto suelto para que no se muestren
+                p = p.replace(/\[\[IMG::([\s\S]*?)\]\]/g,'');
                 processedBlocks.push({ nombre: null, parrafos: [`<p class=\"mb-2 last:mb-0\">${p}</p>`], tieneBoton: false });
             });
             if (currentPlato) processedBlocks.push(currentPlato);
 
-            const html = processedBlocks.map(b => {
+            // Filtrar duplicados de platos por nombre (quedarse con el primero)
+            const filteredBlocks = [];
+            const seenNames = new Set();
+            processedBlocks.forEach(b => {
+                if (b.tieneBoton && b.nombre) {
+                    const key = b.nombre.toLowerCase();
+                    if (seenNames.has(key)) return; // omitir duplicado
+                    seenNames.add(key);
+                }
+                filteredBlocks.push(b);
+            });
+
+            const html = filteredBlocks.map(b => {
                 const join = b.parrafos.join('\n');
                 // Caso normal: ya detectamos plato
                 if (b.tieneBoton && b.nombre) {
                     return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${b.nombre.replace(/\"/g,'\\\"')}\" data-price=\"${(b.precio||'').replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
                 }
                 // Fallback: detectar línea de plato en el bloque
-                const m = join.match(/^-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
+                const m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
                 if (m) {
                     const nombre = (m[1]||'').trim();
                     const precio = (m[2]||'').trim();
@@ -380,7 +403,8 @@
                 }
                 return join;
             }).join('');
-            return html;
+            const safeHtml = html.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'');
+            return safeHtml;
         }
 
         // Agregar mensaje al chat
@@ -420,6 +444,14 @@
         const WISH_KEY_BASE = 'servime_wish_{{ $comercio->id }}_';
         const wishKey = () => WISH_KEY_BASE + getOrCreateSessionId();
         function loadWish(){ try{ const r=localStorage.getItem(wishKey()); return r?JSON.parse(r):[];}catch{return [];} }
+        async function syncCart(arr){
+            try {
+                const sessionId = getOrCreateSessionId();
+                // enviar diferencias simples: mandamos estado actual item por item
+                // aquí solo refrescamos desde servidor con show para mantener simple
+                await fetch('/api/cart/show', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: sessionId})});
+            } catch(e) {}
+        }
         function saveWish(arr){ localStorage.setItem(wishKey(), JSON.stringify(arr)); renderWish(); }
         function parsePriceToCents(txt){ if(!txt) return null; const m=String(txt).replace(/[^0-9,\.]/g,'').replace(',', '.'); const v=parseFloat(m); return isNaN(v)?null:Math.round(v*100); }
         function addWish(nombre, priceText){
@@ -439,11 +471,13 @@
                 w.push({nombre:clean, qty:1, priceText: priceTxt, priceCents: priceC});
             }
             saveWish(w);
+            // sync server increment
+            fetch('/api/cart/incr', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: clean, delta: 1, price_text: priceTxt})});
         }
-        function decWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty=Math.max(0,w[idx].qty-1); if(w[idx].qty===0) w.splice(idx,1); saveWish(w);} }
-        function incWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w);} }
-        function delWish(idx){ const w=loadWish(); w.splice(idx,1); saveWish(w); }
-        function clearWish(){ saveWish([]); }
+        function decWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty=Math.max(0,w[idx].qty-1); const name=w[idx].nombre; if(w[idx].qty===0){ w.splice(idx,1); fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } else { fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name, delta: -1})}); } saveWish(w);} }
+        function incWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w); fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: w[idx].nombre, delta: 1})}); } }
+        function delWish(idx){ const w=loadWish(); const name=w[idx]?.nombre; w.splice(idx,1); saveWish(w); if(name){ fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } }
+        function clearWish(){ saveWish([]); fetch('/api/cart/clear',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId()})}); }
         function copyWish(){ const w=loadWish(); const t=w.length?w.map(it=>`- ${it.nombre} x${it.qty}${it.priceText?` — ${it.priceText}`:''}`).join('\n'):'Sin ítems'; navigator.clipboard.writeText(`Resumen para el mozo\n${t}`); }
         function renderWish(){
             const list=document.getElementById('wishList'); if(!list) return;

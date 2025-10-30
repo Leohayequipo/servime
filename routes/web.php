@@ -98,6 +98,14 @@ Route::middleware('auth')->group(function () {
 Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
 Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
+// API ligera para carrito (por sesión, sin auth)
+Route::prefix('api/cart')->group(function () {
+    Route::post('/show', [App\Http\Controllers\CartController::class, 'show'])->name('api.cart.show');
+    Route::post('/incr', [App\Http\Controllers\CartController::class, 'incr'])->name('api.cart.incr');
+    Route::post('/remove', [App\Http\Controllers\CartController::class, 'remove'])->name('api.cart.remove');
+    Route::post('/clear', [App\Http\Controllers\CartController::class, 'clear'])->name('api.cart.clear');
+});
+
     // Rutas de Categorías de Preguntas
     Route::resource('question-categories', QuestionCategoryController::class);
     
