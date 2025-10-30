@@ -1,3 +1,24 @@
+@php
+    function parseBotResponse($text) {
+        // Sanitizar el texto
+        $text = e($text);
+        
+        // Convertir saltos de línea a <br>
+        $text = nl2br($text);
+        
+        // Convertir **texto** a <strong>texto</strong>
+        $text = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $text);
+        
+        // Convertir *texto* a <em>texto</em>
+        $text = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $text);
+        
+        // Convertir [IMAGEN:url] a <img> tags
+        $text = preg_replace('/\[IMAGEN:([^\]]+)\]/', '<img src="$1" alt="Imagen" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display=\'none\'">', $text);
+        
+        return $text;
+    }
+@endphp
+
 <x-app-layout>
     <div class="min-h-screen bg-background">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -262,18 +283,28 @@
                                 {{ $sesiones->count() }} sesiones • {{ $allConversaciones->count() }} mensajes totales
                             </p>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <!-- Filtros rápidos -->
-                            <button onclick="filterChats('all')" id="filter-all" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
-                                Todas
-                            </button>
-                            <button onclick="filterChats('ai')" id="filter-ai" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
-                                Con IA
-                            </button>
-                            <button onclick="filterChats('faq')" id="filter-faq" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
-                                Solo FAQ
-                            </button>
-                        </div>
+                     <div class="flex items-center gap-3">
+                         <!-- Filtros por tiempo -->
+                         <div class="flex gap-2">
+                             <button onclick="filterByTime('today')" id="filter-today" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
+                                 Hoy
+                             </button>
+                             <button onclick="filterByTime('week')" id="filter-week" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                 📅 Esta semana
+                             </button>
+                             <button onclick="filterByTime('month')" id="filter-month" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                 📆 Este mes
+                             </button>
+                         </div>
+                         
+                         <!-- Separador -->
+                         <div class="w-px h-6 bg-accent-gray"></div>
+                         
+                         <!-- Botón reset -->
+                         <button onclick="resetFilters()" id="filter-reset" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+                             🔄 Mostrar todo
+                         </button>
+                     </div>
                     </div>
                     
                     <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
@@ -286,122 +317,129 @@
                                     $chatType = $tieneIA ? 'ai' : 'faq';
                                 @endphp
                                 
-                                <div class="chat-card group transition-all duration-200" 
-                                     data-chat-type="{{ $chatType }}"
-                                     data-session-id="{{ $sesion['session_id'] }}">
+                             <div class="chat-card group transition-all duration-200" 
+                                  data-chat-type="{{ $chatType }}"
+                                  data-session-id="{{ $sesion['session_id'] }}"
+                                  data-fecha-primera="{{ $sesion['fecha_primera'] }}"
+                                  data-fecha-ultima="{{ $sesion['fecha_ultima'] }}"
+                                  data-fecha-primera-timestamp="{{ $sesion['fecha_primera_timestamp'] }}"
+                                  data-fecha-ultima-timestamp="{{ $sesion['fecha_ultima_timestamp'] }}">
                                     <!-- Header de sesión -->
-                                    <div class="flex items-start justify-between p-4 bg-primary-dark rounded-xl border border-accent-gray hover:border-accent-blue/50 transition-all duration-200 cursor-pointer"
-                                         onclick="toggleSessionExpand('{{ $sesion['session_id'] }}')">
+                                    <div class="flex items-start justify-between p-4 bg-primary-dark rounded-xl border border-accent-gray hover:border-blue-500/50 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                                         onclick="toggleSessionExpand('{{ $sesion['session_id'] }}')"
+                                         style="transition: all 0.2s ease;"
+                                         onmouseover="this.style.transform='translateY(-1px)'"
+                                         onmouseout="this.style.transform='translateY(0)'">
                                         <div class="flex items-start flex-1 min-w-0">
-                                            <!-- Avatar e indicadores -->
-                                            <div class="relative flex-shrink-0 mr-3">
-                                                <div class="w-12 h-12 bg-gradient-to-br from-accent-blue to-blue-600 rounded-full flex items-center justify-center shadow-md">
-                                                    <span class="text-xl">💬</span>
-                                                </div>
-                                                <!-- Badge de tipo -->
-                                                @if($tieneIA)
-                                                    <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full border-2 border-primary-dark flex items-center justify-center" title="Sesión con IA">
-                                                        <span class="text-xs">🤖</span>
-                                                    </div>
-                                                @else
-                                                    <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full border-2 border-primary-dark flex items-center justify-center" title="Solo FAQ">
-                                                        <span class="text-xs">⚡</span>
-                                                    </div>
-                                                @endif
-                                            </div>
+                                         <!-- Avatar e indicadores -->
+                                         <div class="relative flex-shrink-0 mr-3">
+                                             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-lg" style="box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                                                 <span class="text-xl">💬</span>
+                                             </div>
+                                             <!-- Badge de tipo -->
+                                             @if($tieneIA)
+                                                 <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full border-2 border-gray-800 flex items-center justify-center shadow-md" title="Sesión con IA" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                                     <span class="text-xs">🤖</span>
+                                                 </div>
+                                             @else
+                                                 <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-500 to-green-700 rounded-full border-2 border-gray-800 flex items-center justify-center shadow-md" title="Solo FAQ" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                                     <span class="text-xs">⚡</span>
+                                                 </div>
+                                             @endif
+                                         </div>
                                             
                                             <!-- Contenido principal de la sesión -->
                                             <div class="flex-1 min-w-0">
-                                                <div class="flex items-center gap-2 mb-1">
-                                                    <p class="text-text-primary font-semibold text-base">
-                                                        {{ $comercio->nombre }}
-                                                    </p>
-                                                    <span class="text-xs text-text-secondary bg-secondary-dark px-2 py-0.5 rounded">
-                                                        {{ $sesion['total_mensajes'] }} {{ $sesion['total_mensajes'] == 1 ? 'mensaje' : 'mensajes' }}
-                                                    </span>
-                                                    @if($tieneIA)
-                                                        <span class="text-xs text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
-                                                            Con IA
-                                                        </span>
-                                                    @endif
-                                                </div>
+                                             <div class="flex items-center gap-2 mb-1">
+                                                 <p class="text-white font-bold text-lg" style="text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                                     {{ $comercio->nombre }}
+                                                 </p>
+                                                 <span class="text-xs text-blue-300 bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 rounded">
+                                                     {{ $sesion['total_mensajes'] }} {{ $sesion['total_mensajes'] == 1 ? 'mensaje' : 'mensajes' }}
+                                                 </span>
+                                                 @if($tieneIA)
+                                                     <span class="text-xs text-white bg-gradient-to-r from-purple-500 to-purple-600 px-2 py-0.5 rounded">
+                                                         Con IA
+                                                     </span>
+                                                 @endif
+                                             </div>
                                                 
-                                                <!-- Preview del último mensaje -->
-                                                <div class="mb-2">
-                                                    <div class="flex items-start gap-2">
-                                                        <span class="text-text-secondary text-xs font-medium mt-0.5">👤</span>
-                                                        <p class="text-text-primary text-sm leading-relaxed flex-1">
-                                                            {{ Str::limit($ultimaConv->user_message, 80) }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Rango de tiempo de la sesión -->
-                                                <div class="text-text-secondary text-xs">
-                                                    <span>{{ $sesion['primera_conversacion']->created_at->format('d/m H:i') }}</span>
-                                                    @if($sesion['primera_conversacion']->id !== $sesion['ultima_conversacion']->id)
-                                                        <span> → </span>
-                                                        <span>{{ $sesion['ultima_conversacion']->created_at->format('H:i') }}</span>
-                                                        <span class="ml-2">({{ $sesion['ultima_conversacion']->created_at->diffForHumans() }})</span>
-                                                    @else
-                                                        <span class="ml-2">({{ $ultimaConv->created_at->diffForHumans() }})</span>
-                                                    @endif
-                                                </div>
+                                             <!-- Preview del último mensaje -->
+                                             <div class="mb-2">
+                                                 <div class="flex items-start gap-2">
+                                                     <span class="text-text-secondary text-xs font-medium mt-0.5">👤</span>
+                                                     <p class="text-gray-300 text-sm leading-relaxed flex-1">
+                                                         {{ Str::limit($ultimaConv->user_message, 80) }}
+                                                     </p>
+                                                 </div>
+                                             </div>
+                                             
+                                             <!-- Rango de tiempo de la sesión -->
+                                             <div class="text-gray-400 text-xs">
+                                                 <span>{{ $sesion['primera_conversacion']->created_at->format('d/m H:i') }}</span>
+                                                 @if($sesion['primera_conversacion']->id !== $sesion['ultima_conversacion']->id)
+                                                     <span> → </span>
+                                                     <span>{{ $sesion['ultima_conversacion']->created_at->format('H:i') }}</span>
+                                                     <span class="ml-2">({{ $sesion['ultima_conversacion']->created_at->diffForHumans() }})</span>
+                                                 @else
+                                                     <span class="ml-2">({{ $ultimaConv->created_at->diffForHumans() }})</span>
+                                                 @endif
+                                             </div>
                                             </div>
                                             
-                                            <!-- Timestamp y acciones -->
-                                            <div class="flex flex-col items-end gap-2 ml-3 flex-shrink-0">
-                                                <span class="text-text-secondary text-xs whitespace-nowrap">
-                                                    Última: {{ $ultimaConv->created_at->diffForHumans() }}
-                                                </span>
-                                                <!-- Botón ver chat completo -->
-                                                <a href="{{ route('menu.public', $comercio) }}" 
-                                                   target="_blank"
-                                                   onclick="event.stopPropagation();"
-                                                   class="opacity-0 group-hover:opacity-100 transition-opacity text-accent-blue hover:text-blue-400 text-xs font-medium flex items-center gap-1">
-                                                    Ver chat →
-                                                </a>
+                                         <!-- Timestamp y indicador -->
+                                         <div class="flex flex-col items-end gap-2 ml-3 flex-shrink-0">
+                                             <span class="text-gray-400 text-xs whitespace-nowrap">
+                                                 Última: {{ $ultimaConv->created_at->diffForHumans() }}
+                                             </span>
+                                             <!-- Indicador de expansión -->
+                                             <div class="text-gray-500 text-xs flex items-center gap-1">
+                                                 <span class="expand-icon">▼</span>
+                                                 <span>Ver detalles</span>
+                                             </div>
                                         </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- Expandible: Todos los mensajes de la sesión -->
-                                    <div class="session-expanded-content hidden mt-3 pl-4 border-l-2 border-accent-gray/30 space-y-3">
-                                        @foreach($sesion['conversaciones']->sortByDesc('created_at') as $conversacion)
-                                            <div class="bg-background rounded-lg p-3 border border-accent-gray/30">
-                                                <!-- Mensaje del usuario -->
-                                                <div class="mb-3">
-                                                    <div class="flex items-center gap-2 mb-1">
-                                                        <div class="w-6 h-6 bg-gradient-to-br from-accent-blue to-blue-600 rounded-full flex items-center justify-center">
-                                                            <span class="text-xs">👤</span>
-                                                        </div>
-                                                        <span class="text-text-secondary text-xs font-medium">Usuario</span>
-                                                        <span class="text-text-secondary text-xs">•</span>
-                                                        <span class="text-text-secondary text-xs">{{ $conversacion->created_at->format('H:i') }}</span>
-                                                    </div>
-                                                    <p class="text-text-primary text-sm ml-8">{{ Str::limit($conversacion->user_message, 150) }}</p>
-                                                </div>
-                                                
-                                                <!-- Respuesta del bot -->
-                                                @if($conversacion->bot_response)
-                                                    <div>
-                                                        <div class="flex items-center gap-2 mb-1">
-                                                            <div class="w-6 h-6 bg-gradient-to-br {{ $conversacion->used_openai ? 'from-purple-500 to-purple-600' : 'from-green-500 to-green-600' }} rounded-full flex items-center justify-center">
-                                                                <span class="text-xs">{{ $conversacion->used_openai ? '🤖' : '⚡' }}</span>
-                                                            </div>
-                                                            <span class="text-text-secondary text-xs font-medium">
-                                                                {{ $conversacion->used_openai ? 'IA' : 'FAQ' }}
-                                                            </span>
-                                                            @if($conversacion->response_time_ms)
-                                                                <span class="text-text-secondary text-xs">•</span>
-                                                                <span class="text-text-secondary text-xs">{{ number_format($conversacion->response_time_ms) }}ms</span>
-                                                            @endif
-                                                        </div>
-                                                        <p class="text-text-secondary text-sm ml-8 line-clamp-2">{{ Str::limit(strip_tags($conversacion->bot_response), 150) }}</p>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endforeach
+                                 <!-- Expandible: Todos los mensajes de la sesión -->
+                                 <div class="session-expanded-content hidden mt-4 pl-6 border-l-4 border-blue-500 space-y-4">
+                                     @foreach($sesion['conversaciones']->sortByDesc('created_at') as $conversacion)
+                                         <div class="bg-gray-800/60 rounded-xl p-4 border border-gray-600/40 shadow-sm">
+                                             <!-- Mensaje del usuario -->
+                                             <div class="mb-4">
+                                                 <div class="flex items-center gap-3 mb-2">
+                                                     <div class="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-md">
+                                                         <span class="text-sm">👤</span>
+                                                     </div>
+                                                     <span class="text-blue-400 text-sm font-semibold">Usuario</span>
+                                                     <span class="text-gray-500 text-xs">•</span>
+                                                     <span class="text-gray-400 text-xs">{{ $conversacion->created_at->format('H:i') }}</span>
+                                                 </div>
+                                                 <div class="text-gray-100 text-sm ml-10 leading-relaxed whitespace-pre-wrap">{{ Str::limit(e($conversacion->user_message), 200) }}</div>
+                                             </div>
+                                             
+                                             <!-- Respuesta del bot -->
+                                             @if($conversacion->bot_response)
+                                                 <div class="bg-gray-700/30 rounded-lg p-3 border-l-2 {{ $conversacion->used_openai ? 'border-purple-500' : 'border-green-500' }}">
+                                                     <div class="flex items-center gap-3 mb-2">
+                                                         <div class="w-7 h-7 bg-gradient-to-br {{ $conversacion->used_openai ? 'from-purple-500 to-purple-700' : 'from-green-500 to-green-700' }} rounded-full flex items-center justify-center shadow-md">
+                                                             <span class="text-sm">{{ $conversacion->used_openai ? '🤖' : '⚡' }}</span>
+                                                         </div>
+                                                         <span class="text-sm font-semibold {{ $conversacion->used_openai ? 'text-purple-400' : 'text-green-400' }}">
+                                                             {{ $conversacion->used_openai ? 'IA' : 'FAQ' }}
+                                                         </span>
+                                                         @if($conversacion->response_time_ms)
+                                                             <span class="text-gray-500 text-xs">•</span>
+                                                             <span class="text-gray-400 text-xs">{{ number_format($conversacion->response_time_ms) }}ms</span>
+                                                         @endif
+                                                     </div>
+                                                     <div class="text-gray-200 text-sm ml-10 leading-relaxed">
+                                                         {!! Str::limit(parseBotResponse($conversacion->bot_response), 300) !!}
+                                                     </div>
+                                                 </div>
+                                             @endif
+                                         </div>
+                                     @endforeach
                                     </div>
                                 </div>
                             @endforeach
@@ -419,64 +457,179 @@
                 </div>
             @endif
             
-            <style>
-                .session-expanded-content {
-                    animation: slideDown 0.2s ease-out;
-                }
-                
-                @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .line-clamp-2 {
-                    display: -webkit-box;
-                    -webkit-line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                }
-                .active-filter {
-                    opacity: 1 !important;
-                    border: 2px solid var(--accent-blue) !important;
-                }
-            </style>
+         <style>
+             .session-expanded-content {
+                 animation: slideDown 0.4s ease-out;
+                 max-height: 1000px;
+                 overflow: hidden;
+             }
+             
+             @keyframes slideDown {
+                 from {
+                     opacity: 0;
+                     transform: translateY(-15px);
+                     max-height: 0;
+                 }
+                 to {
+                     opacity: 1;
+                     transform: translateY(0);
+                     max-height: 1000px;
+                 }
+             }
+             .line-clamp-2 {
+                 display: -webkit-box;
+                 -webkit-line-clamp: 2;
+                 -webkit-box-orient: vertical;
+                 overflow: hidden;
+             }
+             .active-filter {
+                 opacity: 1 !important;
+                 border: 2px solid var(--accent-blue) !important;
+                 background: var(--accent-blue) !important;
+                 color: white !important;
+             }
+             
+             /* Mejorar el hover de las cards */
+             .chat-card:hover {
+                 box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+             }
+             
+             /* Transición del ícono de expansión */
+             .expand-icon {
+                 transition: transform 0.3s ease;
+             }
+         </style>
             
             <script>
-                function toggleSessionExpand(sessionId) {
-                    const card = document.querySelector(`[data-session-id="${sessionId}"]`);
-                    const expandedContent = card.querySelector('.session-expanded-content');
-                    expandedContent.classList.toggle('hidden');
-                }
+             function toggleSessionExpand(sessionId) {
+                 const card = document.querySelector(`[data-session-id="${sessionId}"]`);
+                 const expandedContent = card.querySelector('.session-expanded-content');
+                 const expandIcon = card.querySelector('.expand-icon');
+                 
+                 expandedContent.classList.toggle('hidden');
+                 
+                 // Rotar el ícono
+                 if (expandedContent.classList.contains('hidden')) {
+                     expandIcon.textContent = '▼';
+                     expandIcon.style.transform = 'rotate(0deg)';
+                 } else {
+                     expandIcon.textContent = '▲';
+                     expandIcon.style.transform = 'rotate(180deg)';
+                 }
+             }
                 
-                function filterChats(type) {
-                    // Remover active de todos los filtros
-                    document.querySelectorAll('[id^="filter-"]').forEach(btn => {
-                        btn.classList.remove('active-filter');
-                        btn.classList.add('bg-secondary-dark', 'text-text-secondary');
-                        btn.classList.remove('bg-accent-blue', 'text-white');
-                    });
-                    
-                    // Activar el filtro seleccionado
-                    const activeBtn = document.getElementById(`filter-${type}`);
-                    activeBtn.classList.add('active-filter', 'bg-accent-blue', 'text-white');
-                    activeBtn.classList.remove('bg-secondary-dark', 'text-text-secondary');
-                    
-                    // Filtrar chats
-                    const chats = document.querySelectorAll('.chat-card');
-                    chats.forEach(chat => {
-                        if (type === 'all') {
-                            chat.style.display = 'block';
-                        } else {
-                            const chatType = chat.getAttribute('data-chat-type');
-                            chat.style.display = (chatType === type) ? 'block' : 'none';
-                        }
-                    });
-                }
+             function filterByTime(period) {
+                 alert(`🔍 DEBUG: Filtrando por tiempo: ${period}`);
+                 console.log('Filtrando por tiempo:', period);
+                 
+                 // Verificar si encuentra los elementos
+                 const chats = document.querySelectorAll('.chat-card');
+                 alert(`📊 Total de chats encontrados: ${chats.length}`);
+                 
+                 if (chats.length === 0) {
+                     alert('❌ ERROR: No se encontraron chats con clase .chat-card');
+                     return;
+                 }
+                 
+                 // Remover active de todos los filtros de tiempo
+                 document.querySelectorAll('[id^="filter-today"], [id^="filter-week"], [id^="filter-month"]').forEach(btn => {
+                     btn.classList.remove('active-filter');
+                     btn.classList.add('bg-secondary-dark', 'text-text-secondary');
+                     btn.classList.remove('bg-accent-blue', 'text-white');
+                 });
+                 
+                 // Activar el filtro seleccionado
+                 const activeBtn = document.getElementById(`filter-${period}`);
+                 if (!activeBtn) {
+                     alert(`❌ ERROR: No se encontró el botón filter-${period}`);
+                     return;
+                 }
+                 activeBtn.classList.add('active-filter', 'bg-accent-blue', 'text-white');
+                 activeBtn.classList.remove('bg-secondary-dark', 'text-text-secondary');
+                 
+                 // Filtrar chats por tiempo
+                 console.log('Total de chats encontrados:', chats.length);
+                 
+                 let visibleCount = 0;
+                 
+                 chats.forEach((chat, index) => {
+                     // Obtener fechas reales de la base de datos
+                     const fechaPrimera = chat.getAttribute('data-fecha-primera');
+                     const fechaUltima = chat.getAttribute('data-fecha-ultima');
+                     const fechaPrimeraTimestamp = parseInt(chat.getAttribute('data-fecha-primera-timestamp'));
+                     const fechaUltimaTimestamp = parseInt(chat.getAttribute('data-fecha-ultima-timestamp'));
+                     
+                     console.log(`Chat ${index + 1} - Fecha primera: ${fechaPrimera}`);
+                     console.log(`Chat ${index + 1} - Fecha última: ${fechaUltima}`);
+                     
+                     let show = false;
+                     
+                     if (fechaPrimera && fechaUltima) {
+                         const chatDate = new Date(fechaPrimera);
+                         const now = new Date();
+                         
+                         // Calcular diferencias
+                         const diffTime = now - chatDate;
+                         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                         const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                         const diffMinutes = Math.floor(diffTime / (1000 * 60));
+                         
+                         // Verificar si es el mismo día
+                         const isSameDay = chatDate.toDateString() === now.toDateString();
+                         
+                         // Verificar si es el mismo mes
+                         const isSameMonth = chatDate.getMonth() === now.getMonth() && 
+                                           chatDate.getFullYear() === now.getFullYear();
+                         
+                         console.log(`Chat ${index + 1} - Días de diferencia: ${diffDays}`);
+                         console.log(`Chat ${index + 1} - Es el mismo día: ${isSameDay}`);
+                         console.log(`Chat ${index + 1} - Es el mismo mes: ${isSameMonth}`);
+                         
+                         switch(period) {
+                             case 'today':
+                                 show = isSameDay;
+                                 break;
+                             case 'week':
+                                 show = diffDays <= 7 && diffDays >= 0;
+                                 break;
+                             case 'month':
+                                 show = isSameMonth;
+                                 break;
+                         }
+                     } else {
+                         // Fallback: mostrar todo si no hay fechas
+                         show = true;
+                     }
+                     
+                     console.log(`Chat ${index + 1} - Mostrar: ${show}`);
+                     chat.style.display = show ? 'block' : 'none';
+                     
+                     if (show) visibleCount++;
+                 });
+                 
+                 alert(`✅ Filtro aplicado. Chats visibles: ${visibleCount} de ${chats.length}`);
+             }
+             
+             
+             function resetFilters() {
+                 // Remover active de todos los filtros de tiempo
+                 document.querySelectorAll('[id^="filter-today"], [id^="filter-week"], [id^="filter-month"]').forEach(btn => {
+                     btn.classList.remove('active-filter');
+                     btn.classList.add('bg-secondary-dark', 'text-text-secondary');
+                     btn.classList.remove('bg-accent-blue', 'text-white');
+                 });
+                 
+                 // Activar el filtro "Este mes" (mostrar todo)
+                 const monthBtn = document.getElementById('filter-month');
+                 monthBtn.classList.add('active-filter', 'bg-accent-blue', 'text-white');
+                 monthBtn.classList.remove('bg-secondary-dark', 'text-text-secondary');
+                 
+                 // Mostrar todos los chats
+                 const chats = document.querySelectorAll('.chat-card');
+                 chats.forEach(chat => {
+                     chat.style.display = 'block';
+                 });
+             }
             </script>
         </div>
     </div>
