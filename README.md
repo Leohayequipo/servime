@@ -35,12 +35,25 @@
 - Logo por defecto para comercios sin logo
 - Campo de nombre para menús
 - Integración de "Contenido Extraído" en create/edit
+- **Imágenes por plato** - Adjuntar fotos individuales a cada item del menú
+- **Descripciones detalladas** - Texto enriquecido para cada plato
 
-### 🔄 **FASE 4: Análisis y Métricas** (En desarrollo)
-- Historial de conversaciones
-- Preguntas más frecuentes
-- Estadísticas de uso
-- Dashboard de métricas
+### ✅ **FASE 4: Carrito de Pre-Pedidos**
+- **Botón "Lo quiero"** - Los clientes pueden seleccionar platos del chat
+- **Resumen visual** - Panel flotante con ítems agregados
+- **Cálculo automático** - Total estimado con precios
+- **Sincronización bidireccional** - localStorage + API
+- **Control de cantidades** - Incrementar/decrementar/eliminar ítems
+- **Copiar resumen** - Función para compartir con el mozo
+
+### ✅ **FASE 5: Análisis y Dashboard Mejorado**
+- Historial de conversaciones agrupado por sesión
+- Preguntas más frecuentes configurables
+- Estadísticas de uso en tiempo real
+- Dashboard de métricas avanzadas
+- Filtros por comercio, fecha y tiempo
+- Mensajes en español con Carbon
+- Timezone configurado (Argentina)
 
 ## 🛠️ Requisitos Técnicos
 
@@ -90,10 +103,47 @@ php artisan migrate
 php artisan storage:link
 ```
 
+**⚠️ Nota:** Si estás actualizando desde una versión anterior, las nuevas migraciones (`carts` y `cart_items`) se ejecutarán automáticamente. El sistema funciona sin estas tablas (solo con localStorage), pero para persistencia del carrito entre dispositivos es recomendable ejecutarlas.
+
 ### 7. Iniciar servidor
 ```bash
 php artisan serve
 ```
+
+## 🚀 Deploy en Producción
+
+### **Pasos importantes al subir a producción:**
+
+1. **Ejecutar migraciones:**
+```bash
+php artisan migrate --force
+```
+
+2. **Configurar storage:**
+```bash
+php artisan storage:link
+```
+
+3. **Limpiar caché:**
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+```
+
+4. **Optimizar:**
+```bash
+composer install --optimize-autoloader --no-dev
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+5. **Verificar variables de entorno:**
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `OPENAI_API_KEY` configurado
+- Timezone correcto (`timezone=America/Argentina/Buenos_Aires`)
 
 ## 📱 Uso del Sistema
 
@@ -108,9 +158,12 @@ php artisan serve
 
 ### **Para Clientes:**
 1. **Escanear QR** - Acceso directo al menú
-2. **Navegar menús** - Ver platos y precios
+2. **Navegar menús** - Ver platos, precios e imágenes
 3. **Chatear con IA** - Preguntar sobre el menú
-4. **Experiencia móvil** - Optimizada para smartphones
+4. **Armar pre-pedido** - Click en "Lo quiero" para agregar platos
+5. **Ver resumen** - Panel con total estimado para el mozo
+6. **Copiar y compartir** - Enviar resumen por WhatsApp
+7. **Experiencia móvil** - Optimizada para smartphones
 
 ## 🔧 Configuración Avanzada
 
@@ -129,7 +182,15 @@ php artisan serve --host=TU_IP_LOCAL --port=8000
 - **Crear menú**: Subir archivo + nombre personalizado
 - **Activar menú**: Hacer clic en "⭐ Activar Menú"
 - **Editar menú**: Modificar nombre, archivo, personalización
+- **Subir imágenes**: Click en el ícono de upload para cada plato
 - **Guardar cambios**: Botón flotante azul en esquina inferior derecha
+
+### **Carrito de Pre-Pedidos:**
+- **Agregar platos**: Click en "Lo quiero" cuando el bot sugiere un plato
+- **Ver resumen**: Ícono de lista (🧾) en la esquina inferior derecha
+- **Ajustar cantidades**: Botones +/- para cada ítem
+- **Copiar resumen**: Botón "Copiar" para compartir con el mozo
+- **Sincronización**: Datos guardados en localStorage + API
 
 ## 📊 Estructura del Proyecto
 
@@ -137,16 +198,23 @@ php artisan serve --host=TU_IP_LOCAL --port=8000
 app/
 ├── Http/Controllers/
 │   ├── ComercioController.php
-│   ├── MenuController.php
+│   ├── MenuController.php (upload de imágenes por plato)
 │   ├── PublicMenuController.php
-│   └── ChatbotController.php
+│   ├── ChatbotController.php
+│   ├── DashboardController.php (agrupación por sesión)
+│   └── CartController.php (API de carrito)
 ├── Models/
 │   ├── Comercio.php
 │   ├── Menu.php (con campos: nombre, activo)
-│   └── User.php
+│   ├── User.php
+│   ├── Cart.php (carritos por sesión)
+│   ├── CartItem.php (ítems del carrito)
+│   └── ChatConversation.php
 └── Services/
     ├── MenuProcessorService.php
-    └── ChatbotService.php
+    ├── ChatbotService.php (contexto con imágenes)
+    ├── PdfProcessorService.php
+    └── PdfToImageService.php
 
 resources/views/
 ├── comercios/
@@ -164,7 +232,10 @@ resources/views/
 
 database/migrations/
 ├── add_nombre_to_menus_table.php
-└── add_activo_to_menus_table.php
+├── add_activo_to_menus_table.php
+├── create_chat_conversations_table.php
+├── create_carts_table.php (carritos por sesión)
+└── create_cart_items_table.php (ítems del carrito)
 ```
 
 ## 🎨 Características de UI/UX
@@ -187,12 +258,12 @@ database/migrations/
 
 ## 🎯 Próximas Funcionalidades
 
-- **PWA (Progressive Web App)** - Instalable como app
-- **Notificaciones push** - Ofertas y promociones
-- **Integración WhatsApp** - Chat directo
-- **Análisis avanzado** - Métricas de conversación
-- **Temas personalizados** - Branding específico
-- **Procesamiento de PDFs** - Mejoras en extracción de texto
+- **PWA (Progressive Web App)** - Instalable como app nativa
+- **Notificaciones push** - Ofertas y promociones en tiempo real
+- **Integración WhatsApp** - Chat directo con el local
+- **Gestión de pedidos** - Conectar pre-pedidos con sistema de cocina
+- **Múltiples idiomas** - Soporte multi-idioma
+- **Modo oscuro/claro** - Toggle automático
 
 ## 🤝 Contribución
 
