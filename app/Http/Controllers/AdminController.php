@@ -9,6 +9,7 @@ use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -165,6 +166,11 @@ class AdminController extends Controller
         // Cargar las relaciones necesarias
         $menu->load(['comercio.user']);
         
+        // Asegurar que el archivo del menú esté disponible en public_html (si existe)
+        if ($menu->archivo_original) {
+            $this->ensureMenuFileInPublicHtml($menu->archivo_original);
+        }
+        
         // Obtener categorías de preguntas como en el MenuController
         $categories = \App\Models\QuestionCategory::active()->ordered()->get();
         
@@ -266,6 +272,10 @@ class AdminController extends Controller
 
         // Guardar archivo
         $archivoPath = $request->file('archivo')->store('menus', 'public');
+        
+        // Copiar archivo a public_html en producción
+        $this->copyMenuToPublicHtml($archivoPath);
+        
         $menu->archivo_original = $archivoPath;
 
         // Detectar formato automáticamente
@@ -348,5 +358,93 @@ class AdminController extends Controller
         $user->delete();
         
         return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado exitosamente');
+    }
+
+    /**
+     * Asegurar que el archivo del menú esté en public_html/storage (sin errores si falla)
+     */
+    private function ensureMenuFileInPublicHtml(string $archivoPath): void
+    {
+        // Solo verificar/copiar si estamos en producción
+        if (!file_exists('/home/u560898880/domains')) {
+            return;
+        }
+        
+        $filename = basename($archivoPath);
+        $targetFile = '/home/u560898880/domains/servime.net/public_html/storage/menus/' . $filename;
+        
+        // Si ya existe en public_html, no hacer nada
+        if (file_exists($targetFile)) {
+            return;
+        }
+        
+        // Si no existe, copiarlo automáticamente
+        $this->copyMenuToPublicHtml($archivoPath);
+    }
+
+    /**
+     * Copiar archivo de menú a public_html/storage automáticamente
+     */
+    private function copyMenuToPublicHtml(string $archivoPath): void
+    {
+        // Ruta directa conocida para servime.net en producción
+        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menus';
+        
+        // Verificar si estamos en producción (Hostinger)
+        if (!file_exists('/home/u560898880/domains')) {
+            // No estamos en producción, salir silenciosamente
+            return;
+        }
+        
+        try {
+            // Ruta del archivo fuente
+            $sourceFile = storage_path('app/public/' . $archivoPath);
+            
+            if (!file_exists($sourceFile)) {
+                Log::error('Archivo de menú no encontrado para copiar', ['path' => $sourceFile]);
+                return;
+            }
+            
+            // Crear directorio si no existe
+            if (!is_dir($publicHtmlPath)) {
+                if (!mkdir($publicHtmlPath, 0775, true)) {
+                    Log::error('No se pudo crear directorio de menús en public_html', ['path' => $publicHtmlPath]);
+                    return;
+                }
+                chmod($publicHtmlPath, 0775);
+            }
+            
+            // Extraer nombre del archivo
+            $filename = basename($archivoPath);
+            $targetFile = $publicHtmlPath . '/' . $filename;
+            
+            // Intentar copiar
+            if (!copy($sourceFile, $targetFile)) {
+                $error = error_get_last();
+                Log::error('Error al copiar archivo de menú', [
+                    'source' => $sourceFile,
+                    'target' => $targetFile,
+                    'error' => $error,
+                    'source_exists' => file_exists($sourceFile),
+                    'target_dir_writable' => is_writable($publicHtmlPath)
+                ]);
+                return;
+            }
+            
+            // Asegurar permisos
+            chmod($targetFile, 0664);
+            
+            Log::info('Archivo de menú copiado exitosamente a public_html', [
+                'file' => $filename,
+                'target' => $targetFile,
+                'size' => filesize($targetFile)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Excepción al copiar archivo de menú', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

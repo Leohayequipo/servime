@@ -96,6 +96,9 @@ class MenuController extends Controller
         // Subir archivo
         $archivoPath = $request->file('archivo')->store('menus', 'public');
         
+        // Copiar archivo a public_html en producción
+        $this->copyMenuToPublicHtml($archivoPath);
+        
         // Crear menú
         $menu = new Menu();
         $menu->comercio_id = $comercio->id;
@@ -179,6 +182,11 @@ class MenuController extends Controller
             abort(404, 'Menú no encontrado en este comercio.');
         }
         
+        // Asegurar que el archivo del menú esté disponible en public_html (si existe)
+        if ($menu->archivo_original) {
+            $this->ensureMenuFileInPublicHtml($menu->archivo_original);
+        }
+        
         $categories = QuestionCategory::active()->ordered()->get();
         $isEdit = true;
         
@@ -220,12 +228,14 @@ class MenuController extends Controller
 
         // Si se sube un nuevo archivo
         if ($request->hasFile('archivo')) {
-            // Eliminar archivo anterior
-            if ($menu->archivo_original && Storage::disk('public')->exists($menu->archivo_original)) {
-                Storage::disk('public')->delete($menu->archivo_original);
-            }
+            // Eliminar archivo anterior de ambos lugares
+            $this->deleteMenuSafely($menu->archivo_original);
             
             $archivoPath = $request->file('archivo')->store('menus', 'public');
+            
+            // Copiar archivo a public_html en producción
+            $this->copyMenuToPublicHtml($archivoPath);
+            
             $menu->archivo_original = $archivoPath;
             
             // Detectar formato automáticamente
@@ -318,10 +328,8 @@ class MenuController extends Controller
             abort(404, 'Menú no encontrado en este comercio.');
         }
         
-        // Eliminar archivo del storage
-        if ($menu->archivo_original && Storage::disk('public')->exists($menu->archivo_original)) {
-            Storage::disk('public')->delete($menu->archivo_original);
-        }
+        // Eliminar archivo de ambos lugares
+        $this->deleteMenuSafely($menu->archivo_original);
         
         $menu->delete();
         
@@ -434,6 +442,128 @@ class MenuController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error al subir imagen de plato: ' . $e->getMessage());
             return response()->json(['error' => 'Error al procesar la imagen: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Asegurar que el archivo del menú esté en public_html/storage (sin errores si falla)
+     */
+    private function ensureMenuFileInPublicHtml(string $archivoPath): void
+    {
+        // Solo verificar/copiar si estamos en producción
+        if (!file_exists('/home/u560898880/domains')) {
+            return;
+        }
+        
+        $filename = basename($archivoPath);
+        $targetFile = '/home/u560898880/domains/servime.net/public_html/storage/menus/' . $filename;
+        
+        // Si ya existe en public_html, no hacer nada
+        if (file_exists($targetFile)) {
+            return;
+        }
+        
+        // Si no existe, copiarlo automáticamente
+        $this->copyMenuToPublicHtml($archivoPath);
+    }
+
+    /**
+     * Copiar archivo de menú a public_html/storage automáticamente
+     */
+    private function copyMenuToPublicHtml(string $archivoPath): void
+    {
+        // Ruta directa conocida para servime.net en producción
+        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menus';
+        
+        // Verificar si estamos en producción (Hostinger)
+        if (!file_exists('/home/u560898880/domains')) {
+            // No estamos en producción, salir silenciosamente
+            return;
+        }
+        
+        try {
+            // Ruta del archivo fuente
+            $sourceFile = storage_path('app/public/' . $archivoPath);
+            
+            if (!file_exists($sourceFile)) {
+                Log::error('Archivo de menú no encontrado para copiar', ['path' => $sourceFile]);
+                return;
+            }
+            
+            // Crear directorio si no existe
+            if (!is_dir($publicHtmlPath)) {
+                if (!mkdir($publicHtmlPath, 0775, true)) {
+                    Log::error('No se pudo crear directorio de menús en public_html', ['path' => $publicHtmlPath]);
+                    return;
+                }
+                chmod($publicHtmlPath, 0775);
+            }
+            
+            // Extraer nombre del archivo
+            $filename = basename($archivoPath);
+            $targetFile = $publicHtmlPath . '/' . $filename;
+            
+            // Intentar copiar
+            if (!copy($sourceFile, $targetFile)) {
+                $error = error_get_last();
+                Log::error('Error al copiar archivo de menú', [
+                    'source' => $sourceFile,
+                    'target' => $targetFile,
+                    'error' => $error,
+                    'source_exists' => file_exists($sourceFile),
+                    'target_dir_writable' => is_writable($publicHtmlPath)
+                ]);
+                return;
+            }
+            
+            // Asegurar permisos
+            chmod($targetFile, 0664);
+            
+            Log::info('Archivo de menú copiado exitosamente a public_html', [
+                'file' => $filename,
+                'target' => $targetFile,
+                'size' => filesize($targetFile)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Excepción al copiar archivo de menú', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Eliminar archivo de menú de forma segura (tanto de storage como de public_html)
+     */
+    private function deleteMenuSafely(?string $archivoPath): void
+    {
+        if (empty($archivoPath)) {
+            return;
+        }
+        
+        // Eliminar de storage/app/public
+        if (Storage::disk('public')->exists($archivoPath)) {
+            Storage::disk('public')->delete($archivoPath);
+        }
+        
+        // Eliminar también de public_html/storage si existe (producción)
+        $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
+        $domainsDir = $homeDir . '/domains';
+        
+        // Buscar el dominio correcto
+        if (is_dir($domainsDir)) {
+            $domains = scandir($domainsDir);
+            foreach ($domains as $domain) {
+                if ($domain === '.' || $domain === '..') continue;
+                $filename = basename($archivoPath);
+                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/menus/' . $filename;
+                if (file_exists($publicHtmlFile)) {
+                    @unlink($publicHtmlFile);
+                    Log::info('Archivo de menú eliminado de public_html', ['file' => $publicHtmlFile]);
+                    break; // Ya lo eliminamos, no necesitamos seguir buscando
+                }
+            }
         }
     }
 }
