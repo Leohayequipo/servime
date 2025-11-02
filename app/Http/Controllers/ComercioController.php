@@ -301,7 +301,11 @@ class ComercioController extends Controller
     {
         $path = storage_path('app/public/logos');
         if (!is_dir($path)) {
-            mkdir($path, 0755, true);
+            mkdir($path, 0775, true);
+            chmod($path, 0775);
+        } else {
+            // Asegurar permisos de escritura aunque el directorio exista
+            chmod($path, 0775);
         }
 
         // Si no está disponible la librería GD, hacer fallback al almacenamiento directo
@@ -351,6 +355,11 @@ class ComercioController extends Controller
         $filename = 'logo_' . Str::random(16) . '.png';
         $full = $path . DIRECTORY_SEPARATOR . $filename;
         \imagepng($dst, $full, 6);
+        
+        // Asegurar permisos de lectura/escritura del archivo
+        if (file_exists($full)) {
+            chmod($full, 0664);
+        }
 
         \imagedestroy($src);
         \imagedestroy($dst);
