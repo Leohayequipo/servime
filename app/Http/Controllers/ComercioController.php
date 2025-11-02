@@ -378,16 +378,31 @@ class ComercioController extends Controller
             if ($publicHtmlPath && is_dir(dirname($publicHtmlPath))) {
                 // Crear directorio de logos en public_html si no existe
                 if (!is_dir($publicHtmlPath)) {
-                    @mkdir($publicHtmlPath, 0775, true);
-                    @chmod($publicHtmlPath, 0775);
+                    if (!@mkdir($publicHtmlPath, 0775, true)) {
+                        \Log::warning('No se pudo crear directorio de logos en public_html', ['path' => $publicHtmlPath]);
+                    } else {
+                        @chmod($publicHtmlPath, 0775);
+                    }
                 }
                 
-                // Copiar el archivo de forma segura (sin romper si falla)
+                // Copiar el archivo de forma segura
                 $targetFile = $publicHtmlPath . '/' . $filename;
-                @copy($full, $targetFile);
-                if (file_exists($targetFile)) {
+                $copied = @copy($full, $targetFile);
+                if ($copied && file_exists($targetFile)) {
                     @chmod($targetFile, 0664);
+                    \Log::info('Logo copiado a public_html exitosamente', ['file' => $filename, 'target' => $targetFile]);
+                } else {
+                    \Log::warning('No se pudo copiar logo a public_html', ['source' => $full, 'target' => $targetFile]);
+                    // Intentar una vez más sin @ para ver el error real
+                    if (!copy($full, $targetFile)) {
+                        \Log::error('Error al copiar logo (sin @)', ['error' => error_get_last()]);
+                    } else {
+                        @chmod($targetFile, 0664);
+                        \Log::info('Logo copiado en segundo intento');
+                    }
                 }
+            } else {
+                \Log::debug('No se encontró directorio public_html para copiar logo', ['publicHtmlPath' => $publicHtmlPath]);
             }
         }
 
