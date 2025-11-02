@@ -358,10 +358,24 @@ class ComercioController extends Controller
             // Copiar automáticamente a public_html/storage si estamos en producción
             // Detectar si estamos en un entorno Hostinger (tiene ~/domains/)
             $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-            $publicHtmlPath = $homeDir . '/domains/' . parse_url(config('app.url'), PHP_URL_HOST) . '/public_html/storage/logos';
+            $domainsDir = $homeDir . '/domains';
             
-            // Solo intentar copiar si el directorio de public_html existe (producción)
-            if (file_exists(dirname($publicHtmlPath)) && is_dir(dirname($publicHtmlPath))) {
+            // Buscar el dominio correcto (puede ser servime.net aunque APP_URL diga servime.com)
+            $publicHtmlPath = null;
+            if (is_dir($domainsDir)) {
+                $domains = scandir($domainsDir);
+                foreach ($domains as $domain) {
+                    if ($domain === '.' || $domain === '..') continue;
+                    $potentialPath = $domainsDir . '/' . $domain . '/public_html/storage/logos';
+                    if (is_dir(dirname($potentialPath))) {
+                        $publicHtmlPath = $potentialPath;
+                        break; // Usar el primer dominio encontrado
+                    }
+                }
+            }
+            
+            // Solo intentar copiar si encontramos un directorio válido
+            if ($publicHtmlPath && is_dir(dirname($publicHtmlPath))) {
                 // Crear directorio de logos en public_html si no existe
                 if (!is_dir($publicHtmlPath)) {
                     @mkdir($publicHtmlPath, 0775, true);
@@ -399,10 +413,19 @@ class ComercioController extends Controller
         
         // Eliminar también de public_html/storage si existe (producción)
         $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-        $publicHtmlPath = $homeDir . '/domains/' . parse_url(config('app.url'), PHP_URL_HOST) . '/public_html/storage/' . $logoUrl;
+        $domainsDir = $homeDir . '/domains';
         
-        if (file_exists($publicHtmlPath)) {
-            @unlink($publicHtmlPath);
+        // Buscar el dominio correcto
+        if (is_dir($domainsDir)) {
+            $domains = scandir($domainsDir);
+            foreach ($domains as $domain) {
+                if ($domain === '.' || $domain === '..') continue;
+                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/' . $logoUrl;
+                if (file_exists($publicHtmlFile)) {
+                    @unlink($publicHtmlFile);
+                    break; // Ya lo eliminamos, no necesitamos seguir buscando
+                }
+            }
         }
     }
 
