@@ -208,18 +208,13 @@ class ComercioController extends Controller
 
         // Manejar eliminación de logo
         if ($request->has('delete_logo') && $request->delete_logo == '1') {
-            // Eliminar archivo del storage si existe
-            if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
-                \Storage::disk('public')->delete($comercio->logo_url);
-            }
+            $this->deleteLogoSafely($comercio->logo_url);
             $comercio->logo_url = null;
         }
         // Manejar subida de nuevo logo
         elseif ($request->hasFile('logo')) {
             // Eliminar logo anterior si existe
-            if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
-                \Storage::disk('public')->delete($comercio->logo_url);
-            }
+            $this->deleteLogoSafely($comercio->logo_url);
             $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512);
         }
 
@@ -359,12 +354,56 @@ class ComercioController extends Controller
         // Asegurar permisos de lectura/escritura del archivo
         if (file_exists($full)) {
             chmod($full, 0664);
+            
+            // Copiar automáticamente a public_html/storage si estamos en producción
+            // Detectar si estamos en un entorno Hostinger (tiene ~/domains/)
+            $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
+            $publicHtmlPath = $homeDir . '/domains/' . parse_url(config('app.url'), PHP_URL_HOST) . '/public_html/storage/logos';
+            
+            // Solo intentar copiar si el directorio de public_html existe (producción)
+            if (file_exists(dirname($publicHtmlPath)) && is_dir(dirname($publicHtmlPath))) {
+                // Crear directorio de logos en public_html si no existe
+                if (!is_dir($publicHtmlPath)) {
+                    @mkdir($publicHtmlPath, 0775, true);
+                    @chmod($publicHtmlPath, 0775);
+                }
+                
+                // Copiar el archivo de forma segura (sin romper si falla)
+                $targetFile = $publicHtmlPath . '/' . $filename;
+                @copy($full, $targetFile);
+                if (file_exists($targetFile)) {
+                    @chmod($targetFile, 0664);
+                }
+            }
         }
 
         \imagedestroy($src);
         \imagedestroy($dst);
 
         return 'logos/' . $filename;
+    }
+
+    /**
+     * Eliminar logo de forma segura (tanto de storage como de public_html)
+     */
+    private function deleteLogoSafely(?string $logoUrl): void
+    {
+        if (empty($logoUrl)) {
+            return;
+        }
+        
+        // Eliminar de storage/app/public
+        if (\Storage::disk('public')->exists($logoUrl)) {
+            \Storage::disk('public')->delete($logoUrl);
+        }
+        
+        // Eliminar también de public_html/storage si existe (producción)
+        $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
+        $publicHtmlPath = $homeDir . '/domains/' . parse_url(config('app.url'), PHP_URL_HOST) . '/public_html/storage/' . $logoUrl;
+        
+        if (file_exists($publicHtmlPath)) {
+            @unlink($publicHtmlPath);
+        }
     }
 
     /**
@@ -380,9 +419,7 @@ class ComercioController extends Controller
         }
         
         // Eliminar logo del storage si existe
-        if ($comercio->logo_url && \Storage::disk('public')->exists($comercio->logo_url)) {
-            \Storage::disk('public')->delete($comercio->logo_url);
-        }
+        $this->deleteLogoSafely($comercio->logo_url);
         
         // Eliminar el comercio (esto también eliminará los menús asociados por la relación)
         $comercio->delete();
