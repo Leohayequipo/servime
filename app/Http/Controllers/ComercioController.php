@@ -354,10 +354,11 @@ class ComercioController extends Controller
         // Asegurar permisos de lectura/escritura del archivo
         if (file_exists($full)) {
             chmod($full, 0664);
-            
-            // Copiar automáticamente a public_html/storage si estamos en producción
-            $this->copyLogoToPublicHtml($full, $filename);
         }
+        
+        // SIEMPRE intentar copiar a public_html/storage (incluso si file_exists falló)
+        // Esto asegura que se ejecute siempre
+        $this->copyLogoToPublicHtml($full, $filename);
 
         \imagedestroy($src);
         \imagedestroy($dst);
@@ -370,86 +371,54 @@ class ComercioController extends Controller
      */
     private function copyLogoToPublicHtml(string $sourceFile, string $filename): void
     {
+        // Ruta directa conocida para servime.net en producción
+        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/logos';
+        
+        // Verificar si estamos en producción (Hostinger)
+        if (!file_exists('/home/u560898880/domains')) {
+            // No estamos en producción, salir silenciosamente
+            return;
+        }
+        
         try {
-            $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-            $domainsDir = $homeDir . '/domains';
-            
-            // Buscar el dominio correcto (puede ser servime.net aunque APP_URL diga servime.com)
-            $publicHtmlPath = null;
-            if (is_dir($domainsDir)) {
-                $domains = @scandir($domainsDir);
-                if ($domains !== false) {
-                    foreach ($domains as $domain) {
-                        if ($domain === '.' || $domain === '..') continue;
-                        $potentialPath = $domainsDir . '/' . $domain . '/public_html/storage/logos';
-                        if (@is_dir(dirname($potentialPath))) {
-                            $publicHtmlPath = $potentialPath;
-                            break; // Usar el primer dominio encontrado
-                        }
-                    }
+            // Crear directorio si no existe
+            if (!is_dir($publicHtmlPath)) {
+                if (!mkdir($publicHtmlPath, 0775, true)) {
+                    \Log::error('No se pudo crear directorio en public_html', ['path' => $publicHtmlPath]);
+                    return;
                 }
+                chmod($publicHtmlPath, 0775);
             }
             
-            // Solo intentar copiar si encontramos un directorio válido
-            if ($publicHtmlPath && @is_dir(dirname($publicHtmlPath))) {
-                // Crear directorio de logos en public_html si no existe
-                if (!@is_dir($publicHtmlPath)) {
-                    if (@mkdir($publicHtmlPath, 0775, true)) {
-                        @chmod($publicHtmlPath, 0775);
-                        \Log::info('Directorio de logos creado en public_html', ['path' => $publicHtmlPath]);
-                    }
-                }
-                
-                // Copiar el archivo
-                $targetFile = $publicHtmlPath . '/' . $filename;
-                $copied = @copy($sourceFile, $targetFile);
-                
-                if ($copied && @file_exists($targetFile)) {
-                    @chmod($targetFile, 0664);
-                    \Log::info('Logo copiado a public_html exitosamente', [
-                        'file' => $filename,
-                        'target' => $targetFile,
-                        'size' => @filesize($targetFile)
-                    ]);
-                } else {
-                    // Segundo intento sin @ para capturar el error
-                    $error = @error_get_last();
-                    \Log::warning('Primer intento de copia falló, intentando de nuevo', [
-                        'source' => $sourceFile,
-                        'target' => $targetFile,
-                        'error' => $error
-                    ]);
-                    
-                    // Limpiar error anterior
-                    @error_clear_last();
-                    
-                    // Intentar de nuevo
-                    if (@copy($sourceFile, $targetFile)) {
-                        @chmod($targetFile, 0664);
-                        \Log::info('Logo copiado en segundo intento exitosamente');
-                    } else {
-                        $finalError = @error_get_last();
-                        \Log::error('Error al copiar logo a public_html', [
-                            'source' => $sourceFile,
-                            'target' => $targetFile,
-                            'error' => $finalError,
-                            'source_exists' => @file_exists($sourceFile),
-                            'target_dir_exists' => @is_dir(dirname($targetFile)),
-                            'target_dir_writable' => @is_writable(dirname($targetFile))
-                        ]);
-                    }
-                }
-            } else {
-                \Log::debug('No se encontró directorio public_html para copiar logo', [
-                    'domainsDir' => $domainsDir,
-                    'domainsDir_exists' => @is_dir($domainsDir),
-                    'publicHtmlPath' => $publicHtmlPath
+            // Copiar el archivo
+            $targetFile = $publicHtmlPath . '/' . $filename;
+            
+            // Intentar copiar
+            if (!copy($sourceFile, $targetFile)) {
+                $error = error_get_last();
+                \Log::error('Error al copiar logo', [
+                    'source' => $sourceFile,
+                    'target' => $targetFile,
+                    'error' => $error,
+                    'source_exists' => file_exists($sourceFile),
+                    'target_dir_writable' => is_writable($publicHtmlPath)
                 ]);
+                return;
             }
+            
+            // Asegurar permisos
+            chmod($targetFile, 0664);
+            
+            \Log::info('Logo copiado exitosamente a public_html', [
+                'file' => $filename,
+                'target' => $targetFile,
+                'size' => filesize($targetFile)
+            ]);
+            
         } catch (\Exception $e) {
-            \Log::error('Excepción al copiar logo a public_html', [
+            \Log::error('Excepción al copiar logo', [
                 'message' => $e->getMessage(),
-                'file' => $filename
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }
