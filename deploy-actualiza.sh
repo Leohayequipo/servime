@@ -83,7 +83,12 @@ if [ -d "$PROJECT_DIR/storage/app/public" ]; then
     cp -r "$PROJECT_DIR/storage/app/public/"* "$PUBLIC_HTML_DIR/storage/" 2>/dev/null || true
 fi
 
-# 9. Limpiar cachés (no falla)
+# 9. Ejecutar migraciones (no falla)
+echo -e "${YELLOW}🗄️ Ejecutando migraciones...${NC}"
+cd "$PROJECT_DIR"
+php artisan migrate --force 2>/dev/null || echo "⚠️ Migrations falló, continuando..."
+
+# 10. Limpiar cachés (no falla)
 echo -e "${YELLOW}🧽 Limpiando cachés...${NC}"
 cd "$PROJECT_DIR"
 php artisan cache:clear 2>/dev/null || true
@@ -91,13 +96,13 @@ php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 
-# 10. Optimizar (no falla)
+# 11. Optimizar (no falla)
 echo -e "${YELLOW}⚡ Optimizando...${NC}"
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
 php artisan view:cache 2>/dev/null || true
 
-# 11. Verificar (no falla)
+# 12. Verificar (no falla)
 echo -e "${YELLOW}🔍 Verificando...${NC}"
 if php "$PUBLIC_HTML_DIR/index.php" 2>&1 | grep -q "This script cannot be run from the CLI\|DOCTYPE html\|Redirecting to"; then
     echo -e "${GREEN}✅ Deploy exitoso!${NC}"

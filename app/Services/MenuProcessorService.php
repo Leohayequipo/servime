@@ -10,6 +10,7 @@ class MenuProcessorService
 {
     protected $openaiApiKey;
     protected $openaiModel;
+    protected $savedExtractedText = ''; // Para guardar texto extraído de PDFs
 
     public function __construct()
     {
@@ -33,25 +34,47 @@ class MenuProcessorService
                 throw new \Exception('No se pudo extraer texto del archivo');
             }
 
-            // 2. Actualizar el menú con el texto extraído
+            // 2. Guardar el texto extraído primero (si existe texto sin procesar)
+            // Para PDFs con texto extraíble, savedExtractedText contiene el texto sin procesar
+            // Para imágenes/PDFs escaneados, no hay texto extraído, solo la respuesta procesada de OpenAI
+            $textoExtraido = !empty($this->savedExtractedText) ? $this->savedExtractedText : ($menu->formato === 'pdf' ? 'PDF procesado con OpenAI Vision' : 'Imagen procesada con OpenAI Vision');
+            
             $menu->update([
-                'texto_extraido' => $extractedText,
+                'texto_extraido' => $textoExtraido,
                 'procesado' => false
             ]);
+            
+            // Limpiar el texto guardado después de usarlo
+            $this->savedExtractedText = '';
 
-            // 3. La respuesta ya viene procesada desde OpenAI Vision
+            // 3. La respuesta ya viene procesada desde OpenAI Vision (PDFs o imágenes)
+            // Para PDFs con texto extraíble, processPdfToMenu ya procesa con OpenAI
+            // Para PDFs escaneados/imágenes, processPdfAsImageWithOpenAI/processImageWithOpenAI ya procesan
+            // Entonces extractedText es el JSON procesado, no texto sin procesar
             $gptResponse = $extractedText;
             
-            if ($gptResponse) {
-                // 4. Actualizar con la respuesta de GPT
+            if (!empty($gptResponse)) {
+                // 4. Actualizar con la respuesta de GPT (ya procesada)
                 $menu->update([
                     'contexto_gpt' => $gptResponse,
                     'procesado' => true
                 ]);
                 
+                Log::info('Menú procesado exitosamente', [
+                    'menu_id' => $menu->id,
+                    'tamaño_respuesta' => strlen($gptResponse),
+                    'formato' => $menu->formato
+                ]);
+                
                 return true;
             }
 
+            // Si no hay respuesta procesada, queda marcado como procesado = false
+            Log::warning('Menú no procesado - respuesta vacía', [
+                'menu_id' => $menu->id,
+                'formato' => $menu->formato
+            ]);
+            
             return false;
 
         } catch (\Exception $e) {
@@ -95,6 +118,12 @@ class MenuProcessorService
             $result = $pdfProcessor->processPdfToMenu($filePath);
             
             if ($result['success']) {
+                // Guardar el texto extraído sin procesar en el menú antes de retornar
+                // Esto se hace aquí porque necesitamos el texto extraído para guardarlo
+                // El JSON procesado se guardará en contexto_gpt
+                $this->savedExtractedText = $result['extracted_text'] ?? '';
+                
+                // Retornar el JSON procesado (menu_data)
                 return $result['menu_data'];
             } else {
                 throw new \Exception($result['message'] . ' ' . ($result['suggestion'] ?? ''));
