@@ -112,13 +112,15 @@ class PdfProcessorService
     {
         $prompt = "Analiza el siguiente texto de un menú de restaurante y extráelo en formato JSON estructurado. 
 
-INSTRUCCIONES:
-- Identifica las categorías (entradas, platos principales, postres, bebidas, etc.)
-- Para cada plato, extrae: nombre, precio, descripción (si existe)
-- Usa el formato JSON exacto que se muestra abajo
-- Si no hay precio visible, pon 'Precio no especificado'
-- Mantén los nombres de platos tal como aparecen en el texto
-- Si hay información del restaurante, inclúyela al inicio
+INSTRUCCIONES CRÍTICAS:
+- SOLO extrae información que REALMENTE APARECE en el texto
+- NO inventes platos, precios, descripciones o categorías que no estén en el texto
+- Si no ves un precio, NO inventes uno - pon exactamente 'Precio no especificado'
+- Si no hay descripción visible, NO inventes una - deja el campo descripción vacío o pon 'Sin descripción'
+- Mantén los nombres de platos EXACTAMENTE como aparecen en el texto, sin modificar
+- Identifica las categorías que realmente existen en el texto
+- Si hay información del restaurante visible, inclúyela al inicio
+- Si NO hay información del restaurante, deja el campo restaurante con nombre vacío
 
 FORMATO JSON REQUERIDO:
 {
@@ -143,7 +145,9 @@ FORMATO JSON REQUERIDO:
 TEXTO DEL MENÚ:
 {$text}
 
-Responde SOLO con el JSON, sin texto adicional.";
+REGLA FINAL: NO INVENTES NADA. Solo extrae lo que REALMENTE aparece en el texto arriba. Si no está en el texto, no lo incluyas.
+
+Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios.";
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->openaiApiKey,
@@ -156,13 +160,29 @@ Responde SOLO con el JSON, sin texto adicional.";
                     'content' => $prompt
                 ]
             ],
-            'max_tokens' => 4000,
+            'max_tokens' => 16000,
             'temperature' => 0.1,
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
-            return $data['choices'][0]['message']['content'] ?? 'Error procesando con OpenAI';
+            $content = $data['choices'][0]['message']['content'] ?? 'Error procesando con OpenAI';
+            
+            // Verificar si la respuesta fue truncada
+            $finishReason = $data['choices'][0]['finish_reason'] ?? null;
+            if ($finishReason === 'length') {
+                Log::warning('Respuesta de OpenAI truncada por límite de tokens', [
+                    'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido',
+                    'tamaño_respuesta' => strlen($content)
+                ]);
+            } else {
+                Log::info('PDF procesado exitosamente con OpenAI', [
+                    'tamaño_respuesta' => strlen($content),
+                    'finish_reason' => $finishReason
+                ]);
+            }
+            
+            return $content;
         }
 
         Log::error('Error OpenAI API', [

@@ -11,6 +11,7 @@ class MenuProcessorService
     protected $openaiApiKey;
     protected $openaiModel;
     protected $savedExtractedText = ''; // Para guardar texto extraído de PDFs
+    protected $menuId = null; // Para logs de truncamiento
 
     public function __construct()
     {
@@ -25,6 +26,9 @@ class MenuProcessorService
     public function processMenu(Menu $menu)
     {
         try {
+            // Guardar ID del menú para logs
+            $this->menuId = $menu->id;
+            
             // 1. Extraer texto del archivo
             $extractedText = $this->extractTextFromFile($menu);
             
@@ -190,13 +194,15 @@ class MenuProcessorService
                                 'type' => 'text',
                                 'text' => 'Analiza este PDF escaneado de un menú de restaurante y extráelo en formato JSON estructurado.
 
-INSTRUCCIONES:
-- Identifica las categorías (entradas, platos principales, postres, bebidas, etc.)
-- Para cada plato, extrae: nombre, precio, descripción (si existe)
-- Usa el formato JSON exacto que se muestra abajo
-- Si no hay precio visible, pon "Precio no especificado"
-- Mantén los nombres de platos tal como aparecen en el PDF
-- Si hay información del restaurante, inclúyela al inicio
+INSTRUCCIONES CRÍTICAS:
+- SOLO extrae información que REALMENTE VES en el PDF
+- NO inventes platos, precios, descripciones o categorías que no estén visibles
+- Si no ves un precio, NO inventes uno - pon exactamente "Precio no especificado"
+- Si no hay descripción visible, NO inventes una - deja el campo descripción vacío o pon "Sin descripción"
+- Mantén los nombres de platos EXACTAMENTE como aparecen en el PDF, sin modificar
+- Identifica las categorías que realmente existen en el PDF
+- Si hay información del restaurante visible, inclúyela al inicio
+- Si NO hay información del restaurante, deja el campo restaurante con nombre vacío
 
 FORMATO JSON REQUERIDO:
 {
@@ -218,7 +224,9 @@ FORMATO JSON REQUERIDO:
   ]
 }
 
-Responde SOLO con el JSON, sin texto adicional.'
+REGLA FINAL: NO INVENTES NADA. Solo extrae lo que REALMENTE VES en el PDF. Si no está visible en el PDF, no lo incluyas.
+
+Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios.'
                             ],
                             [
                                 'type' => 'image_url',
@@ -229,7 +237,7 @@ Responde SOLO con el JSON, sin texto adicional.'
                         ]
                     ]
                 ],
-                'max_tokens' => 2000,
+                'max_tokens' => 16000,
                 'temperature' => 0.3
             ]);
 
@@ -237,8 +245,20 @@ Responde SOLO con el JSON, sin texto adicional.'
                 $data = $response->json();
                 $content = $data['choices'][0]['message']['content'] ?? null;
                 
+                // Verificar si la respuesta fue truncada
+                $finishReason = $data['choices'][0]['finish_reason'] ?? null;
+                if ($finishReason === 'length') {
+                    Log::warning('Respuesta de OpenAI truncada por límite de tokens', [
+                        'menu_id' => $this->menuId ?? null,
+                        'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido'
+                    ]);
+                }
+                
                 if ($content) {
-                    Log::info('PDF procesado exitosamente con OpenAI Vision');
+                    Log::info('PDF procesado exitosamente con OpenAI Vision', [
+                        'tamaño_respuesta' => strlen($content),
+                        'finish_reason' => $finishReason
+                    ]);
                     return $content;
                 }
             }
@@ -294,13 +314,15 @@ Responde SOLO con el JSON, sin texto adicional.'
                                 'type' => 'text',
                                 'text' => 'Analiza esta imagen de un menú de restaurante y extráelo en formato JSON estructurado.
 
-INSTRUCCIONES:
-- Identifica las categorías (entradas, platos principales, postres, bebidas, etc.)
-- Para cada plato, extrae: nombre, precio, descripción (si existe)
-- Usa el formato JSON exacto que se muestra abajo
-- Si no hay precio visible, pon "Precio no especificado"
-- Mantén los nombres de platos tal como aparecen en la imagen
-- Si hay información del restaurante, inclúyela al inicio
+INSTRUCCIONES CRÍTICAS:
+- SOLO extrae información que REALMENTE VES en la imagen
+- NO inventes platos, precios, descripciones o categorías que no estén visibles
+- Si no ves un precio, NO inventes uno - pon exactamente "Precio no especificado"
+- Si no hay descripción visible, NO inventes una - deja el campo descripción vacío o pon "Sin descripción"
+- Mantén los nombres de platos EXACTAMENTE como aparecen en la imagen, sin modificar
+- Identifica las categorías que realmente existen en la imagen
+- Si hay información del restaurante visible, inclúyela al inicio
+- Si NO hay información del restaurante, deja el campo restaurante con nombre vacío
 
 FORMATO JSON REQUERIDO:
 {
@@ -322,7 +344,9 @@ FORMATO JSON REQUERIDO:
   ]
 }
 
-Responde SOLO con el JSON, sin texto adicional.'
+REGLA FINAL: NO INVENTES NADA. Solo extrae lo que REALMENTE VES en la imagen. Si no está visible en la imagen, no lo incluyas.
+
+Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios.'
                             ],
                             [
                                 'type' => 'image_url',
@@ -333,13 +357,29 @@ Responde SOLO con el JSON, sin texto adicional.'
                         ]
                     ]
                 ],
-                'max_tokens' => 2000,
+                'max_tokens' => 16000,
                 'temperature' => 0.3
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 $content = $data['choices'][0]['message']['content'] ?? null;
+                
+                // Verificar si la respuesta fue truncada
+                $finishReason = $data['choices'][0]['finish_reason'] ?? null;
+                if ($finishReason === 'length') {
+                    Log::warning('Respuesta de OpenAI truncada por límite de tokens', [
+                        'menu_id' => $this->menuId ?? null,
+                        'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido'
+                    ]);
+                }
+                
+                if ($content) {
+                    Log::info('Imagen procesada exitosamente con OpenAI Vision', [
+                        'tamaño_respuesta' => strlen($content),
+                        'finish_reason' => $finishReason
+                    ]);
+                }
                 
                 return $content;
             }
