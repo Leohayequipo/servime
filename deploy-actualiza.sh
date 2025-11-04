@@ -25,9 +25,25 @@ echo ""
 # 1. Ir al proyecto
 cd "$PROJECT_DIR"
 
-# 2. Hacer git pull (opcional, no falla)
+# 2. Hacer git pull (forzar actualización)
 echo -e "${YELLOW}📦 Actualizando código...${NC}"
-git pull origin main 2>/dev/null || echo "⚠️ Git pull falló, continuando..."
+# Descargar cambios sin aplicar primero
+git fetch origin main
+
+# Verificar si hay cambios locales que puedan causar conflictos
+if ! git diff --quiet HEAD origin/main; then
+    echo "⚠️ Hay diferencias con origin/main. Resolviendo..."
+    # Guardar cambios locales si existen (backup)
+    git stash save "Backup antes de actualizar desde deploy" 2>/dev/null || true
+    # Resetear a origin/main para forzar actualización
+    git reset --hard origin/main
+    echo "✅ Código actualizado forzando a origin/main"
+else
+    echo "✅ Código ya está actualizado"
+fi
+
+# Asegurar que estamos en main
+git checkout main 2>/dev/null || true
 
 # 3. Instalar dependencias
 echo -e "${YELLOW}📚 Instalando dependencias...${NC}"
