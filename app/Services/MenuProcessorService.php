@@ -177,14 +177,32 @@ class MenuProcessorService
         }
 
         try {
+            // Verificar tamaño del archivo (OpenAI tiene límite de ~20MB)
+            $fileSize = filesize($filePath);
+            $maxSize = 20 * 1024 * 1024; // 20MB
+            
+            if ($fileSize > $maxSize) {
+                Log::warning('PDF demasiado grande para OpenAI', [
+                    'tamaño' => $fileSize,
+                    'máximo' => $maxSize,
+                    'archivo' => basename($filePath)
+                ]);
+                throw new \Exception('El PDF es demasiado grande. Por favor, reduce el tamaño a menos de 20MB o convierte solo la primera página a imagen.');
+            }
+            
             // Leer el PDF y convertir a base64
             $pdfData = file_get_contents($filePath);
             $base64Pdf = base64_encode($pdfData);
             
+            Log::info('Procesando PDF con OpenAI Vision', [
+                'tamaño_archivo' => $fileSize,
+                'tamaño_base64' => strlen($base64Pdf)
+            ]);
+            
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o',
                 'messages' => [
                     [
@@ -286,6 +304,19 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
         }
 
         try {
+            // Verificar tamaño del archivo (OpenAI tiene límite de ~20MB para imágenes)
+            $fileSize = filesize($filePath);
+            $maxSize = 20 * 1024 * 1024; // 20MB
+            
+            if ($fileSize > $maxSize) {
+                Log::warning('Imagen demasiado grande para OpenAI', [
+                    'tamaño' => $fileSize,
+                    'máximo' => $maxSize,
+                    'archivo' => basename($filePath)
+                ]);
+                throw new \Exception('La imagen es demasiado grande. Por favor, reduce el tamaño a menos de 20MB.');
+            }
+            
             // Leer la imagen y convertir a base64
             $imageData = file_get_contents($filePath);
             $base64Image = base64_encode($imageData);
@@ -299,12 +330,19 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             
             $mimeType = $imageInfo['mime'];
             
+            Log::info('Procesando imagen con OpenAI Vision', [
+                'tamaño_archivo' => $fileSize,
+                'tamaño_base64' => strlen($base64Image),
+                'tipo' => $mimeType,
+                'dimensiones' => $imageInfo[0] . 'x' . $imageInfo[1]
+            ]);
+            
             // La imagen está lista para enviar a OpenAI
             
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o',
                 'messages' => [
                     [
@@ -407,7 +445,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->openaiModel,
                 'messages' => [
                     [

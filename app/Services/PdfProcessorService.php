@@ -152,7 +152,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->openaiApiKey,
             'Content-Type' => 'application/json',
-        ])->timeout(60)->post($this->openaiBaseUrl . '/chat/completions', [
+        ])->timeout(180)->post($this->openaiBaseUrl . '/chat/completions', [
             'model' => 'gpt-4o-mini',
             'messages' => [
                 [
