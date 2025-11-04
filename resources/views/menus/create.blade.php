@@ -162,30 +162,14 @@
                 </div>
             </div>
 
+            {{-- Mensaje de éxito oculto - se muestra en modal mejorado --}}
             @if (session('success'))
-                <div class="mb-8 bg-accent-green/20 border border-accent-green text-accent-green px-6 py-4 rounded-xl neon-glow-green">
-                    <div class="flex items-center">
-                        <div class="w-5 h-5 mr-3">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                        </div>
-                        {{ session('success') }}
-                    </div>
-                </div>
+                <div class="hidden" id="success-message" data-message="{{ session('success') }}"></div>
             @endif
 
+            {{-- Mensaje de error oculto - se muestra en modal mejorado --}}
             @if (session('error'))
-                <div class="mb-8 bg-red-500/20 border border-red-500 text-red-400 px-6 py-4 rounded-xl">
-                    <div class="flex items-center">
-                        <div class="w-5 h-5 mr-3">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                            </svg>
-                        </div>
-                        {{ session('error') }}
-                    </div>
-                </div>
+                <div class="hidden" id="error-message" data-message="{{ session('error') }}"></div>
             @endif
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -1050,10 +1034,49 @@
                         formData.append('nombre', document.getElementById('nombre').value);
                         formData.append('archivo', convertedImageFile);
                         
-                        // Enviar con fetch
+                        // Agregar todos los campos ocultos del formulario
+                        const menuForm = document.getElementById('menu-form');
+                        if (menuForm) {
+                            // Agregar campos del chatbot
+                            const chatbotName = document.getElementById('chatbot_name_hidden');
+                            if (chatbotName) formData.append('chatbot_name', chatbotName.value);
+                            
+                            const welcomeMessage = document.getElementById('welcome_message_hidden');
+                            if (welcomeMessage) formData.append('welcome_message', welcomeMessage.value);
+                            
+                            // Agregar campos de colores
+                            const primaryColor = document.getElementById('primary_color');
+                            if (primaryColor) formData.append('primary_color', primaryColor.value);
+                            
+                            const secondaryColor = document.getElementById('secondary_color');
+                            if (secondaryColor) formData.append('secondary_color', secondaryColor.value);
+                            
+                            const accentColor = document.getElementById('accent_color');
+                            if (accentColor) formData.append('accent_color', accentColor.value);
+                            
+                            const backgroundColor = document.getElementById('background_color');
+                            if (backgroundColor) formData.append('background_color', backgroundColor.value);
+                            
+                            // Si estamos en modo edición, agregar método PUT
+                            // NOTA: No enviamos el formato porque el controlador lo detectará automáticamente
+                            // basándose en la extensión del archivo subido (imagen convertida = "image")
+                            @if(isset($isEdit) && $isEdit)
+                                formData.append('_method', 'PUT');
+                            @endif
+                        }
                         
-                        fetch('{{ route("menus.store", $comercio) }}', {
-                            method: 'POST',
+                        // Determinar la ruta correcta según si es edición o creación
+                        @if(isset($isEdit) && $isEdit)
+                            const url = '{{ route("menus.update", [$comercio, $menu]) }}';
+                            const method = 'POST'; // Laravel usa POST con _method=PUT
+                        @else
+                            const url = '{{ route("menus.store", $comercio) }}';
+                            const method = 'POST';
+                        @endif
+                        
+                        // Enviar con fetch
+                        fetch(url, {
+                            method: method,
                             body: formData
                         }).then(response => {
                             if (response.ok) {
@@ -1061,10 +1084,13 @@
                             } else {
                                 saveButton.disabled = false;
                                 saveButton.textContent = 'Guardar Cambios';
+                                alert('Error al guardar el menú. Por favor, intenta nuevamente.');
                             }
                         }).catch(error => {
+                            console.error('Error:', error);
                             saveButton.disabled = false;
                             saveButton.textContent = 'Guardar Cambios';
+                            alert('Error al guardar el menú. Por favor, intenta nuevamente.');
                         });
                     } else {
                         // Enviar el formulario del menú
@@ -1942,5 +1968,90 @@
             // Por ahora un simple log
             console.log('✅', message);
         }
+
+        // Detectar mensajes de sesión y mostrarlos en modal mejorado
+        @if (session('success'))
+            document.addEventListener('DOMContentLoaded', function() {
+                const successMessage = @json(session('success'));
+                const isEdit = @json(isset($isEdit) && $isEdit);
+                const menuName = @json($menu->nombre ?? 'el menú');
+                
+                // Determinar mensaje personalizado según el contexto
+                let title = '¡Éxito!';
+                let message = successMessage;
+                
+                if (isEdit) {
+                    title = 'Menú Actualizado';
+                    message = `El menú "${menuName}" ha sido actualizado exitosamente. Los cambios se han guardado correctamente.`;
+                } else {
+                    title = 'Menú Guardado';
+                    message = successMessage || 'El menú ha sido guardado exitosamente.';
+                }
+                
+                // Mostrar modal mejorado con mejor UX
+                Swal.fire({
+                    ...swalConfig,
+                    title: title,
+                    html: `
+                        <div class="flex flex-col items-center space-y-4">
+                            <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
+                                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <p class="text-gray-300 text-lg font-medium text-center px-4">${message}</p>
+                            <div class="flex items-center space-x-2 text-sm text-gray-400">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Cambios aplicados correctamente</span>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#10B981',
+                    width: '500px',
+                    showClass: {
+                        popup: 'animate-fade-in-down'
+                    },
+                    hideClass: {
+                        popup: 'animate-fade-out-up'
+                    },
+                    timer: 5000,
+                    timerProgressBar: true,
+                    allowOutsideClick: true,
+                    allowEscapeKey: true
+                }).then(() => {
+                    // Limpiar el mensaje de sesión para que no se muestre de nuevo
+                    // Esto se hace automáticamente al recargar, pero por si acaso
+                });
+            });
+        @endif
+
+        @if (session('error'))
+            document.addEventListener('DOMContentLoaded', function() {
+                const errorMessage = @json(session('error'));
+                
+                Swal.fire({
+                    ...swalConfig,
+                    title: 'Error',
+                    html: `
+                        <div class="flex flex-col items-center space-y-4">
+                            <div class="w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl">
+                                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <p class="text-gray-300 text-lg font-medium text-center px-4">${errorMessage}</p>
+                        </div>
+                    `,
+                    icon: 'error',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#EF4444',
+                    width: '500px'
+                });
+            });
+        @endif
     </script>
 </x-app-layout>
