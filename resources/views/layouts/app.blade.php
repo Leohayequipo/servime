@@ -788,6 +788,53 @@
         .dark-input::placeholder {
             color: rgba(156, 163, 175, 0.8) !important;
         }
+        
+        /* Estilos para modales SweetAlert2 con tema oscuro */
+        .dark-modal {
+            background: linear-gradient(135deg, rgba(26, 42, 68, 0.98) 0%, rgba(42, 58, 85, 0.98) 100%) !important;
+            border: 1px solid rgba(0, 196, 255, 0.3) !important;
+            border-radius: 1rem !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 196, 255, 0.2) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .dark-modal .swal2-title {
+            color: #FFFFFF !important;
+            font-weight: 600 !important;
+            font-size: 1.5rem !important;
+        }
+        
+        .dark-modal .swal2-content {
+            color: #CCCCCC !important;
+        }
+        
+        .dark-modal .swal2-confirm {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.75rem 2rem !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        .dark-modal .swal2-confirm:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+        }
+        
+        .dark-modal .swal2-success {
+            border-color: #10B981 !important;
+        }
+        
+        .dark-modal .swal2-success-ring {
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        .dark-modal .swal2-success [class^=swal2-success-line] {
+            background-color: #10B981 !important;
+        }
     </style>
     
     <!-- SweetAlert2 CSS -->

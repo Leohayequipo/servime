@@ -180,8 +180,8 @@
                                         </span>
                                     </div>
                                     <div class="flex items-center justify-between">
-                                        <span>Creado:</span>
-                                        <span>{{ $menu->created_at->format('d/m/Y') }}</span>
+                                        <span>Actualizado:</span>
+                                        <span class="text-accent-green/90 font-medium">{{ $menu->updated_at->format('d/m/Y H:i') }}</span>
                                     </div>
                                 </div>
                                 

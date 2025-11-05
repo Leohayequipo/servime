@@ -243,8 +243,12 @@
                                             <div class="min-w-0 flex-1">
                                                 <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
                                                 <div class="flex items-center space-x-2">
-                                                    <span class="text-text-secondary/70 text-xs bg-accent-gray/20 px-2 py-1 rounded-md">{{ $menu->created_at->format('d/m/Y') }}</span>
-                                                    <span class="text-text-secondary/70 text-xs bg-accent-gray/20 px-2 py-1 rounded-md">{{ $menu->created_at->format('H:i') }}</span>
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('d/m/Y') }}
+                                                    </span>
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('H:i') }}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1988,40 +1992,41 @@
                     message = successMessage || 'El menú ha sido guardado exitosamente.';
                 }
                 
-                // Mostrar modal mejorado con mejor UX
+                // Mostrar modal mejorado con tema oscuro del sistema
                 Swal.fire({
                     ...swalConfig,
                     title: title,
                     html: `
-                        <div class="flex flex-col items-center space-y-4">
-                            <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
-                                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                            </div>
-                            <p class="text-gray-300 text-lg font-medium text-center px-4">${message}</p>
-                            <div class="flex items-center space-x-2 text-sm text-gray-400">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span>Cambios aplicados correctamente</span>
-                            </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
+                            <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                                ${message}
+                            </p>
                         </div>
                     `,
                     icon: 'success',
+                    iconColor: '#10B981',
                     confirmButtonText: 'Entendido',
                     confirmButtonColor: '#10B981',
-                    width: '500px',
+                    width: '520px',
+                    padding: '2rem',
                     showClass: {
                         popup: 'animate-fade-in-down'
                     },
                     hideClass: {
                         popup: 'animate-fade-out-up'
                     },
-                    timer: 5000,
+                    timer: 4000,
                     timerProgressBar: true,
+                    timerProgressBarColor: '#10B981',
                     allowOutsideClick: true,
-                    allowEscapeKey: true
+                    allowEscapeKey: true,
+                    backdrop: true,
+                    customClass: {
+                        popup: 'dark-modal',
+                        title: 'text-white',
+                        content: 'text-gray-300',
+                        confirmButton: 'bg-green-600 hover:bg-green-700'
+                    }
                 }).then(() => {
                     // Limpiar el mensaje de sesión para que no se muestre de nuevo
                     // Esto se hace automáticamente al recargar, pero por si acaso
@@ -2037,19 +2042,24 @@
                     ...swalConfig,
                     title: 'Error',
                     html: `
-                        <div class="flex flex-col items-center space-y-4">
-                            <div class="w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl">
-                                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <p class="text-gray-300 text-lg font-medium text-center px-4">${errorMessage}</p>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
+                            <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                                ${errorMessage}
+                            </p>
                         </div>
                     `,
                     icon: 'error',
+                    iconColor: '#EF4444',
                     confirmButtonText: 'Entendido',
                     confirmButtonColor: '#EF4444',
-                    width: '500px'
+                    width: '520px',
+                    padding: '2rem',
+                    customClass: {
+                        popup: 'dark-modal',
+                        title: 'text-white',
+                        content: 'text-gray-300',
+                        confirmButton: 'bg-red-600 hover:bg-red-700'
+                    }
                 });
             });
         @endif
