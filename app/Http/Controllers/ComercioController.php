@@ -232,7 +232,7 @@ class ComercioController extends Controller
         $user = auth()->user();
         if ($user->isSuperAdmin()) {
             // Para Super Admin, usar la ruta de admin sin el prefijo admin.
-            return redirect()->route('admin.dashboard')->with('success', 'Comercio actualizado exitosamente');
+            return redirect()->route('dashboard')->with('success', 'Comercio actualizado exitosamente');
         } else {
             return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comercio;
 use App\Models\Menu;
+use App\Models\User;
 use App\Models\ChatConversation;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -16,14 +17,20 @@ class DashboardController extends Controller
         Carbon::setLocale('es');
         
         $user = auth()->user();
+        $recentUsers = collect();
+        $recentComercios = collect();
         
         if ($user->isSuperAdmin()) {
-            // Super Admin ve todos los comercios
-            $comercios = Comercio::all();
-            $menus = Menu::all();
+            // Super Admin ve todos los comercios y menús
+            $comercios = Comercio::with('user')->get();
+            $menus = Menu::with('comercio')->get();
             $allConversaciones = ChatConversation::latest()->get();
+            
+            // Datos adicionales para tarjetas de resumen
+            $recentUsers = User::latest()->take(8)->get();
+            $recentComercios = Comercio::with('user')->latest()->take(8)->get();
         } else {
-            // Usuario común ve solo sus comercios
+            // Usuario común ve solo sus comercios y menús
             $comercios = Comercio::where('user_id', auth()->id())->get();
             $menus = Menu::whereHas('comercio', function($query) {
                 $query->where('user_id', auth()->id());
@@ -31,6 +38,8 @@ class DashboardController extends Controller
             $allConversaciones = ChatConversation::whereHas('comercio', function($query) {
                 $query->where('user_id', auth()->id());
             })->latest()->get();
+            
+            $recentComercios = $comercios->sortByDesc('created_at')->take(8);
         }
         
         // Agrupar conversaciones por session_id
@@ -64,6 +73,14 @@ class DashboardController extends Controller
             ];
         });
 
-        return view('dashboard', compact('comercios', 'menus', 'sesiones', 'allConversaciones', 'comerciosList'));
+        return view('dashboard', compact(
+            'comercios',
+            'menus',
+            'sesiones',
+            'allConversaciones',
+            'comerciosList',
+            'recentUsers',
+            'recentComercios'
+        ));
     }
 }

@@ -8,7 +8,7 @@
                 <a href="{{ route('admin.menus.create') }}" class="btn-primary">
                     ➕ Crear Menú
                 </a>
-                <a href="{{ route('admin.dashboard') }}" class="btn-secondary">
+                <a href="{{ route('dashboard') }}" class="btn-secondary">
                     {{ __('Volver al Dashboard') }}
                 </a>
             </div>

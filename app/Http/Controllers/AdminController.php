@@ -14,25 +14,6 @@ use Illuminate\Support\Facades\Log;
 class AdminController extends Controller
 {
     /**
-     * Panel principal del Super Administrador
-     */
-    public function dashboard()
-    {
-        $stats = [
-            'total_users' => User::count(),
-            'total_comercios' => Comercio::count(),
-            'total_menus' => Menu::count(),
-            'super_admins' => User::where('role', 'super_admin')->count(),
-            'regular_users' => User::where('role', 'user')->count(),
-        ];
-
-        $recent_users = User::with('comercios')->latest()->take(10)->get();
-        $recent_comercios = Comercio::with('user')->latest()->take(10)->get();
-
-        return view('admin.dashboard', compact('stats', 'recent_users', 'recent_comercios'));
-    }
-
-    /**
      * Lista de todos los usuarios
      */
     public function users()

@@ -39,7 +39,9 @@ Route::middleware('auth')->group(function () {
     
     // Rutas de Administración (Solo Super Administradores)
     Route::middleware('super_admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard', function () {
+            return redirect()->route('dashboard');
+        })->name('dashboard');
         
         // Gestión de Usuarios
         Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])->name('users.index');

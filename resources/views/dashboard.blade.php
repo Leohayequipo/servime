@@ -176,11 +176,93 @@
                         </div>
                     </div>
 
+                    <!-- Listados recientes para Super Admin -->
+                    <div class="mt-10 grid grid-cols-1 xl:grid-cols-2 gap-8">
+                        <!-- Usuarios Recientes -->
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                        <span class="text-white text-lg">👥</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold text-text-primary">Usuarios Recientes</h3>
+                                        <p class="text-text-secondary text-sm">Altas más recientes en el sistema</p>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.users.index') }}" class="text-accent-blue hover:text-blue-400 text-sm font-medium self-start sm:self-auto">
+                                    Ver todos
+                                </a>
+                            </div>
+
+                            <div class="space-y-3">
+                                @forelse($recentUsers as $recentUser)
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#1B2538] rounded-xl px-4 py-3 hover:bg-[#22314A] transition-colors cursor-pointer gap-3" onclick="window.location.href='{{ route('admin.users.show', $recentUser) }}'">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                                                {{ strtoupper(substr($recentUser->name, 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <p class="text-text-primary font-medium">{{ $recentUser->name }}</p>
+                                                <p class="text-text-secondary text-xs">{{ $recentUser->email }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3 sm:justify-end">
+                                            <span class="px-3 py-1 text-xs rounded-full {{ $recentUser->role === 'super_admin' ? 'bg-orange-200/20 text-orange-200' : 'bg-blue-200/20 text-blue-100' }}">
+                                                {{ $recentUser->role === 'super_admin' ? 'Admin' : 'Usuario' }}
+                                            </span>
+                                            <span class="text-xs text-text-secondary">{{ $recentUser->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <p class="text-text-secondary text-center py-6">Sin usuarios recientes.</p>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <!-- Comercios Recientes -->
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                                        <span class="text-white text-lg">🏪</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold text-text-primary">Comercios Recientes</h3>
+                                        <p class="text-text-secondary text-sm">Últimos comercios creados o asignados</p>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.comercios.index') }}" class="text-accent-blue hover:text-blue-400 text-sm font-medium self-start sm:self-auto">
+                                    Ver todos
+                                </a>
+                            </div>
+
+                            <div class="space-y-3">
+                                @forelse($recentComercios as $recentComercio)
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#1B2538] rounded-xl px-4 py-3 hover:bg-[#22314A] transition-colors cursor-pointer gap-3" onclick="window.location.href='{{ route('admin.comercios.show', $recentComercio) }}'">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center text-white font-semibold">
+                                                {{ strtoupper(substr($recentComercio->nombre, 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <p class="text-text-primary font-medium">{{ $recentComercio->nombre }}</p>
+                                                <p class="text-text-secondary text-xs">Propietario: {{ $recentComercio->user->name ?? 'Sin asignar' }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs text-text-secondary sm:text-right">{{ $recentComercio->created_at->diffForHumans() }}</span>
+                                    </div>
+                                @empty
+                                    <p class="text-text-secondary text-center py-6">Sin comercios recientes.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             @endif
 
             <!-- Quick Actions Section -->
-            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8">
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-8 mb-12">
                 <h2 class="text-2xl font-bold text-text-primary mb-8 text-center">Acciones Rápidas</h2>
                 
                 @if(auth()->user()->isSuperAdmin())
@@ -273,53 +355,50 @@
             </div>
 
 
+
             <!-- Recent Activity - Improved UX (Agrupado por Sesión) -->
             @if($sesiones->count() > 0)
                 <div class="mt-12">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-6">
+                        <div class="space-y-1">
                             <h2 class="text-2xl font-bold text-text-primary">Sesiones de Chat Recientes</h2>
-                            <p class="text-text-secondary text-sm mt-1">
+                            <p class="text-text-secondary text-sm">
                                 {{ $sesiones->count() }} sesiones • {{ $allConversaciones->count() }} mensajes totales
                             </p>
                         </div>
-                     <div class="flex items-center gap-3">
-                         @if(auth()->user()->isSuperAdmin())
-                         <!-- Filtro por comercio (solo para super admin) -->
-                         <div class="flex gap-2">
-                             <select id="filter-comercio" onchange="filterByComercio(this.value)" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
-                                 <option value="all">🏢 Todos los comercios</option>
-                                 @foreach($comerciosList as $comercio)
-                                     <option value="{{ $comercio['id'] }}">{{ $comercio['nombre'] }}</option>
-                                 @endforeach
-                             </select>
-                         </div>
-                         
-                         <!-- Separador -->
-                         <div class="w-px h-6 bg-accent-gray"></div>
-                         @endif
-                         
-                         <!-- Filtros por tiempo -->
-                         <div class="flex gap-2">
-                             <button onclick="filterByTime('today')" id="filter-today" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
-                                 Hoy
-                             </button>
-                             <button onclick="filterByTime('week')" id="filter-week" class="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
-                                 📅 Esta semana
-                             </button>
-                             <button onclick="filterByTime('month')" id="filter-month" class="px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
-                                 📆 Este mes
-                             </button>
-                         </div>
-                         
-                         <!-- Separador -->
-                         <div class="w-px h-6 bg-accent-gray"></div>
-                         
-                         <!-- Botón reset -->
-                         <button onclick="resetFilters()" id="filter-reset" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
-                             🔄 Mostrar todo
-                         </button>
-                     </div>
+
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full md:w-auto">
+                            @if(auth()->user()->isSuperAdmin())
+                                <select id="filter-comercio"
+                                        onchange="filterByComercio(this.value)"
+                                        class="w-full sm:w-auto px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                    <option value="all">🏢 Todos los comercios</option>
+                                    @foreach($comerciosList as $comercio)
+                                        <option value="{{ $comercio['id'] }}">{{ $comercio['nombre'] }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
+
+                            <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
+                                <button onclick="filterByTime('today')" id="filter-today"
+                                        class="w-full sm:w-auto px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                    Hoy
+                                </button>
+                                <button onclick="filterByTime('week')" id="filter-week"
+                                        class="w-full sm:w-auto px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors active-filter">
+                                    📅 Esta semana
+                                </button>
+                                <button onclick="filterByTime('month')" id="filter-month"
+                                        class="w-full sm:w-auto px-4 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors border border-accent-gray">
+                                    📆 Este mes
+                                </button>
+                            </div>
+
+                            <button onclick="resetFilters()" id="filter-reset"
+                                    class="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+                                🔄 Mostrar todo
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
