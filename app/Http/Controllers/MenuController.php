@@ -417,13 +417,19 @@ class MenuController extends Controller
             // Guardar imagen
             $imagenPath = $request->file('imagen')->store('menu-items', 'public');
             
-            // Si ya existía una imagen, eliminar la anterior
+            // Preparar referencia a la imagen anterior (si existe)
             $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            $oldImageRelativePath = null;
             if (isset($plato['imagen']) && !empty($plato['imagen'])) {
-                $oldImagePath = str_replace('/storage/', '', $plato['imagen']);
-                if (Storage::disk('public')->exists($oldImagePath)) {
-                    Storage::disk('public')->delete($oldImagePath);
-                }
+                $oldImageRelativePath = str_replace('/storage/', '', $plato['imagen']);
+            }
+
+            // Copiar imagen a public_html si corresponde
+            $this->copyMenuItemToPublicHtml($imagenPath);
+
+            // Eliminar imagen anterior en ambos lugares
+            if ($oldImageRelativePath) {
+                $this->deleteMenuItemSafely($oldImageRelativePath);
             }
 
             // Actualizar JSON con la nueva ruta de imagen
@@ -465,6 +471,68 @@ class MenuController extends Controller
         
         // Si no existe, copiarlo automáticamente
         $this->copyMenuToPublicHtml($archivoPath);
+    }
+
+    /**
+     * Copiar imagen de plato a public_html/storage/menu-items automáticamente
+     */
+    private function copyMenuItemToPublicHtml(string $archivoPath): void
+    {
+        if (empty($archivoPath)) {
+            return;
+        }
+
+        // Verificar entorno de producción
+        if (!file_exists('/home/u560898880/domains')) {
+            return;
+        }
+
+        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menu-items';
+
+        try {
+            $sourceFile = storage_path('app/public/' . $archivoPath);
+            if (!file_exists($sourceFile)) {
+                Log::warning('Imagen de plato no encontrada para copiar a public_html', [
+                    'path' => $sourceFile,
+                    'relative' => $archivoPath,
+                ]);
+                return;
+            }
+
+            if (!is_dir($publicHtmlPath) && !mkdir($publicHtmlPath, 0775, true)) {
+                Log::error('No se pudo crear directorio de imágenes de platos en public_html', [
+                    'path' => $publicHtmlPath,
+                ]);
+                return;
+            }
+
+            $filename = basename($archivoPath);
+            $targetFile = $publicHtmlPath . '/' . $filename;
+
+            if (!copy($sourceFile, $targetFile)) {
+                $error = error_get_last();
+                Log::error('Error al copiar imagen de plato a public_html', [
+                    'source' => $sourceFile,
+                    'target' => $targetFile,
+                    'error' => $error,
+                    'source_exists' => file_exists($sourceFile),
+                    'target_dir_writable' => is_writable($publicHtmlPath),
+                ]);
+                return;
+            }
+
+            chmod($targetFile, 0664);
+
+            Log::info('Imagen de plato copiada a public_html', [
+                'file' => $filename,
+                'target' => $targetFile,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Excepción al copiar imagen de plato a public_html', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**
@@ -562,6 +630,40 @@ class MenuController extends Controller
                     @unlink($publicHtmlFile);
                     Log::info('Archivo de menú eliminado de public_html', ['file' => $publicHtmlFile]);
                     break; // Ya lo eliminamos, no necesitamos seguir buscando
+                }
+            }
+        }
+    }
+
+    /**
+     * Eliminar imagen de plato de forma segura (storage + public_html)
+     */
+    private function deleteMenuItemSafely(?string $archivoPath): void
+    {
+        if (empty($archivoPath)) {
+            return;
+        }
+
+        // Eliminar de storage/app/public
+        if (Storage::disk('public')->exists($archivoPath)) {
+            Storage::disk('public')->delete($archivoPath);
+        }
+
+        $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
+        $domainsDir = $homeDir . '/domains';
+
+        if (is_dir($domainsDir)) {
+            $domains = scandir($domainsDir);
+            foreach ($domains as $domain) {
+                if ($domain === '.' || $domain === '..') {
+                    continue;
+                }
+                $filename = basename($archivoPath);
+                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/menu-items/' . $filename;
+                if (file_exists($publicHtmlFile)) {
+                    @unlink($publicHtmlFile);
+                    Log::info('Imagen de plato eliminada de public_html', ['file' => $publicHtmlFile]);
+                    break;
                 }
             }
         }
