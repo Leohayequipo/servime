@@ -34,6 +34,7 @@ class CustomizationController extends Controller
             'chatbot_name' => 'required|string|max:50',
             'show_contact_info' => 'boolean',
             'enable_ai_responses' => 'boolean',
+            'pedido_habilitado' => 'nullable|boolean',
             'page_title' => 'nullable|string|max:100',
             'page_description' => 'nullable|string|max:500',
             'favicon_url' => 'nullable|string|max:255',
@@ -45,7 +46,9 @@ class CustomizationController extends Controller
             'quick_questions.*.auto_generated' => 'boolean'
         ]);
 
-        $comercio->update($request->all());
+        $data = $request->all();
+        $data['pedido_habilitado'] = $request->boolean('pedido_habilitado');
+        $comercio->update($data);
 
         return redirect()
             ->route('comercios.customize', $comercio)
@@ -81,6 +84,7 @@ class CustomizationController extends Controller
             'chatbot_name' => 'Asistente IA',
             'show_contact_info' => true,
             'enable_ai_responses' => true,
+            'pedido_habilitado' => true,
             'page_title' => null,
             'page_description' => null,
             'favicon_url' => null

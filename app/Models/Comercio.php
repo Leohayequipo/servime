@@ -24,13 +24,15 @@ class Comercio extends Model
         'page_title',
         'page_description',
         'favicon_url',
-        'quick_questions'
+        'quick_questions',
+        'pedido_habilitado'
     ];
 
     protected $casts = [
         'show_contact_info' => 'boolean',
         'enable_ai_responses' => 'boolean',
-        'quick_questions' => 'array'
+        'quick_questions' => 'array',
+        'pedido_habilitado' => 'boolean'
     ];
 
     public function user()

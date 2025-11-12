@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Comercio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -36,6 +37,13 @@ class CartController extends Controller
             'comercio_id' => 'required|integer',
             'session_id' => 'required|string'
         ]);
+        $comercio = Comercio::find($data['comercio_id']);
+        if (!$comercio) {
+            return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
+        }
+        if (!$comercio->pedido_habilitado) {
+            return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
+        }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
         return response()->json([
             'items' => $cart->items,
@@ -54,6 +62,13 @@ class CartController extends Controller
             'price_text' => 'nullable|string'
         ]);
         $delta = $data['delta'] ?? 1;
+        $comercio = Comercio::find($data['comercio_id']);
+        if (!$comercio) {
+            return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
+        }
+        if (!$comercio->pedido_habilitado) {
+            return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
+        }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
         $item = $cart->items()->firstOrCreate(['nombre' => $data['nombre']], ['qty' => 0]);
         $item->qty = max(0, $item->qty + $delta);
@@ -84,6 +99,13 @@ class CartController extends Controller
             'session_id' => 'required|string',
             'nombre' => 'required|string'
         ]);
+        $comercio = Comercio::find($data['comercio_id']);
+        if (!$comercio) {
+            return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
+        }
+        if (!$comercio->pedido_habilitado) {
+            return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
+        }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
         $cart->items()->where('nombre', $data['nombre'])->delete();
         $cart->load('items');
@@ -97,6 +119,13 @@ class CartController extends Controller
             'comercio_id' => 'required|integer',
             'session_id' => 'required|string'
         ]);
+        $comercio = Comercio::find($data['comercio_id']);
+        if (!$comercio) {
+            return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
+        }
+        if (!$comercio->pedido_habilitado) {
+            return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
+        }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
         $cart->items()->delete();
         $cart->total_centavos = 0;

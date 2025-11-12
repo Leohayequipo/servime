@@ -180,7 +180,8 @@ class ComercioController extends Controller
             'quick_questions.*.question' => 'required|string|max:255',
             'quick_questions.*.category' => 'required|string|in:menu,precios,horarios,ubicacion,contacto,general',
             'quick_questions.*.answer' => 'nullable|string|max:1000',
-            'quick_questions.*.auto_generated' => 'boolean'
+            'quick_questions.*.auto_generated' => 'boolean',
+            'pedido_habilitado' => 'nullable|boolean'
         ]);
 
         // Actualizar información básica
@@ -201,6 +202,7 @@ class ComercioController extends Controller
         $comercio->chatbot_name = $validated['chatbot_name'];
         $comercio->show_contact_info = $validated['show_contact_info'] ?? false;
         $comercio->enable_ai_responses = $validated['enable_ai_responses'] ?? false;
+        $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
         $comercio->page_title = $validated['page_title'];
         $comercio->page_description = $validated['page_description'];
         $comercio->favicon_url = $validated['favicon_url'];

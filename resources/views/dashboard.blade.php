@@ -174,6 +174,7 @@
                                 <span class="text-accent-blue">→</span>
                             </div>
                         </div>
+
                     </div>
 
                     <!-- Listados recientes para Super Admin -->

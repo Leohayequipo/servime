@@ -220,7 +220,8 @@ class MenuController extends Controller
             'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/'
+            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'pedido_habilitado' => 'nullable|boolean'
         ]);
 
 
@@ -297,6 +298,12 @@ class MenuController extends Controller
             
             $comercio->save();
             \Log::info('Campos del comercio guardados exitosamente');
+        }
+
+        $nuevoEstadoPedidos = $request->boolean('pedido_habilitado');
+        if ($comercio->pedido_habilitado !== $nuevoEstadoPedidos) {
+            $comercio->pedido_habilitado = $nuevoEstadoPedidos;
+            $comercio->save();
         }
 
         // Reprocesar con OpenAI

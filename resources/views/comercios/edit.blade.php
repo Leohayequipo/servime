@@ -112,6 +112,7 @@
                                               class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">{{ old('descripcion', $comercio->descripcion) }}</textarea>
                                     <x-input-error :messages="$errors->get('descripcion')" class="mt-1" />
                                 </div>
+
                             </div>
                         </div>
                     </div>

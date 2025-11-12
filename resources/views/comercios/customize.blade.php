@@ -119,6 +119,20 @@
                                             Mostrar información de contacto
                                         </label>
                                     </div>
+
+                                    <div class="flex items-center">
+                                        <input type="hidden" name="pedido_habilitado" value="0">
+                                        <input type="checkbox" 
+                                               id="pedido_habilitado" 
+                                               name="pedido_habilitado" 
+                                               value="1"
+                                               {{ $comercio->pedido_habilitado ? 'checked' : '' }}
+                                               class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
+                                        <label for="pedido_habilitado" class="ml-3 text-sm text-text-secondary">
+                                            Habilitar pedidos (botón “Lo quiero”)
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-text-secondary ml-7">Si lo desactivás, el menú funcionará solo como catálogo (sin pre-pedido).</p>
                                 </div>
                             </div>
                         </div>

@@ -175,28 +175,32 @@
 
     <!-- FAB Preguntas Rápidas + Pre‑pedido -->
     <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px;">
-        <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-            <span style="font-size: 22px;">🧾</span>
-        </button>
+        @if($comercio->pedido_habilitado)
+            <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="font-size: 22px;">🧾</span>
+            </button>
+        @endif
         <button id="fabFaq" title="Preguntas rápidas" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
             <span style="font-size: 22px;">💡</span>
         </button>
     </div>
 
-    <!-- Panel Resumen para el mozo -->
-    <div id="wishPanel" style="display:none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;">
-        <div style="background:#0b0b0b; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,0.45); padding:12px; max-width:520px; margin:0 auto;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-                <h4 style="font-size:14px; font-weight:700; color:#fff; margin:0;">Resumen para el mozo</h4>
-                <div style="display:flex; gap:8px;">
-                    <button id="wishCopy" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Copiar</button>
-                    <button id="wishClear" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#221111; color:#ffb4b4; font-size:12px; cursor:pointer;">Vaciar</button>
-                    <button id="wishClose" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Cerrar</button>
+    @if($comercio->pedido_habilitado)
+        <!-- Panel Resumen para el mozo -->
+        <div id="wishPanel" style="display:none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;">
+            <div style="background:#0b0b0b; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,0.45); padding:12px; max-width:520px; margin:0 auto;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                    <h4 style="font-size:14px; font-weight:700; color:#fff; margin:0;">Resumen para el mozo</h4>
+                    <div style="display:flex; gap:8px;">
+                        <button id="wishCopy" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Copiar</button>
+                        <button id="wishClear" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#221111; color:#ffb4b4; font-size:12px; cursor:pointer;">Vaciar</button>
+                        <button id="wishClose" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Cerrar</button>
+                    </div>
                 </div>
+                <div id="wishList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
             </div>
-            <div id="wishList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
         </div>
-    </div>
+    @endif
 
     <!-- Panel de Preguntas Rápidas -->
     <div id="faqPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
@@ -214,6 +218,7 @@
 
     <script>
         let isLoading = false;
+        const pedidosHabilitados = @json($comercio->pedido_habilitado);
 
         // Obtener o crear session_id persistente
         function getOrCreateSessionId() {
@@ -391,7 +396,7 @@
             const html = filteredBlocks.map(b => {
                 const join = b.parrafos.join('\n');
                 // Caso normal: ya detectamos plato
-                if (b.tieneBoton && b.nombre) {
+                if (pedidosHabilitados && b.tieneBoton && b.nombre) {
                     return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${b.nombre.replace(/\"/g,'\\\"')}\" data-price=\"${(b.precio||'').replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
                 }
                 // Fallback: detectar línea de plato en el bloque
@@ -399,7 +404,10 @@
                 if (m) {
                     const nombre = (m[1]||'').trim();
                     const precio = (m[2]||'').trim();
-                    return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                    if (pedidosHabilitados) {
+                        return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                    }
+                    return join;
                 }
                 return join;
             }).join('');
@@ -455,6 +463,7 @@
         function saveWish(arr){ localStorage.setItem(wishKey(), JSON.stringify(arr)); renderWish(); }
         function parsePriceToCents(txt){ if(!txt) return null; const m=String(txt).replace(/[^0-9,\.]/g,'').replace(',', '.'); const v=parseFloat(m); return isNaN(v)?null:Math.round(v*100); }
         function addWish(nombre, priceText){
+            if (!pedidosHabilitados) return;
             const clean=(nombre||'').trim(); if(!clean) return;
             const w=loadWish();
             const i=w.findIndex(x=>x.nombre.toLowerCase()===clean.toLowerCase());
@@ -474,12 +483,13 @@
             // sync server increment
             fetch('/api/cart/incr', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: clean, delta: 1, price_text: priceTxt})});
         }
-        function decWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty=Math.max(0,w[idx].qty-1); const name=w[idx].nombre; if(w[idx].qty===0){ w.splice(idx,1); fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } else { fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name, delta: -1})}); } saveWish(w);} }
-        function incWish(idx){ const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w); fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: w[idx].nombre, delta: 1})}); } }
-        function delWish(idx){ const w=loadWish(); const name=w[idx]?.nombre; w.splice(idx,1); saveWish(w); if(name){ fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } }
-        function clearWish(){ saveWish([]); fetch('/api/cart/clear',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId()})}); }
-        function copyWish(){ const w=loadWish(); const t=w.length?w.map(it=>`- ${it.nombre} x${it.qty}${it.priceText?` — ${it.priceText}`:''}`).join('\n'):'Sin ítems'; navigator.clipboard.writeText(`Resumen para el mozo\n${t}`); }
+        function decWish(idx){ if(!pedidosHabilitados) return; const w=loadWish(); if(w[idx]){ w[idx].qty=Math.max(0,w[idx].qty-1); const name=w[idx].nombre; if(w[idx].qty===0){ w.splice(idx,1); fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } else { fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name, delta: -1})}); } saveWish(w);} }
+        function incWish(idx){ if(!pedidosHabilitados) return; const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w); fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: w[idx].nombre, delta: 1})}); } }
+        function delWish(idx){ if(!pedidosHabilitados) return; const w=loadWish(); const name=w[idx]?.nombre; w.splice(idx,1); saveWish(w); if(name){ fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } }
+        function clearWish(){ if(!pedidosHabilitados) return; saveWish([]); fetch('/api/cart/clear',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId()})}); }
+        function copyWish(){ if(!pedidosHabilitados) return; const w=loadWish(); const t=w.length?w.map(it=>`- ${it.nombre} x${it.qty}${it.priceText?` — ${it.priceText}`:''}`).join('\n'):'Sin ítems'; navigator.clipboard.writeText(`Resumen para el mozo\n${t}`); }
         function renderWish(){
+            if(!pedidosHabilitados) return;
             const list=document.getElementById('wishList'); if(!list) return;
             const w=loadWish();
             let anyNoPrecio = false;
@@ -490,7 +500,7 @@
               }).join('')
               : '<div style="color:#94a3b8; font-size:13px;">No hay ítems agregados.</div>';
             const totalCents=w.reduce((s,it)=>s+((it.priceCents||0)*it.qty),0);
-            const fmtTotal=(totalCents/100).toLocaleString("es-ES",{minimumFractionDigits:2, maximumFractionDigits:2})+' €';
+            const fmtTotal=(totalCents/100).toLocaleString("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:2,maximumFractionDigits:2});
             let totalHtml = `<div style=\"margin-top:14px; color:#fff; font-size:1.12em;\"><strong>Total estimado:</strong> ${fmtTotal}</div>`;
             if(anyNoPrecio) totalHtml += `<div style=\"margin-top:2px; color:#bdbdbd; font-size:12px;\">algunos platos no tienen precio confirmado</div>`;
             list.innerHTML = htmlItems + totalHtml;
@@ -556,12 +566,12 @@
         // Wishlist panel handlers
         const fabWish = document.getElementById('fabWish');
         const wishPanel = document.getElementById('wishPanel');
-        if (fabWish) fabWish.addEventListener('click', () => {
+        if (fabWish && wishPanel) fabWish.addEventListener('click', () => {
             const shown = wishPanel.style.display === 'block';
             wishPanel.style.display = shown ? 'none' : 'block';
             if (!shown) renderWish();
         });
-        document.getElementById('wishClose')?.addEventListener('click', () => { wishPanel.style.display = 'none'; });
+        document.getElementById('wishClose')?.addEventListener('click', () => { if (wishPanel) wishPanel.style.display = 'none'; });
         document.getElementById('wishClear')?.addEventListener('click', clearWish);
         document.getElementById('wishCopy')?.addEventListener('click', copyWish);
 
@@ -576,7 +586,9 @@
         });
 
         // Render inicial por si había selección previa
-        renderWish();
+        if (pedidosHabilitados) {
+            renderWish();
+        }
 
         // Hacer pregunta rápida
         function askQuestion(question) {
