@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Comercio;
 use App\Models\Menu;
+use App\Models\ChatConversation;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -19,34 +20,28 @@ class ChatbotService
     }
 
     /**
-     * Procesar mensaje del chatbot con contexto del menú
+     * Procesar mensaje del chatbot con contexto del menú y memoria de conversación
      */
-    public function processMessage(Comercio $comercio, string $message): string
+    public function processMessage(Comercio $comercio, string $message, ?string $sessionId = null): string
     {
         try {
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
 
-            // DEBUG: Log de contexto (recortado) para ver qué se está enviando
-            try {
-                Log::info('CHAT_CONTEXT_PREVIEW', [
-                    'comercio_id' => $comercio->id,
-                    'comercio_nombre' => $comercio->nombre,
-                    'context_length' => mb_strlen($contexto, 'UTF-8'),
-                    'context_preview' => mb_substr($contexto, 0, 1500, 'UTF-8')
-                ]);
-            } catch (\Throwable $e) {
-                // no romper si falla el log
-            }
-            
             // Recortar contexto si es demasiado largo (seguridad)
             $contexto = $this->trimContext($contexto, 48000); // ~aprox 12-15k tokens
+
+            // Obtener historial de conversación si hay sessionId
+            $conversationHistory = [];
+            if ($sessionId) {
+                $conversationHistory = $this->getConversationHistory($comercio, $sessionId);
+            }
 
             // Crear prompt para OpenAI
             $prompt = $this->createPrompt($comercio, $contexto, $message);
             
-            // Llamar a OpenAI
-            $response = $this->callOpenAI($prompt);
+            // Llamar a OpenAI con historial
+            $response = $this->callOpenAI($prompt, $conversationHistory);
             
             return $response;
             
@@ -142,18 +137,6 @@ class ChatbotService
                     $contexto .= $contextoMenu . "\n\n";
                 }
 
-                // DEBUG: Log por menú para inspección
-                try {
-                    Log::info('CHAT_CONTEXT_MENU', [
-                        'comercio_id' => $comercio->id,
-                        'menu_id' => $menu->id,
-                        'formato' => $menu->formato,
-                        'length' => mb_strlen($contextoMenu, 'UTF-8'),
-                        'preview' => mb_substr($contextoMenu, 0, 600, 'UTF-8')
-                    ]);
-                } catch (\Throwable $e) {
-                    // ignorar
-                }
             }
         } else {
             $contexto .= "\nNo hay menús procesados disponibles.\n";
@@ -275,6 +258,42 @@ class ChatbotService
     }
 
     /**
+     * Obtener historial de conversación de la sesión
+     */
+    private function getConversationHistory(Comercio $comercio, string $sessionId, int $limit = 10): array
+    {
+        try {
+            // Obtener los últimos N mensajes de la sesión (excluyendo el actual)
+            $conversations = ChatConversation::where('comercio_id', $comercio->id)
+                ->where('session_id', $sessionId)
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get(['user_message', 'bot_response', 'created_at'])
+                ->reverse(); // Invertir para tener el orden cronológico correcto
+
+            $history = [];
+            foreach ($conversations as $conv) {
+                // Agregar mensaje del usuario
+                $history[] = [
+                    'role' => 'user',
+                    'content' => $conv->user_message
+                ];
+                
+                // Agregar respuesta del bot
+                $history[] = [
+                    'role' => 'assistant',
+                    'content' => $conv->bot_response
+                ];
+            }
+
+            return $history;
+        } catch (\Exception $e) {
+            Log::error('Error getting conversation history: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Crear prompt para OpenAI
      */
     private function createPrompt(Comercio $comercio, string $contexto, string $message): string
@@ -284,30 +303,35 @@ class ChatbotService
 INFORMACIÓN DEL RESTAURANTE Y MENÚ:
 {$contexto}
 
+REGLAS ABSOLUTAS - NO INVENTAR NADA:
+- SOLO menciona platos que REALMENTE aparecen en el menú proporcionado arriba
+- NO inventes platos, categorías o productos que no estén en el menú
+- NO inventes descripciones para platos que no tienen descripción en el menú
+- Si un plato NO está en el menú, di que no está disponible en lugar de inventarlo
+- Si un plato tiene descripción en el menú, úsala tal cual o mejórala sutilmente sin cambiar información
+- Si un plato NO tiene descripción, puedes hacer una descripción breve basada SOLO en el nombre del plato, pero NO inventes ingredientes o preparaciones que no sean obvias del nombre
+
 PERSONALIDAD Y ESTILO:
 - Eres entusiasta, gourmet y apasionado por la comida
-- Siempre destacas los sabores, texturas y experiencias culinarias
-- Usas lenguaje seductor y tentador para describir los platos
-- Eres proactivo: sugieres combinaciones, recomiendas platos populares, creas antojos
+- Siempre destacas los sabores, texturas y experiencias culinarias de los platos REALES del menú
+- Usas lenguaje seductor y tentador para describir los platos que REALMENTE existen
+- Eres proactivo: sugieres combinaciones entre platos REALES, recomiendas platos populares que ESTÉN en el menú
 
-INSTRUCCIONES DE VENTAS:
-- SIEMPRE agrega descripciones gourmet a los platos, incluso si no las hay
-- Inventa detalles apetitosos: \"crujiente por fuera, suave por dentro\", \"salsa casera\", \"ingredientes frescos\", \"preparación tradicional\"
-- Sugiere acompañamientos: \"perfecto con...\", \"se combina excelente con...\"
-- Destaca características especiales: \"nuestro plato estrella\", \"receta de la casa\", \"muy popular entre nuestros clientes\"
-- Crea urgencia: \"hoy tenemos disponible\", \"limitado\", \"especial del chef\"
+INSTRUCCIONES DE VENTAS (SOLO CON PLATOS REALES):
+- Si un plato tiene descripción en el menú, úsala y mejórala sutilmente con lenguaje gourmet sin cambiar información
+- Si un plato NO tiene descripción, puedes hacer una descripción MUY breve basada SOLO en el nombre (ej: \"Milanesa\" → \"Milanesa empanada\"), pero NO inventes tipo de carne, ingredientes, salsas, acompañamientos o preparaciones específicas
+- Sugiere combinaciones entre platos que REALMENTE están en el menú
+- Destaca características de platos REALES del menú que ya están mencionadas en el menú
 
-EJEMPLOS DE DESCRIPCIONES GOURMET:
-- Panqueques con dulce de leche → \"Panqueques esponjosos con dulce de leche casero, decorados con frutos rojos frescos\"
-- Milanesa → \"Milanesa de ternera empanada a la perfección, crujiente y dorada, servida con papas fritas artesanales\"
-- Pizza → \"Pizza con masa casera fermentada 24hs, mozzarella fresca y ingredientes premium\"
+EJEMPLOS DE DESCRIPCIONES (SOLO SI EL PLATO ESTÁ EN EL MENÚ):
+- Si el menú dice \"Panqueques con dulce de leche\" → puedes decir \"Panqueques con dulce de leche\" o mejorarlo sutilmente si hay descripción en el menú
+- Si el menú dice \"Milanesa\" sin descripción → puedes decir \"Milanesa empanada\" pero NO inventes \"con papas fritas artesanales\" si no está en el menú
+- IMPORTANTE: Estos son solo ejemplos. SOLO usa información que REALMENTE está en el menú proporcionado arriba
 
-FORMATO DE RESPUESTAS:
+FORMATO DE RESPUESTAS (CRÍTICO - DEBE SEGUIRSE EXACTAMENTE):
 - ORGANIZA por CATEGORÍAS con emojis temáticos
 - USA SALTOS DE LÍNEA dobles entre secciones para claridad visual
-- DESTACA PRECIOS en **NEGRITA** con formato: **\$precio**
-- SIEMPRE incluye imágenes cuando estén disponibles usando el formato [IMAGEN:url] que aparece en el contexto
-- FORMATO de menú:
+- FORMATO OBLIGATORIO para cada plato (DEBE empezar con guión y espacio):
   
 🍽️ **CATEGORÍA NOMBRE**
   
@@ -324,11 +348,21 @@ FORMATO DE RESPUESTAS:
   *Descripción*
   [IMAGEN:url_si_existe]
 
-- IMPORTANTE: Cuando un plato tiene imagen disponible en el formato [IMAGEN:url], SIEMPRE inclúyela en tu respuesta usando exactamente ese formato [IMAGEN:url]
-- Usa emojis estratégicamente: 🍽️ 🥘 🍷 🧀 🍰 🍕 🥗 🍝 🍖 🍤
-- Incluye llamadas a la acción: \"¡No te lo pierdas!\", \"¡Imperdible!\", \"¡Pruébalo ya!\", \"¡Atrévete ahora!\", \"¡Disfrútalo hoy!\", \"¡Saborea esto!\"
-- Mantén un tono cálido y acogedor
-- SIEMPRE separa cada plato con una línea en blanco para mejor legibilidad
+REGLAS DE FORMATO ESTRICTO PARA PLATOS (NO NEGOCIABLES):
+1. SIEMPRE empieza cada línea de plato con: guión (-) + espacio + **nombre en negrita** + espacio + guión largo (—) + espacio + **precio en negrita**
+2. EJEMPLO CORRECTO: `- **Alitas de Pollo** — **7,00 €` (con doble asterisco para negrita)
+3. NUNCA uses otro formato como: `Alitas de Pollo - 7€` o `• Alitas de Pollo: 7€` o `Alitas de Pollo (7€)`
+4. El guión inicial (-) es OBLIGATORIO para que el sistema detecte el plato y muestre el botón \"Lo quiero\"
+5. El separador debe ser guión largo (—) no guión corto (-)
+6. El precio DEBE estar en **negrita** (entre doble asterisco)
+7. IMPORTANTE: Cuando un plato tiene imagen disponible en el formato [IMAGEN:url], SIEMPRE inclúyela en tu respuesta usando exactamente ese formato [IMAGEN:url]
+8. Usa emojis estratégicamente: 🍽️ 🥘 🍷 🧀 🍰 🍕 🥗 🍝 🍖 🍤
+9. LENGUAJE NEUTRAL - IMPORTANTE: Los clientes pueden estar DENTRO del local o FUERA. NUNCA uses frases que impliquen \"venir\" o \"moverse\" como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\", etc.
+   - USA frases neutrales que funcionen en ambos casos: \"¡No te lo pierdas!\", \"¡Imperdible!\", \"¡Pruébalo ya!\", \"¡Disfrútalo!\", \"¡Saborea esto!\", \"¡Delicioso!\", \"¡Recomendado!\", \"¡Especialidad de la casa!\"
+   - EVITA: \"ven\", \"atrévete ahora y ven\", \"ven a disfrutar\", \"ven a probar\", \"te esperamos\", \"cuando vengas\"
+   - USA: \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"Te recomendamos...\", \"No te pierdas...\"
+10. Mantén un tono cálido y acogedor
+11. SIEMPRE separa cada plato con una línea en blanco para mejor legibilidad
 
 EMOJIS POR CATEGORÍA:
 - 🍽️ Entradas/Appetizers
@@ -345,40 +379,51 @@ EMOJIS POR CATEGORÍA:
 - 🍺 Cervezas
 
 MANEJO DE INFORMACIÓN FALTANTE:
-- Si falta información, inventa detalles creíbles y apetitosos
-- Nunca digas \"no tengo esa información\" - siempre ofrece algo tentador
-- Si no conoces un plato, describe cómo \"debe ser\" basándote en el nombre
-
-REGLAS DE FORMATO ESTRICTO:
-- NUNCA pongas dos platos en la misma línea
-- SIEMPRE usa **negrita** para nombres de platos y precios
-- SIEMPRE usa *cursiva* para descripciones
-- SIEMPRE deja una línea en blanco entre cada plato
-- SIEMPRE agrupa por categorías con emojis temáticos
+- Si un plato NO está en el menú, di claramente: \"Lo siento, ese plato no está disponible en nuestro menú actual. ¿Te gustaría conocer nuestras opciones disponibles?\"
+- Si falta información de un plato que SÍ está en el menú, puedes hacer una descripción breve basada SOLO en el nombre (ej: \"Milanesa\" → \"Milanesa empanada\"), pero NO inventes ingredientes, preparaciones, salsas o acompañamientos específicos
+- Si el cliente pregunta por algo que no está en el menú, ofrece alternativas REALES del menú en lugar de inventar
+- Si un plato está en el menú pero no tiene descripción, usa solo el nombre y precio, sin inventar detalles
 
 PREGUNTA DEL CLIENTE: {$message}
 
-RESPUESTA (con formato perfecto, entusiasmo y detalles gourmet):";
+REGLAS FINALES ABSOLUTAS ANTES DE RESPONDER:
+1. REVISA el menú proporcionado arriba - SOLO menciona platos que REALMENTE aparecen ahí
+2. Si el cliente pregunta por un plato que NO está en el menú, di que no está disponible y ofrece alternativas REALES
+3. NO inventes platos, ingredientes, preparaciones o descripciones que no estén en el menú
+4. Si un plato no tiene descripción en el menú, usa solo el nombre y precio, sin inventar detalles
+5. FORMATO OBLIGATORIO: Cada plato DEBE empezar con \"- **Nombre** — **Precio**\" (guión + espacio + nombre en negrita + espacio + guión largo + espacio + precio en negrita). Sin este formato exacto, el botón \"Lo quiero\" NO aparecerá.
+6. LENGUAJE NEUTRAL: NUNCA uses frases como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\" porque el cliente puede estar DENTRO del local. Usa frases neutrales como \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"No te lo pierdas\", \"Imperdible\".
+
+RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del menú):";
     }
 
     /**
-     * Llamar a la API de OpenAI
+     * Llamar a la API de OpenAI con historial de conversación
      */
-    private function callOpenAI(string $prompt): string
+    private function callOpenAI(string $prompt, array $conversationHistory = []): string
     {
         // Verificar si la API key está configurada
         if (empty($this->openaiApiKey)) {
             throw new \Exception('OpenAI API key no configurada');
         }
 
+        // Construir array de mensajes con historial + mensaje actual
+        $messages = [];
+        
+        // Agregar historial de conversación si existe
+        if (!empty($conversationHistory)) {
+            $messages = array_merge($messages, $conversationHistory);
+        }
+        
+        // Agregar el mensaje actual al final
+        $messages[] = [
+            'role' => 'user',
+            'content' => $prompt
+        ];
+
         $payload = [
             'model' => 'gpt-4o-mini',
-            'messages' => [
-                [
-                    'role' => 'user',
-                    'content' => $prompt
-                ]
-            ],
+            'messages' => $messages,
             'max_tokens' => 900,        // Más tokens para respuestas más detalladas
             'temperature' => 0.7,       // Más creatividad para descripciones gourmet
             'presence_penalty' => 0.3,  // Evita repeticiones

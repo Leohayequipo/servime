@@ -229,7 +229,6 @@
                 // Generar nuevo session_id único
                 sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem(storageKey, sessionId);
-                console.log('Nueva sesión creada:', sessionId);
             }
             
             return sessionId;
@@ -321,27 +320,60 @@
                 // Saltos simples a <br>
                 p = p.replace(/\n/g, '<br>');
 
-                // ¿Es inicio de plato? Buscar - <strong>nombre</strong> — precio (precio puede venir en <strong>...> o texto plano)
-                const platoMatch = p.match(/^\s*-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/);
+                // ¿Es inicio de plato? Buscar múltiples patrones flexibles
+                // Patrón 1: - <strong>nombre</strong> — precio (formato estándar)
+                let platoMatch = p.match(/^\s*-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/);
+                
+                // Patrón 2: - <strong>nombre</strong> - precio (guión corto)
+                if (!platoMatch) {
+                    platoMatch = p.match(/^\s*-\s*<strong>([^<]+)<\/strong>\s*-\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/);
+                }
+                
+                // Patrón 3: - <strong>nombre</strong> : precio (dos puntos)
+                if (!platoMatch) {
+                    platoMatch = p.match(/^\s*-\s*<strong>([^<]+)<\/strong>\s*:\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/);
+                }
+                
+                // Patrón 4: - nombre — precio (sin negrita en nombre)
+                if (!platoMatch) {
+                    platoMatch = p.match(/^\s*-\s*([^:\n<—–]+?)\s*[—–-]\s*([^<\n]+)/);
+                }
+                
+                // Patrón 5: - nombre - precio (sin negrita, guión corto)
+                if (!platoMatch) {
+                    platoMatch = p.match(/^\s*-\s*([^:\n<-]+?)\s*-\s*([^<\n]+)/);
+                }
+                
+                // Patrón 6: nombre — precio (sin guión inicial, pero con formato de precio)
+                if (!platoMatch) {
+                    platoMatch = p.match(/^\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([0-9,\.\s€$]+)(?:<\/strong>)?/);
+                }
+                
                 if (platoMatch) {
                     // Siguiente bloque de plato
                     if (currentPlato) processedBlocks.push(currentPlato);
-                    currentPlato = {
-                        nombre: platoMatch[1].trim(),
-                        precio: (platoMatch[2]||'').trim(),
-                        parrafos: [ `<p class=\"mb-1 last:mb-0\">${p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'').trim()}</p>` ],
-                        tieneBoton: true,
-                        _imgTaken: false,
-                        _linesSinceStart: 0
-                    };
-                    // Si el propio encabezado trae imagen, insertar SOLO la imagen (sin repetir texto)
-                    const mHead = p.match(/\[{2,}IMG::([\s\S]*?)\]{2,}/);
-                    if (mHead && mHead[1]) {
-                        const u = mHead[1].trim();
-                        currentPlato.parrafos.push(`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
-                        currentPlato._imgTaken = true;
+                    const nombre = platoMatch[1].trim();
+                    const precio = (platoMatch[2]||'').trim();
+                    
+                    // Validar que tenemos nombre y precio válidos
+                    if (nombre && precio && (precio.match(/[0-9]/) || precio.includes('€') || precio.includes('$'))) {
+                        currentPlato = {
+                            nombre: nombre,
+                            precio: precio,
+                            parrafos: [ `<p class=\"mb-1 last:mb-0\">${p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'').trim()}</p>` ],
+                            tieneBoton: true,
+                            _imgTaken: false,
+                            _linesSinceStart: 0
+                        };
+                        // Si el propio encabezado trae imagen, insertar SOLO la imagen (sin repetir texto)
+                        const mHead = p.match(/\[{2,}IMG::([\s\S]*?)\]{2,}/);
+                        if (mHead && mHead[1]) {
+                            const u = mHead[1].trim();
+                            currentPlato.parrafos.push(`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                            currentPlato._imgTaken = true;
+                        }
+                        return;
                     }
-                    return;
                 }
 
                 // ¿Es cabecera de categoría? Si hay un plato abierto, ciérralo antes
@@ -399,15 +431,41 @@
                 if (pedidosHabilitados && b.tieneBoton && b.nombre) {
                     return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${b.nombre.replace(/\"/g,'\\\"')}\" data-price=\"${(b.precio||'').replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
                 }
-                // Fallback: detectar línea de plato en el bloque
-                const m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
+                // Fallback: detectar línea de plato en el bloque con múltiples patrones
+                let m = null;
+                
+                // Patrón 1: - <strong>nombre</strong> — precio
+                m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
+                
+                // Patrón 2: - <strong>nombre</strong> - precio
+                if (!m) {
+                    m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*-\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
+                }
+                
+                // Patrón 3: - nombre — precio (sin negrita)
+                if (!m) {
+                    m = join.match(/^\-\s*([^:\n<—–]+?)\s*[—–-]\s*([0-9,\.\s€$]+)/m);
+                }
+                
+                // Patrón 4: - nombre - precio (sin negrita, guión corto)
+                if (!m) {
+                    m = join.match(/^\-\s*([^:\n<-]+?)\s*-\s*([0-9,\.\s€$]+)/m);
+                }
+                
+                // Patrón 5: <strong>nombre</strong> — precio (sin guión inicial)
+                if (!m) {
+                    m = join.match(/<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([0-9,\.\s€$]+)(?:<\/strong>)?/m);
+                }
+                
                 if (m) {
                     const nombre = (m[1]||'').trim();
                     const precio = (m[2]||'').trim();
-                    if (pedidosHabilitados) {
-                        return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                    // Validar que tenemos nombre y precio válidos
+                    if (nombre && precio && (precio.match(/[0-9]/) || precio.includes('€') || precio.includes('$'))) {
+                        if (pedidosHabilitados) {
+                            return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
+                        }
                     }
-                    return join;
                 }
                 return join;
             }).join('');

@@ -68,8 +68,8 @@ class ChatbotController extends Controller
                 throw new \Exception('Respuestas con IA deshabilitadas');
             }
             
-            // Usar el servicio de chatbot con OpenAI
-            $response = $this->chatbotService->processMessage($comercio, $message);
+            // Usar el servicio de chatbot con OpenAI (pasar sessionId para memoria de conversación)
+            $response = $this->chatbotService->processMessage($comercio, $message, $sessionId);
             $responseTime = round((microtime(true) - $startTime) * 1000);
             
             // Log de la conversación (usar session_id obtenido anteriormente)
