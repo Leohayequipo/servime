@@ -73,20 +73,20 @@
                     <div class="space-y-4">
                         <div>
                             <label class="text-text-secondary text-sm font-medium">Formato</label>
-                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->formato === 'pdf' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }}">
+                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->formato === 'pdf' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30' }}">
                                 {{ strtoupper($menu->formato) }}
                             </span>
                         </div>
                         <div>
                             <label class="text-text-secondary text-sm font-medium">Estado</label>
-                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->procesado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->procesado ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
                                 {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
                             </span>
                         </div>
                         @if($menu->activo)
                             <div>
                                 <label class="text-text-secondary text-sm font-medium">Estado del menú</label>
-                                <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800">
+                                <span class="px-3 py-1 text-sm rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
                                     Activo
                                 </span>
                             </div>
@@ -135,13 +135,13 @@
                                 @if($menu->formato === 'pdf')
                                     <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
                                        target="_blank"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                       class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                                         Ver PDF
                                     </a>
                                 @else
                                     <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
                                        target="_blank"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                       class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                                         Ver Imagen
                                     </a>
                                 @endif
@@ -173,11 +173,11 @@
                     <h3 class="text-xl font-bold text-text-primary">Acciones</h3>
                     <div class="flex space-x-3">
                         <a href="{{ route('admin.menus.edit', $menu) }}" 
-                           class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                           class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                             Editar Menú
                         </a>
                         <a href="{{ route('admin.menus.index') }}" 
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                           class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                             Volver a Lista
                         </a>
                     </div>

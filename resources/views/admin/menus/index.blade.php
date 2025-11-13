@@ -133,11 +133,11 @@
                                     </td>
                                     <td class="py-4 px-4">
                                         <div class="space-y-1">
-                                            <span class="px-2 py-1 text-xs rounded-full {{ $menu->procesado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                                            <span class="px-2 py-1 text-xs rounded-full {{ $menu->procesado ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
                                                 {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
                                             </span>
                                             @if($menu->activo)
-                                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
                                                     Activo
                                                 </span>
                                             @endif
@@ -150,11 +150,11 @@
                                     <td class="py-4 px-4">
                                         <div class="flex items-center space-x-2">
                                             <a href="{{ route('admin.menus.show', $menu) }}" 
-                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                                               class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                                                 Ver
                                             </a>
                                             <a href="{{ route('admin.menus.edit', $menu) }}" 
-                                               class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                                               class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                                                 Editar
                                             </a>
                                         </div>

@@ -682,7 +682,7 @@
         /* Button styles */
         .btn-primary {
             background: linear-gradient(135deg, var(--accent-blue), #0099CC);
-            color: var(--text-primary);
+            color: #ffffff !important;
             border: none;
             border-radius: 12px;
             padding: 12px 24px;
@@ -694,11 +694,12 @@
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 196, 255, 0.5);
+            color: #ffffff !important;
         }
         
         .btn-success {
             background: linear-gradient(135deg, var(--accent-green), #00CC00);
-            color: var(--text-primary);
+            color: #ffffff !important;
             border: none;
             border-radius: 12px;
             padding: 12px 24px;
@@ -710,6 +711,7 @@
         .btn-success:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 255, 0, 0.5);
+            color: #ffffff !important;
         }
         
         .btn-secondary {

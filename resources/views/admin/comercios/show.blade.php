@@ -128,20 +128,20 @@
                                 <div class="space-y-2 mb-4">
                                     <div class="flex items-center justify-between">
                                         <span class="text-xs text-text-secondary">Formato:</span>
-                                        <span class="px-2 py-1 text-xs rounded-full {{ $menu->formato === 'pdf' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }}">
+                                        <span class="px-2 py-1 text-xs rounded-full {{ $menu->formato === 'pdf' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30' }}">
                                             {{ strtoupper($menu->formato) }}
                                         </span>
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-xs text-text-secondary">Estado:</span>
-                                        <span class="px-2 py-1 text-xs rounded-full {{ $menu->procesado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                                        <span class="px-2 py-1 text-xs rounded-full {{ $menu->procesado ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
                                             {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
                                         </span>
                                     </div>
                                     @if($menu->activo)
                                         <div class="flex items-center justify-between">
                                             <span class="text-xs text-text-secondary">Estado:</span>
-                                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
                                                 Activo
                                             </span>
                                         </div>
@@ -150,7 +150,7 @@
                                 
                                 <div class="flex items-center justify-between">
                                     <a href="{{ route('admin.menus.show', $menu) }}" 
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                                       class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
                                         Ver Detalles
                                     </a>
                                 </div>
