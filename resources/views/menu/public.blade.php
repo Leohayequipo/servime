@@ -162,10 +162,17 @@
         <!-- Input fijo abajo -->
         <div class="input-fixed">
             <div class="max-w-md mx-auto flex">
+                <button id="micButton" 
+                        title="Hablar con el asistente" 
+                        style="display: none; background: var(--accent-color); border: none; border-radius: 8px 0 0 8px; padding: 12px; cursor: pointer; transition: all 0.2s;"
+                        class="mic-button">
+                    <span style="font-size: 20px;">🎤</span>
+                </button>
                 <input type="text" 
                        id="messageInput"
                        placeholder="Escribe tu mensaje..." 
-                       class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                       class="flex-1 bg-secondary-dark border border-accent-gray px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                       style="border-radius: 8px;">
                 <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
                     Enviar
                 </button>
@@ -219,6 +226,171 @@
     <script>
         let isLoading = false;
         const pedidosHabilitados = @json($comercio->pedido_habilitado);
+        
+        // ===== Reconocimiento de Voz =====
+        let recognition = null;
+        let isListening = false;
+        const micPermissionKey = 'servime_mic_permission_{{ $comercio->id }}';
+        const micRejectedKey = 'servime_mic_rejected_{{ $comercio->id }}';
+        
+        // Detectar soporte de Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const isSpeechSupported = SpeechRecognition !== undefined;
+        
+        // Verificar si el usuario ya rechazó el permiso
+        const micRejected = localStorage.getItem(micRejectedKey) === 'true';
+        
+        // Inicializar reconocimiento de voz cuando el DOM esté listo
+        function initSpeechRecognition() {
+            const micButton = document.getElementById('micButton');
+            const messageInput = document.getElementById('messageInput');
+            
+            if (!micButton || !messageInput) return;
+            
+            // Inicializar reconocimiento de voz si está soportado y no fue rechazado
+            if (isSpeechSupported && !micRejected) {
+                try {
+                    recognition = new SpeechRecognition();
+                    recognition.lang = 'es-ES';
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    
+                    recognition.onstart = function() {
+                        isListening = true;
+                        micButton.style.background = '#ef4444';
+                        micButton.querySelector('span').textContent = '🔴';
+                        messageInput.placeholder = 'Escuchando...';
+                    };
+                    
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        messageInput.value = transcript;
+                        messageInput.placeholder = 'Escribe tu mensaje...';
+                        // Opcional: enviar automáticamente o permitir editar
+                        // sendMessage(transcript);
+                    };
+                    
+                    recognition.onerror = function(event) {
+                        isListening = false;
+                        micButton.style.background = 'var(--accent-color)';
+                        micButton.querySelector('span').textContent = '🎤';
+                        messageInput.placeholder = 'Escribe tu mensaje...';
+                        
+                        if (event.error === 'not-allowed' || event.error === 'denied') {
+                            // Usuario rechazó el permiso
+                            localStorage.setItem(micRejectedKey, 'true');
+                            micButton.style.display = 'none';
+                            alert('Permiso de micrófono denegado. Puedes seguir usando el chat escribiendo.');
+                        } else if (event.error === 'network') {
+                            // Error de red: solo mostrar una vez, no spamear la consola
+                            if (!recognition._networkErrorShown) {
+                                recognition._networkErrorShown = true;
+                                // Silenciosamente reiniciar después de un tiempo
+                                setTimeout(() => {
+                                    recognition._networkErrorShown = false;
+                                }, 5000);
+                            }
+                        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                            // Solo mostrar errores significativos, no los temporales
+                            console.warn('Error en reconocimiento de voz:', event.error);
+                        }
+                    };
+                    
+                    recognition.onend = function() {
+                        isListening = false;
+                        micButton.style.background = 'var(--accent-color)';
+                        micButton.querySelector('span').textContent = '🎤';
+                        messageInput.placeholder = 'Escribe tu mensaje...';
+                    };
+                    
+                    // Solicitar permiso la primera vez que se presiona el botón
+                    micButton.addEventListener('click', function() {
+                        if (!isListening) {
+                            // Intentar iniciar reconocimiento (solicitará permiso si es la primera vez)
+                            try {
+                                recognition.start();
+                            } catch (error) {
+                                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                                    localStorage.setItem(micRejectedKey, 'true');
+                                    micButton.style.display = 'none';
+                                    alert('Permiso de micrófono denegado. Puedes seguir usando el chat escribiendo.');
+                                }
+                            }
+                        } else {
+                            // Detener reconocimiento
+                            recognition.stop();
+                        }
+                    });
+                    
+                    // Verificar si ya se dio permiso antes (mostrar botón si es así)
+                    // Safari no soporta bien navigator.permissions.query, así que usamos fallback
+                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                    
+                    if (isSafari) {
+                        // Safari: usar solo localStorage como referencia
+                        const savedPermission = localStorage.getItem(micPermissionKey);
+                        if (savedPermission === 'granted') {
+                            micButton.style.display = 'block';
+                        } else {
+                            // En Safari, mostrar botón y solicitar permiso al hacer clic
+                            // (Safari solicita permiso automáticamente al llamar start())
+                            micButton.style.display = 'block';
+                        }
+                    } else {
+                        // Chrome, Edge, etc: usar permissions.query
+                        navigator.permissions.query({ name: 'microphone' }).then(function(result) {
+                            if (result.state === 'granted') {
+                                micButton.style.display = 'block';
+                                localStorage.setItem(micPermissionKey, 'granted');
+                            } else if (result.state === 'prompt') {
+                                // Mostrar botón pero solicitar permiso al hacer clic
+                                micButton.style.display = 'block';
+                            } else {
+                                // Permiso denegado
+                                localStorage.setItem(micRejectedKey, 'true');
+                                micButton.style.display = 'none';
+                            }
+                        }).catch(function() {
+                            // Fallback: mostrar botón y solicitar permiso al hacer clic
+                            // (algunos navegadores no soportan permissions.query)
+                            const savedPermission = localStorage.getItem(micPermissionKey);
+                            if (savedPermission === 'granted') {
+                                micButton.style.display = 'block';
+                            } else {
+                                // Mostrar botón para intentar solicitar permiso
+                                micButton.style.display = 'block';
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error('Error inicializando reconocimiento de voz:', error);
+                }
+            }
+            
+            // Función para ajustar estilo del input cuando el micrófono está visible
+            function updateInputStyle() {
+                if (micButton.style.display === 'block' || micButton.style.display === '') {
+                    messageInput.style.borderRadius = '0';
+                } else {
+                    messageInput.style.borderRadius = '8px';
+                }
+            }
+            
+            // Ajustar estilo inicial
+            updateInputStyle();
+            
+            // Observar cambios en el display del botón
+            const observer = new MutationObserver(updateInputStyle);
+            observer.observe(micButton, { attributes: true, attributeFilter: ['style'] });
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSpeechRecognition);
+        } else {
+            initSpeechRecognition();
+        }
 
         // Obtener o crear session_id persistente
         function getOrCreateSessionId() {
@@ -313,8 +485,20 @@
                 // Las adjuntaremos sólo si pertenecen al plato actual (evita imágenes coladas)
                 let p = paragraph.replace(/\[IMAGEN:([^\]]+)\]/g, function(match, url) {
                     const clean = (url || '').trim();
-                    const isValid = clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '-' && (/^https?:\/\//.test(clean) || clean.startsWith('/'));
-                    if (!isValid) return '';
+                    // Validar URL: debe ser http/https o ruta absoluta/relativa válida
+                    const isValid = clean && 
+                        clean.toLowerCase() !== 'null' && 
+                        clean.toLowerCase() !== 'undefined' && 
+                        clean !== '-' && 
+                        (clean.startsWith('http://') || 
+                         clean.startsWith('https://') || 
+                         clean.startsWith('/') ||
+                         clean.startsWith('./') ||
+                         clean.match(/^[a-zA-Z0-9][a-zA-Z0-9._/-]*\.(jpg|jpeg|png|gif|webp)/i));
+                    if (!isValid) {
+                        console.warn('URL de imagen inválida descartada:', clean);
+                        return '';
+                    }
                     return `[[IMG::${clean}]]`;
                 });
                 // Saltos simples a <br>

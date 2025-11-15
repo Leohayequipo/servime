@@ -121,7 +121,26 @@ class ChatbotService
                                     }
                                     // INCLUIR URL DE IMAGEN si existe
                                     if (isset($plato['imagen']) && !empty($plato['imagen'])) {
-                                        $imagenUrl = url($plato['imagen']);
+                                        // Usar asset() para generar URL pública correcta
+                                        // Normalizar la ruta: asegurar que empiece con /storage/
+                                        $rutaImagen = trim($plato['imagen']);
+                                        
+                                        // Si no empieza con /, agregarlo
+                                        if (!str_starts_with($rutaImagen, '/')) {
+                                            $rutaImagen = '/' . $rutaImagen;
+                                        }
+                                        
+                                        // Si no empieza con /storage/, agregarlo
+                                        if (!str_starts_with($rutaImagen, '/storage/')) {
+                                            // Si empieza con storage/, agregar /
+                                            if (str_starts_with($rutaImagen, 'storage/')) {
+                                                $rutaImagen = '/' . $rutaImagen;
+                                            } else {
+                                                $rutaImagen = '/storage/' . ltrim($rutaImagen, '/');
+                                            }
+                                        }
+                                        
+                                        $imagenUrl = asset($rutaImagen);
                                         $contexto .= "\n  [IMAGEN:{$imagenUrl}]";
                                     }
                                     $contexto .= "\n";
