@@ -336,23 +336,48 @@
                             </div>
 
                             @if($isEdit)
-                                <div class="bg-secondary-dark border border-accent-gray rounded-xl px-4 py-3 flex items-center justify-between">
-                                    <div class="text-sm text-text-secondary">
-                                        <p class="font-medium text-text-primary">Pedidos desde el menú digital</p>
-                                        <p class="mt-1">Controla si el botón “Lo quiero” y el resumen para el mozo están activos en este menú. Si lo desactivás, el menú funcionará solo como catálogo informativo.</p>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <label class="flex items-center gap-3 cursor-pointer">
-                                            <input type="checkbox"
-                                                   name="pedido_habilitado"
-                                                   value="1"
-                                                   {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
-                                                   class="pedido-toggle w-5 h-5 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
-                                            <span class="text-sm font-medium text-text-primary">Activar pedidos (botón “Lo quiero”)</span>
-                                        </label>
-                                        <span id="pedido-status" class="text-xs px-2 py-1 rounded-full {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300' }}">
-                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'Pedidos habilitados' : 'Pedidos deshabilitados' }}
-                                        </span>
+                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                                    <div class="relative p-6">
+                                        <!-- Texto arriba -->
+                                        <div class="mb-5">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
+                                                @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
+                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                                                        <span class="text-xs font-semibold text-green-300">ACTIVO</span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
+                                        </div>
+                                        
+                                        <!-- Icono y botón abajo -->
+                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+                                            <div class="relative flex-shrink-0">
+                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                                    <span class="text-2xl filter drop-shadow-lg">🛒</span>
+                                                    @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="flex items-center gap-4 flex-1 justify-end">
+                                                <label class="relative inline-flex items-center cursor-pointer group">
+                                                    <input type="checkbox"
+                                                           name="pedido_habilitado"
+                                                           value="1"
+                                                           {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
+                                                           class="sr-only peer pedido-toggle"
+                                                           onchange="updatePedidoStatus(this.checked)">
+                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                                </label>
+                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
+                                                    {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -1019,21 +1044,41 @@
         // Variable global para almacenar el archivo convertido
         let convertedImageFile = null;
         
-        document.addEventListener('DOMContentLoaded', function() {
-            const pedidoToggle = document.querySelector('.pedido-toggle');
+        // Función global para actualizar el estado visual del toggle de pedidos
+        function updatePedidoStatus(isChecked) {
             const pedidoStatus = document.getElementById('pedido-status');
-            if (pedidoToggle && pedidoStatus) {
-                function updatePedidoBadge() {
-                    if (pedidoToggle.checked) {
-                        pedidoStatus.textContent = 'Pedidos habilitados';
-                        pedidoStatus.className = 'text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-300';
-                    } else {
-                        pedidoStatus.textContent = 'Pedidos deshabilitados';
-                        pedidoStatus.className = 'text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-300';
-                    }
+            const card = document.querySelector('.pedido-card') || document.querySelector('[class*="bg-gradient-to-br"][class*="from-green"]');
+            
+            if (pedidoStatus) {
+                if (isChecked) {
+                    pedidoStatus.textContent = '✓ Activo';
+                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm';
+                } else {
+                    pedidoStatus.textContent = '○ Inactivo';
+                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-gray-600/30 text-gray-400 border-2 border-gray-500/30';
                 }
-                updatePedidoBadge();
-                pedidoToggle.addEventListener('change', updatePedidoBadge);
+            }
+            
+            // Actualizar el card con animación
+            if (card) {
+                if (isChecked) {
+                    card.className = card.className.replace(/from-gray-.*?\/\d+|border-gray-.*?\/\d+|shadow-lg(?!.*green)/g, '');
+                    card.classList.add('bg-gradient-to-br', 'from-green-500/20', 'via-blue-500/20', 'to-purple-500/20', 'border-green-500/40', 'shadow-lg', 'shadow-green-500/20');
+                } else {
+                    card.className = card.className.replace(/from-green-.*?\/\d+|via-blue-.*?\/\d+|to-purple-.*?\/\d+|border-green-.*?\/\d+|shadow-green-.*?\/\d+/g, '');
+                    card.classList.add('bg-gradient-to-br', 'from-gray-700/50', 'to-gray-800/50', 'border-gray-600/40', 'shadow-lg');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar estado si el toggle existe
+            const pedidoToggle = document.querySelector('.pedido-toggle');
+            if (pedidoToggle) {
+                updatePedidoStatus(pedidoToggle.checked);
+                pedidoToggle.addEventListener('change', function() {
+                    updatePedidoStatus(this.checked);
+                });
             }
             
             // Interceptar el input de archivo para procesar PDFs
