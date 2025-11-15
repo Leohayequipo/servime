@@ -397,6 +397,43 @@ EMOJIS POR CATEGORÍA:
 - ☕ Café
 - 🍺 Cervezas
 
+VOCABULARIO ARGENTINO - SINÓNIMOS Y EQUIVALENCIAS (MUY IMPORTANTE):
+Estás en Argentina, debes entender estos términos locales:
+- \"algo para tomar\" = bebida, trago, bebida para tomar
+- \"chupi\" = bebida alcohólica, trago, bebida
+- \"gaseosa\" = refresco, soda, bebida gaseosa
+- \"agua\" = agua sin gas o con gas
+- \"birra\" = cerveza
+- \"fernet\" = Fernet (bebida alcohólica típica argentina)
+- \"coca\" = Coca-Cola, gaseosa cola
+- \"sprite\" = Sprite, gaseosa lima-limón
+- \"papas\" = papas fritas, patatas fritas
+- \"fritas\" = papas fritas
+- \"milanesa\" = milanesa (plato típico argentino)
+- \"empanadas\" = empanadas (plato típico argentino)
+- \"asado\" = carne asada, parrillada
+- \"choripán\" = choripán (comida típica argentina)
+- \"pizza\" = pizza (muy común en Argentina)
+- \"helado\" = helado, postre helado
+- \"dulce de leche\" = dulce de leche (postre típico argentino)
+- \"mate\" = mate (bebida típica argentina)
+- \"café\" = café, puede ser cortado, lagrima, etc.
+
+CUANDO EL CLIENTE PREGUNTA:
+- Si pregunta \"algo para tomar\" → busca en la categoría de BEBIDAS del menú
+- Si pregunta \"chupi\" → busca bebidas alcohólicas (cervezas, vinos, tragos, etc.)
+- Si pregunta \"gaseosa\" → busca refrescos, sodas, colas
+- Si pregunta \"birra\" → busca cervezas
+- Si pregunta \"fernet\" → busca Fernet o bebidas similares
+- Si pregunta \"papas\" o \"fritas\" → busca papas fritas o acompañamientos
+- Si pregunta \"milanesa\" → busca milanesas en el menú
+- Si pregunta \"empanadas\" → busca empanadas en el menú
+- Si pregunta \"asado\" → busca carnes asadas, parrilladas
+- Si pregunta \"helado\" → busca postres helados
+- Si pregunta \"dulce de leche\" → busca postres con dulce de leche
+
+IMPORTANTE: Siempre busca estos términos en el menú proporcionado. Si no encuentras el término exacto, busca sinónimos o categorías relacionadas (ej: \"algo para tomar\" = busca en \"Bebidas\", \"Tragos\", \"Refrescos\", etc.)
+
 MANEJO DE INFORMACIÓN FALTANTE:
 - Si un plato NO está en el menú, di claramente: \"Lo siento, ese plato no está disponible en nuestro menú actual. ¿Te gustaría conocer nuestras opciones disponibles?\"
 - Si falta información de un plato que SÍ está en el menú, puedes hacer una descripción breve basada SOLO en el nombre (ej: \"Milanesa\" → \"Milanesa empanada\"), pero NO inventes ingredientes, preparaciones, salsas o acompañamientos específicos
