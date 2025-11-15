@@ -1910,7 +1910,8 @@
                     return;
                 }
                 
-                const uploadUrl = `{{ url('/') }}/comercios/{{ $comercio->slug }}/menus/${menuId}/upload-plato-imagen`;
+                // Usar la ruta con nombre de Laravel
+                const uploadUrl = `{{ route('menus.upload.plato.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
                 const response = await fetch(uploadUrl, {
                     method: 'POST',
                     body: formData,
@@ -1919,7 +1920,18 @@
                     }
                 });
 
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
                 const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
 
                 if (data.success) {
                     // Actualizar imagen con URL del servidor
@@ -1938,8 +1950,9 @@
                     throw new Error(data.error || 'Error al subir la imagen');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al subir la imagen: ' + error.message);
+                console.error('Error completo al subir imagen:', error);
+                console.error('Stack:', error.stack);
+                alert('Error al subir la imagen: ' + (error.message || 'Error desconocido'));
                 
                 // Remover preview si falló
                 const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);

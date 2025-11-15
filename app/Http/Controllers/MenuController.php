@@ -227,8 +227,10 @@ class MenuController extends Controller
 
         
 
+        $nuevoArchivo = $request->hasFile('archivo');
+        
         // Si se sube un nuevo archivo
-        if ($request->hasFile('archivo')) {
+        if ($nuevoArchivo) {
             // Eliminar archivo anterior de ambos lugares
             $this->deleteMenuSafely($menu->archivo_original);
             
@@ -242,15 +244,17 @@ class MenuController extends Controller
             // Detectar formato automáticamente
             $extension = $request->file('archivo')->getClientOriginalExtension();
             $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
-            $menu->procesado = false; // Marcar como no procesado
+            $menu->procesado = false; // Marcar como no procesado para reprocesar después
         }
 
-        $menu->nombre = $request->nombre;
+        // Actualizar nombre del menú
+        if ($request->has('nombre')) {
+            $menu->nombre = $request->nombre;
+        }
         
-        // Solo actualizar formato si se envía
-        if ($request->has('formato') && $request->formato) {
+        // Solo actualizar formato si se envía explícitamente y NO hay archivo nuevo
+        if (!$nuevoArchivo && $request->has('formato') && $request->formato) {
             $menu->formato = $validated['formato'];
-            $menu->procesado = false; // Marcar como no procesado si se actualiza
         }
         
         $menu->save();
@@ -287,35 +291,100 @@ class MenuController extends Controller
         }
         
         if ($needsUpdate) {
-            \Log::info('Actualizando campos del comercio', [
-                'chatbot_name' => $request->input('chatbot_name'),
-                'welcome_message' => $request->input('welcome_message'),
-                'primary_color' => $request->input('primary_color'),
-                'secondary_color' => $request->input('secondary_color'),
-                'accent_color' => $request->input('accent_color'),
-                'background_color' => $request->input('background_color')
-            ]);
-            
             $comercio->save();
-            \Log::info('Campos del comercio guardados exitosamente');
         }
 
+        // Actualizar estado de pedidos
         $nuevoEstadoPedidos = $request->boolean('pedido_habilitado');
         if ($comercio->pedido_habilitado !== $nuevoEstadoPedidos) {
             $comercio->pedido_habilitado = $nuevoEstadoPedidos;
             $comercio->save();
         }
 
-        // Reprocesar con OpenAI
-        $processor = new MenuProcessorService();
-        $processed = $processor->processMenu($menu);
+        // SOLO reprocesar si se subió un nuevo archivo
+        // NO reprocesar si solo se actualizaron otros campos (preserva imágenes)
+        if (!$nuevoArchivo) {
+            return redirect()->route('menus.edit', [$comercio, $menu])
+                ->with('success', 'Cambios guardados exitosamente.');
+        }
 
-        if ($processed) {
-            return redirect()->route('menus.index', $comercio)
-                ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
-        } else {
-            return redirect()->route('menus.index', $comercio)
-                ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
+        // Se subió un nuevo archivo: preservar imágenes antes de reprocesar
+        $imagenesExistentes = [];
+        if ($menu->contexto_gpt) {
+            try {
+                $jsonContent = $menu->contexto_gpt;
+                if (strpos($jsonContent, '```json') !== false) {
+                    $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                    $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+                }
+                $contenidoActual = json_decode(trim($jsonContent), true);
+                if ($contenidoActual && isset($contenidoActual['categorias']) && is_array($contenidoActual['categorias'])) {
+                    foreach ($contenidoActual['categorias'] as $categoria) {
+                        if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                            foreach ($categoria['platos'] as $plato) {
+                                if (isset($plato['imagen'], $plato['nombre']) && !empty($plato['imagen']) && !empty($plato['nombre'])) {
+                                    $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
+                                    $imagenesExistentes[$nombreNormalizado] = $plato['imagen'];
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error al extraer imágenes existentes antes de reprocesar: ' . $e->getMessage());
+            }
+        }
+
+        // Reprocesar con OpenAI
+        try {
+            $processor = new MenuProcessorService();
+            $processed = $processor->processMenu($menu);
+
+            // Restaurar las imágenes después del reprocesamiento
+            if ($processed && !empty($imagenesExistentes) && $menu->contexto_gpt) {
+                try {
+                    $jsonContent = $menu->contexto_gpt;
+                    if (strpos($jsonContent, '```json') !== false) {
+                        $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                        $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+                    }
+                    $contenidoNuevo = json_decode(trim($jsonContent), true);
+                    if ($contenidoNuevo && isset($contenidoNuevo['categorias']) && is_array($contenidoNuevo['categorias'])) {
+                        $modified = false;
+                        foreach ($contenidoNuevo['categorias'] as &$categoria) {
+                            if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                                foreach ($categoria['platos'] as &$plato) {
+                                    if (isset($plato['nombre'])) {
+                                        $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
+                                        if (isset($imagenesExistentes[$nombreNormalizado])) {
+                                            $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
+                                            $modified = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ($modified) {
+                            $menu->contexto_gpt = json_encode($contenidoNuevo, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                            $menu->save();
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Error al restaurar imágenes después del reprocesamiento: ' . $e->getMessage());
+                }
+            }
+
+            if ($processed) {
+                return redirect()->route('menus.index', $comercio)
+                    ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
+            } else {
+                return redirect()->route('menus.index', $comercio)
+                    ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error al reprocesar menú: ' . $e->getMessage());
+            return redirect()->route('menus.edit', [$comercio, $menu])
+                ->with('error', 'Error al reprocesar el menú: ' . $e->getMessage());
         }
     }
 
@@ -431,20 +500,26 @@ class MenuController extends Controller
                 $oldImageRelativePath = str_replace('/storage/', '', $plato['imagen']);
             }
 
-            // Copiar imagen a public_html si corresponde
-            $this->copyMenuItemToPublicHtml($imagenPath);
-
-            // Eliminar imagen anterior en ambos lugares
-            if ($oldImageRelativePath) {
-                $this->deleteMenuItemSafely($oldImageRelativePath);
-            }
-
             // Actualizar JSON con la nueva ruta de imagen
             $plato['imagen'] = '/storage/' . $imagenPath;
 
-            // Guardar JSON actualizado
-            $menu->contexto_gpt = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            // Guardar JSON actualizado PRIMERO (esto es lo crítico)
+            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            if ($jsonResult === false) {
+                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+            }
+            
+            $menu->contexto_gpt = $jsonResult;
             $menu->save();
+
+            // Copiar y eliminar después del guardado (no crítico, no debe bloquear)
+            // Solo en producción, y con manejo silencioso de errores
+            $this->copyMenuItemToPublicHtml($imagenPath);
+            
+            if ($oldImageRelativePath) {
+                $this->deleteMenuItemSafely($oldImageRelativePath);
+            }
 
             return response()->json([
                 'success' => true,
@@ -454,7 +529,9 @@ class MenuController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Error al subir imagen de plato: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al procesar la imagen: ' . $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Error al procesar la imagen: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -489,56 +566,36 @@ class MenuController extends Controller
             return;
         }
 
-        // Verificar entorno de producción
+        // Verificar entorno de producción - salir rápido si no estamos en producción
         if (!file_exists('/home/u560898880/domains')) {
             return;
         }
 
         $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menu-items';
+        $sourceFile = storage_path('app/public/' . $archivoPath);
+        
+        // Verificaciones rápidas sin logs excesivos
+        if (!file_exists($sourceFile)) {
+            return;
+        }
 
-        try {
-            $sourceFile = storage_path('app/public/' . $archivoPath);
-            if (!file_exists($sourceFile)) {
-                Log::warning('Imagen de plato no encontrada para copiar a public_html', [
-                    'path' => $sourceFile,
-                    'relative' => $archivoPath,
-                ]);
-                return;
-            }
+        // Crear directorio si no existe (sin logs)
+        if (!is_dir($publicHtmlPath)) {
+            @mkdir($publicHtmlPath, 0775, true);
+            @chmod($publicHtmlPath, 0775);
+        }
 
-            if (!is_dir($publicHtmlPath) && !mkdir($publicHtmlPath, 0775, true)) {
-                Log::error('No se pudo crear directorio de imágenes de platos en public_html', [
-                    'path' => $publicHtmlPath,
-                ]);
-                return;
-            }
+        // Verificar permisos rápidamente
+        if (!is_writable($publicHtmlPath)) {
+            return;
+        }
 
-            $filename = basename($archivoPath);
-            $targetFile = $publicHtmlPath . '/' . $filename;
+        // Copiar archivo
+        $filename = basename($archivoPath);
+        $targetFile = $publicHtmlPath . '/' . $filename;
 
-            if (!copy($sourceFile, $targetFile)) {
-                $error = error_get_last();
-                Log::error('Error al copiar imagen de plato a public_html', [
-                    'source' => $sourceFile,
-                    'target' => $targetFile,
-                    'error' => $error,
-                    'source_exists' => file_exists($sourceFile),
-                    'target_dir_writable' => is_writable($publicHtmlPath),
-                ]);
-                return;
-            }
-
-            chmod($targetFile, 0664);
-
-            Log::info('Imagen de plato copiada a public_html', [
-                'file' => $filename,
-                'target' => $targetFile,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Excepción al copiar imagen de plato a public_html', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        if (@copy($sourceFile, $targetFile)) {
+            @chmod($targetFile, 0664);
         }
     }
 
