@@ -1944,8 +1944,8 @@
                     // Actualizar texto del botón
                     button.innerHTML = '<span class="mr-2">📷</span>Cambiar';
                     
-                    // Mostrar mensaje de éxito (opcional)
-                    showSuccessMessage('Imagen subida exitosamente');
+                    // Mostrar mensaje de éxito
+                    showSuccess('Imagen subida exitosamente');
                 } else {
                     throw new Error(data.error || 'Error al subir la imagen');
                 }
@@ -1979,41 +1979,110 @@
 
         // Función para eliminar imagen de plato
         async function removePlatoImagen(categoriaIndex, platoIndex, imagenPath) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) {
-                return;
-            }
-
-            try {
-                // Nota: Para eliminar completamente necesitarías otra ruta API
-                // Por ahora solo eliminamos del DOM y el usuario puede subir otra
-                const container = document.getElementById(`plato-imagen-container-${categoriaIndex}-${platoIndex}`);
-                const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+            showConfirm('¿Estás seguro de que quieres eliminar esta imagen?', async function(confirmed) {
+                if (!confirmed) {
+                    return;
+                }
                 
-                if (img) {
-                    const wrapper = img.closest(`#plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`);
-                    if (wrapper) {
-                        wrapper.remove();
+                await deletePlatoImagen(categoriaIndex, platoIndex);
+            });
+        }
+
+        // Función auxiliar que realiza la eliminación
+        async function deletePlatoImagen(categoriaIndex, platoIndex) {
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    showError('El menú no está disponible');
+                    return;
+                }
+
+                // Preparar datos para la petición
+                const formData = new FormData();
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                formData.append('_method', 'DELETE');
+
+                // Llamar al endpoint de eliminación
+                const deleteUrl = `{{ route('menus.delete.plato.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(deleteUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
+                });
+
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
                 }
 
-                // Restaurar placeholder
-                let placeholder = document.getElementById(`plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`);
-                if (!placeholder) {
-                    placeholder = document.createElement('div');
-                    placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
-                    placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
-                    placeholder.textContent = 'Sin imagen';
-                    container.appendChild(placeholder);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
                 }
 
-                // Actualizar texto del botón
-                const button = document.querySelector(`#imagen-input-${categoriaIndex}-${platoIndex}`).closest('label').querySelector('span');
-                button.innerHTML = '<span class="mr-2">📷</span>Subir';
+                if (data.success) {
+                    // Eliminar del DOM
+                    const container = document.getElementById(`plato-imagen-container-${categoriaIndex}-${platoIndex}`);
+                    const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                    
+                    if (img) {
+                        // Buscar el contenedor padre (puede ser wrapper o div.relative.inline-block)
+                        const wrapper = img.closest(`#plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`);
+                        const relativeDiv = img.closest('div.relative.inline-block');
+                        
+                        // Eliminar el contenedor que corresponda
+                        if (wrapper) {
+                            wrapper.remove();
+                        } else if (relativeDiv) {
+                            relativeDiv.remove();
+                        } else {
+                            // Si no encuentra contenedor, eliminar directamente la imagen y su botón
+                            img.remove();
+                            // Buscar y eliminar el botón de eliminar si está cerca
+                            const removeBtn = container?.querySelector('button[onclick*="removePlatoImagen"]');
+                            if (removeBtn) {
+                                removeBtn.remove();
+                            }
+                        }
+                    }
 
-                showSuccessMessage('Imagen eliminada');
+                    // Limpiar el container completamente
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        // Crear placeholder
+                        const placeholder = document.createElement('div');
+                        placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
+                        placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
+                        placeholder.textContent = 'Sin imagen';
+                        container.appendChild(placeholder);
+                    }
+
+                    // Actualizar texto del botón
+                    const inputElement = document.getElementById(`imagen-input-${categoriaIndex}-${platoIndex}`);
+                    if (inputElement) {
+                        inputElement.value = ''; // Limpiar el input también
+                        const button = inputElement.closest('label')?.querySelector('span');
+                        if (button) {
+                            button.innerHTML = '<span class="mr-2">📷</span>Subir';
+                        }
+                    }
+
+                    showSuccess('Imagen eliminada exitosamente');
+                } else {
+                    throw new Error(data.error || 'Error al eliminar la imagen');
+                }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al eliminar la imagen');
+                console.error('Error completo al eliminar imagen:', error);
+                console.error('Stack:', error.stack);
+                showError('Error al eliminar la imagen: ' + (error.message || 'Error desconocido'));
             }
         }
 
