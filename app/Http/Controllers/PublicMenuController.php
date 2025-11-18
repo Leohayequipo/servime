@@ -25,7 +25,9 @@ class PublicMenuController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
         
-        return view('menu.chat', compact('comercio', 'menus'));
+        $categorias = $comercio->getCategoriasDelMenu();
+        
+        return view('menu.chat', compact('comercio', 'menus', 'categorias'));
     }
 
     /**

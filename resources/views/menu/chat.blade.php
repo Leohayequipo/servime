@@ -180,11 +180,16 @@
         </div>
     </div>
 
-    <!-- FAB Preguntas Rápidas + Pre‑pedido -->
+    <!-- FAB Categorías + Pre‑pedido -->
     <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px;">
         @if($comercio->pedido_habilitado)
             <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                 <span style="font-size: 22px;">🧾</span>
+            </button>
+        @endif
+        @if(!empty($categorias))
+            <button id="fabCategories" title="Categorías del menú" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="font-size: 22px;">📋</span>
             </button>
         @endif
     </div>
@@ -202,6 +207,25 @@
                     </div>
                 </div>
                 <div id="wishList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Panel de Categorías -->
+    @if(!empty($categorias))
+        <div id="categoriesPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
+            <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">Categorías</h4>
+                    <button id="closeCategories" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
+                    @foreach($categorias as $categoria)
+                        <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer; transition: background 0.2s;">
+                            {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </div>
     @endif
@@ -791,6 +815,24 @@
         document.getElementById('wishClose')?.addEventListener('click', () => { if (wishPanel) wishPanel.style.display = 'none'; });
         document.getElementById('wishClear')?.addEventListener('click', clearWish);
         document.getElementById('wishCopy')?.addEventListener('click', copyWish);
+
+        // Categories panel handlers
+        const fabCategories = document.getElementById('fabCategories');
+        const categoriesPanel = document.getElementById('categoriesPanel');
+        function showCategories() { if (categoriesPanel) categoriesPanel.style.display = 'block'; }
+        function hideCategories() { if (categoriesPanel) categoriesPanel.style.display = 'none'; }
+        function toggleCategories() { 
+            if (categoriesPanel) {
+                categoriesPanel.style.display = categoriesPanel.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+        if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
+        document.getElementById('closeCategories')?.addEventListener('click', hideCategories);
+        
+        function askQuestion(question) {
+            sendMessage(question);
+            hideCategories();
+        }
 
         // Delegación de eventos para botones "Lo quiero"
         document.getElementById('chatMessages').addEventListener('click', (e) => {

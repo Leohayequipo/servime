@@ -72,4 +72,80 @@ class Comercio extends Model
         return $value ?: $this->nombre . ' - Menú Digital';
     }
 
+    /**
+     * Obtener categorías del menú activo
+     */
+    public function getCategoriasDelMenu(): array
+    {
+        $menuActivo = $this->menus()
+            ->where('activo', true)
+            ->where('procesado', true)
+            ->first();
+        
+        if (!$menuActivo || !$menuActivo->contexto_gpt) {
+            return [];
+        }
+
+        try {
+            $jsonContent = $menuActivo->contexto_gpt;
+            $clean = trim($jsonContent);
+            
+            // Remover markdown si existe
+            if (strpos($clean, '```json') !== false) {
+                $clean = preg_replace('/```json\s*/', '', $clean);
+                $clean = preg_replace('/```\s*$/', '', $clean);
+            }
+            
+            $data = json_decode($clean, true);
+            
+            if (!is_array($data) || !isset($data['categorias'])) {
+                return [];
+            }
+
+            $categorias = [];
+            foreach ($data['categorias'] as $categoria) {
+                if (isset($categoria['nombre']) && !empty($categoria['nombre'])) {
+                    $categorias[] = [
+                        'nombre' => $categoria['nombre'],
+                        'icon' => $this->getIconForCategory($categoria['nombre'])
+                    ];
+                }
+            }
+
+            return $categorias;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtener icono para una categoría
+     */
+    private function getIconForCategory(string $nombre): string
+    {
+        $nombreLower = strtolower($nombre);
+        
+        $iconMap = [
+            'entrada' => '🍽️', 'entradas' => '🍽️',
+            'principal' => '🥘', 'principales' => '🥘', 'plato principal' => '🥘', 'platos principales' => '🥘',
+            'bebida' => '🍷', 'bebidas' => '🍷', 'tragos' => '🍸',
+            'postre' => '🍰', 'postres' => '🍰',
+            'pizza' => '🍕', 'pizzas' => '🍕',
+            'pasta' => '🍝', 'pastas' => '🍝',
+            'ensalada' => '🥗', 'ensaladas' => '🥗',
+            'carne' => '🍖', 'carnes' => '🍖',
+            'pescado' => '🐟', 'marisco' => '🍤', 'mariscos' => '🍤',
+            'queso' => '🧀', 'quesos' => '🧀',
+            'café' => '☕',
+            'cerveza' => '🍺', 'cervezas' => '🍺',
+        ];
+
+        foreach ($iconMap as $key => $icon) {
+            if (strpos($nombreLower, $key) !== false) {
+                return $icon;
+            }
+        }
+
+        return '🍽️'; // Default icon
+    }
 }
