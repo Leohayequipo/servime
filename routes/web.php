@@ -98,7 +98,9 @@ Route::middleware('auth')->group(function () {
 });
 
 // Rutas públicas (sin autenticación, usando slug)
-Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'show'])->name('menu.public');
+Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
+Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');
+Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
 Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
 // API ligera para carrito (por sesión, sin auth)

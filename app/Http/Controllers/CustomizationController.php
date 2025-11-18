@@ -63,7 +63,7 @@ class CustomizationController extends Controller
         $comercio = Comercio::findOrFail($comercioId);
         $menus = $comercio->menus()->where('procesado', true)->get();
         
-        return view('menu.public', compact('comercio', 'menus'))->with('preview', true);
+        return view('menu.chat', compact('comercio', 'menus'))->with('preview', true);
     }
 
     /**
