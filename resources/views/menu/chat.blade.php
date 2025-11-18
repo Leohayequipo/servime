@@ -187,9 +187,6 @@
                 <span style="font-size: 22px;">🧾</span>
             </button>
         @endif
-        <button id="fabFaq" title="Preguntas rápidas" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-            <span style="font-size: 22px;">💡</span>
-        </button>
     </div>
 
     @if($comercio->pedido_habilitado)
@@ -208,20 +205,6 @@
             </div>
         </div>
     @endif
-
-    <!-- Panel de Preguntas Rápidas -->
-    <div id="faqPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
-        <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
-            <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px 0;">Preguntas rápidas</h4>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
-                @foreach($comercio->quick_questions as $quickQuestion)
-                    <button onclick="askQuestion('{{ $quickQuestion['question'] }}'); hideFaq();" style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer;">
-                        {{ $quickQuestion['icon'] ?? '❓' }} {{ $quickQuestion['question'] }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-    </div>
 
     <script>
         let isLoading = false;
@@ -797,14 +780,6 @@
             }, 100);
         }
 
-        // FAB FAQ
-        const fab = document.getElementById('fabFaq');
-        const faqPanel = document.getElementById('faqPanel');
-        function showFaq(){ faqPanel.style.display = 'block'; }
-        function hideFaq(){ faqPanel.style.display = 'none'; }
-        function toggleFaq(){ faqPanel.style.display = faqPanel.style.display === 'block' ? 'none' : 'block'; }
-        if (fab) fab.addEventListener('click', toggleFaq);
-
         // Wishlist panel handlers
         const fabWish = document.getElementById('fabWish');
         const wishPanel = document.getElementById('wishPanel');
@@ -830,12 +805,6 @@
         // Render inicial por si había selección previa
         if (pedidosHabilitados) {
             renderWish();
-        }
-
-        // Hacer pregunta rápida
-        function askQuestion(question) {
-            sendMessage(question);
-            hideFaq();
         }
 
         // Event listeners

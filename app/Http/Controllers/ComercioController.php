@@ -175,12 +175,6 @@ class ComercioController extends Controller
             'page_title' => 'nullable|string|max:100',
             'page_description' => 'nullable|string|max:500',
             'favicon_url' => 'nullable|string|max:255',
-            'quick_questions' => 'nullable|array',
-            'quick_questions.*.icon' => 'required|string|max:10',
-            'quick_questions.*.question' => 'required|string|max:255',
-            'quick_questions.*.category' => 'required|string|in:menu,precios,horarios,ubicacion,contacto,general',
-            'quick_questions.*.answer' => 'nullable|string|max:1000',
-            'quick_questions.*.auto_generated' => 'boolean',
             'pedido_habilitado' => 'nullable|boolean'
         ]);
 
@@ -206,7 +200,6 @@ class ComercioController extends Controller
         $comercio->page_title = $validated['page_title'];
         $comercio->page_description = $validated['page_description'];
         $comercio->favicon_url = $validated['favicon_url'];
-        $comercio->quick_questions = $validated['quick_questions'] ?? [];
 
         // Manejar eliminación de logo
         if ($request->has('delete_logo') && $request->delete_logo == '1') {
@@ -240,39 +233,6 @@ class ComercioController extends Controller
         }
     }
 
-    /**
-     * Generar preguntas frecuentes con IA
-     */
-    public function generateQuestions(Request $request, Comercio $comercio)
-    {
-        $user = auth()->user();
-        
-        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
-            abort(403, 'No tienes permiso para generar preguntas para este comercio.');
-        }
-        
-        // Llamar al método del CustomizationController
-        $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->generateQuestions($request, $comercio->id);
-    }
-
-    /**
-     * Mejorar respuesta con IA
-     */
-    public function improveAnswer(Request $request, Comercio $comercio)
-    {
-        $user = auth()->user();
-        
-        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
-            abort(403, 'No tienes permiso para mejorar respuestas en este comercio.');
-        }
-        
-        // Llamar al método del CustomizationController
-        $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->improveAnswer($request, $comercio->id);
-    }
 
     /**
      * Vista previa del comercio

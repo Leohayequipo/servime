@@ -284,17 +284,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Generar preguntas frecuentes con IA para Super Admin
-     */
-    public function generateQuestions(Request $request, Comercio $comercio)
-    {
-        // Super Admin puede generar preguntas para cualquier comercio (sin validación adicional)
-        
-        // Llamar al método del ComercioController
-        $comercioController = new \App\Http\Controllers\ComercioController();
-        return $comercioController->generateQuestions($request, $comercio);
-    }
 
     /**
      * Eliminar comercio (Super Admin)

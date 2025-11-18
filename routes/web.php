@@ -59,7 +59,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
         Route::delete('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
-        Route::post('/comercios/{comercio:slug}/generate-questions', [App\Http\Controllers\AdminController::class, 'generateQuestions'])->name('comercios.generate.questions');
         
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');
@@ -93,8 +92,6 @@ Route::middleware('auth')->group(function () {
     
     // Rutas de personalización (ahora integradas en editar, usando slug)
     Route::get('/comercios/{comercio:slug}/preview', [App\Http\Controllers\ComercioController::class, 'preview'])->name('comercios.preview');
-    Route::post('/comercios/{comercio:slug}/generate-questions', [App\Http\Controllers\ComercioController::class, 'generateQuestions'])->name('comercios.generate.questions');
-    Route::post('/comercios/{comercio:slug}/improve-answer', [App\Http\Controllers\ComercioController::class, 'improveAnswer'])->name('comercios.improve.answer');
 });
 
 // Rutas públicas (sin autenticación, usando slug)

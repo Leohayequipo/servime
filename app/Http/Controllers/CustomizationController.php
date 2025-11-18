@@ -37,13 +37,7 @@ class CustomizationController extends Controller
             'pedido_habilitado' => 'nullable|boolean',
             'page_title' => 'nullable|string|max:100',
             'page_description' => 'nullable|string|max:500',
-            'favicon_url' => 'nullable|string|max:255',
-            'quick_questions' => 'nullable|array',
-            'quick_questions.*.icon' => 'required|string|max:10',
-            'quick_questions.*.question' => 'required|string|max:255',
-            'quick_questions.*.category' => 'required|string|in:menu,precios,horarios,ubicacion,contacto,general',
-            'quick_questions.*.answer' => 'nullable|string|max:1000',
-            'quick_questions.*.auto_generated' => 'boolean'
+            'favicon_url' => 'nullable|string|max:255'
         ]);
 
         $data = $request->all();

@@ -77,18 +77,6 @@ class ChatbotService
             $contexto .= "Dirección: {$comercio->direccion}\n";
         }
         
-        // Agregar preguntas frecuentes como contexto
-        $questions = $comercio->quick_questions;
-        if (!empty($questions)) {
-            $contexto .= "\nPREGUNTAS FRECUENTES Y SUS RESPUESTAS:\n";
-            foreach ($questions as $question) {
-                if (!empty($question['question']) && !empty($question['answer'])) {
-                    $contexto .= "Pregunta: {$question['question']}\n";
-                    $contexto .= "Respuesta: {$question['answer']}\n\n";
-                }
-            }
-        }
-        
         // Agregar menús si están disponibles
         if (!$menus->isEmpty()) {
             $contexto .= "\nMenús disponibles:\n";
