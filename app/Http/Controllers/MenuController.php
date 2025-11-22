@@ -1335,15 +1335,20 @@ class MenuController extends Controller
                     'descripcion' => trim($promo['descripcion'] ?? '')
                 ];
                 
-                // Preservar imagen: primero del request, luego buscar por nombre, luego por índice
+                // Preservar imagen SOLO si viene explícitamente en el request o coincide por nombre
+                // NO usar índice porque al filtrar promociones los índices cambian y se mezclan imágenes
                 if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+                    // Si viene explícitamente en el request, usar esa
                     $plato['imagen'] = $promo['imagen'];
-                } elseif (isset($imagenesExistentes[$nombreNormalizado])) {
-                    // Buscar por nombre normalizado (más confiable)
+                    Log::info("Imagen asignada desde request para promoción $idx", ['imagen' => $promo['imagen']]);
+                } elseif (!empty($nombreNormalizado) && isset($imagenesExistentes[$nombreNormalizado])) {
+                    // Buscar por nombre normalizado SOLO si hay nombre (más confiable)
                     $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
-                } elseif (isset($imagenesExistentes[$idx])) {
-                    // Fallback: buscar por índice
-                    $plato['imagen'] = $imagenesExistentes[$idx];
+                    Log::info("Imagen asignada por nombre para promoción $idx", ['nombre' => $nombreNormalizado, 'imagen' => $imagenesExistentes[$nombreNormalizado]]);
+                } else {
+                    // Si no viene imagen en el request y no coincide por nombre, NO asignar imagen
+                    // Esto previene que se asigne incorrectamente una imagen de otra promoción
+                    Log::info("Promoción $idx sin imagen - no se asignará ninguna");
                 }
                 
                 Log::info('Agregando promoción', [

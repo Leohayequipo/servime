@@ -681,14 +681,6 @@
                                     <span>➕</span>
                                     <span>Agregar Promoción</span>
                                 </button>
-                                <button type="button" 
-                                        onclick="savePromocionesAjax()"
-                                        id="btn-save-promociones"
-                                        style="background-color: #16a34a !important; color: white !important;"
-                                        class="hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-green-500/50">
-                                    <span>💾</span>
-                                    <span>Guardar Promociones</span>
-                                </button>
                             </div>
                         </div>
                         <div class="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-6">
@@ -1076,16 +1068,23 @@
                         console.log('Welcome message sincronizado:', welcomeMessage.value);
                     }
                     
-                    // ESPERAR un momento para asegurar que el DOM se actualizó completamente
-                    setTimeout(() => {
-                        // Sincronizar promociones antes de enviar
-                        syncPromocionesToForm();
-                        
-                        // Esperar un momento más y luego continuar con el submit
+                    // Guardar promociones primero vía AJAX antes de enviar el formulario
+                    savePromocionesSilently().then(() => {
+                        // Esperar un momento para asegurar que el DOM se actualizó completamente
                         setTimeout(() => {
-                            return handleFormSubmit(event);
+                            // Sincronizar promociones al formulario (por si acaso)
+                            syncPromocionesToForm();
+                            
+                            // Continuar con el envío normal del formulario
+                            setTimeout(() => {
+                                return handleFormSubmit(event);
+                            }, 100);
                         }, 100);
-                    }, 100);
+                    }).catch((error) => {
+                        console.error('Error al guardar promociones:', error);
+                        showError('Error al guardar las promociones: ' + error.message);
+                        // No continuar con el envío si falla el guardado de promociones
+                    });
                 });
             }
             
@@ -1103,14 +1102,18 @@
                         return;
                     }
                     
-                    // Sincronizar promociones ANTES de crear el FormData
-                    syncPromocionesToForm();
-                    
                     saveButton.disabled = true;
-                    saveButton.textContent = 'Procesando...';
+                    saveButton.textContent = 'Guardando promociones...';
                     
-                    // Verificar si hay archivo convertido
-                    if (convertedImageFile) {
+                    // Guardar promociones primero vía AJAX
+                    savePromocionesSilently().then(() => {
+                        saveButton.textContent = 'Procesando...';
+                        
+                        // Sincronizar promociones al formulario (por si acaso)
+                        syncPromocionesToForm();
+                        
+                        // Verificar si hay archivo convertido
+                        if (convertedImageFile) {
                         
                         // Crear FormData manualmente
                         const formData = new FormData();
@@ -1197,39 +1200,36 @@
                             saveButton.textContent = 'Guardar Cambios';
                             alert('Error al guardar el menú. Por favor, intenta nuevamente.');
                         });
-                    } else {
-                        // Sincronizar campos del chatbot ANTES de enviar el formulario
-                        const chatbotName = document.getElementById('chatbot_name');
-                        const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
-                        if (chatbotName && chatbotNameHidden) {
-                            chatbotNameHidden.value = chatbotName.value;
-                            console.log('✅ Chatbot name sincronizado antes de submit:', chatbotName.value);
-                        }
-                        
-                        const welcomeMessage = document.getElementById('welcome_message');
-                        const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
-                        if (welcomeMessage && welcomeMessageHidden) {
-                            welcomeMessageHidden.value = welcomeMessage.value;
-                            console.log('✅ Welcome message sincronizado antes de submit:', welcomeMessage.value.substring(0, 50) + '...');
-                        }
-                        
-                        // Enviar el formulario del menú (las promociones ya están sincronizadas arriba)
-                        const menuForm = document.getElementById('menu-form');
-                        if (menuForm) {
-                            console.log('Enviando formulario normalmente (sin archivo convertido)');
-                            // Verificar que las promociones estén sincronizadas
-                            const promoInputs = menuForm.querySelectorAll('input[name^="promociones"]');
-                            console.log('Inputs de promociones en el form antes de enviar:', promoInputs.length);
+                        } else {
+                            // Sincronizar campos del chatbot ANTES de enviar el formulario
+                            const chatbotName = document.getElementById('chatbot_name');
+                            const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
+                            if (chatbotName && chatbotNameHidden) {
+                                chatbotNameHidden.value = chatbotName.value;
+                                console.log('✅ Chatbot name sincronizado antes de submit:', chatbotName.value);
+                            }
                             
-                            // Verificar que los campos ocultos tienen los valores correctos
-                            console.log('Valores finales antes de enviar:', {
-                                chatbot_name_hidden: chatbotNameHidden?.value,
-                                welcome_message_hidden: welcomeMessageHidden?.value?.substring(0, 50) + '...'
-                            });
+                            const welcomeMessage = document.getElementById('welcome_message');
+                            const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
+                            if (welcomeMessage && welcomeMessageHidden) {
+                                welcomeMessageHidden.value = welcomeMessage.value;
+                                console.log('✅ Welcome message sincronizado antes de submit:', welcomeMessage.value.substring(0, 50) + '...');
+                            }
                             
-                            menuForm.submit();
+                            // Enviar el formulario del menú (las promociones ya están guardadas vía AJAX)
+                            const menuForm = document.getElementById('menu-form');
+                            if (menuForm) {
+                                console.log('Enviando formulario normalmente (sin archivo convertido)');
+                                menuForm.submit();
+                            }
                         }
-                    }
+                    }).catch((error) => {
+                        console.error('Error al guardar promociones:', error);
+                        saveButton.disabled = false;
+                        saveButton.textContent = 'Guardar Cambios';
+                        showError('Error al guardar las promociones: ' + error.message);
+                        // No continuar con el envío si falla el guardado de promociones
+                    });
                 });
             }
             // Aplicar tema predefinido
@@ -2430,124 +2430,115 @@
         }
         
         // Función para guardar promociones vía AJAX
-        async function savePromocionesAjax() {
-            const btn = document.getElementById('btn-save-promociones');
-            const originalText = btn.innerHTML;
+        // Función auxiliar para recopilar datos de promociones
+        function collectPromocionesData() {
+            const container = document.getElementById('promociones-container');
+            if (!container) {
+                console.warn('⚠️ No se encontró el contenedor de promociones');
+                return [];
+            }
             
-            try {
-                // Deshabilitar botón
-                btn.disabled = true;
-                btn.innerHTML = '<span>⏳</span><span>Guardando...</span>';
-                
-                // Obtener contenedor de promociones
-                const container = document.getElementById('promociones-container');
-                if (!container) {
-                    throw new Error('No se encontró el contenedor de promociones');
+            const allItems = Array.from(container.querySelectorAll('.promocion-item'));
+            console.log(`📋 Total items encontrados en DOM: ${allItems.length}`);
+            const promociones = [];
+            
+            allItems.forEach((item, idx) => {
+                // Verificar que está en el DOM y es visible
+                if (!item.isConnected || !container.contains(item)) {
+                    console.warn(`⚠️ Item ${idx} no está conectado al DOM, saltando`);
+                    return;
                 }
                 
-                // Recopilar datos de todas las promociones visibles
-                const allItems = Array.from(container.querySelectorAll('.promocion-item'));
-                const promociones = [];
+                const style = window.getComputedStyle(item);
+                if (style.display === 'none' || style.visibility === 'hidden' || !item.offsetParent) {
+                    console.warn(`⚠️ Item ${idx} no es visible, saltando`);
+                    return;
+                }
                 
-                console.log('=== GUARDANDO PROMOCIONES VÍA AJAX ===');
-                console.log(`Total items encontrados: ${allItems.length}`);
+                const index = item.getAttribute('data-promo-index');
+                if (!index) {
+                    console.warn(`⚠️ Item ${idx} no tiene data-promo-index, saltando`);
+                    return;
+                }
                 
-                allItems.forEach((item, idx) => {
-                    // Verificar que está en el DOM
-                    if (!item.isConnected || !container.contains(item)) {
-                        console.warn(`Item ${idx} no está conectado, saltando`);
-                        return;
-                    }
-                    
-                    // Verificar que es visible
-                    const style = window.getComputedStyle(item);
-                    if (style.display === 'none' || style.visibility === 'hidden' || !item.offsetParent) {
-                        console.warn(`Item ${idx} no es visible, saltando`);
-                        return;
-                    }
-                    
-                    const index = item.getAttribute('data-promo-index');
-                    if (!index) {
-                        console.warn(`Item ${idx} sin data-promo-index, saltando`);
-                        return;
-                    }
-                    
-                    const promo = {
-                        nombre: '',
-                        precio: '',
-                        descripcion: '',
-                        imagen: ''
-                    };
-                    
-                    // Recopilar datos de los inputs
-                    const inputsInItem = item.querySelectorAll('[data-promo-field]');
-                    console.log(`  Item ${index}, inputs encontrados: ${inputsInItem.length}`);
-                    
-                    inputsInItem.forEach(input => {
-                        const field = input.getAttribute('data-promo-field');
-                        if (!field) {
-                            console.warn(`    Input sin data-promo-field en item ${index}`);
-                            return;
-                        }
-                        
-                        // Leer el valor directamente del input
-                        let value = '';
-                        if (input.tagName === 'TEXTAREA') {
-                            value = input.value || '';
-                        } else if (input.tagName === 'INPUT') {
-                            value = input.value || '';
-                        }
-                        
-                        // Guardar el valor (aunque esté vacío)
+                const promo = {
+                    nombre: '',
+                    precio: '',
+                    descripcion: '',
+                    imagen: ''
+                };
+                
+                // Recopilar datos de los inputs
+                const inputsInItem = item.querySelectorAll('[data-promo-field]');
+                console.log(`  Item ${index} (índice DOM ${idx}): encontró ${inputsInItem.length} inputs`);
+                
+                inputsInItem.forEach(input => {
+                    const field = input.getAttribute('data-promo-field');
+                    if (field) {
+                        const value = input.value || '';
                         promo[field] = value;
-                        
-                        console.log(`    Campo ${field}: valor="${value}", type="${input.type}", name="${input.name}"`);
-                        console.log(`    Input completo:`, {
-                            tagName: input.tagName,
-                            type: input.type,
-                            name: input.name,
-                            id: input.id,
-                            value: input.value,
-                            defaultValue: input.defaultValue,
-                            disabled: input.disabled
-                        });
-                    });
-                    
-                    // Buscar imagen
-                    const img = item.querySelector('img[id^="promo-imagen-"]');
-                    if (img && img.src) {
-                        const imgPath = img.src.replace(window.location.origin, '');
-                        if (imgPath) {
-                            promo.imagen = imgPath;
-                            console.log(`  Item ${index}, imagen: "${imgPath}"`);
-                        }
-                    }
-                    
-                    // IMPORTANTE: Agregar TODAS las promociones que están en el DOM (incluso si están vacías)
-                    // porque pueden tener imágenes o el usuario puede estar editándolas
-                    // Solo saltar si no tiene NADA (ni nombre, ni precio, ni descripción, ni imagen)
-                    const tieneAlgo = (promo.nombre && promo.nombre.trim() !== '') ||
-                                      (promo.precio && promo.precio.trim() !== '') ||
-                                      (promo.descripcion && promo.descripcion.trim() !== '') ||
-                                      (promo.imagen && promo.imagen.trim() !== '');
-                    
-                    if (tieneAlgo) {
-                        // Asegurar que todos los campos básicos existan (aunque estén vacíos)
-                        if (!promo.hasOwnProperty('nombre')) promo.nombre = '';
-                        if (!promo.hasOwnProperty('precio')) promo.precio = '';
-                        if (!promo.hasOwnProperty('descripcion')) promo.descripcion = '';
-                        
-                        promociones.push(promo);
-                        console.log(`✓ Promoción ${index} agregada:`, promo);
-                    } else {
-                        console.log(`⚠️ Promoción ${index} está completamente vacía, saltando`);
+                        console.log(`    - Campo ${field}: "${value}"`);
                     }
                 });
                 
-                console.log(`📊 Total promociones a guardar: ${promociones.length}`);
-                console.log('📊 Promociones:', JSON.stringify(promociones, null, 2));
+                // Buscar imagen - SOLO si realmente existe y es válida
+                const img = item.querySelector('img[id^="promo-imagen-"]');
+                if (img && img.src) {
+                    const imgPath = img.src.replace(window.location.origin, '');
+                    // Solo agregar imagen si tiene una ruta válida y no es un placeholder
+                    if (imgPath && 
+                        !imgPath.includes('placeholder') && 
+                        !imgPath.includes('data:') && 
+                        imgPath.startsWith('/storage/')) {
+                        promo.imagen = imgPath;
+                        console.log(`    - Imagen: "${imgPath}"`);
+                    } else {
+                        // Si no hay imagen válida, asegurar que el campo esté vacío
+                        promo.imagen = '';
+                        console.log(`    - Sin imagen válida (path: "${imgPath}")`);
+                    }
+                } else {
+                    // No hay imagen, asegurar que el campo esté vacío explícitamente
+                    promo.imagen = '';
+                    console.log(`    - Sin imagen en el DOM`);
+                }
                 
-                // Enviar vía AJAX
+                // Verificar si tiene nombre o precio (requisitos del backend)
+                const tieneNombre = promo.nombre && promo.nombre.trim() !== '';
+                const tienePrecio = promo.precio && promo.precio.trim() !== '';
+                
+                console.log(`  Item ${index}: nombre="${promo.nombre}", precio="${promo.precio}", descripcion="${promo.descripcion}", imagen="${promo.imagen ? 'sí' : 'no'}"`);
+                
+                // Agregar si tiene nombre O precio (el backend requiere esto)
+                if (tieneNombre || tienePrecio) {
+                    // Asegurar que todos los campos básicos existan (aunque estén vacíos)
+                    if (!promo.hasOwnProperty('nombre')) promo.nombre = '';
+                    if (!promo.hasOwnProperty('precio')) promo.precio = '';
+                    if (!promo.hasOwnProperty('descripcion')) promo.descripcion = '';
+                    
+                    promociones.push(promo);
+                    console.log(`  ✓ Promoción ${index} agregada a la lista para guardar`);
+                } else {
+                    console.log(`  ⚠️ Promoción ${index} sin nombre ni precio, NO se agregará`);
+                }
+            });
+            
+            console.log(`📊 Total promociones a guardar: ${promociones.length}`);
+            console.log('📊 Promociones recopiladas:', JSON.stringify(promociones, null, 2));
+            
+            return promociones;
+        }
+        
+        // Función para guardar promociones vía AJAX (sin mostrar mensaje)
+        async function savePromocionesSilently() {
+            try {
+                const promociones = collectPromocionesData();
+                
+                if (promociones.length === 0) {
+                    // Si no hay promociones, no hacer nada (pero no fallar)
+                    return true;
+                }
+                
                 const saveUrl = `{{ route('menus.save.promociones', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
                 const response = await fetch(saveUrl, {
                     method: 'POST',
@@ -2569,30 +2560,15 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log('✅ Promociones guardadas exitosamente', data);
-                    
-                    // Obtener el número de promociones guardadas desde la respuesta o del array
-                    const count = data.count || promociones.length || 0;
-                    
-                    // Mostrar mensaje de éxito usando la función showSuccess para mantener consistencia
-                    const message = count > 0 
-                        ? `Se guardaron ${count} promoción${count !== 1 ? 'es' : ''} correctamente.`
-                        : 'Las promociones se guardaron correctamente.';
-                    
-                    showSuccess(message, '¡Guardado exitosamente!');
+                    console.log('✅ Promociones guardadas silenciosamente');
+                    return true;
                 } else {
                     throw new Error(data.error || 'Error al guardar las promociones');
                 }
                 
             } catch (error) {
                 console.error('❌ Error al guardar promociones:', error);
-                
-                // Mostrar mensaje de error usando la función showError para mantener consistencia
-                showError(error.message || 'Error al guardar las promociones. Por favor, intenta nuevamente.');
-            } finally {
-                // Rehabilitar botón
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                throw error; // Re-lanzar para que el manejador principal lo capture
             }
         }
         
@@ -2604,14 +2580,50 @@
                 const promoItem = document.querySelector(`#promociones-container [data-promo-index="${index}"]`);
                 if (!promoItem) {
                     console.warn(`⚠️ No se encontró la promoción con índice ${index}`);
-                    alert(`No se encontró la promoción con índice ${index}. Por favor, recarga la página.`);
                     return;
                 }
                 
                 console.log(`🗑️ ELIMINANDO PROMOCIÓN ${index}...`);
                 
+                // Verificar si es una promoción nueva (vacía, sin guardar en el backend)
+                const nombreInput = promoItem.querySelector('[data-promo-field="nombre"]');
+                const precioInput = promoItem.querySelector('[data-promo-field="precio"]');
+                const descripcionInput = promoItem.querySelector('[data-promo-field="descripcion"]');
+                const img = promoItem.querySelector(`img[id^="promo-imagen-"]`);
+                
+                const tieneNombre = nombreInput && nombreInput.value && nombreInput.value.trim() !== '';
+                const tienePrecio = precioInput && precioInput.value && precioInput.value.trim() !== '';
+                const tieneDescripcion = descripcionInput && descripcionInput.value && descripcionInput.value.trim() !== '';
+                const tieneImagen = img && img.src && !img.src.includes('placeholder');
+                
+                // Si no tiene ningún dato, es una promoción nueva que aún no existe en el backend
+                // Solo eliminarla del DOM sin llamar al backend
+                if (!tieneNombre && !tienePrecio && !tieneDescripcion && !tieneImagen) {
+                    console.log(`⚠️ Promoción ${index} está vacía, eliminando solo del DOM`);
+                    
+                    // Eliminar inputs relacionados
+                    const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
+                    allPromoInputs.forEach(input => {
+                        const match = input.name.match(/promociones\[(\d+)\]/);
+                        if (match && match[1] === String(index)) {
+                            input.remove();
+                        }
+                    });
+                    
+                    // Eliminar del DOM
+                    promoItem.style.opacity = '0';
+                    promoItem.style.transform = 'scale(0.95)';
+                    promoItem.style.transition = 'all 0.3s ease-out';
+                    setTimeout(() => {
+                        promoItem.remove();
+                        console.log(`✅ PROMOCIÓN ${index} ELIMINADA DEL DOM (era nueva y vacía)`);
+                    }, 300);
+                    
+                    return;
+                }
+                
+                // Si tiene datos, intentar eliminar del backend
                 try {
-                    // PASO 1: Eliminar del JSON inmediatamente (AJAX)
                     const deleteUrl = `{{ route('menus.delete.promocion', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
                     const response = await fetch(deleteUrl, {
                         method: 'DELETE',
@@ -2626,41 +2638,81 @@
                     
                     const data = await response.json();
                     
+                    // Si la promoción no existe en el backend (error "no encontrada"), 
+                    // simplemente eliminarla del DOM sin mostrar error
                     if (!response.ok || !data.success) {
+                        const errorMsg = data.error || '';
+                        if (errorMsg.includes('no encontrada') || errorMsg.includes('not found')) {
+                            console.log(`⚠️ Promoción ${index} no existe en el backend, eliminando solo del DOM`);
+                            
+                            // Eliminar inputs relacionados
+                            const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
+                            allPromoInputs.forEach(input => {
+                                const match = input.name.match(/promociones\[(\d+)\]/);
+                                if (match && match[1] === String(index)) {
+                                    input.remove();
+                                }
+                            });
+                            
+                            // Eliminar del DOM
+                            promoItem.style.opacity = '0';
+                            promoItem.style.transform = 'scale(0.95)';
+                            promoItem.style.transition = 'all 0.3s ease-out';
+                            setTimeout(() => {
+                                promoItem.remove();
+                                console.log(`✅ PROMOCIÓN ${index} ELIMINADA DEL DOM`);
+                            }, 300);
+                            
+                            return;
+                        }
+                        
+                        // Si es otro tipo de error, sí mostrarlo
                         throw new Error(data.error || 'Error al eliminar la promoción del servidor');
                     }
                     
                     console.log(`✓ Promoción ${index} eliminada del JSON en el servidor`);
                     
-                    // PASO 2: Si tiene imagen, eliminarla del servidor también (pero no esperar)
-                    const img = document.getElementById(`promo-imagen-${index}`);
+                    // Si tiene imagen, eliminarla del servidor también (pero no esperar)
                     if (img && img.src) {
                         const imgPath = img.src.replace(window.location.origin, '');
-                        removePromocionImagenSilent(index, imgPath);
+                        if (imgPath && !imgPath.includes('placeholder')) {
+                            removePromocionImagenSilent(index, imgPath);
+                        }
                     }
                     
-                    // PASO 3: Eliminar TODOS los inputs relacionados con esta promoción (visibles Y ocultos)
+                    // Eliminar TODOS los inputs relacionados con esta promoción (visibles Y ocultos)
                     const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
-                    let inputsEliminados = 0;
                     allPromoInputs.forEach(input => {
                         const match = input.name.match(/promociones\[(\d+)\]/);
                         if (match && match[1] === String(index)) {
-                            console.log(`  ✓ Eliminando input: ${input.name}`);
                             input.remove();
-                            inputsEliminados++;
                         }
                     });
                     
-                    // PASO 4: Ocultar/eliminar la card del DOM
-                    promoItem.style.display = 'none'; // Ocultar primero
+                    // Ocultar/eliminar la card del DOM
+                    promoItem.style.opacity = '0';
+                    promoItem.style.transform = 'scale(0.95)';
+                    promoItem.style.transition = 'all 0.3s ease-out';
                     setTimeout(() => {
-                        promoItem.remove(); // Eliminar después
+                        promoItem.remove();
                         console.log(`✅ PROMOCIÓN ${index} ELIMINADA COMPLETAMENTE (JSON + DOM)`);
                     }, 300);
                     
                 } catch (error) {
                     console.error('❌ Error al eliminar promoción:', error);
-                    alert(`Error al eliminar la promoción: ${error.message}. Por favor, intenta nuevamente.`);
+                    // Solo mostrar error si no es porque no existe
+                    if (!error.message.includes('no encontrada') && !error.message.includes('not found')) {
+                        showError('Error al eliminar la promoción: ' + error.message);
+                    } else {
+                        // Si no existe, simplemente eliminarla del DOM
+                        promoItem.style.opacity = '0';
+                        promoItem.style.transform = 'scale(0.95)';
+                        promoItem.style.transition = 'all 0.3s ease-out';
+                        setTimeout(() => {
+                            promoItem.remove();
+                            console.log(`✅ PROMOCIÓN ${index} ELIMINADA DEL DOM (no existía en backend)`);
+                        }, 300);
+                    }
                 }
             });
         }
