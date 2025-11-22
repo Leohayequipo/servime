@@ -221,9 +221,21 @@
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
                     @foreach($categorias as $categoria)
-                        <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer; transition: background 0.2s;">
-                            {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
-                        </button>
+                        @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
+                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
+                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 140, 0, 0.5); background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%); color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);"
+                                    onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(255, 140, 0, 0.5)';"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(255, 140, 0, 0.3)';">
+                                {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
+                            </button>
+                        @else
+                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
+                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer; transition: background 0.2s;"
+                                    onmouseover="this.style.background='#1f1f1f';"
+                                    onmouseout="this.style.background='#141414';">
+                                {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
+                            </button>
+                        @endif
                     @endforeach
                 </div>
             </div>

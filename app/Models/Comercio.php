@@ -103,16 +103,30 @@ class Comercio extends Model
             }
 
             $categorias = [];
+            $promociones = [];
+            
             foreach ($data['categorias'] as $categoria) {
                 if (isset($categoria['nombre']) && !empty($categoria['nombre'])) {
-                    $categorias[] = [
+                    $nombreLower = strtolower(trim($categoria['nombre']));
+                    $esPromocion = $nombreLower === 'promociones del día' || $nombreLower === 'promociones del dia';
+                    
+                    $item = [
                         'nombre' => $categoria['nombre'],
-                        'icon' => $this->getIconForCategory($categoria['nombre'])
+                        'icon' => $esPromocion ? '🔥' : $this->getIconForCategory($categoria['nombre']),
+                        'es_promocion' => $esPromocion
                     ];
+                    
+                    // Separar promociones de categorías normales
+                    if ($esPromocion) {
+                        $promociones[] = $item;
+                    } else {
+                        $categorias[] = $item;
+                    }
                 }
             }
 
-            return $categorias;
+            // Retornar promociones primero (destacadas) y luego categorías normales
+            return array_merge($promociones, $categorias);
         } catch (\Exception $e) {
             return [];
         }
