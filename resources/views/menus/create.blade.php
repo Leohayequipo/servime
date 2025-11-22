@@ -684,7 +684,8 @@
                                 <button type="button" 
                                         onclick="savePromocionesAjax()"
                                         id="btn-save-promociones"
-                                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
+                                        style="background-color: #16a34a !important; color: white !important;"
+                                        class="hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-green-500/50">
                                     <span>💾</span>
                                     <span>Guardar Promociones</span>
                                 </button>
@@ -2032,9 +2033,6 @@
                     
                     // Actualizar texto del botón
                     button.innerHTML = '<span class="mr-2">📷</span>Cambiar';
-                    
-                    // Mostrar mensaje de éxito
-                    showSuccess('Imagen subida exitosamente');
                 } else {
                     throw new Error(data.error || 'Error al subir la imagen');
                 }
@@ -2521,21 +2519,17 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log('✅ Promociones guardadas exitosamente');
+                    console.log('✅ Promociones guardadas exitosamente', data);
                     
-                    // Mostrar mensaje de éxito
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Guardado!',
-                            text: `Se guardaron ${promociones.length} promoción${promociones.length !== 1 ? 'es' : ''} exitosamente.`,
-                            confirmButtonColor: '#10B981',
-                            timer: 2000,
-                            showConfirmButton: true
-                        });
-                    } else {
-                        alert(`✅ Promociones guardadas exitosamente (${promociones.length} promoción${promociones.length !== 1 ? 'es' : ''})`);
-                    }
+                    // Obtener el número de promociones guardadas desde la respuesta o del array
+                    const count = data.count || promociones.length || 0;
+                    
+                    // Mostrar mensaje de éxito usando la función showSuccess para mantener consistencia
+                    const message = count > 0 
+                        ? `Se guardaron ${count} promoción${count !== 1 ? 'es' : ''} correctamente.`
+                        : 'Las promociones se guardaron correctamente.';
+                    
+                    showSuccess(message, '¡Guardado exitosamente!');
                 } else {
                     throw new Error(data.error || 'Error al guardar las promociones');
                 }
@@ -2543,17 +2537,8 @@
             } catch (error) {
                 console.error('❌ Error al guardar promociones:', error);
                 
-                // Mostrar mensaje de error
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: error.message || 'Error al guardar las promociones. Por favor, intenta nuevamente.',
-                        confirmButtonColor: '#EF4444'
-                    });
-                } else {
-                    alert(`❌ Error al guardar las promociones: ${error.message || 'Error desconocido'}`);
-                }
+                // Mostrar mensaje de error usando la función showError para mantener consistencia
+                showError(error.message || 'Error al guardar las promociones. Por favor, intenta nuevamente.');
             } finally {
                 // Rehabilitar botón
                 btn.disabled = false;
@@ -2704,7 +2689,6 @@
                             </button>
                         </div>
                     `;
-                    showSuccess('Imagen subida exitosamente');
                 } else {
                     throw new Error(data.error || 'Error desconocido');
                 }

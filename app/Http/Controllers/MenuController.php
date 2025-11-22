@@ -898,16 +898,23 @@ class MenuController extends Controller
             // Validar índice de promoción
             $promoIndex = $validated['promo_index'];
             
-            // Si la promoción no existe en ese índice, crearla
+            // NO crear placeholder vacío - solo actualizar si ya existe
+            // La promoción solo se guardará en el JSON cuando tenga al menos nombre o precio
             if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
-                // Asegurar que el array tenga el tamaño correcto
-                while (count($contenido['categorias'][$promocionesCategoriaIndex]['platos']) <= $promoIndex) {
-                    $contenido['categorias'][$promocionesCategoriaIndex]['platos'][] = [
-                        'nombre' => '',
-                        'precio' => '',
-                        'descripcion' => ''
-                    ];
-                }
+                // La promoción no existe aún - no crear registro vacío
+                // Solo guardar la imagen en storage y devolver la URL
+                // El registro se creará cuando se guarden los datos de texto vía savePromociones()
+                $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+                
+                // Copiar a public_html
+                $this->copyMenuItemToPublicHtml($imagenPath);
+                
+                return response()->json([
+                    'success' => true,
+                    'imagen_url' => asset('storage/' . $imagenPath),
+                    'imagen_path' => '/storage/' . $imagenPath,
+                    'message' => 'Imagen subida. Completa los datos (nombre o precio) y guarda la promoción para que se guarde en el JSON.'
+                ]);
             }
 
             // Guardar imagen
@@ -1209,16 +1216,14 @@ class MenuController extends Controller
                 'count' => count($promociones)
             ]);
             
-            // NO filtrar promociones vacías - guardar TODAS las que tienen algún dato
-            // (nombre, precio, descripción o imagen) porque el usuario puede estar editándolas
+            // Solo guardar promociones que tengan al menos nombre o precio (además de imagen)
+            // No crear registros vacíos solo con imagen
             $promocionesFiltradas = array_filter($promociones, function($promo) {
-                // Guardar si tiene nombre, precio, descripción o imagen
                 $tieneNombre = isset($promo['nombre']) && trim($promo['nombre']) !== '';
                 $tienePrecio = isset($promo['precio']) && trim($promo['precio']) !== '';
-                $tieneDescripcion = isset($promo['descripcion']) && trim($promo['descripcion']) !== '';
-                $tieneImagen = isset($promo['imagen']) && trim($promo['imagen']) !== '';
                 
-                return $tieneNombre || $tienePrecio || $tieneDescripcion || $tieneImagen;
+                // Debe tener al menos nombre O precio para guardarse en el JSON
+                return $tieneNombre || $tienePrecio;
             });
 
             // Reindexar array para eliminar índices vacíos
