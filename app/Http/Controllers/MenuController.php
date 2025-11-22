@@ -301,6 +301,15 @@ class MenuController extends Controller
             $comercio->save();
         }
 
+        // SIEMPRE guardar promociones (incluso si el array está vacío, para eliminar las que fueron borradas)
+        $promocionesData = $request->input('promociones', []);
+        
+        // Siempre llamar a savePromociones para que pueda eliminar las que fueron borradas del DOM
+        // Si promocionesData está vacío o no es array, se pasará un array vacío
+        $promocionesParaGuardar = is_array($promocionesData) ? $promocionesData : [];
+        Log::info('Guardando promociones', ['count' => count($promocionesParaGuardar), 'promociones' => $promocionesParaGuardar]);
+        $this->savePromociones($menu, $promocionesParaGuardar);
+
         // SOLO reprocesar si se subió un nuevo archivo
         // NO reprocesar si solo se actualizaron otros campos (preserva imágenes)
         if (!$nuevoArchivo) {
@@ -818,6 +827,552 @@ class MenuController extends Controller
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Subir imagen de una promoción específica y actualizar el JSON
+     */
+    public function uploadPromocionImagen(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
+            'promo_index' => 'required|integer',
+        ]);
+
+        try {
+            // Obtener y decodificar JSON actual
+            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+            
+            if (empty($rawContent)) {
+                return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
+            }
+
+            // Limpiar el contenido JSON
+            $jsonContent = $rawContent;
+            if (strpos($jsonContent, '```json') !== false) {
+                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+            }
+            
+            $contenido = json_decode(trim($jsonContent), true);
+            
+            if (!$contenido || !isset($contenido['categorias'])) {
+                return response()->json(['error' => 'Formato de menú inválido.'], 400);
+            }
+
+            // Buscar la categoría "Promociones del Día"
+            $promocionesCategoriaIndex = null;
+            foreach ($contenido['categorias'] as $idx => $cat) {
+                if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                    $promocionesCategoriaIndex = $idx;
+                    break;
+                }
+            }
+
+            if ($promocionesCategoriaIndex === null) {
+                // Crear la categoría si no existe
+                $promocionesCategoriaIndex = count($contenido['categorias']);
+                $contenido['categorias'][] = [
+                    'nombre' => 'Promociones del Día',
+                    'platos' => []
+                ];
+            }
+
+            // Asegurar que el array de platos existe
+            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
+                $contenido['categorias'][$promocionesCategoriaIndex]['platos'] = [];
+            }
+
+            // Validar índice de promoción
+            $promoIndex = $validated['promo_index'];
+            
+            // Si la promoción no existe en ese índice, crearla
+            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+                // Asegurar que el array tenga el tamaño correcto
+                while (count($contenido['categorias'][$promocionesCategoriaIndex]['platos']) <= $promoIndex) {
+                    $contenido['categorias'][$promocionesCategoriaIndex]['platos'][] = [
+                        'nombre' => '',
+                        'precio' => '',
+                        'descripcion' => ''
+                    ];
+                }
+            }
+
+            // Guardar imagen
+            $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+            
+            // Preparar referencia a la imagen anterior (si existe)
+            $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
+            $oldImageRelativePath = null;
+            if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+                $oldImageRelativePath = str_replace('/storage/', '', $promo['imagen']);
+            }
+
+            // Actualizar JSON con la nueva ruta de imagen
+            $promo['imagen'] = '/storage/' . $imagenPath;
+
+            // Guardar JSON actualizado
+            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            if ($jsonResult === false) {
+                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+            }
+            
+            $menu->contexto_gpt = $jsonResult;
+            $menu->save();
+
+            // Copiar y eliminar después del guardado
+            $this->copyMenuItemToPublicHtml($imagenPath);
+            
+            if ($oldImageRelativePath) {
+                $this->deleteMenuItemSafely($oldImageRelativePath);
+            }
+
+            return response()->json([
+                'success' => true,
+                'imagen_url' => asset('storage/' . $imagenPath),
+                'imagen_path' => $promo['imagen']
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al subir imagen de promoción: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al procesar la imagen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar imagen de promoción
+     */
+    /**
+     * Eliminar una promoción del JSON inmediatamente
+     */
+    public function deletePromocion(Request $request, Comercio $comercio, Menu $menu)
+    {
+        try {
+            $promoIndex = $request->input('promo_index');
+            
+            if ($promoIndex === null) {
+                return response()->json(['success' => false, 'error' => 'Índice de promoción no proporcionado'], 400);
+            }
+            
+            if (!$menu->contexto_gpt) {
+                return response()->json(['success' => false, 'error' => 'El menú no tiene contexto GPT'], 400);
+            }
+            
+            // Parsear JSON
+            $jsonContent = $menu->contexto_gpt;
+            if (strpos($jsonContent, '```json') !== false) {
+                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+            }
+            
+            $contenido = json_decode(trim($jsonContent), true);
+            
+            if (!$contenido || !isset($contenido['categorias'])) {
+                return response()->json(['success' => false, 'error' => 'JSON inválido'], 400);
+            }
+            
+            // Buscar categoría de promociones
+            $promocionesIndex = -1;
+            foreach ($contenido['categorias'] as $idx => $cat) {
+                if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                    $promocionesIndex = $idx;
+                    break;
+                }
+            }
+            
+            if ($promocionesIndex < 0) {
+                return response()->json(['success' => false, 'error' => 'No se encontró la categoría de promociones'], 400);
+            }
+            
+            // Eliminar la promoción del índice especificado
+            if (isset($contenido['categorias'][$promocionesIndex]['platos'][$promoIndex])) {
+                unset($contenido['categorias'][$promocionesIndex]['platos'][$promoIndex]);
+                // Reindexar el array
+                $contenido['categorias'][$promocionesIndex]['platos'] = array_values($contenido['categorias'][$promocionesIndex]['platos']);
+                
+                // Si no quedan promociones, eliminar la categoría completa
+                if (empty($contenido['categorias'][$promocionesIndex]['platos'])) {
+                    unset($contenido['categorias'][$promocionesIndex]);
+                    $contenido['categorias'] = array_values($contenido['categorias']);
+                }
+                
+                // Guardar JSON actualizado
+                $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                $menu->contexto_gpt = $jsonResult;
+                $menu->save();
+                
+                Log::info('Promoción eliminada del JSON', [
+                    'menu_id' => $menu->id,
+                    'promo_index' => $promoIndex,
+                    'promociones_restantes' => isset($contenido['categorias'][$promocionesIndex]) ? count($contenido['categorias'][$promocionesIndex]['platos']) : 0
+                ]);
+                
+                return response()->json(['success' => true, 'message' => 'Promoción eliminada exitosamente']);
+            } else {
+                return response()->json(['success' => false, 'error' => 'Promoción no encontrada'], 404);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar promoción: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    public function deletePromocionImagen(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'promo_index' => 'required|integer',
+        ]);
+
+        try {
+            // Obtener y decodificar JSON actual
+            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+            
+            if (empty($rawContent)) {
+                return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
+            }
+
+            // Limpiar el contenido JSON
+            $jsonContent = $rawContent;
+            if (strpos($jsonContent, '```json') !== false) {
+                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+            }
+            
+            $contenido = json_decode(trim($jsonContent), true);
+            
+            if (!$contenido || !isset($contenido['categorias'])) {
+                return response()->json(['error' => 'Formato de menú inválido.'], 400);
+            }
+
+            // Buscar la categoría "Promociones del Día"
+            $promocionesCategoriaIndex = null;
+            foreach ($contenido['categorias'] as $idx => $cat) {
+                if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                    $promocionesCategoriaIndex = $idx;
+                    break;
+                }
+            }
+
+            if ($promocionesCategoriaIndex === null) {
+                return response()->json(['error' => 'Categoría de promociones no encontrada.'], 404);
+            }
+
+            // Validar índice de promoción
+            $promoIndex = $validated['promo_index'];
+            
+            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+                return response()->json(['error' => 'Índice de promoción inválido.'], 400);
+            }
+
+            // Obtener referencia a la promoción
+            $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
+            
+            // Guardar ruta de imagen anterior para eliminarla
+            $oldImagePath = null;
+            if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+                $oldImagePath = str_replace('/storage/', '', $promo['imagen']);
+                // Eliminar la imagen del JSON
+                unset($promo['imagen']);
+            } else {
+                return response()->json(['error' => 'Esta promoción no tiene imagen.'], 400);
+            }
+
+            // Guardar JSON actualizado
+            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            if ($jsonResult === false) {
+                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+            }
+            
+            $menu->contexto_gpt = $jsonResult;
+            $menu->save();
+
+            // Eliminar imagen del storage
+            if ($oldImagePath) {
+                $this->deleteMenuItemSafely($oldImagePath);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Imagen eliminada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar imagen de promoción: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al eliminar la imagen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Guardar promociones vía AJAX (endpoint separado)
+     */
+    public function savePromocionesAjax(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['success' => false, 'error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['success' => false, 'error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+        
+        // Obtener datos del body JSON
+        // Cuando se envía con Content-Type: application/json, Laravel no lo procesa automáticamente
+        $jsonBody = json_decode($request->getContent(), true);
+        $promocionesData = $jsonBody['promociones'] ?? [];
+        
+        // Fallback: intentar con input() por si acaso viene como form-data
+        if (empty($promocionesData)) {
+            $promocionesData = $request->input('promociones', []);
+        }
+        
+        // Validar que sea un array
+        if (!is_array($promocionesData)) {
+            Log::error('savePromocionesAjax: datos inválidos', [
+                'promociones_data' => $promocionesData,
+                'request_all' => $request->all(),
+                'request_content' => $request->getContent()
+            ]);
+            return response()->json(['success' => false, 'error' => 'Datos de promociones inválidos'], 400);
+        }
+        
+        try {
+            Log::info('savePromocionesAjax llamado', [
+                'menu_id' => $menu->id,
+                'promociones_count' => count($promocionesData),
+                'promociones_recibidas' => $promocionesData,
+                'request_all' => $request->all(),
+                'request_content_type' => $request->header('Content-Type')
+            ]);
+            
+            // Llamar al método privado savePromociones
+            $this->savePromociones($menu, $promocionesData);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Promociones guardadas exitosamente',
+                'count' => count($promocionesData)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al guardar promociones vía AJAX: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al guardar las promociones: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Guardar promociones en el contexto_gpt del menú
+     */
+    private function savePromociones(Menu $menu, array $promociones)
+    {
+        try {
+            Log::info('savePromociones llamado', [
+                'menu_id' => $menu->id,
+                'promociones_recibidas' => $promociones,
+                'count' => count($promociones)
+            ]);
+            
+            // NO filtrar promociones vacías - guardar TODAS las que tienen algún dato
+            // (nombre, precio, descripción o imagen) porque el usuario puede estar editándolas
+            $promocionesFiltradas = array_filter($promociones, function($promo) {
+                // Guardar si tiene nombre, precio, descripción o imagen
+                $tieneNombre = isset($promo['nombre']) && trim($promo['nombre']) !== '';
+                $tienePrecio = isset($promo['precio']) && trim($promo['precio']) !== '';
+                $tieneDescripcion = isset($promo['descripcion']) && trim($promo['descripcion']) !== '';
+                $tieneImagen = isset($promo['imagen']) && trim($promo['imagen']) !== '';
+                
+                return $tieneNombre || $tienePrecio || $tieneDescripcion || $tieneImagen;
+            });
+
+            // Reindexar array para eliminar índices vacíos
+            $promocionesFiltradas = array_values($promocionesFiltradas);
+            
+            Log::info('Promociones filtradas (con algún dato)', [
+                'count' => count($promocionesFiltradas),
+                'promociones' => $promocionesFiltradas
+            ]);
+
+            // Leer contexto_gpt actual
+            $jsonContent = $menu->contexto_gpt;
+            if (!$jsonContent) {
+                // Si no hay contexto_gpt, crear estructura básica
+                $contenido = [
+                    'categorias' => []
+                ];
+            } else {
+                // Limpiar markdown si existe
+                $clean = trim($jsonContent);
+                if (strpos($clean, '```json') !== false) {
+                    $clean = preg_replace('/```json\s*/', '', $clean);
+                    $clean = preg_replace('/```\s*$/', '', $clean);
+                }
+                $contenido = json_decode(trim($clean), true);
+                
+                if (!$contenido || !is_array($contenido)) {
+                    $contenido = ['categorias' => []];
+                }
+                
+                if (!isset($contenido['categorias']) || !is_array($contenido['categorias'])) {
+                    $contenido['categorias'] = [];
+                }
+            }
+
+            // Buscar o crear categoría "Promociones del Día"
+            $promocionesIndex = -1;
+            foreach ($contenido['categorias'] as $idx => $cat) {
+                if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                    $promocionesIndex = $idx;
+                    break;
+                }
+            }
+
+            // Preparar array de platos para promociones
+            // Primero, obtener las imágenes existentes indexadas por nombre (más confiable que por índice)
+            $imagenesExistentes = [];
+            if ($promocionesIndex >= 0 && isset($contenido['categorias'][$promocionesIndex]['platos'])) {
+                $platosExistentes = $contenido['categorias'][$promocionesIndex]['platos'];
+                foreach ($platosExistentes as $idx => $platoExistente) {
+                    if (isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])) {
+                        // Indexar por nombre normalizado para buscar más fácilmente
+                        $nombreNormalizado = isset($platoExistente['nombre']) ? mb_strtolower(trim($platoExistente['nombre'])) : '';
+                        if ($nombreNormalizado) {
+                            $imagenesExistentes[$nombreNormalizado] = $platoExistente['imagen'];
+                        }
+                        // También mantener por índice para compatibilidad
+                        $imagenesExistentes[$idx] = $platoExistente['imagen'];
+                    }
+                }
+            }
+
+            // Preparar array de platos para promociones, preservando imágenes
+            $platosPromociones = [];
+            $indiceNuevo = 0; // Inicializar índice
+            
+            Log::info('Procesando promociones recibidas', [
+                'total' => count($promocionesFiltradas),
+                'promociones' => $promocionesFiltradas
+            ]);
+            
+            // Usar promocionesFiltradas (ya filtradas para tener al menos un dato)
+            foreach ($promocionesFiltradas as $idx => $promo) {
+                Log::info("Procesando promoción índice $idx", ['promo' => $promo]);
+                
+                // Asegurar que siempre tengamos los campos básicos (aunque estén vacíos)
+                if (!isset($promo['nombre'])) {
+                    $promo['nombre'] = '';
+                }
+                if (!isset($promo['precio'])) {
+                    $promo['precio'] = '';
+                }
+                if (!isset($promo['descripcion'])) {
+                    $promo['descripcion'] = '';
+                }
+                
+                $nombreNormalizado = mb_strtolower(trim($promo['nombre']));
+                
+                $plato = [
+                    'nombre' => trim($promo['nombre'] ?? ''),
+                    'precio' => trim($promo['precio'] ?? ''),
+                    'descripcion' => trim($promo['descripcion'] ?? '')
+                ];
+                
+                // Preservar imagen: primero del request, luego buscar por nombre, luego por índice
+                if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+                    $plato['imagen'] = $promo['imagen'];
+                } elseif (isset($imagenesExistentes[$nombreNormalizado])) {
+                    // Buscar por nombre normalizado (más confiable)
+                    $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
+                } elseif (isset($imagenesExistentes[$idx])) {
+                    // Fallback: buscar por índice
+                    $plato['imagen'] = $imagenesExistentes[$idx];
+                }
+                
+                Log::info('Agregando promoción', [
+                    'indice_nuevo' => $indiceNuevo,
+                    'indice_original' => $idx,
+                    'plato' => $plato
+                ]);
+                
+                $platosPromociones[] = $plato;
+                $indiceNuevo++;
+            }
+            
+            // Si no hay promociones válidas, eliminar la categoría completa
+            if (empty($platosPromociones)) {
+                if ($promocionesIndex >= 0) {
+                    unset($contenido['categorias'][$promocionesIndex]);
+                    $contenido['categorias'] = array_values($contenido['categorias']); // Reindexar
+                    Log::info('Eliminando categoría de promociones vacía');
+                }
+            } else {
+                // Actualizar o crear categoría de promociones
+                if ($promocionesIndex >= 0) {
+                    $contenido['categorias'][$promocionesIndex]['platos'] = $platosPromociones;
+                } else {
+                    $contenido['categorias'][] = [
+                        'nombre' => 'Promociones del Día',
+                        'platos' => $platosPromociones
+                    ];
+                }
+            }
+
+            // Guardar JSON actualizado (solo si hay cambios)
+            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            if ($jsonResult === false) {
+                Log::error('Error al codificar JSON de promociones: ' . json_last_error_msg());
+                return;
+            }
+
+            $menu->contexto_gpt = $jsonResult;
+            $menu->save();
+
+            Log::info('Promociones guardadas exitosamente', [
+                'menu_id' => $menu->id,
+                'cantidad' => count($platosPromociones),
+                'json_length' => strlen($jsonResult),
+                'platos' => $platosPromociones
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al guardar promociones: ' . $e->getMessage());
         }
     }
 }

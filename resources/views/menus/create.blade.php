@@ -249,8 +249,8 @@
                                                     <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
                                                         {{ $menu->updated_at->format('H:i') }}
                                                     </span>
-                                                </div>
                                             </div>
+                                        </div>
                                         </div>
                                         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
                                             <button type="button" 
@@ -551,15 +551,15 @@
                             <div class="mb-4">
                                 <!-- Logo centrado -->
                                 <div class="flex justify-center mb-3">
-                                    @if($comercio->logo_url)
-                                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                             alt="{{ $comercio->nombre }}" 
+                                @if($comercio->logo_url)
+                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
+                                         alt="{{ $comercio->nombre }}" 
                                              class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
-                                    @else
-                                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                             alt="Logo por defecto de {{ $comercio->nombre }}" 
+                                @else
+                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
+                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
                                              class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
-                                    @endif
+                                @endif
                                 </div>
                                 <!-- Nombre del comercio centrado -->
                                 <div class="text-center">
@@ -628,6 +628,164 @@
                 </div>
             </div>
 
+            <!-- Sección de Promociones del Día - ARRIBA DE CONTENIDO EXTRAÍDO, ANCHO COMPLETO -->
+            @if($isEdit && $menu)
+                @php
+                    $promocionesCategoria = null;
+                    $promocionesIndex = -1;
+                    
+                    // Solo intentar leer promociones si hay contexto_gpt
+                    if ($menu->contexto_gpt) {
+                        $jsonContent = $menu->contexto_gpt;
+                        $clean = trim($jsonContent);
+                        if (strpos($clean, '```json') !== false) {
+                            $clean = preg_replace('/```json\s*/', '', $clean);
+                            $clean = preg_replace('/```\s*$/', '', $clean);
+                        }
+                        $contenido = json_decode(trim($clean), true);
+                        
+                        // Buscar categoría de promociones
+                        if ($contenido && isset($contenido['categorias']) && is_array($contenido['categorias'])) {
+                            foreach ($contenido['categorias'] as $idx => $cat) {
+                                if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                                    $promocionesCategoria = $cat;
+                                    $promocionesIndex = $idx;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Si no existe, crear estructura vacía
+                    if (!$promocionesCategoria) {
+                        $promocionesCategoria = [
+                            'nombre' => 'Promociones del Día',
+                            'platos' => []
+                        ];
+                    }
+                @endphp
+                
+                <div class="mt-12">
+                    <div class="metric-card">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                    <span class="text-white text-lg">🔥</span>
+                                </div>
+                                <h3 class="text-xl font-semibold text-text-primary">Promociones del Día</h3>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button type="button" 
+                                        onclick="addPromocion()"
+                                        class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
+                                    <span>➕</span>
+                                    <span>Agregar Promoción</span>
+                                </button>
+                                <button type="button" 
+                                        onclick="savePromocionesAjax()"
+                                        id="btn-save-promociones"
+                                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
+                                    <span>💾</span>
+                                    <span>Guardar Promociones</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-6">
+                            
+                            <div id="promociones-container" class="space-y-4">
+                                <!-- Las promociones se agregarán aquí -->
+                                @if(isset($promocionesCategoria['platos']) && is_array($promocionesCategoria['platos']))
+                                    @foreach($promocionesCategoria['platos'] as $promoIndex => $promo)
+                                        <div class="promocion-item bg-secondary-dark rounded-lg p-4 border border-accent-gray" data-promo-index="{{ $promoIndex }}">
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                                                <!-- Nombre -->
+                                                <div class="md:col-span-3">
+                                                    <label class="block text-xs text-text-secondary mb-1.5">Nombre</label>
+                                                    <input type="text" 
+                                                           data-promo-field="nombre"
+                                                           data-promo-index="{{ $promoIndex }}"
+                                                           name="promociones[{{ $promoIndex }}][nombre]" 
+                                                           value="{{ old("promociones.{$promoIndex}.nombre", $promo['nombre'] ?? '') }}"
+                                                           placeholder="Nombre de la promoción"
+                                                           class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                                </div>
+                                                
+                                                <!-- Precio -->
+                                                <div class="md:col-span-2">
+                                                    <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
+                                                    <input type="text" 
+                                                           data-promo-field="precio"
+                                                           data-promo-index="{{ $promoIndex }}"
+                                                           name="promociones[{{ $promoIndex }}][precio]" 
+                                                           value="{{ old("promociones.{$promoIndex}.precio", $promo['precio'] ?? '') }}"
+                                                           placeholder="$0.00"
+                                                           class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                                </div>
+                                                
+                                                <!-- Descripción -->
+                                                <div class="md:col-span-4">
+                                                    <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
+                                                    <textarea data-promo-field="descripcion"
+                                                              data-promo-index="{{ $promoIndex }}"
+                                                              name="promociones[{{ $promoIndex }}][descripcion]" 
+                                                              rows="2"
+                                                              placeholder="Descripción de la promoción"
+                                                              class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none">{{ old("promociones.{$promoIndex}.descripcion", $promo['descripcion'] ?? '') }}</textarea>
+                                                </div>
+                                                
+                                                <!-- Imagen -->
+                                                <div class="md:col-span-2">
+                                                    <label class="block text-xs text-text-secondary mb-1.5">Imagen</label>
+                                                    <div id="promo-imagen-container-{{ $promoIndex }}">
+                                                        @if(isset($promo['imagen']) && !empty($promo['imagen']))
+                                                            <div class="relative inline-block">
+                                                                <img src="{{ asset($promo['imagen']) }}" 
+                                                                     alt="{{ $promo['nombre'] ?? 'Promoción' }}"
+                                                                     class="w-20 h-20 object-cover rounded-lg border border-accent-gray"
+                                                                     id="promo-imagen-{{ $promoIndex }}">
+                                                                <button type="button"
+                                                                        onclick="removePromocionImagen({{ $promoIndex }}, '{{ $promo['imagen'] }}')"
+                                                                        class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                                                    ×
+                                                                </button>
+                                                            </div>
+                                                        @else
+                                                            <label class="cursor-pointer">
+                                                                <input type="file" 
+                                                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                       class="hidden"
+                                                                       onchange="uploadPromocionImagen(event, {{ $promoIndex }})"
+                                                                       id="promo-imagen-input-{{ $promoIndex }}">
+                                                                <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                                                    📷 Subir
+                                                                </span>
+                                                            </label>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Botón Eliminar -->
+                                                <div class="md:col-span-1 flex items-end">
+                                                    <button type="button" 
+                                                            onclick="removePromocion({{ $promoIndex }})"
+                                                            class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </div>
+                            
+                            <p class="text-xs text-text-secondary mt-4">
+                                💡 Las promociones aparecerán como una categoría especial en el menú del chat.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <!-- 📋 Contenido Extraído del Menú - Sección de ancho completo -->
             @if($menu && $menu->procesado && ($menu->texto_extraido || $menu->contexto_gpt))
                 <div class="mt-12">
@@ -675,6 +833,13 @@
                                 @if($categorias && is_array($categorias))
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         @foreach($categorias as $categoriaIndex => $categoria)
+                                            @php
+                                                // Filtrar "Promociones del Día" ya que tiene su propia sección dedicada
+                                                $nombreCategoria = strtolower(trim($categoria['nombre'] ?? ''));
+                                                if ($nombreCategoria === 'promociones del día') {
+                                                    continue;
+                                                }
+                                            @endphp
                                             <div class="bg-secondary-dark rounded-lg p-6">
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
                                                     {{ $categoria['nombre'] ?? 'Sin nombre' }}
@@ -687,11 +852,11 @@
                                                                 <div class="flex-1 min-w-0">
                                                                     <div class="flex items-start justify-between gap-3 mb-1">
                                                                         <h5 class="text-text-primary font-semibold text-base leading-tight">
-                                                                            {{ $plato['nombre'] ?? 'Sin nombre' }}
+                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
                                                                         </h5>
                                                                         <span class="text-accent-blue font-bold text-base whitespace-nowrap flex-shrink-0">
-                                                                            {{ $plato['precio'] ?? 'Sin precio' }}
-                                                                        </span>
+                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
+                                                                </span>
                                                                     </div>
                                                                     @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
                                                                         <p class="text-text-secondary text-sm leading-relaxed mt-1.5">
@@ -871,7 +1036,7 @@
                 }
             }
         }
-
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializar estado si el toggle existe
             const pedidoToggle = document.querySelector('.pedido-toggle');
@@ -892,7 +1057,19 @@
             const menuForm = document.getElementById('menu-form');
             if (menuForm) {
                 menuForm.addEventListener('submit', function(event) {
-                    return handleFormSubmit(event);
+                    // PREVENIR el envío automático
+                    event.preventDefault();
+                    
+                    // ESPERAR un momento para asegurar que el DOM se actualizó completamente
+                    setTimeout(() => {
+                        // Sincronizar promociones antes de enviar
+                        syncPromocionesToForm();
+                        
+                        // Esperar un momento más y luego continuar con el submit
+                        setTimeout(() => {
+                            return handleFormSubmit(event);
+                        }, 100);
+                    }, 100);
                 });
             }
             
@@ -909,6 +1086,9 @@
                     if (saveButton.disabled) {
                         return;
                     }
+                    
+                    // Sincronizar promociones ANTES de crear el FormData
+                    syncPromocionesToForm();
                     
                     saveButton.disabled = true;
                     saveButton.textContent = 'Procesando...';
@@ -944,6 +1124,14 @@
                             
                             const backgroundColor = document.getElementById('background_color');
                             if (backgroundColor) formData.append('background_color', backgroundColor.value);
+                            
+                            // Agregar promociones
+                            const promoInputs = menuForm.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
+                            console.log('Agregando promociones al FormData:', promoInputs.length);
+                            promoInputs.forEach(input => {
+                                formData.append(input.name, input.value);
+                                console.log(`  - ${input.name} = ${input.value}`);
+                            });
                             
                             // Si estamos en modo edición, agregar método PUT
                             // NOTA: No enviamos el formato porque el controlador lo detectará automáticamente
@@ -981,9 +1169,13 @@
                             alert('Error al guardar el menú. Por favor, intenta nuevamente.');
                         });
                     } else {
-                        // Enviar el formulario del menú
+                        // Enviar el formulario del menú (las promociones ya están sincronizadas arriba)
                         const menuForm = document.getElementById('menu-form');
                         if (menuForm) {
+                            console.log('Enviando formulario normalmente (sin archivo convertido)');
+                            // Verificar que las promociones estén sincronizadas
+                            const promoInputs = menuForm.querySelectorAll('input[name^="promociones"]');
+                            console.log('Inputs de promociones en el form antes de enviar:', promoInputs.length);
                             menuForm.submit();
                         }
                     }
@@ -1095,9 +1287,264 @@
             // Inicializar vista previa
             setTimeout(updatePreview, 100);
         });
+        
+        // Función para sincronizar promociones al form principal
+        function syncPromocionesToForm() {
+            const menuForm = document.getElementById('menu-form');
+            if (!menuForm) {
+                console.error('Formulario menu-form no encontrado');
+                return;
+            }
+            
+            console.log('=== SYNC PROMOCIONES ===');
+            
+            // PASO 1: Obtener SOLO los items de promociones que están VISIBLES en el contenedor
+            // IMPORTANTE: Hacer esto ANTES de eliminar inputs para asegurar que tenemos los datos
+            const container = document.getElementById('promociones-container');
+            if (!container) {
+                console.error('ERROR: No se encontró el contenedor #promociones-container');
+                return;
+            }
+            
+            // Obtener TODOS los items del contenedor y verificar que realmente existen en el DOM
+            // IMPORTANTE: Hacer una consulta FRESCA del DOM en este momento para asegurar que tenemos items actualizados
+            const allItems = Array.from(container.querySelectorAll('.promocion-item'));
+            console.log(`=== SYNC PROMOCIONES - INICIO ===`);
+            console.log(`Total items encontrados en contenedor: ${allItems.length}`);
+            
+            // FILTRAR items que realmente están en el DOM ANTES de procesarlos
+            // Esto elimina cualquier referencia obsoleta a items que fueron eliminados
+            const realItems = allItems.filter(item => {
+                if (!item.isConnected) {
+                    console.warn(`⚠️ Item con índice ${item.getAttribute('data-promo-index')} NO está conectado al DOM - será ignorado`);
+                    return false;
+                }
+                if (!container.contains(item)) {
+                    console.warn(`⚠️ Item con índice ${item.getAttribute('data-promo-index')} NO está dentro del contenedor - será ignorado`);
+                    return false;
+                }
+                return true;
+            });
+            
+            console.log(`Items REALMENTE en el DOM: ${realItems.length} de ${allItems.length}`);
+            
+            // PASO 2: Recopilar datos de los items VISIBLES Y DESHABILITAR sus inputs para que no se envíen
+            const promocionesData = {};
+            
+            // Iterar sobre cada item REAL y recopilar sus datos
+            realItems.forEach(item => {
+                const index = item.getAttribute('data-promo-index');
+                if (!index) {
+                    console.warn('Item de promoción sin data-promo-index:', item);
+                    return;
+                }
+                
+                // Verificar que es visible
+                const style = window.getComputedStyle(item);
+                const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && item.offsetParent !== null;
+                
+                if (!isVisible) {
+                    console.warn(`⚠️ Item ${index} NO es visible - será ignorado`);
+                    return;
+                }
+                
+                console.log(`  ✓ Procesando item VISIBLE con índice: ${index}`);
+                
+                // Inicializar objeto para esta promoción
+                if (!promocionesData[index]) {
+                    promocionesData[index] = {};
+                }
+                
+                // Buscar TODOS los inputs dentro de este item (solo los que están VISIBLES)
+                const inputsInItem = item.querySelectorAll('[data-promo-field]');
+                console.log(`    - Inputs encontrados en item ${index}: ${inputsInItem.length}`);
+                
+                inputsInItem.forEach(input => {
+                    const field = input.getAttribute('data-promo-field');
+                    if (!field) {
+                        console.warn(`Input sin data-promo-field en item ${index}:`, input);
+                        return;
+                    }
+                    
+                    // IMPORTANTE: Recopilar el valor ANTES de deshabilitar
+                    // Leer el valor directamente del input visible
+                    const rawValue = input.value;
+                    const value = rawValue !== null && rawValue !== undefined ? String(rawValue) : '';
+                    
+                    // Guardar el valor (aunque esté vacío, lo guardamos para que el backend lo reciba)
+                    promocionesData[index][field] = value;
+                    
+                    console.log(`    - Campo ${field}: tipo="${input.tagName}", valor raw="${rawValue}", valor guardado="${value}"`);
+                    console.log(`    - Input completo:`, {
+                        name: input.name,
+                        id: input.id,
+                        value: input.value,
+                        type: input.type,
+                        disabled: input.disabled
+                    });
+                    
+                    // NO deshabilitar aquí - deshabilitar DESPUÉS de crear los inputs ocultos
+                    // para asegurar que los valores se lean correctamente
+                });
+                
+                // Buscar imagen en este item VISIBLE
+                const img = item.querySelector('img[id^="promo-imagen-"]');
+                if (img && img.src) {
+                    // Extraer la ruta relativa de la imagen
+                    const imgPath = img.src.replace(window.location.origin, '');
+                    if (imgPath && !promocionesData[index]['imagen']) {
+                        promocionesData[index]['imagen'] = imgPath;
+                        console.log(`    - Imagen encontrada: ${imgPath}`);
+                    }
+                }
+            });
+            
+            console.log(`📊 Datos de promociones recopilados: ${Object.keys(promocionesData).length} promociones`);
+            console.log(`📊 Detalle de datos recopilados:`, JSON.stringify(promocionesData, null, 2));
+            
+            // AHORA deshabilitar todos los inputs visibles para que no se envíen
+            realItems.forEach(item => {
+                const inputsInItem = item.querySelectorAll('[data-promo-field]');
+                inputsInItem.forEach(input => {
+                    input.disabled = true;
+                    console.log(`  - Input ${input.getAttribute('data-promo-field')} deshabilitado`);
+                });
+            });
+            
+            // PASO 3: AHORA eliminar TODOS los inputs de promociones existentes (ocultos) del form
+            // Solo eliminar inputs OCULTOS (los visibles están dentro de items que ya procesamos)
+            const existingPromoInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"], input[name^="promociones"]:not([data-promo-field]), textarea[name^="promociones"]:not([data-promo-field])');
+            console.log(`Eliminando inputs ocultos antiguos del formulario: ${existingPromoInputs.length}`);
+            
+            // Crear un array de los inputs a eliminar para evitar problemas con NodeList
+            const inputsToRemove = Array.from(existingPromoInputs);
+            inputsToRemove.forEach(input => {
+                // Solo eliminar si NO está dentro de un item visible (para no eliminar inputs visibles)
+                const isInVisibleItem = realItems.some(item => item.contains(input));
+                if (!isInVisibleItem) {
+                    console.log(`  - Eliminando input oculto: ${input.name}`);
+                    input.remove();
+                }
+            });
+            
+            // Verificar que se eliminaron correctamente - hacer múltiples verificaciones solo para inputs ocultos
+            let attempts = 0;
+            let remainingInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"]');
+            while (remainingInputs.length > 0 && attempts < 5) {
+                const remainingArray = Array.from(remainingInputs);
+                remainingArray.forEach(input => {
+                    const isInVisibleItem = realItems.some(item => item.contains(input));
+                    if (!isInVisibleItem) {
+                        console.warn(`  - Eliminando input huérfano: ${input.name}`);
+                        input.remove();
+                    }
+                });
+                attempts++;
+                remainingInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"]');
+            }
+            
+            console.log(`✓ Inputs ocultos antiguos eliminados correctamente`);
+            
+            // PASO 4: Crear inputs ocultos basados en los datos recopilados
+            console.log(`📊 Datos de promociones recopilados: ${Object.keys(promocionesData).length} promociones`);
+            
+            // VERIFICAR que hay datos antes de continuar
+            if (Object.keys(promocionesData).length === 0) {
+                console.log('ℹ️ No hay promociones para sincronizar (esto es válido si se eliminaron todas)');
+                return; // Salir temprano si no hay datos (esto es válido si no hay promociones)
+            }
+            
+            // Crear inputs ocultos en el form principal
+            // IMPORTANTE: Guardar TODAS las promociones que están en el DOM, incluso si están vacías
+            // porque el usuario puede estar en proceso de editarlas
+            let promocionesAgregadas = 0;
+            Object.keys(promocionesData).sort((a, b) => parseInt(a) - parseInt(b)).forEach(index => {
+                const promo = promocionesData[index];
+                
+                console.log(`Procesando promoción índice ${index}:`, promo);
+                console.log(`  DEBUG - nombre: "${promo.nombre}" (type: ${typeof promo.nombre})`);
+                console.log(`  DEBUG - precio: "${promo.precio}" (type: ${typeof promo.precio})`);
+                console.log(`  DEBUG - descripcion: "${promo.descripcion}" (type: ${typeof promo.descripcion})`);
+                console.log(`  DEBUG - imagen: "${promo.imagen}" (type: ${typeof promo.imagen})`);
+                
+                // Agregar TODAS las promociones que están en el DOM, incluso si están vacías
+                // Solo saltar si no tiene NADA (ni nombre, ni precio, ni descripción, ni imagen)
+                const tieneDatos = (promo.nombre !== undefined && String(promo.nombre).trim() !== '') ||
+                                   (promo.precio !== undefined && String(promo.precio).trim() !== '') ||
+                                   (promo.descripcion !== undefined && String(promo.descripcion).trim() !== '') ||
+                                   (promo.imagen !== undefined && String(promo.imagen).trim() !== '');
+                
+                console.log(`  DEBUG - tieneDatos: ${tieneDatos}`);
+                
+                if (tieneDatos) {
+                    // IMPORTANTE: Siempre agregar los campos básicos (nombre, precio, descripción)
+                    // aunque estén vacíos, para que el backend los reciba correctamente
+                    // Asegurar que los valores sean strings, no undefined
+                    const campos = ['nombre', 'precio', 'descripcion'];
+                    campos.forEach(field => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = `promociones[${promocionesAgregadas}][${field}]`;
+                        // Asegurar que el valor sea string, no undefined o null
+                        const fieldValue = (promo[field] !== undefined && promo[field] !== null) ? String(promo[field]) : '';
+                        input.value = fieldValue;
+                        menuForm.appendChild(input);
+                        console.log(`Agregado: promociones[${promocionesAgregadas}][${field}] = "${fieldValue}"`);
+                    });
+                    
+                    // Agregar imagen solo si existe
+                    if (promo.imagen && promo.imagen.trim() !== '') {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = `promociones[${promocionesAgregadas}][imagen]`;
+                        input.value = promo.imagen;
+                        menuForm.appendChild(input);
+                        console.log(`Agregado: promociones[${promocionesAgregadas}][imagen] = "${promo.imagen}"`);
+                    }
+                    
+                    promocionesAgregadas++;
+                } else {
+                    console.log(`Saltando promoción ${index} porque no tiene ningún dato (está completamente vacía)`);
+                }
+            });
+            
+            console.log(`✅ Promociones sincronizadas: ${promocionesAgregadas}`);
+            
+            // Verificar que los inputs se agregaron
+            const hiddenInputs = menuForm.querySelectorAll('input[name^="promociones"]');
+            console.log('📝 Inputs ocultos creados:', hiddenInputs.length);
+            hiddenInputs.forEach(input => {
+                const valuePreview = input.value.length > 50 ? input.value.substring(0, 50) + '...' : input.value;
+                console.log(`  - ${input.name} = "${valuePreview}"`);
+            });
+            
+            // ALERT si no se agregaron inputs
+            if (hiddenInputs.length === 0 && Object.keys(promocionesData).length > 0) {
+                console.error('❌ ERROR: No se crearon inputs ocultos aunque había datos de promociones');
+                alert(`ERROR: No se crearon inputs ocultos. Promociones encontradas: ${Object.keys(promocionesData).length}, Promociones agregadas: ${promocionesAgregadas}`);
+            }
+            
+            console.log('=== SYNC PROMOCIONES - FIN ===');
+        }
 
         // Función para guardar personalización
         function saveCustomization() {
+            // ESPERAR un momento para asegurar que el DOM se actualizó completamente
+            setTimeout(() => {
+                // Sincronizar promociones al form principal
+                syncPromocionesToForm();
+                
+                // Esperar un momento más y luego enviar
+                setTimeout(() => {
+                    const menuForm = document.getElementById('menu-form');
+                    if (menuForm) {
+                        console.log('Enviando formulario menu-form con promociones sincronizadas');
+                        menuForm.submit();
+                    }
+                }, 100);
+            }, 100);
+            return;
+            
             // Sincronizar campos del chatbot con los campos ocultos
             const chatbotName = document.getElementById('chatbot_name');
             const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
@@ -1122,8 +1569,9 @@
             });
             
             // Primero, enviar el formulario del menú directamente
-            const menuForm = document.querySelector('form[action*="menus"]');
+            const menuForm = document.getElementById('menu-form');
             if (menuForm) {
+                console.log('Enviando formulario menu-form con promociones sincronizadas');
                 // Simplemente enviar el formulario original
                 menuForm.submit();
                 return;
@@ -1824,5 +2272,512 @@
                 });
             });
         @endif
+
+        // Variables para promociones
+        @if($isEdit && $menu && $menu->procesado && $menu->contexto_gpt)
+            @php
+                $jsonContent = $menu->contexto_gpt;
+                $clean = trim($jsonContent);
+                if (strpos($clean, '```json') !== false) {
+                    $clean = preg_replace('/```json\s*/', '', $clean);
+                    $clean = preg_replace('/```\s*$/', '', $clean);
+                }
+                $contenido = json_decode(trim($clean), true);
+                
+                $promocionesCategoria = null;
+                if ($contenido && isset($contenido['categorias']) && is_array($contenido['categorias'])) {
+                    foreach ($contenido['categorias'] as $cat) {
+                        if (isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === 'promociones del día') {
+                            $promocionesCategoria = $cat;
+                            break;
+                        }
+                    }
+                }
+            @endphp
+            let promocionIndex = {{ isset($promocionesCategoria['platos']) && is_array($promocionesCategoria['platos']) ? count($promocionesCategoria['platos']) : 0 }};
+        @else
+            let promocionIndex = 0;
+        @endif
+                
+        // Función para agregar nueva promoción
+        function addPromocion() {
+            const container = document.getElementById('promociones-container');
+            const newPromo = document.createElement('div');
+            newPromo.className = 'promocion-item bg-secondary-dark rounded-lg p-4 border border-accent-gray';
+            newPromo.setAttribute('data-promo-index', promocionIndex);
+            
+            newPromo.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    <!-- Nombre -->
+                    <div class="md:col-span-3">
+                        <label class="block text-xs text-text-secondary mb-1.5">Nombre</label>
+                        <input type="text" 
+                               data-promo-field="nombre"
+                               data-promo-index="${promocionIndex}"
+                               name="promociones[${promocionIndex}][nombre]" 
+                               value=""
+                               placeholder="Nombre de la promoción"
+                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    
+                    <!-- Precio -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
+                        <input type="text" 
+                               data-promo-field="precio"
+                               data-promo-index="${promocionIndex}"
+                               name="promociones[${promocionIndex}][precio]" 
+                               value=""
+                               placeholder="$0.00"
+                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    
+                    <!-- Descripción -->
+                    <div class="md:col-span-4">
+                        <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
+                        <textarea data-promo-field="descripcion"
+                                  data-promo-index="${promocionIndex}"
+                                  name="promociones[${promocionIndex}][descripcion]" 
+                                  rows="2"
+                                  placeholder="Descripción de la promoción"
+                                  class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+                    </div>
+                    
+                    <!-- Imagen -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-text-secondary mb-1.5">Imagen</label>
+                        <div id="promo-imagen-container-${promocionIndex}">
+                            <label class="cursor-pointer">
+                                <input type="file" 
+                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                       class="hidden"
+                                       onchange="uploadPromocionImagen(event, ${promocionIndex})"
+                                       id="promo-imagen-input-${promocionIndex}">
+                                <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                    📷 Subir
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Botón Eliminar -->
+                    <div class="md:col-span-1 flex items-end">
+                        <button type="button" 
+                                onclick="removePromocion(${promocionIndex})"
+                                class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Insertar al principio del contenedor (arriba)
+            if (container.firstChild) {
+                container.insertBefore(newPromo, container.firstChild);
+            } else {
+                container.appendChild(newPromo);
+            }
+            
+            promocionIndex++;
+        }
+        
+        // Función para guardar promociones vía AJAX
+        async function savePromocionesAjax() {
+            const btn = document.getElementById('btn-save-promociones');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // Deshabilitar botón
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳</span><span>Guardando...</span>';
+                
+                // Obtener contenedor de promociones
+                const container = document.getElementById('promociones-container');
+                if (!container) {
+                    throw new Error('No se encontró el contenedor de promociones');
+                }
+                
+                // Recopilar datos de todas las promociones visibles
+                const allItems = Array.from(container.querySelectorAll('.promocion-item'));
+                const promociones = [];
+                
+                console.log('=== GUARDANDO PROMOCIONES VÍA AJAX ===');
+                console.log(`Total items encontrados: ${allItems.length}`);
+                
+                allItems.forEach((item, idx) => {
+                    // Verificar que está en el DOM
+                    if (!item.isConnected || !container.contains(item)) {
+                        console.warn(`Item ${idx} no está conectado, saltando`);
+                        return;
+                    }
+                    
+                    // Verificar que es visible
+                    const style = window.getComputedStyle(item);
+                    if (style.display === 'none' || style.visibility === 'hidden' || !item.offsetParent) {
+                        console.warn(`Item ${idx} no es visible, saltando`);
+                        return;
+                    }
+                    
+                    const index = item.getAttribute('data-promo-index');
+                    if (!index) {
+                        console.warn(`Item ${idx} sin data-promo-index, saltando`);
+                        return;
+                    }
+                    
+                    const promo = {
+                        nombre: '',
+                        precio: '',
+                        descripcion: '',
+                        imagen: ''
+                    };
+                    
+                    // Recopilar datos de los inputs
+                    const inputsInItem = item.querySelectorAll('[data-promo-field]');
+                    console.log(`  Item ${index}, inputs encontrados: ${inputsInItem.length}`);
+                    
+                    inputsInItem.forEach(input => {
+                        const field = input.getAttribute('data-promo-field');
+                        if (!field) {
+                            console.warn(`    Input sin data-promo-field en item ${index}`);
+                            return;
+                        }
+                        
+                        // Leer el valor directamente del input
+                        let value = '';
+                        if (input.tagName === 'TEXTAREA') {
+                            value = input.value || '';
+                        } else if (input.tagName === 'INPUT') {
+                            value = input.value || '';
+                        }
+                        
+                        // Guardar el valor (aunque esté vacío)
+                        promo[field] = value;
+                        
+                        console.log(`    Campo ${field}: valor="${value}", type="${input.type}", name="${input.name}"`);
+                        console.log(`    Input completo:`, {
+                            tagName: input.tagName,
+                            type: input.type,
+                            name: input.name,
+                            id: input.id,
+                            value: input.value,
+                            defaultValue: input.defaultValue,
+                            disabled: input.disabled
+                        });
+                    });
+                    
+                    // Buscar imagen
+                    const img = item.querySelector('img[id^="promo-imagen-"]');
+                    if (img && img.src) {
+                        const imgPath = img.src.replace(window.location.origin, '');
+                        if (imgPath) {
+                            promo.imagen = imgPath;
+                            console.log(`  Item ${index}, imagen: "${imgPath}"`);
+                        }
+                    }
+                    
+                    // IMPORTANTE: Agregar TODAS las promociones que están en el DOM (incluso si están vacías)
+                    // porque pueden tener imágenes o el usuario puede estar editándolas
+                    // Solo saltar si no tiene NADA (ni nombre, ni precio, ni descripción, ni imagen)
+                    const tieneAlgo = (promo.nombre && promo.nombre.trim() !== '') ||
+                                      (promo.precio && promo.precio.trim() !== '') ||
+                                      (promo.descripcion && promo.descripcion.trim() !== '') ||
+                                      (promo.imagen && promo.imagen.trim() !== '');
+                    
+                    if (tieneAlgo) {
+                        // Asegurar que todos los campos básicos existan (aunque estén vacíos)
+                        if (!promo.hasOwnProperty('nombre')) promo.nombre = '';
+                        if (!promo.hasOwnProperty('precio')) promo.precio = '';
+                        if (!promo.hasOwnProperty('descripcion')) promo.descripcion = '';
+                        
+                        promociones.push(promo);
+                        console.log(`✓ Promoción ${index} agregada:`, promo);
+                    } else {
+                        console.log(`⚠️ Promoción ${index} está completamente vacía, saltando`);
+                    }
+                });
+                
+                console.log(`📊 Total promociones a guardar: ${promociones.length}`);
+                console.log('📊 Promociones:', JSON.stringify(promociones, null, 2));
+                
+                // Enviar vía AJAX
+                const saveUrl = `{{ route('menus.save.promociones', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        promociones: promociones
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ Promociones guardadas exitosamente');
+                    
+                    // Mostrar mensaje de éxito
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Guardado!',
+                            text: `Se guardaron ${promociones.length} promoción${promociones.length !== 1 ? 'es' : ''} exitosamente.`,
+                            confirmButtonColor: '#10B981',
+                            timer: 2000,
+                            showConfirmButton: true
+                        });
+                    } else {
+                        alert(`✅ Promociones guardadas exitosamente (${promociones.length} promoción${promociones.length !== 1 ? 'es' : ''})`);
+                    }
+                } else {
+                    throw new Error(data.error || 'Error al guardar las promociones');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error al guardar promociones:', error);
+                
+                // Mostrar mensaje de error
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'Error al guardar las promociones. Por favor, intenta nuevamente.',
+                        confirmButtonColor: '#EF4444'
+                    });
+                } else {
+                    alert(`❌ Error al guardar las promociones: ${error.message || 'Error desconocido'}`);
+                }
+            } finally {
+                // Rehabilitar botón
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // Función para eliminar promoción
+        async function removePromocion(index) {
+            showConfirm('¿Estás seguro de que quieres eliminar esta promoción?', async function(result) {
+                if (!result) return;
+                
+                const promoItem = document.querySelector(`#promociones-container [data-promo-index="${index}"]`);
+                if (!promoItem) {
+                    console.warn(`⚠️ No se encontró la promoción con índice ${index}`);
+                    alert(`No se encontró la promoción con índice ${index}. Por favor, recarga la página.`);
+                    return;
+                }
+                
+                console.log(`🗑️ ELIMINANDO PROMOCIÓN ${index}...`);
+                
+                try {
+                    // PASO 1: Eliminar del JSON inmediatamente (AJAX)
+                    const deleteUrl = `{{ route('menus.delete.promocion', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                    const response = await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            promo_index: index
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Error al eliminar la promoción del servidor');
+                    }
+                    
+                    console.log(`✓ Promoción ${index} eliminada del JSON en el servidor`);
+                    
+                    // PASO 2: Si tiene imagen, eliminarla del servidor también (pero no esperar)
+                    const img = document.getElementById(`promo-imagen-${index}`);
+                    if (img && img.src) {
+                        const imgPath = img.src.replace(window.location.origin, '');
+                        removePromocionImagenSilent(index, imgPath);
+                    }
+                    
+                    // PASO 3: Eliminar TODOS los inputs relacionados con esta promoción (visibles Y ocultos)
+                    const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
+                    let inputsEliminados = 0;
+                    allPromoInputs.forEach(input => {
+                        const match = input.name.match(/promociones\[(\d+)\]/);
+                        if (match && match[1] === String(index)) {
+                            console.log(`  ✓ Eliminando input: ${input.name}`);
+                            input.remove();
+                            inputsEliminados++;
+                        }
+                    });
+                    
+                    // PASO 4: Ocultar/eliminar la card del DOM
+                    promoItem.style.display = 'none'; // Ocultar primero
+                    setTimeout(() => {
+                        promoItem.remove(); // Eliminar después
+                        console.log(`✅ PROMOCIÓN ${index} ELIMINADA COMPLETAMENTE (JSON + DOM)`);
+                    }, 300);
+                    
+                } catch (error) {
+                    console.error('❌ Error al eliminar promoción:', error);
+                    alert(`Error al eliminar la promoción: ${error.message}. Por favor, intenta nuevamente.`);
+                }
+            });
+        }
+        
+        // Función para eliminar imagen sin confirmación (cuando se elimina toda la promoción)
+        async function removePromocionImagenSilent(promoIndex, imagenPath) {
+            try {
+                const deleteUrl = `{{ route('menus.delete.promo.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        promo_index: promoIndex,
+                        imagen_path: imagenPath
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log(`Imagen de promoción ${promoIndex} eliminada del servidor`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error al eliminar imagen del servidor:', error);
+                // No mostrar error al usuario, solo log
+            }
+        }
+        
+        // Función para subir imagen de promoción
+        async function uploadPromocionImagen(event, promoIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('imagen', file);
+            formData.append('promo_index', promoIndex);
+            formData.append('_token', '{{ csrf_token() }}');
+            
+            const container = document.getElementById(`promo-imagen-container-${promoIndex}`);
+            if (!container) {
+                showError('No se encontró el contenedor de imagen');
+                return;
+            }
+            
+            const uploadUrl = `{{ route('menus.upload.promo.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+            
+            try {
+                container.innerHTML = '<div class="text-text-secondary text-xs">Subiendo...</div>';
+                
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al subir la imagen');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    container.innerHTML = `
+                        <div class="relative inline-block">
+                            <img src="${data.imagen_url}" 
+                                 alt="Promoción"
+                                 class="w-20 h-20 object-cover rounded-lg border border-accent-gray"
+                                 id="promo-imagen-${promoIndex}">
+                            <button type="button"
+                                    onclick="removePromocionImagen(${promoIndex}, '${data.imagen_path}')"
+                                    class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                ×
+                            </button>
+                        </div>
+                    `;
+                    showSuccess('Imagen subida exitosamente');
+                } else {
+                    throw new Error(data.error || 'Error desconocido');
+                }
+            } catch (error) {
+                showError('Error al subir la imagen: ' + error.message);
+                container.innerHTML = `
+                    <label class="cursor-pointer">
+                        <input type="file" 
+                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                               class="hidden"
+                               onchange="uploadPromocionImagen(event, ${promoIndex})"
+                               id="promo-imagen-input-${promoIndex}">
+                        <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                            📷 Subir
+                        </span>
+                    </label>
+                `;
+            }
+        }
+        
+        // Función para eliminar imagen de promoción
+        async function removePromocionImagen(promoIndex, imagenPath) {
+            showConfirm('¿Estás seguro de que quieres eliminar esta imagen?', async function(result) {
+                if (result) {
+                    try {
+                        const deleteUrl = `{{ route('menus.delete.promo.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                        const response = await fetch(deleteUrl, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                promo_index: promoIndex,
+                                imagen_path: imagenPath
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Error al eliminar la imagen');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const container = document.getElementById(`promo-imagen-container-${promoIndex}`);
+                            if (container) {
+                                container.innerHTML = `
+                                    <label class="cursor-pointer">
+                                        <input type="file" 
+                                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                                               class="hidden"
+                                               onchange="uploadPromocionImagen(event, ${promoIndex})"
+                                               id="promo-imagen-input-${promoIndex}">
+                                        <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                            📷 Subir
+                                        </span>
+                                    </label>
+                                `;
+                                showSuccess('Imagen eliminada exitosamente');
+                            } else {
+                                console.warn(`Contenedor promo-imagen-container-${promoIndex} no encontrado, pero la imagen fue eliminada del servidor`);
+                                showSuccess('Imagen eliminada exitosamente');
+                            }
+                        } else {
+                            throw new Error(data.error || 'Error desconocido');
+                        }
+                    } catch (error) {
+                        console.error('Error al eliminar imagen:', error);
+                        showError('Error al eliminar la imagen: ' + error.message);
+                    }
+                }
+            });
+        }
     </script>
 </x-app-layout>
