@@ -113,6 +113,117 @@
             transition: opacity .15s ease;
         }
         .btn-lo-quiero:hover { opacity: .9; }
+        
+        /* Animaciones para promociones */
+        @keyframes fire-pulse {
+            0%, 100% { 
+                transform: scale(1);
+                filter: brightness(1);
+            }
+            50% { 
+                transform: scale(1.15);
+                filter: brightness(1.3);
+            }
+        }
+        
+        @keyframes promo-glow {
+            0%, 100% {
+                box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3),
+                           0 0 10px rgba(255, 140, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 2px 12px rgba(255, 140, 0, 0.6),
+                           0 0 20px rgba(255, 140, 0, 0.5),
+                           0 0 30px rgba(255, 100, 0, 0.3);
+            }
+        }
+        
+        @keyframes promo-shimmer {
+            0% {
+                background-position: -100% 0;
+            }
+            100% {
+                background-position: 100% 0;
+            }
+        }
+        
+        .promo-fire-icon {
+            display: inline-block;
+            animation: fire-pulse 1.5s ease-in-out infinite;
+        }
+        
+        .promo-button {
+            position: relative;
+            overflow: hidden;
+            animation: promo-glow 2s ease-in-out infinite;
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+        }
+        
+        .promo-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: promo-shimmer 3s ease-in-out infinite;
+        }
+        
+        /* Animaciones para botón FAB de categorías */
+        @keyframes fab-float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+        
+        @keyframes fab-pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+            }
+        }
+        
+        @keyframes fab-combined {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+                box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            }
+            25% {
+                transform: translateY(-6px) scale(1.03);
+                box-shadow: 0 12px 26px rgba(0,0,0,0.4);
+            }
+            50% {
+                transform: translateY(-8px) scale(1.05);
+                box-shadow: 0 14px 28px rgba(0,0,0,0.45);
+            }
+            75% {
+                transform: translateY(-6px) scale(1.03);
+                box-shadow: 0 12px 26px rgba(0,0,0,0.4);
+            }
+        }
+        
+        .fab-categories-animated {
+            animation: fab-combined 3s ease-in-out infinite;
+        }
+        
+        .fab-categories-animated:hover {
+            animation-play-state: paused;
+            transform: translateY(-4px) scale(1.08) !important;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.5) !important;
+        }
     </style>
 </head>
 <body class="bg-background">
@@ -188,8 +299,8 @@
             </button>
         @endif
         @if(!empty($categorias))
-            <button id="fabCategories" title="Categorías del menú" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                <span style="font-size: 22px;">📋</span>
+            <button id="fabCategories" title="Categorías del menú" class="fab-categories-animated" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
+                <span style="font-size: 22px; display: inline-block;">📋</span>
             </button>
         @endif
     </div>
@@ -223,10 +334,11 @@
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
                             <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
-                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 140, 0, 0.5); background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%); color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);"
-                                    onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(255, 140, 0, 0.5)';"
-                                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(255, 140, 0, 0.3)';">
-                                {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
+                                    class="promo-button"
+                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 140, 0, 0.5); color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; position: relative; z-index: 1;"
+                                    onmouseover="this.style.transform='scale(1.08)';"
+                                    onmouseout="this.style.transform='scale(1)';">
+                                <span class="promo-fire-icon">{{ $categoria['icon'] }}</span> {{ $categoria['nombre'] }}
                             </button>
                         @else
                             <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
