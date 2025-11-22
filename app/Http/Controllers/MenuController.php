@@ -262,14 +262,31 @@ class MenuController extends Controller
         // Actualizar campos del chatbot y colores en el comercio
         $needsUpdate = false;
         
-        // Campos del chatbot
+        // Log para depurar
+        Log::info('MenuController@update - Datos recibidos del chatbot', [
+            'chatbot_name' => $request->input('chatbot_name'),
+            'welcome_message' => $request->input('welcome_message'),
+            'has_chatbot_name' => $request->has('chatbot_name'),
+            'has_welcome_message' => $request->has('welcome_message'),
+            'all_request_keys' => array_keys($request->all())
+        ]);
+        
+        // Campos del chatbot - actualizar siempre que estén presentes en el request
         if ($request->has('chatbot_name')) {
-            $comercio->chatbot_name = $request->chatbot_name;
+            $comercio->chatbot_name = $request->chatbot_name ?? null;
             $needsUpdate = true;
+            Log::info('Chatbot name actualizado', [
+                'valor_anterior' => $comercio->getOriginal('chatbot_name'),
+                'valor_nuevo' => $request->chatbot_name
+            ]);
         }
         if ($request->has('welcome_message')) {
-            $comercio->welcome_message = $request->welcome_message;
+            $comercio->welcome_message = $request->welcome_message ?? null;
             $needsUpdate = true;
+            Log::info('Welcome message actualizado', [
+                'valor_anterior' => $comercio->getOriginal('welcome_message'),
+                'valor_nuevo' => substr($request->welcome_message ?? '', 0, 50) . '...'
+            ]);
         }
         
         // Campos de colores

@@ -1061,6 +1061,21 @@
                     // PREVENIR el envío automático
                     event.preventDefault();
                     
+                    // Sincronizar campos del chatbot con los campos ocultos ANTES de enviar
+                    const chatbotName = document.getElementById('chatbot_name');
+                    const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
+                    if (chatbotName && chatbotNameHidden) {
+                        chatbotNameHidden.value = chatbotName.value;
+                        console.log('Chatbot name sincronizado:', chatbotName.value);
+                    }
+                    
+                    const welcomeMessage = document.getElementById('welcome_message');
+                    const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
+                    if (welcomeMessage && welcomeMessageHidden) {
+                        welcomeMessageHidden.value = welcomeMessage.value;
+                        console.log('Welcome message sincronizado:', welcomeMessage.value);
+                    }
+                    
                     // ESPERAR un momento para asegurar que el DOM se actualizó completamente
                     setTimeout(() => {
                         // Sincronizar promociones antes de enviar
@@ -1103,15 +1118,28 @@
                         formData.append('nombre', document.getElementById('nombre').value);
                         formData.append('archivo', convertedImageFile);
                         
+                        // Sincronizar campos del chatbot ANTES de crear el FormData
+                        const chatbotName = document.getElementById('chatbot_name');
+                        const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
+                        if (chatbotName && chatbotNameHidden) {
+                            chatbotNameHidden.value = chatbotName.value;
+                            console.log('✅ Chatbot name sincronizado para FormData:', chatbotName.value);
+                        }
+                        
+                        const welcomeMessage = document.getElementById('welcome_message');
+                        const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
+                        if (welcomeMessage && welcomeMessageHidden) {
+                            welcomeMessageHidden.value = welcomeMessage.value;
+                            console.log('✅ Welcome message sincronizado para FormData:', welcomeMessage.value.substring(0, 50) + '...');
+                        }
+                        
                         // Agregar todos los campos ocultos del formulario
                         const menuForm = document.getElementById('menu-form');
                         if (menuForm) {
-                            // Agregar campos del chatbot
-                            const chatbotName = document.getElementById('chatbot_name_hidden');
-                            if (chatbotName) formData.append('chatbot_name', chatbotName.value);
+                            // Agregar campos del chatbot (ya sincronizados arriba)
+                            if (chatbotNameHidden) formData.append('chatbot_name', chatbotNameHidden.value);
                             
-                            const welcomeMessage = document.getElementById('welcome_message_hidden');
-                            if (welcomeMessage) formData.append('welcome_message', welcomeMessage.value);
+                            if (welcomeMessageHidden) formData.append('welcome_message', welcomeMessageHidden.value);
                             
                             // Agregar campos de colores
                             const primaryColor = document.getElementById('primary_color');
@@ -1170,6 +1198,21 @@
                             alert('Error al guardar el menú. Por favor, intenta nuevamente.');
                         });
                     } else {
+                        // Sincronizar campos del chatbot ANTES de enviar el formulario
+                        const chatbotName = document.getElementById('chatbot_name');
+                        const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
+                        if (chatbotName && chatbotNameHidden) {
+                            chatbotNameHidden.value = chatbotName.value;
+                            console.log('✅ Chatbot name sincronizado antes de submit:', chatbotName.value);
+                        }
+                        
+                        const welcomeMessage = document.getElementById('welcome_message');
+                        const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
+                        if (welcomeMessage && welcomeMessageHidden) {
+                            welcomeMessageHidden.value = welcomeMessage.value;
+                            console.log('✅ Welcome message sincronizado antes de submit:', welcomeMessage.value.substring(0, 50) + '...');
+                        }
+                        
                         // Enviar el formulario del menú (las promociones ya están sincronizadas arriba)
                         const menuForm = document.getElementById('menu-form');
                         if (menuForm) {
@@ -1177,6 +1220,13 @@
                             // Verificar que las promociones estén sincronizadas
                             const promoInputs = menuForm.querySelectorAll('input[name^="promociones"]');
                             console.log('Inputs de promociones en el form antes de enviar:', promoInputs.length);
+                            
+                            // Verificar que los campos ocultos tienen los valores correctos
+                            console.log('Valores finales antes de enviar:', {
+                                chatbot_name_hidden: chatbotNameHidden?.value,
+                                welcome_message_hidden: welcomeMessageHidden?.value?.substring(0, 50) + '...'
+                            });
+                            
                             menuForm.submit();
                         }
                     }
