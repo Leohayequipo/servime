@@ -650,6 +650,85 @@ class MenuController extends Controller
     }
 
     /**
+     * Actualizar precio de plato
+     */
+    public function updatePlatoPrecio(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'precio' => 'nullable|string|max:50',
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            // Obtener y decodificar JSON actual
+            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+            
+            if (empty($rawContent)) {
+                return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
+            }
+
+            // Limpiar el contenido JSON
+            $jsonContent = $rawContent;
+            if (strpos($jsonContent, '```json') !== false) {
+                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+            }
+            
+            $contenido = json_decode(trim($jsonContent), true);
+            
+            if (!$contenido || !isset($contenido['categorias'])) {
+                return response()->json(['error' => 'Formato de menú inválido.'], 400);
+            }
+
+            // Validar índices
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex]) || !isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            // Actualizar precio
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            $plato['precio'] = $validated['precio'] ?? '';
+
+            // Guardar JSON actualizado
+            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            if ($jsonResult === false) {
+                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+            }
+            
+            $menu->contexto_gpt = $jsonResult;
+            $menu->save();
+
+            return response()->json([
+                'success' => true,
+                'precio' => $plato['precio'],
+                'message' => 'Precio actualizado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar precio de plato: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al actualizar el precio: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Asegurar que el archivo del menú esté en public_html/storage (sin errores si falla)
      */
     private function ensureMenuFileInPublicHtml(string $archivoPath): void

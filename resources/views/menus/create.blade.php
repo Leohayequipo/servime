@@ -706,13 +706,17 @@
                                                 <!-- Precio -->
                                                 <div class="md:col-span-2">
                                                     <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
-                                                    <input type="text" 
-                                                           data-promo-field="precio"
-                                                           data-promo-index="{{ $promoIndex }}"
-                                                           name="promociones[{{ $promoIndex }}][precio]" 
-                                                           value="{{ old("promociones.{$promoIndex}.precio", $promo['precio'] ?? '') }}"
-                                                           placeholder="$0.00"
-                                                           class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                                    <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
+                                                        <span class="text-text-primary font-medium text-sm px-3 py-2 border-r border-accent-gray">$</span>
+                                                        <input type="text" 
+                                                               data-promo-field="precio"
+                                                               data-promo-index="{{ $promoIndex }}"
+                                                               name="promociones[{{ $promoIndex }}][precio]" 
+                                                               value="{{ preg_replace('/[^0-9]/', '', old("promociones.{$promoIndex}.precio", $promo['precio'] ?? '')) }}"
+                                                               placeholder="0"
+                                                               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                                               class="w-full px-3 py-2 bg-transparent text-text-primary focus:outline-none flex-1 text-right">
+                                                    </div>
                                                 </div>
                                                 
                                                 <!-- Descripción -->
@@ -847,9 +851,20 @@
                                                                         <h5 class="text-text-primary font-semibold text-base leading-tight">
                                                                     {{ $plato['nombre'] ?? 'Sin nombre' }}
                                                                         </h5>
-                                                                        <span class="text-accent-blue font-bold text-base whitespace-nowrap flex-shrink-0">
-                                                                    {{ $plato['precio'] ?? 'Sin precio' }}
-                                                                </span>
+                                                                        <div class="flex items-center gap-2 flex-shrink-0">
+                                                                            <div class="flex items-center bg-secondary-dark border border-accent-gray/50 rounded-lg overflow-hidden">
+                                                                                <span class="text-accent-blue font-bold text-base px-2 py-1 border-r border-accent-gray/50">$</span>
+                                                                                <input type="text" 
+                                                                                       value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
+                                                                                       placeholder="0"
+                                                                                       data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
+                                                                                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                                                                       onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
+                                                                                       class="text-accent-blue font-bold text-base whitespace-nowrap bg-transparent px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all w-20 text-right"
+                                                                                       id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                            </div>
+                                                                            <span class="text-accent-blue text-xs opacity-70" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
+                                                                        </div>
                                                                     </div>
                                                                     @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
                                                                         <p class="text-text-secondary text-sm leading-relaxed mt-1.5">
@@ -1419,7 +1434,15 @@
                     
                     // IMPORTANTE: Recopilar el valor ANTES de deshabilitar
                     // Leer el valor directamente del input visible
-                    const rawValue = input.value;
+                    let rawValue = input.value;
+                    
+                    // Si es el campo precio, formatear con signo $ y solo números
+                    if (field === 'precio') {
+                        // Extraer solo números
+                        const valorNumerico = rawValue.toString().replace(/[^0-9]/g, '');
+                        // Formatear con signo $ si hay números
+                        rawValue = valorNumerico ? `$ ${valorNumerico}` : '';
+                    }
                     const value = rawValue !== null && rawValue !== undefined ? String(rawValue) : '';
                     
                     // Guardar el valor (aunque esté vacío, lo guardamos para que el backend lo reciba)
@@ -2223,6 +2246,129 @@
             }
         }
 
+        // Función para actualizar el precio de un plato
+        async function updatePlatoPrecio(categoriaIndex, platoIndex, nuevoPrecio) {
+            const statusElement = document.getElementById(`precio-status-${categoriaIndex}-${platoIndex}`);
+            const inputElement = document.getElementById(`precio-input-${categoriaIndex}-${platoIndex}`);
+            
+            // Limpiar el valor: solo números
+            const valorNumerico = nuevoPrecio.toString().replace(/[^0-9]/g, '');
+            
+            // Si está vacío, no hacer nada (permitir precios vacíos)
+            if (valorNumerico === '' && inputElement.value === '') {
+                return;
+            }
+            
+            // Guardar el valor original por si hay error
+            const valorOriginal = inputElement.dataset.originalValue || inputElement.value;
+            
+            // Actualizar el valor del input para mostrar solo números
+            if (inputElement) {
+                inputElement.value = valorNumerico;
+            }
+            
+            // Preparar precio con signo $ para guardar
+            const precioConSigno = valorNumerico ? `$ ${valorNumerico}` : '';
+            
+            // Mostrar indicador de carga
+            if (statusElement) {
+                statusElement.textContent = '⏳';
+                statusElement.className = 'text-accent-blue text-xs opacity-70';
+            }
+            
+            // Deshabilitar input mientras se guarda
+            if (inputElement) {
+                inputElement.disabled = true;
+                inputElement.style.opacity = '0.7';
+            }
+
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    throw new Error('El menú no está disponible');
+                }
+
+                // Preparar datos para la petición
+                const formData = new FormData();
+                formData.append('precio', precioConSigno);
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                // Llamar al endpoint de actualización
+                const updateUrl = `{{ route('menus.update.plato.precio', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+
+                if (data.success) {
+                    // Mostrar éxito
+                    if (statusElement) {
+                        statusElement.textContent = '✓';
+                        statusElement.className = 'text-green-500 text-xs';
+                    }
+                    
+                    // Guardar el nuevo valor numérico como original
+                    if (inputElement) {
+                        inputElement.dataset.originalValue = valorNumerico;
+                        // Asegurar que el input solo muestre números
+                        inputElement.value = valorNumerico;
+                    }
+                    
+                    // Ocultar el check después de 2 segundos
+                    setTimeout(() => {
+                        if (statusElement) {
+                            statusElement.textContent = '';
+                        }
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Error al actualizar el precio');
+                }
+            } catch (error) {
+                console.error('Error al actualizar precio:', error);
+                
+                // Restaurar valor original numérico
+                if (inputElement) {
+                    const valorOriginalNumerico = valorOriginal.replace(/[^0-9]/g, '');
+                    inputElement.value = valorOriginalNumerico;
+                }
+                
+                // Mostrar error
+                if (statusElement) {
+                    statusElement.textContent = '✗';
+                    statusElement.className = 'text-red-500 text-xs';
+                    setTimeout(() => {
+                        statusElement.textContent = '';
+                    }, 3000);
+                }
+                
+                showError('Error al actualizar el precio: ' + (error.message || 'Error desconocido'));
+            } finally {
+                // Rehabilitar input
+                if (inputElement) {
+                    inputElement.disabled = false;
+                    inputElement.style.opacity = '1';
+                }
+            }
+        }
+
         // Función helper para mensajes de éxito
         function showSuccessMessage(message) {
             // Puedes usar tu sistema de notificaciones existente
@@ -2371,13 +2517,17 @@
                     <!-- Precio -->
                     <div class="md:col-span-2">
                         <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
-                        <input type="text" 
-                               data-promo-field="precio"
-                               data-promo-index="${promocionIndex}"
-                               name="promociones[${promocionIndex}][precio]" 
-                               value=""
-                               placeholder="$0.00"
-                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
+                            <span class="text-text-primary font-medium text-sm px-3 py-2 border-r border-accent-gray">$</span>
+                            <input type="text" 
+                                   data-promo-field="precio"
+                                   data-promo-index="${promocionIndex}"
+                                   name="promociones[${promocionIndex}][precio]" 
+                                   value=""
+                                   placeholder="0"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                   class="w-full px-3 py-2 bg-transparent text-text-primary focus:outline-none flex-1 text-right">
+                        </div>
                     </div>
                     
                     <!-- Descripción -->
@@ -2475,7 +2625,16 @@
                 inputsInItem.forEach(input => {
                     const field = input.getAttribute('data-promo-field');
                     if (field) {
-                        const value = input.value || '';
+                        let value = input.value || '';
+                        
+                        // Si es el campo precio, formatear con signo $ y solo números
+                        if (field === 'precio') {
+                            // Extraer solo números
+                            const valorNumerico = value.toString().replace(/[^0-9]/g, '');
+                            // Formatear con signo $ si hay números
+                            value = valorNumerico ? `$ ${valorNumerico}` : '';
+                        }
+                        
                         promo[field] = value;
                         console.log(`    - Campo ${field}: "${value}"`);
                     }

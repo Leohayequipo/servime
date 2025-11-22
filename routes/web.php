@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/comercios/{comercio:slug}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-plato-imagen', [App\Http\Controllers\MenuController::class, 'uploadPlatoImagen'])->name('menus.upload.plato.imagen');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-plato-imagen', [App\Http\Controllers\MenuController::class, 'deletePlatoImagen'])->name('menus.delete.plato.imagen');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-precio', [App\Http\Controllers\MenuController::class, 'updatePlatoPrecio'])->name('menus.update.plato.precio');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-promo-imagen', [App\Http\Controllers\MenuController::class, 'uploadPromocionImagen'])->name('menus.upload.promo.imagen');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion');
