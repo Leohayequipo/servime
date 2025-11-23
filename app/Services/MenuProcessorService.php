@@ -262,17 +262,36 @@ class MenuProcessorService
             'modelo_usado' => $this->openaiModel
         ]);
 
-        $jsonResults = [];
+        $jsonResults = []; // Array indexado por número de sección para preservar orden
 
         foreach ($sections as $section) {
-            Log::info('Procesando sección ' . $section['number'] . ' de ' . count($sections), [
+            $sectionNumber = $section['number']; // Número original de la sección (1, 2, 3...)
+            $sectionIndex = $sectionNumber - 1; // Índice para el array (0, 1, 2...)
+            
+            Log::info('Procesando sección ' . $sectionNumber . ' de ' . count($sections), [
                 'modelo' => $this->openaiModel,
-                'seccion_path' => $section['path']
+                'seccion_path' => $section['path'],
+                'section_index' => $sectionIndex
             ]);
             
             try {
                 $imageData = file_get_contents($section['path']);
                 $base64Image = base64_encode($imageData);
+                
+                // Obtener dimensiones de la imagen para logging
+                $imageInfo = getimagesize($section['path']);
+                $imageWidth = $imageInfo[0] ?? 'N/A';
+                $imageHeight = $imageInfo[1] ?? 'N/A';
+                $imageSize = strlen($imageData);
+                $base64Size = strlen($base64Image);
+                
+                Log::info('Enviando sección a OpenAI', [
+                    'seccion' => $sectionNumber,
+                    'dimensiones' => $imageWidth . 'x' . $imageHeight,
+                    'tamaño_imagen_bytes' => $imageSize,
+                    'tamaño_base64_bytes' => $base64Size,
+                    'tamaño_base64_mb' => round($base64Size / 1024 / 1024, 2)
+                ]);
                 
                 $response = Http::withHeaders([
                     'Authorization' => 'Bearer ' . $this->openaiApiKey,
@@ -287,7 +306,23 @@ class MenuProcessorService
                                     'type' => 'text',
                                     'text' => 'Eres SOLO un OCR (reconocimiento óptico de caracteres). NO eres un asistente inteligente. NO interpretes. NO completes. NO inventes.
 
-Esta es la sección ' . $section['number'] . ' de ' . count($sections) . ' de una imagen de menú.
+Esta es la sección ' . $sectionNumber . ' de ' . count($sections) . ' de una imagen de menú.
+
+🚨🚨🚨 ATENCIÓN CRÍTICA - LEE ESTO PRIMERO 🚨🚨🚨:
+Esta imagen tiene el ANCHO COMPLETO del menú original. Puede tener MÚLTIPLES COLUMNAS.
+DEBES leer TODA la imagen de IZQUIERDA A DERECHA, columna por columna.
+NO te enfoques solo en la columna izquierda. Escanea toda la imagen horizontalmente.
+Si hay "Waffles" a la izquierda y "Postres" a la derecha, AMBOS deben aparecer en tu respuesta.
+Lee cada línea COMPLETA de izquierda a derecha antes de pasar a la siguiente.
+
+⚠️⚠️⚠️ LEE TODA LA IMAGEN COMPLETA - ESTO ES CRÍTICO ⚠️⚠️⚠️:
+- Esta sección contiene el ANCHO COMPLETO de la imagen original
+- La imagen puede tener MÚLTIPLES COLUMNAS (izquierda, centro, derecha)
+- DEBES leer TODA la imagen de IZQUIERDA A DERECHA, sin saltarte ninguna columna
+- Si ves texto en la parte izquierda Y texto en la parte derecha, AMBOS deben ser procesados
+- NO te enfoques solo en una columna, escanea toda la imagen horizontalmente
+- Ejemplo: Si hay "Waffles" a la izquierda y "Postres" a la derecha, AMBOS deben aparecer en el JSON
+- Lee cada línea de IZQUIERDA A DERECHA antes de pasar a la siguiente línea
 
 🚫 REGLAS ABSOLUTAS - NO HAY EXCEPCIONES:
 
@@ -317,17 +352,39 @@ Esta es la sección ' . $section['number'] . ' de ' . count($sections) . ' de un
 - NO "corrijas" nombres (si dice "CAFÉ- CORTADO", NO lo cambies a "Café Cortado")
 - Si NO ves un plato escrito, NO lo agregues aunque sea común en menús
 
-✅ PROCESO DE TRANSCRIPCIÓN:
-1. Lee la imagen de arriba hacia abajo
-2. Para cada línea que veas:
-   - Si es un título/encabezado → es una categoría
+✅ PROCESO DE TRANSCRIPCIÓN (RESPETA EL ORDEN - ESTO ES CRÍTICO):
+1. ⚠️ LEE TODA LA IMAGEN COMPLETA - NO TE SALTEES NINGUNA PARTE:
+   - Lee de ARRIBA HACIA ABAJO, línea por línea
+   - Lee de IZQUIERDA A DERECHA en cada línea
+   - Si la imagen tiene MÚLTIPLES COLUMNAS, lee TODAS las columnas (izquierda, centro, derecha)
+   - NO te enfoques solo en una columna, lee TODA la imagen completa
+   - Si ves texto en la parte izquierda Y texto en la parte derecha, ambos deben ser procesados
+   - Ejemplo: Si hay "Waffles" a la izquierda y "Postres" a la derecha, AMBOS deben aparecer en el JSON
+   - Escanea toda la imagen de izquierda a derecha antes de pasar a la siguiente línea
+2. Para cada línea que veas, en el orden exacto que aparece (de arriba hacia abajo, y de izquierda a derecha):
+   - Si es un título/encabezado → es una categoría (ejemplos: "CAFETERÍA", "Para acompañar", "Pastelería", "Waffles", "Postres", etc.)
    - Si es un nombre de plato seguido de precio → es un plato
    - Si hay texto descriptivo debajo del nombre del plato (ingredientes, preparación, etc.) → es la descripción, cópiala EXACTAMENTE
    - Si falta el nombre O el precio → NO lo agregues
-3. Transcribe carácter por carácter, sin interpretar
-4. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
+3. ⚠️ DETECCIÓN DE CATEGORÍAS - MUY IMPORTANTE:
+   - Una categoría puede aparecer como: texto en mayúsculas, texto centrado, texto más grande, texto en negrita, o simplemente texto seguido de una lista de platos
+   - Si ves texto que parece ser un encabezado o título (aunque no esté en mayúsculas), es probablemente una categoría
+   - Ejemplos de categorías comunes: "Cafetería", "Para acompañar", "Pastelería", "Waffles", "Postres", "Milanesas", "Lomitos", "Hamburguesas", "Ensaladas", "Brunch", "Promos", "Licuados", etc.
+   - NO te saltes ninguna categoría, incluso si no tiene un formato muy claro de título
+   - Si dudas si algo es una categoría o un plato, pregúntate: ¿viene seguido de una lista de platos? Si la respuesta es sí, es una categoría
+   - ⚠️ CRÍTICO: Si la imagen tiene múltiples columnas, busca categorías en TODAS las columnas (izquierda, centro, derecha)
+   - Si ves "Waffles" a la izquierda y "Postres" a la derecha, AMBAS son categorías y deben aparecer en el JSON
+   - NO ignores ninguna columna, lee TODA la imagen de izquierda a derecha
+4. Transcribe carácter por carácter, sin interpretar
+5. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
+6. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
+   - Las categorías y platos DEBEN aparecer en el JSON en el MISMO ORDEN EXACTO que aparecen en la imagen
+   - Lee de ARRIBA HACIA ABAJO, línea por línea, y agrega cada categoría/plato al JSON en el mismo orden que lo lees
+   - NO reordenes, NO agrupes por tipo, NO cambies el orden por NINGÚN motivo
+   - Si lees "A" antes que "B" en la imagen, entonces "A" debe estar ANTES que "B" en el JSON
+   - El orden del JSON debe ser un REFLEJO EXACTO del orden visual de la imagen
 
-FORMATO JSON (OBLIGATORIO):
+FORMATO JSON (OBLIGATORIO - RESPETA EL ORDEN):
 {
   "restaurante": {"nombre": "", "descripcion": ""},
   "categorias": [
@@ -344,14 +401,50 @@ FORMATO JSON (OBLIGATORIO):
   ]
 }
 
+⚠️ ORDEN OBLIGATORIO - ESTO ES CRÍTICO (LEE 5 VECES):
+- Las categorías en el array "categorias" DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO, línea por línea
+- Los platos dentro de cada categoría DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO
+- NO reordenes las categorías alfabéticamente - NUNCA
+- NO agrupes categorías similares - NUNCA
+- NO cambies el orden por ningún motivo - NUNCA
+- NO uses lógica o conocimiento previo para ordenar - NUNCA
+- Si en la imagen aparece primero "Cafetería" y luego "Para acompañar", ese DEBE ser el orden en el JSON, sin excepciones
+- Si lees la imagen de arriba hacia abajo y encuentras "A" primero y luego "B", entonces en el JSON "A" debe estar ANTES de "B"
+- El orden del JSON debe ser un REFLEJO EXACTO del orden visual de la imagen, sin modificaciones
+
 ⚠️ RECUERDA: Si no está escrito en esta sección, NO existe. NO inventes, NO asumas, NO completes, NO uses conocimiento previo.
+
+📋 EJEMPLO DE ORDEN CORRECTO:
+Si en la imagen lees de arriba hacia abajo:
+1. "CAFETERÍA" (categoría)
+2. "Café con leche - $50" (plato)
+3. "Café cortado - $45" (plato)
+4. "PARA ACOMPAÑAR" (categoría)
+5. "Medialunas - $30" (plato)
+
+Entonces el JSON DEBE ser:
+{
+  "categorias": [
+    {"nombre": "CAFETERÍA", "platos": [{"nombre": "Café con leche", "precio": "$50"}, {"nombre": "Café cortado", "precio": "$45"}]},
+    {"nombre": "PARA ACOMPAÑAR", "platos": [{"nombre": "Medialunas", "precio": "$30"}]}
+  ]
+}
+
+NO hagas esto (INCORRECTO):
+{
+  "categorias": [
+    {"nombre": "PARA ACOMPAÑAR", ...},  // ❌ INCORRECTO: Esta categoría aparece después en la imagen
+    {"nombre": "CAFETERÍA", ...}         // ❌ INCORRECTO: Esta categoría aparece primero en la imagen
+  ]
+}
 
 Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explicaciones.'
                                 ],
                                 [
                                     'type' => 'image_url',
                                     'image_url' => [
-                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image
+                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
+                                        'detail' => 'high'
                                     ]
                                 ]
                             ]
@@ -377,34 +470,57 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                             $cleanContent = trim($cleanContent);
                         }
                         
+                        // Guardar respuesta de OpenAI en archivo de texto para revisión
+                        $txtPath = storage_path('app/temp/openai_response_section_' . $sectionNumber . '_' . uniqid() . '.txt');
+                        if (!is_dir(storage_path('app/temp'))) {
+                            mkdir(storage_path('app/temp'), 0755, true);
+                        }
+                        file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - SECCIÓN {$sectionNumber} ===\n\n");
+                        file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
+                        file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
+                        file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
+                        Log::info('Respuesta de OpenAI guardada en archivo', [
+                            'seccion' => $sectionNumber,
+                            'archivo' => $txtPath
+                        ]);
+                        
                         // Validar que el JSON sea válido antes de agregarlo
                         $jsonTest = json_decode($cleanContent, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
                             // Validar estructura básica
                             if (isset($jsonTest['categorias']) && is_array($jsonTest['categorias'])) {
-                                $jsonResults[] = $cleanContent;
-                                Log::info('Sección ' . $section['number'] . ' procesada exitosamente', [
+                                // IMPORTANTE: Guardar en el índice correcto según el número de sección original
+                                // Esto preserva el orden incluso si las secciones terminan en orden diferente
+                                $jsonResults[$sectionIndex] = $cleanContent;
+                                Log::info('Sección ' . $sectionNumber . ' procesada exitosamente', [
+                                    'section_index' => $sectionIndex,
                                     'categorias_encontradas' => count($jsonTest['categorias']),
                                     'total_platos' => array_sum(array_map(function($cat) {
                                         return isset($cat['platos']) && is_array($cat['platos']) ? count($cat['platos']) : 0;
                                     }, $jsonTest['categorias']))
                                 ]);
                             } else {
-                                Log::warning('Sección ' . $section['number'] . ' procesada pero sin estructura válida');
+                                Log::warning('Sección ' . $sectionNumber . ' procesada pero sin estructura válida');
                             }
                         } else {
-                            Log::warning('Sección ' . $section['number'] . ' procesada pero JSON inválido: ' . json_last_error_msg());
+                            Log::warning('Sección ' . $sectionNumber . ' procesada pero JSON inválido: ' . json_last_error_msg());
                         }
                     }
                 }
             } catch (\Exception $e) {
-                Log::error('Error procesando sección ' . $section['number'] . ': ' . $e->getMessage());
+                Log::error('Error procesando sección ' . $sectionNumber . ': ' . $e->getMessage());
             }
         }
 
         if (empty($jsonResults)) {
             throw new \Exception('No se pudo procesar ninguna sección de la imagen');
         }
+
+        // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
+        ksort($jsonResults);
+        
+        // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
+        $jsonResults = array_values($jsonResults);
 
         // Combinar resultados
         $combinedJson = $this->combineMenuJsons($jsonResults);
@@ -443,11 +559,12 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
      */
     protected function combineMenuJsons(array $jsonStrings): string
     {
-        $combinedCategorias = [];
         $restaurante = ['nombre' => '', 'descripcion' => ''];
-        $categoriaOrder = []; // Para preservar el orden de primera aparición
         $seenPlatos = []; // Para detectar platos duplicados
-
+        $platosConOrden = []; // Para preservar el orden de los platos: [categoria => [platos con orden]]
+        $categoriasConOrden = []; // Array temporal: [timestamp => categoria_completa]
+        
+        // Primero, recopilar todas las categorías con su orden
         foreach ($jsonStrings as $index => $jsonString) {
             try {
                 if (empty($jsonString)) {
@@ -468,33 +585,54 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
 
                 // Combinar categorías preservando el orden
                 if (isset($data['categorias']) && is_array($data['categorias'])) {
-                    foreach ($data['categorias'] as $categoria) {
+                    // Log del orden en que OpenAI devolvió las categorías en esta sección
+                    $categoriasEnSeccion = array_map(function($cat) {
+                        return $cat['nombre'] ?? '';
+                    }, $data['categorias']);
+                    Log::info('Categorías devueltas por OpenAI en sección ' . ($index + 1), [
+                        'seccion_index' => $index,
+                        'categorias_orden' => $categoriasEnSeccion
+                    ]);
+                    
+                    foreach ($data['categorias'] as $categoriaIndex => $categoria) {
                         if (!is_array($categoria)) continue;
                         
                         $nombreCategoria = trim($categoria['nombre'] ?? '');
                         if (empty($nombreCategoria)) continue;
 
                         $nombreCategoriaLower = strtolower($nombreCategoria);
+                        
+                        // Calcular timestamp para esta categoría (orden absoluto)
+                        // IMPORTANTE: $index es el índice de la sección (0, 1, 2...)
+                        // $categoriaIndex es el índice dentro del array de categorías devuelto por OpenAI
+                        $timestamp = $index * 10000 + $categoriaIndex; // Multiplicar por 10000 para dejar espacio para platos
 
-                        // Buscar si la categoría ya existe
-                        $categoriaExistente = null;
-                        $categoriaExistenteIndex = null;
-                        foreach ($combinedCategorias as $idx => &$cat) {
-                            if (is_array($cat) && isset($cat['nombre']) && strtolower(trim($cat['nombre'])) === $nombreCategoriaLower) {
-                                $categoriaExistente = &$cat;
-                                $categoriaExistenteIndex = $idx;
+                        // Buscar si la categoría ya existe en categoriasConOrden
+                        $categoriaExistenteKey = null;
+                        foreach ($categoriasConOrden as $key => $catData) {
+                            if (strtolower(trim($catData['categoria']['nombre'] ?? '')) === $nombreCategoriaLower) {
+                                $categoriaExistenteKey = $key;
                                 break;
                             }
                         }
 
-                        if ($categoriaExistente && is_array($categoriaExistente)) {
+                        if ($categoriaExistenteKey !== null) {
+                            // La categoría ya existe, solo agregar platos
+                            Log::info('Categoría existente encontrada, agregando platos', [
+                                'categoria' => $nombreCategoria,
+                                'seccion' => $index + 1,
+                                'categoria_existente_key' => $categoriaExistenteKey
+                            ]);
+                            
                             // Agregar platos a la categoría existente, validando duplicados y precios
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
-                                if (!isset($categoriaExistente['platos']) || !is_array($categoriaExistente['platos'])) {
-                                    $categoriaExistente['platos'] = [];
+                                // Inicializar platosConOrden si no existe
+                                if (!isset($platosConOrden[$nombreCategoriaLower])) {
+                                    $platosConOrden[$nombreCategoriaLower] = [];
                                 }
                                 
-                                foreach ($categoria['platos'] as $plato) {
+                                $platosAgregados = 0;
+                                foreach ($categoria['platos'] as $platoIndex => $plato) {
                                     if (!is_array($plato)) continue;
                                     
                                     $nombrePlato = trim($plato['nombre'] ?? '');
@@ -518,25 +656,36 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                                     
                                     $seenPlatos[$platoKey] = true;
                                     
-                                    // Agregar plato con precio validado
-                                    $categoriaExistente['platos'][] = [
-                                        'nombre' => $nombrePlato,
-                                        'precio' => $precio,
-                                        'descripcion' => trim($plato['descripcion'] ?? ''),
-                                        'imagen' => $plato['imagen'] ?? ''
+                                    // Guardar plato con información de orden (sección y posición)
+                                    $platosConOrden[$nombreCategoriaLower][] = [
+                                        'plato' => [
+                                            'nombre' => $nombrePlato,
+                                            'precio' => $precio,
+                                            'descripcion' => trim($plato['descripcion'] ?? ''),
+                                            'imagen' => $plato['imagen'] ?? ''
+                                        ],
+                                        'seccion' => $index, // Índice de la sección (0, 1, 2...)
+                                        'posicion' => $platoIndex // Posición dentro de la categoría en esta sección
                                     ];
+                                    $platosAgregados++;
                                 }
+                                
+                                Log::info('Platos agregados a categoría existente', [
+                                    'categoria' => $nombreCategoria,
+                                    'seccion' => $index + 1,
+                                    'platos_agregados' => $platosAgregados,
+                                    'total_platos_en_categoria' => count($platosConOrden[$nombreCategoriaLower])
+                                ]);
+                            } else {
+                                Log::warning('Categoría existente sin platos en esta sección', [
+                                    'categoria' => $nombreCategoria,
+                                    'seccion' => $index + 1
+                                ]);
                             }
                         } else {
-                            // Agregar nueva categoría preservando orden
-                            if (!isset($categoriaOrder[$nombreCategoriaLower])) {
-                                $categoriaOrder[$nombreCategoriaLower] = count($combinedCategorias);
-                            }
-                            
-                            // Validar precios de los platos antes de agregar
+                            // Nueva categoría - agregar platos primero
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
-                                $platosValidados = [];
-                                foreach ($categoria['platos'] as $plato) {
+                                foreach ($categoria['platos'] as $platoIndex => $plato) {
                                     if (!is_array($plato)) continue;
                                     
                                     $nombrePlato = trim($plato['nombre'] ?? '');
@@ -555,17 +704,35 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                                     
                                     $seenPlatos[$platoKey] = true;
                                     
-                                    $platosValidados[] = [
-                                        'nombre' => $nombrePlato,
-                                        'precio' => $this->validatePrice($plato['precio'] ?? ''),
-                                        'descripcion' => trim($plato['descripcion'] ?? ''),
-                                        'imagen' => $plato['imagen'] ?? ''
+                                    // Guardar plato con información de orden
+                                    if (!isset($platosConOrden[$nombreCategoriaLower])) {
+                                        $platosConOrden[$nombreCategoriaLower] = [];
+                                    }
+                                    $platosConOrden[$nombreCategoriaLower][] = [
+                                        'plato' => [
+                                            'nombre' => $nombrePlato,
+                                            'precio' => $this->validatePrice($plato['precio'] ?? ''),
+                                            'descripcion' => trim($plato['descripcion'] ?? ''),
+                                            'imagen' => $plato['imagen'] ?? ''
+                                        ],
+                                        'seccion' => $index,
+                                        'posicion' => $platoIndex
                                     ];
                                 }
-                                $categoria['platos'] = $platosValidados;
                             }
                             
-                            $combinedCategorias[] = $categoria;
+                            // Agregar categoría a categoriasConOrden con su timestamp
+                            $categoriasConOrden[$timestamp] = [
+                                'categoria' => $categoria,
+                                'nombre_lower' => $nombreCategoriaLower
+                            ];
+                            
+                            Log::info('Categoría nueva registrada', [
+                                'categoria' => $nombreCategoria,
+                                'seccion' => $index,
+                                'posicion_en_seccion' => $categoriaIndex,
+                                'timestamp' => $timestamp
+                            ]);
                         }
                     }
                 }
@@ -576,16 +743,56 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
             }
         }
 
-        // Ordenar categorías según su primera aparición
-        usort($combinedCategorias, function($a, $b) use ($categoriaOrder) {
-            $aName = strtolower(trim($a['nombre'] ?? ''));
-            $bName = strtolower(trim($b['nombre'] ?? ''));
+        // Ordenar categorías por timestamp (orden absoluto de aparición)
+        ksort($categoriasConOrden);
+        
+        // Construir array final de categorías en el orden correcto
+        $combinedCategorias = [];
+        foreach ($categoriasConOrden as $timestamp => $catData) {
+            $combinedCategorias[] = $catData['categoria'];
+        }
+        
+        Log::info('Categorías ordenadas por timestamp', [
+            'total_categorias' => count($combinedCategorias),
+            'orden' => array_map(function($cat) {
+                return $cat['nombre'] ?? '';
+            }, $combinedCategorias)
+        ]);
+        
+        // Ordenar platos dentro de cada categoría según el orden de las secciones (de arriba hacia abajo)
+        foreach ($combinedCategorias as &$categoria) {
+            $categoriaNombreLower = strtolower(trim($categoria['nombre'] ?? ''));
             
-            $aOrder = $categoriaOrder[$aName] ?? 999;
-            $bOrder = $categoriaOrder[$bName] ?? 999;
+            // Inicializar array de platos si no existe
+            if (!isset($categoria['platos'])) {
+                $categoria['platos'] = [];
+            }
             
-            return $aOrder <=> $bOrder;
-        });
+            if (isset($platosConOrden[$categoriaNombreLower]) && !empty($platosConOrden[$categoriaNombreLower])) {
+                // Ordenar platos por sección y luego por posición dentro de la sección
+                usort($platosConOrden[$categoriaNombreLower], function($a, $b) {
+                    // Primero por sección (orden de arriba hacia abajo)
+                    if ($a['seccion'] !== $b['seccion']) {
+                        return $a['seccion'] <=> $b['seccion'];
+                    }
+                    // Si están en la misma sección, por posición dentro de la sección
+                    return $a['posicion'] <=> $b['posicion'];
+                });
+                
+                // Reemplazar los platos con los ordenados
+                $categoria['platos'] = array_map(function($item) {
+                    return $item['plato'];
+                }, $platosConOrden[$categoriaNombreLower]);
+            } else {
+                // Si no hay platos en platosConOrden, mantener los platos originales de la categoría
+                // Esto puede pasar si la categoría fue agregada pero no tiene platos aún
+                Log::info('Categoría sin platos en platosConOrden, manteniendo platos originales', [
+                    'categoria' => $categoria['nombre'] ?? '',
+                    'platos_originales' => count($categoria['platos'] ?? [])
+                ]);
+            }
+        }
+        unset($categoria); // Liberar referencia
 
         Log::info('JSON combinado', [
             'total_categorias' => count($combinedCategorias),
@@ -635,7 +842,10 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                 // Procesar imagen con OpenAI
                 $pageJson = $this->processImagePageWithOpenAI($imagePath, $page, $pageCount);
                 if ($pageJson) {
-                    $jsonResults[] = $pageJson;
+                    // IMPORTANTE: Guardar en el índice correcto según el número de página (0-indexed)
+                    // Esto preserva el orden incluso si las páginas terminan en orden diferente
+                    $pageIndex = $page - 1; // Convertir página (1, 2, 3...) a índice (0, 1, 2...)
+                    $jsonResults[$pageIndex] = $pageJson;
                 }
             }
 
@@ -654,6 +864,12 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
             if (empty($jsonResults)) {
                 throw new \Exception('No se pudo procesar ninguna página del PDF');
             }
+
+            // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
+            ksort($jsonResults);
+            
+            // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
+            $jsonResults = array_values($jsonResults);
 
             $combinedJson = $this->combineMenuJsons($jsonResults);
             Log::info('PDF procesado exitosamente página por página', [
@@ -704,6 +920,14 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
 
 Esta es la página ' . $pageNumber . ' de ' . $totalPages . ' de un menú.
 
+🚨🚨🚨 ATENCIÓN CRÍTICA - LEE ESTO PRIMERO 🚨🚨🚨:
+Esta imagen tiene el ANCHO COMPLETO del menú original. Puede tener MÚLTIPLES COLUMNAS.
+DEBES leer TODA la imagen de IZQUIERDA A DERECHA, columna por columna.
+NO te enfoques solo en la columna izquierda. Escanea toda la imagen horizontalmente.
+Si hay "Waffles" a la izquierda y "Postres" a la derecha, AMBOS deben aparecer en tu respuesta.
+Lee cada línea COMPLETA de izquierda a derecha antes de pasar a la siguiente.
+Si solo lees una columna, tu respuesta será INCORRECTA e INCOMPLETA.
+
 🚫 REGLAS ABSOLUTAS - NO HAY EXCEPCIONES:
 
 1. TRANSCRIBE SOLO lo que VES escrito. Si no está escrito, NO existe.
@@ -732,17 +956,39 @@ Esta es la página ' . $pageNumber . ' de ' . $totalPages . ' de un menú.
 - NO "corrijas" nombres (si dice "CAFÉ- CORTADO", NO lo cambies a "Café Cortado")
 - Si NO ves un plato escrito, NO lo agregues aunque sea común en menús
 
-✅ PROCESO DE TRANSCRIPCIÓN:
-1. Lee la imagen de arriba hacia abajo
-2. Para cada línea que veas:
-   - Si es un título/encabezado → es una categoría
+✅ PROCESO DE TRANSCRIPCIÓN (RESPETA EL ORDEN - ESTO ES CRÍTICO):
+1. ⚠️ LEE TODA LA IMAGEN COMPLETA - NO TE SALTEES NINGUNA PARTE:
+   - Lee de ARRIBA HACIA ABAJO, línea por línea
+   - Lee de IZQUIERDA A DERECHA en cada línea
+   - Si la imagen tiene MÚLTIPLES COLUMNAS, lee TODAS las columnas (izquierda, centro, derecha)
+   - NO te enfoques solo en una columna, lee TODA la imagen completa
+   - Si ves texto en la parte izquierda Y texto en la parte derecha, ambos deben ser procesados
+   - Ejemplo: Si hay "Waffles" a la izquierda y "Postres" a la derecha, AMBOS deben aparecer en el JSON
+   - Escanea toda la imagen de izquierda a derecha antes de pasar a la siguiente línea
+2. Para cada línea que veas, en el orden exacto que aparece (de arriba hacia abajo, y de izquierda a derecha):
+   - Si es un título/encabezado → es una categoría (ejemplos: "CAFETERÍA", "Para acompañar", "Pastelería", "Waffles", "Postres", etc.)
    - Si es un nombre de plato seguido de precio → es un plato
    - Si hay texto descriptivo debajo del nombre del plato (ingredientes, preparación, etc.) → es la descripción, cópiala EXACTAMENTE
    - Si falta el nombre O el precio → NO lo agregues
-3. Transcribe carácter por carácter, sin interpretar
-4. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
+3. ⚠️ DETECCIÓN DE CATEGORÍAS - MUY IMPORTANTE:
+   - Una categoría puede aparecer como: texto en mayúsculas, texto centrado, texto más grande, texto en negrita, o simplemente texto seguido de una lista de platos
+   - Si ves texto que parece ser un encabezado o título (aunque no esté en mayúsculas), es probablemente una categoría
+   - Ejemplos de categorías comunes: "Cafetería", "Para acompañar", "Pastelería", "Waffles", "Postres", "Milanesas", "Lomitos", "Hamburguesas", "Ensaladas", "Brunch", "Promos", "Licuados", etc.
+   - NO te saltes ninguna categoría, incluso si no tiene un formato muy claro de título
+   - Si dudas si algo es una categoría o un plato, pregúntate: ¿viene seguido de una lista de platos? Si la respuesta es sí, es una categoría
+   - ⚠️ CRÍTICO: Si la imagen tiene múltiples columnas, busca categorías en TODAS las columnas (izquierda, centro, derecha)
+   - Si ves "Waffles" a la izquierda y "Postres" a la derecha, AMBAS son categorías y deben aparecer en el JSON
+   - NO ignores ninguna columna, lee TODA la imagen de izquierda a derecha
+4. Transcribe carácter por carácter, sin interpretar
+5. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
+6. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
+   - Las categorías y platos DEBEN aparecer en el JSON en el MISMO ORDEN EXACTO que aparecen en la imagen
+   - Lee de ARRIBA HACIA ABAJO, línea por línea, y agrega cada categoría/plato al JSON en el mismo orden que lo lees
+   - NO reordenes, NO agrupes por tipo, NO cambies el orden por NINGÚN motivo
+   - Si lees "A" antes que "B" en la imagen, entonces "A" debe estar ANTES que "B" en el JSON
+   - El orden del JSON debe ser un REFLEJO EXACTO del orden visual de la imagen
 
-FORMATO JSON (OBLIGATORIO):
+FORMATO JSON (OBLIGATORIO - RESPETA EL ORDEN):
 {
   "restaurante": {"nombre": "", "descripcion": ""},
   "categorias": [
@@ -759,16 +1005,28 @@ FORMATO JSON (OBLIGATORIO):
   ]
 }
 
+⚠️ ORDEN OBLIGATORIO - ESTO ES CRÍTICO (LEE 5 VECES):
+- Las categorías en el array "categorias" DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO, línea por línea
+- Los platos dentro de cada categoría DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO
+- NO reordenes las categorías alfabéticamente - NUNCA
+- NO agrupes categorías similares - NUNCA
+- NO cambies el orden por ningún motivo - NUNCA
+- NO uses lógica o conocimiento previo para ordenar - NUNCA
+- Si en la imagen aparece primero "Cafetería" y luego "Para acompañar", ese DEBE ser el orden en el JSON, sin excepciones
+- Si lees la imagen de arriba hacia abajo y encuentras "A" primero y luego "B", entonces en el JSON "A" debe estar ANTES de "B"
+- El orden del JSON debe ser un REFLEJO EXACTO del orden visual de la imagen, sin modificaciones
+
 ⚠️ RECUERDA: Si no está escrito en esta página, NO existe. NO inventes, NO asumas, NO completa, NO uses conocimiento previo.
 
 Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explicaciones.'
                             ],
-                            [
-                                'type' => 'image_url',
-                                'image_url' => [
-                                    'url' => 'data:' . $mimeType . ';base64,' . $base64Image
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => [
+                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
+                                        'detail' => 'high'
+                                    ]
                                 ]
-                            ]
                         ]
                     ]
                 ],
@@ -791,6 +1049,20 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                         $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
                         $cleanContent = trim($cleanContent);
                     }
+                    
+                    // Guardar respuesta de OpenAI en archivo de texto para revisión
+                    $txtPath = storage_path('app/temp/openai_response_page_' . $pageNumber . '_' . uniqid() . '.txt');
+                    if (!is_dir(storage_path('app/temp'))) {
+                        mkdir(storage_path('app/temp'), 0755, true);
+                    }
+                    file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - PÁGINA {$pageNumber} de {$totalPages} ===\n\n");
+                    file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
+                    file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
+                    file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
+                    Log::info('Respuesta de OpenAI guardada en archivo', [
+                        'pagina' => $pageNumber,
+                        'archivo' => $txtPath
+                    ]);
                     
                     Log::info('Página ' . $pageNumber . ' procesada exitosamente');
                     return $cleanContent;
@@ -1281,12 +1553,13 @@ FORMATO JSON REQUERIDO:
 
 Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.'
                             ],
-                            [
-                                'type' => 'image_url',
-                                'image_url' => [
-                                    'url' => 'data:' . $mimeType . ';base64,' . $base64Image
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => [
+                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
+                                        'detail' => 'high'
+                                    ]
                                 ]
-                            ]
                         ]
                     ]
                 ],

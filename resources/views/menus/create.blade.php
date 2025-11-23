@@ -1783,22 +1783,72 @@
                     // Crear URL temporal para mostrar la imagen
                     const imageUrl = URL.createObjectURL(imageFile);
                     
-                    // Mostrar mensaje de éxito con URL
+                    // Mostrar mensaje de éxito con estética del proyecto
                     Swal.fire({
-                        title: '✅ PDF Procesado',
-                        html: `El PDF se ha convertido a imagen exitosamente.<br><strong>Páginas procesadas: ${imageFile.pageCount}</strong><br><strong>Archivo: ${imageFile.name} (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)</strong><br><br><strong>URL temporal:</strong><br><small style="word-break: break-all;">${imageUrl}</small><br><br><em>Ahora completa el formulario y haz clic en "Guardar Cambios"</em>`,
+                        ...swalConfig,
+                        title: 'PDF Procesado',
+                        html: `
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
+                                <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                                    El PDF se ha convertido a imagen exitosamente.
+                                </p>
+                                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 0.75rem; padding: 1rem; width: 100%;">
+                                    <p style="color: #A7F3D0; font-size: 0.875rem; margin: 0.5rem 0;"><strong>Páginas procesadas:</strong> ${imageFile.pageCount}</p>
+                                    <p style="color: #A7F3D0; font-size: 0.875rem; margin: 0.5rem 0;"><strong>Archivo:</strong> ${imageFile.name}</p>
+                                    <p style="color: #A7F3D0; font-size: 0.875rem; margin: 0.5rem 0;"><strong>Tamaño:</strong> ${(imageFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                                <p style="color: #9CA3AF; font-size: 0.875rem; text-align: center; margin: 0; font-style: italic;">
+                                    Ahora completa el formulario y haz clic en "Guardar Cambios"
+                                </p>
+                            </div>
+                        `,
                         icon: 'success',
+                        iconColor: '#10B981',
                         confirmButtonText: 'Entendido',
-                        width: '600px'
+                        confirmButtonColor: '#10B981',
+                        width: '520px',
+                        padding: '2rem',
+                        showClass: {
+                            popup: 'animate-fade-in-down'
+                        },
+                        hideClass: {
+                            popup: 'animate-fade-out-up'
+                        },
+                        allowOutsideClick: true,
+                        allowEscapeKey: true,
+                        backdrop: true,
+                        customClass: {
+                            popup: 'dark-modal',
+                            title: 'text-white',
+                            content: 'text-gray-300',
+                            confirmButton: 'bg-green-600 hover:bg-green-700'
+                        }
                     });
                 } catch (error) {
                     LoadingManager.hideGlobalLoader();
                     console.error('Error procesando PDF:', error);
                     Swal.fire({
+                        ...swalConfig,
                         title: 'Error',
-                        text: 'No se pudo procesar el PDF: ' + error.message,
+                        html: `
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
+                                <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                                    No se pudo procesar el PDF: ${error.message}
+                                </p>
+                            </div>
+                        `,
                         icon: 'error',
-                        confirmButtonText: 'Ok'
+                        iconColor: '#EF4444',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#EF4444',
+                        width: '520px',
+                        padding: '2rem',
+                        customClass: {
+                            popup: 'dark-modal',
+                            title: 'text-white',
+                            content: 'text-gray-300',
+                            confirmButton: 'bg-red-600 hover:bg-red-700'
+                        }
                     });
                     // Limpiar el input
                     event.target.value = '';
