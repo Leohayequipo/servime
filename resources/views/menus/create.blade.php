@@ -1092,7 +1092,7 @@
                             
                             // Continuar con el envío normal del formulario
                             setTimeout(() => {
-                                return handleFormSubmit(event);
+                                handleFormSubmit(event);
                             }, 100);
                         }, 100);
                     }).catch((error) => {
@@ -1368,7 +1368,8 @@
             // IMPORTANTE: Hacer esto ANTES de eliminar inputs para asegurar que tenemos los datos
             const container = document.getElementById('promociones-container');
             if (!container) {
-                console.error('ERROR: No se encontró el contenedor #promociones-container');
+                // Si no existe el contenedor, es un menú nuevo sin promociones aún
+                console.log('ℹ️ No hay contenedor de promociones (menú nuevo) - saltando sincronización');
                 return;
             }
             
@@ -1808,17 +1809,53 @@
             }
         }
         
+        let isSubmitting = false;
+        
         function handleFormSubmit(event) {
+            // Prevenir envíos dobles
+            if (isSubmitting) {
+                console.log('⚠️ Formulario ya se está enviando, ignorando envío duplicado');
+                return false;
+            }
+            
+            isSubmitting = true;
+            
+            // Obtener el formulario
+            const menuForm = document.getElementById('menu-form');
+            if (!menuForm) {
+                console.error('❌ No se encontró el formulario menu-form');
+                isSubmitting = false;
+                return false;
+            }
+            
+            // Verificar que el archivo esté presente
+            const fileInput = document.getElementById('archivo');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                if (!convertedImageFile) {
+                    console.error('❌ No hay archivo para enviar');
+                    alert('Por favor, selecciona un archivo de menú antes de guardar.');
+                    isSubmitting = false;
+                    return false;
+                }
+            }
+            
             // Verificar si hay archivo convertido
             if (convertedImageFile) {
                 // Mostrar loader
                 LoadingManager.showGlobalLoader('Subiendo menú...');
                 
-                // Permitir que el formulario se envíe normalmente
-                return true;
+                // El archivo convertido se enviará a través del FormData en el botón de guardar
+                // Aquí solo permitimos que continúe el flujo
+                console.log('✅ Archivo convertido listo, el FormData lo enviará');
             } else {
-                return true;
+                // Mostrar loader
+                LoadingManager.showGlobalLoader('Subiendo menú...');
             }
+            
+            // Enviar el formulario
+            console.log('📤 Enviando formulario...');
+            menuForm.submit();
+            return false;
         }
         
         async function pdfToSingleImage(pdfFile) {
@@ -2584,7 +2621,8 @@
         function collectPromocionesData() {
             const container = document.getElementById('promociones-container');
             if (!container) {
-                console.warn('⚠️ No se encontró el contenedor de promociones');
+                // Si no existe el contenedor, es un menú nuevo sin promociones aún
+                console.log('ℹ️ No hay contenedor de promociones (menú nuevo) - retornando array vacío');
                 return [];
             }
             
@@ -2691,6 +2729,12 @@
         // Función para guardar promociones vía AJAX (sin mostrar mensaje)
         async function savePromocionesSilently() {
             try {
+                // Si es un menú nuevo, no intentar guardar promociones (aún no existe el menú)
+                @if(!isset($isEdit) || !$isEdit || !isset($menu) || !$menu)
+                    console.log('ℹ️ Menú nuevo - saltando guardado de promociones (se guardarán después de crear el menú)');
+                    return true;
+                @endif
+                
                 const promociones = collectPromocionesData();
                 
                 if (promociones.length === 0) {

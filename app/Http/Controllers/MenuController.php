@@ -79,13 +79,21 @@ class MenuController extends Controller
         }
         
         // DEBUG: Ver información del archivo recibido
+        if (!$request->hasFile('archivo')) {
+            Log::error('❌ ERROR: No se recibió archivo en la petición');
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'No se recibió ningún archivo. Por favor, intenta nuevamente.');
+        }
+        
         $file = $request->file('archivo');
         Log::info('DEBUG - Archivo recibido en store:', [
             'original_name' => $file->getClientOriginalName(),
             'extension' => $file->getClientOriginalExtension(),
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
-            'is_valid' => $file->isValid()
+            'is_valid' => $file->isValid(),
+            'has_file' => $request->hasFile('archivo')
         ]);
         
         $validated = $request->validate([
@@ -93,11 +101,33 @@ class MenuController extends Controller
             'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB max
         ]);
 
-        // Subir archivo
-        $archivoPath = $request->file('archivo')->store('menus', 'public');
+        // Subir archivo preservando la extensión original
+        $archivo = $request->file('archivo');
+        $extension = $archivo->getClientOriginalExtension();
+        $nombreArchivo = uniqid() . '.' . $extension;
+        $archivoPath = $archivo->storeAs('menus', $nombreArchivo, 'public');
         
-        // Copiar archivo a public_html en producción
-        $this->copyMenuToPublicHtml($archivoPath);
+        Log::info('📤 ARCHIVO SUBIDO', [
+            'archivo_path' => $archivoPath,
+            'nombre_original' => $request->file('archivo')->getClientOriginalName(),
+            'extension_original' => $request->file('archivo')->getClientOriginalExtension(),
+            'extension_guardada' => $extension,
+            'tamaño' => $request->file('archivo')->getSize(),
+            'mime_type' => $request->file('archivo')->getMimeType(),
+            'comercio_id' => $comercio->id,
+            'comercio_nombre' => $comercio->nombre
+        ]);
+        
+        // Copiar archivo a public_html en producción (con manejo de errores)
+        try {
+            $this->copyMenuToPublicHtml($archivoPath);
+        } catch (\Exception $e) {
+            // No fallar si hay error al copiar a public_html (solo es para producción)
+            Log::warning('Error al copiar archivo a public_html (no crítico)', [
+                'error' => $e->getMessage(),
+                'archivo_path' => $archivoPath
+            ]);
+        }
         
         // Crear menú
         $menu = new Menu();
@@ -105,17 +135,23 @@ class MenuController extends Controller
         $menu->nombre = $request->nombre;
         $menu->archivo_original = $archivoPath;
         
-        // Detectar formato automáticamente basándose en MIME type (más confiable)
+        Log::info('💾 MENÚ CREADO EN BD', [
+            'menu_id' => 'NUEVO (aún no guardado)',
+            'archivo_original' => $archivoPath,
+            'comercio_id' => $comercio->id
+        ]);
+        
+        // Detectar formato automáticamente basándose en MIME type y extensión
         $mimeType = $request->file('archivo')->getMimeType();
-        $extension = $request->file('archivo')->getClientOriginalExtension();
+        $extension = strtolower($request->file('archivo')->getClientOriginalExtension());
         
         Log::info('DEBUG - Detectando formato:', [
             'mime_type' => $mimeType,
             'extension' => $extension
         ]);
         
-        // Usar MIME type en lugar de extensión para mayor precisión
-        $menu->formato = ($mimeType === 'application/pdf') ? 'pdf' : 'image';
+        // Usar MIME type O extensión para detectar PDF (algunos PDFs escaneados pueden tener MIME type incorrecto)
+        $menu->formato = ($mimeType === 'application/pdf' || $extension === 'pdf') ? 'pdf' : 'image';
         
         $menu->procesado = false;
         
@@ -125,13 +161,37 @@ class MenuController extends Controller
         }
         
         $menu->save();
+        
+        // REFRESCAR el modelo desde la BD para asegurar que tenemos los datos más recientes
+        $menu->refresh();
+        
+        Log::info('💾 MENÚ GUARDADO EN BD', [
+            'menu_id' => $menu->id,
+            'archivo_original' => $menu->archivo_original,
+            'formato' => $menu->formato,
+            'comercio_id' => $comercio->id,
+            'archivo_path_completo' => storage_path('app/public/' . $menu->archivo_original),
+            'archivo_existe' => file_exists(storage_path('app/public/' . $menu->archivo_original)),
+            'tamaño_archivo' => file_exists(storage_path('app/public/' . $menu->archivo_original)) ? filesize(storage_path('app/public/' . $menu->archivo_original)) : 'N/A'
+        ]);
 
         // Procesar con OpenAI
         try {
             $processor = new MenuProcessorService();
+            Log::info('🚀 INICIANDO PROCESAMIENTO CON OpenAI', [
+                'menu_id' => $menu->id,
+                'archivo_original' => $menu->archivo_original,
+                'archivo_path_completo' => storage_path('app/public/' . $menu->archivo_original),
+                'archivo_existe' => file_exists(storage_path('app/public/' . $menu->archivo_original))
+            ]);
             $processed = $processor->processMenu($menu);
         } catch (\Exception $e) {
-            Log::error('Error al procesar menú: ' . $e->getMessage());
+            Log::error('❌ Error al procesar menú: ' . $e->getMessage(), [
+                'menu_id' => $menu->id ?? 'N/A',
+                'archivo_original' => $menu->archivo_original ?? 'N/A',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->route('menus.index', $comercio)
                 ->with('error', 'Error al procesar el menú: ' . $e->getMessage());
         }
@@ -234,7 +294,11 @@ class MenuController extends Controller
             // Eliminar archivo anterior de ambos lugares
             $this->deleteMenuSafely($menu->archivo_original);
             
-            $archivoPath = $request->file('archivo')->store('menus', 'public');
+            // Preservar extensión original al actualizar
+            $archivo = $request->file('archivo');
+            $extension = $archivo->getClientOriginalExtension();
+            $nombreArchivo = uniqid() . '.' . $extension;
+            $archivoPath = $archivo->storeAs('menus', $nombreArchivo, 'public');
             
             // Copiar archivo a public_html en producción
             $this->copyMenuToPublicHtml($archivoPath);
