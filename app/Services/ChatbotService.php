@@ -107,6 +107,22 @@ class ChatbotService
                                     if (isset($plato['descripcion']) && !empty($plato['descripcion'])) {
                                         $contexto .= "\n  Descripción: {$plato['descripcion']}";
                                     }
+                                    // INCLUIR TAGS si existen
+                                    if (isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags'])) {
+                                        try {
+                                            // Filtrar solo tags válidos (strings no vacíos)
+                                            $tagsValidos = array_filter($plato['tags'], function($tag) {
+                                                return is_string($tag) && !empty(trim($tag));
+                                            });
+                                            if (!empty($tagsValidos)) {
+                                                $tagsStr = implode(', ', $tagsValidos);
+                                                $contexto .= "\n  Tags: {$tagsStr}";
+                                            }
+                                        } catch (\Exception $e) {
+                                            // Si hay error procesando tags, simplemente continuar sin tags
+                                            Log::warning('Error procesando tags en ChatbotService: ' . $e->getMessage());
+                                        }
+                                    }
                                     // INCLUIR URL DE IMAGEN si existe
                                     if (isset($plato['imagen']) && !empty($plato['imagen'])) {
                                         // Usar asset() para generar URL pública correcta
@@ -317,6 +333,13 @@ REGLAS ABSOLUTAS - NO INVENTAR NADA:
 - Si un plato NO está en el menú, di que no está disponible en lugar de inventarlo
 - Si un plato tiene descripción en el menú, úsala tal cual o mejórala sutilmente sin cambiar información
 - Si un plato NO tiene descripción, puedes hacer una descripción breve basada SOLO en el nombre del plato, pero NO inventes ingredientes o preparaciones que no sean obvias del nombre
+- ⚠️ CRÍTICO SOBRE TAGS: SOLO menciona tags si están EXPLÍCITAMENTE escritos en el menú para ese plato
+- Los tags pueden aparecer en diferentes formatos en el menú (con guiones bajos, espacios, mayúsculas, minúsculas, etc.)
+- NO asumas tags basándote en el tipo de producto o en conocimiento general
+- NO asumas que algo es sin TACC solo porque es una bebida, un té, o un producto que típicamente no tiene gluten
+- NO asumas que algo es vegano solo porque no menciona carne
+- Si un plato NO tiene tags en el menú, NO le asignes tags
+- Si el usuario pregunta por algo específico y ningún plato en el menú tiene ese tag, debes decir claramente que no tienes esa información en el menú y recomendar consultar directamente con el restaurante
 
 PERSONALIDAD Y ESTILO:
 - Eres entusiasta, gourmet y apasionado por la comida
@@ -329,6 +352,21 @@ INSTRUCCIONES DE VENTAS (SOLO CON PLATOS REALES):
 - Si un plato NO tiene descripción, puedes hacer una descripción MUY breve basada SOLO en el nombre (ej: \"Milanesa\" → \"Milanesa empanada\"), pero NO inventes tipo de carne, ingredientes, salsas, acompañamientos o preparaciones específicas
 - Sugiere combinaciones entre platos que REALMENTE están en el menú
 - Destaca características de platos REALES del menú que ya están mencionadas en el menú
+- ⚠️ SOBRE FILTROS Y BÚSQUEDAS POR TAGS (MUY IMPORTANTE):
+  * Los tags en el menú pueden aparecer en diferentes formatos (con guiones bajos, espacios, mayúsculas, minúsculas, etc.)
+  * Cuando el usuario pregunta por tags, debes hacer un MATCHING FLEXIBLE entre lo que pregunta y los tags que aparecen en el menú:
+    - Compara el significado, no solo el formato exacto
+    - Ignora diferencias de mayúsculas/minúsculas, guiones bajos vs espacios, acentos, etc.
+    - Ejemplos de matching flexible:
+      * Usuario pregunta sin tacc → busca tags como SIN_TACC, sin tacc, SIN GLUTEN, gluten free, celíaco, etc.
+      * Usuario pregunta vegano → busca tags como VEGANO, vegano, VEG, veg, etc.
+      * Usuario pregunta vegetariano → busca tags como VEGETARIANO, vegetariano, VEGET, etc.
+      * Usuario pregunta sin lactosa → busca tags como SIN_LACTOSA, sin lactosa, lactose free, etc.
+  * Si el usuario pregunta por platos con un tag específico, busca en el menú TODOS los platos que tengan tags que coincidan (en significado) con lo que pregunta
+  * SOLO menciona los platos que tienen ese tag EXPLÍCITAMENTE en el menú
+  * Si NO hay platos con tags que coincidan, di claramente: No tengo información en el menú sobre [tag solicitado]. Te recomiendo consultar directamente con el restaurante para confirmar.
+  * NO asumas ni inventes tags basándote en el tipo de producto o en conocimiento general
+  * IMPORTANTE: Este sistema funciona con muchos menús diferentes, así que debes ser flexible y adaptarte a los tags que realmente aparecen en cada menú, no solo a una lista predefinida
 
 EJEMPLOS DE DESCRIPCIONES (SOLO SI EL PLATO ESTÁ EN EL MENÚ):
 - Si el menú dice \"Panqueques con dulce de leche\" → puedes decir \"Panqueques con dulce de leche\" o mejorarlo sutilmente si hay descripción en el menú
@@ -344,6 +382,7 @@ FORMATO DE RESPUESTAS (CRÍTICO - DEBE SEGUIRSE EXACTAMENTE):
   
 - **Nombre del Plato** — **\$precio**
   *Descripción gourmet tentadora*
+  [TAGS:VEGANO,SIN_GLUTEN] (solo si el plato tiene tags en el menú, mostrar como: [TAGS:tag1,tag2])
   [IMAGEN:url_de_la_imagen_si_existe]
   
 - **Otro Plato** — **\$precio**

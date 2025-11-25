@@ -291,8 +291,8 @@
         </div>
     </div>
 
-    <!-- FAB Categorías + Pre‑pedido -->
-    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px;">
+    <!-- FAB Categorías + Tags + Pre‑pedido -->
+    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px; flex-direction: column;">
         @if($comercio->pedido_habilitado)
             <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                 <span style="font-size: 22px;">🧾</span>
@@ -301,6 +301,11 @@
         @if(!empty($categorias))
             <button id="fabCategories" title="Categorías del menú" class="fab-categories-animated" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
                 <span style="font-size: 22px; display: inline-block;">📋</span>
+            </button>
+        @endif
+        @if(!empty($tags))
+            <button id="fabTags" title="Filtrar por tags" style="width: 56px; height: 56px; background: #ff8c00; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="font-size: 22px;">🏷️</span>
             </button>
         @endif
     </div>
@@ -348,6 +353,28 @@
                                 {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
                             </button>
                         @endif
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Panel de Tags -->
+    @if(!empty($tags))
+        <div id="tagsPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
+            <div style="background: #0b0b0b; border: 1px solid rgba(255, 140, 0, 0.3); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">Filtrar por Tags</h4>
+                    <button id="closeTags" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
+                    @foreach($tags as $tag)
+                        <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();" 
+                                style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 140, 0, 0.3); background: rgba(255, 140, 0, 0.15); color: #ff8c00; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(255, 140, 0, 0.25)'; this.style.transform='scale(1.05)';"
+                                onmouseout="this.style.background='rgba(255, 140, 0, 0.15)'; this.style.transform='scale(1)';">
+                            {{ str_replace('_', ' ', $tag) }}
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -595,12 +622,24 @@
             });
         }
 
-        // Convertir Markdown básico a HTML con soporte para imágenes y saltos de línea
+        // Convertir Markdown básico a HTML con soporte para imágenes, tags y saltos de línea
         function parseMarkdown(text) {
             // Convertir **texto** a <strong>texto</strong> (antes de procesar saltos)
             text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             // Convertir *texto* a <em>texto</em> (antes de procesar saltos)
             text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            
+            // Convertir [TAGS:tag1,tag2] a badges visuales
+            text = text.replace(/\[TAGS:([^\]]+)\]/g, function(match, tagsStr) {
+                const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
+                if (tags.length === 0) return '';
+                const tagsHtml = tags.map(tag => {
+                    // Convertir guiones bajos a espacios y capitalizar
+                    const displayTag = tag.replace(/_/g, ' ').toUpperCase();
+                    return `<span style="display:inline-block;padding:2px 8px;margin:2px;border-radius:6px;font-size:11px;font-weight:500;background:rgba(255,140,0,0.2);color:#ff8c00;border:1px solid rgba(255,140,0,0.3);">${displayTag}</span>`;
+                }).join('');
+                return `<div style="margin-top:4px;margin-bottom:4px;">${tagsHtml}</div>`;
+            });
             
             // Dividir en párrafos (doble salto de línea)
             const paragraphs = text.split(/\n\n+/);
@@ -943,19 +982,47 @@
         // Categories panel handlers
         const fabCategories = document.getElementById('fabCategories');
         const categoriesPanel = document.getElementById('categoriesPanel');
-        function showCategories() { if (categoriesPanel) categoriesPanel.style.display = 'block'; }
+        function showCategories() { 
+            if (categoriesPanel) {
+                categoriesPanel.style.display = 'block';
+                if (tagsPanel) tagsPanel.style.display = 'none';
+            }
+        }
         function hideCategories() { if (categoriesPanel) categoriesPanel.style.display = 'none'; }
         function toggleCategories() { 
             if (categoriesPanel) {
-                categoriesPanel.style.display = categoriesPanel.style.display === 'block' ? 'none' : 'block';
+                const isVisible = categoriesPanel.style.display === 'block';
+                categoriesPanel.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible && tagsPanel) tagsPanel.style.display = 'none';
             }
         }
         if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
         document.getElementById('closeCategories')?.addEventListener('click', hideCategories);
         
+        // Tags panel handlers
+        const fabTags = document.getElementById('fabTags');
+        const tagsPanel = document.getElementById('tagsPanel');
+        function showTags() { 
+            if (tagsPanel) {
+                tagsPanel.style.display = 'block';
+                if (categoriesPanel) categoriesPanel.style.display = 'none';
+            }
+        }
+        function hideTags() { if (tagsPanel) tagsPanel.style.display = 'none'; }
+        function toggleTags() { 
+            if (tagsPanel) {
+                const isVisible = tagsPanel.style.display === 'block';
+                tagsPanel.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible && categoriesPanel) categoriesPanel.style.display = 'none';
+            }
+        }
+        if (fabTags) fabTags.addEventListener('click', toggleTags);
+        document.getElementById('closeTags')?.addEventListener('click', hideTags);
+        
         function askQuestion(question) {
             sendMessage(question);
             hideCategories();
+            hideTags();
         }
 
         // Delegación de eventos para botones "Lo quiero"

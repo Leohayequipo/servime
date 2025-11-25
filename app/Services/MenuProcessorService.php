@@ -152,10 +152,16 @@ class MenuProcessorService
     protected function processPDFWithOpenAI($filePath)
     {
         try {
+            Log::info('📄 PROCESANDO PDF - Intentando extracción de texto directa primero', [
+                'file_path' => $filePath,
+                'archivo_existe' => file_exists($filePath)
+            ]);
+            
             $pdfProcessor = new PdfProcessorService();
             
             // Verificar si es un PDF válido
             if (!$pdfProcessor->isValidPdf($filePath)) {
+                Log::warning('⚠️ El archivo no es un PDF válido, usando fallback a imagen');
                 throw new \Exception('El archivo no es un PDF válido');
             }
             
@@ -163,6 +169,11 @@ class MenuProcessorService
             $result = $pdfProcessor->processPdfToMenu($filePath);
             
             if ($result['success']) {
+                Log::info('✅ Extracción de texto directa exitosa, usando resultado', [
+                    'longitud_texto_extraido' => strlen($result['extracted_text'] ?? ''),
+                    'longitud_json_procesado' => strlen($result['menu_data'] ?? '')
+                ]);
+                
                 // Guardar el texto extraído sin procesar en el menú antes de retornar
                 // Esto se hace aquí porque necesitamos el texto extraído para guardarlo
                 // El JSON procesado se guardará en contexto_gpt
@@ -171,23 +182,32 @@ class MenuProcessorService
                 // Retornar el JSON procesado (menu_data)
                 return $result['menu_data'];
             } else {
+                Log::warning('⚠️ Extracción de texto directa falló, usando fallback a imagen', [
+                    'mensaje' => $result['message'] ?? 'Sin mensaje',
+                    'sugerencia' => $result['suggestion'] ?? 'Sin sugerencia'
+                ]);
                 throw new \Exception($result['message'] . ' ' . ($result['suggestion'] ?? ''));
             }
             
         } catch (\Exception $e) {
-            Log::error('Error procesando PDF con extracción de texto: ' . $e->getMessage());
+            Log::error('❌ Error procesando PDF con extracción de texto: ' . $e->getMessage(), [
+                'exception_type' => get_class($e),
+                'file_path' => $filePath
+            ]);
             
             // Fallback: procesar PDF completo directamente con OpenAI Vision (sin convertir a imagen)
             // Esto procesa TODAS las páginas del PDF, no solo la primera
             // OpenAI Vision puede procesar PDFs completos mejor que imágenes muy grandes
             try {
-                Log::info('Procesando PDF completo directamente con OpenAI Vision (todas las páginas)...');
+                Log::info('🔄 FALLBACK: Procesando PDF como imágenes con OpenAI Vision (todas las páginas)...', [
+                    'razon_fallback' => $e->getMessage()
+                ]);
                 $result = $this->processPdfAsImageWithOpenAI($filePath);
                 
-                Log::info('PDF procesado exitosamente con OpenAI Vision');
+                Log::info('✅ PDF procesado exitosamente con OpenAI Vision (fallback)');
                 return $result;
             } catch (\Exception $visionError) {
-                Log::error('Error procesando PDF con OpenAI Vision: ' . $visionError->getMessage());
+                Log::error('❌ Error procesando PDF con OpenAI Vision (fallback): ' . $visionError->getMessage());
                 
                 throw new \Exception('No se pudo procesar el PDF. Error de extracción de texto: ' . $e->getMessage() . ' | Error procesando con OpenAI Vision: ' . $visionError->getMessage());
             }
@@ -292,21 +312,136 @@ class MenuProcessorService
                     'tamaño_base64_bytes' => $base64Size,
                     'tamaño_base64_mb' => round($base64Size / 1024 / 1024, 2)
                 ]);
-                
                 $response = Http::withHeaders([
                     'Authorization' => 'Bearer ' . $this->openaiApiKey,
                     'Content-Type' => 'application/json',
                 ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => $this->openaiModel,
+                    'model' => $this->openaiModel, // gpt-4o-mini o gpt-4.1
                     'messages' => [
                         [
                             'role' => 'user',
                             'content' => [
                                 [
                                     'type' => 'text',
-                                    'text' => 'Eres SOLO un OCR (reconocimiento óptico de caracteres). NO eres un asistente inteligente. NO interpretes. NO completes. NO inventes.
+                                    'text' => $this->buildExtractionPrompt($sectionNumber, $sections)
+                                ],
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => [
+                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
+                                        'detail' => 'high'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ],
+                    'temperature' => 0,
+                    'max_tokens' => 16384
+                ]);
+                
 
-Esta es la sección ' . $sectionNumber . ' de ' . count($sections) . ' de una imagen de menú.
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $content = $data['choices'][0]['message']['content'] ?? null;
+                    
+                    if ($content) {
+                        // Limpiar markdown si existe
+                        $cleanContent = $content;
+                        if (strpos($cleanContent, '```json') !== false) {
+                            $cleanContent = preg_replace('/```json\s*/', '', $cleanContent);
+                            $cleanContent = preg_replace('/```\s*$/', '', $cleanContent);
+                            $cleanContent = trim($cleanContent);
+                        } elseif (strpos($cleanContent, '```') !== false) {
+                            $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
+                            $cleanContent = trim($cleanContent);
+                        }
+                        
+                        // Guardar respuesta de OpenAI en archivo de texto para revisión
+                        $txtPath = storage_path('app/temp/openai_response_section_' . $sectionNumber . '_' . uniqid() . '.txt');
+                        if (!is_dir(storage_path('app/temp'))) {
+                            mkdir(storage_path('app/temp'), 0755, true);
+                        }
+                        file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - SECCIÓN {$sectionNumber} ===\n\n");
+                        file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
+                        file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
+                        file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
+                        Log::info('Respuesta de OpenAI guardada en archivo', [
+                            'seccion' => $sectionNumber,
+                            'archivo' => $txtPath
+                        ]);
+                        
+                        // Validar que el JSON sea válido antes de agregarlo
+                        $jsonTest = json_decode($cleanContent, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
+                            // Convertir formato "items" al formato "categorias" si es necesario
+                            if (isset($jsonTest['items']) && is_array($jsonTest['items'])) {
+                                Log::info('Convirtiendo formato "items" a formato "categorias"', [
+                                    'seccion' => $sectionNumber,
+                                    'total_items' => count($jsonTest['items'])
+                                ]);
+                                $jsonTest = $this->convertItemsFormatToCategoriasFormat($jsonTest);
+                                $cleanContent = json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                            }
+                            
+                            // Validar estructura básica
+                            if (isset($jsonTest['categorias']) && is_array($jsonTest['categorias'])) {
+                                // IMPORTANTE: Guardar en el índice correcto según el número de sección original
+                                // Esto preserva el orden incluso si las secciones terminan en orden diferente
+                                $jsonResults[$sectionIndex] = $cleanContent;
+                                Log::info('Sección ' . $sectionNumber . ' procesada exitosamente', [
+                                    'section_index' => $sectionIndex,
+                                    'categorias_encontradas' => count($jsonTest['categorias']),
+                                    'total_platos' => array_sum(array_map(function($cat) {
+                                        return isset($cat['platos']) && is_array($cat['platos']) ? count($cat['platos']) : 0;
+                                    }, $jsonTest['categorias']))
+                                ]);
+                            } else {
+                                Log::warning('Sección ' . $sectionNumber . ' procesada pero sin estructura válida', [
+                                    'keys_disponibles' => array_keys($jsonTest),
+                                    'tiene_items' => isset($jsonTest['items']),
+                                    'tiene_categorias' => isset($jsonTest['categorias'])
+                                ]);
+                            }
+                        } else {
+                            Log::warning('Sección ' . $sectionNumber . ' procesada pero JSON inválido: ' . json_last_error_msg());
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Error procesando sección ' . $sectionNumber . ': ' . $e->getMessage());
+            }
+        }
+
+        if (empty($jsonResults)) {
+            throw new \Exception('No se pudo procesar ninguna sección de la imagen');
+        }
+
+        // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
+        ksort($jsonResults);
+        
+        // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
+        $jsonResults = array_values($jsonResults);
+
+        // Combinar resultados
+        $combinedJson = $this->combineMenuJsons($jsonResults);
+        Log::info('Imagen procesada exitosamente por secciones', [
+            'secciones_procesadas' => count($jsonResults),
+            'total_secciones' => count($sections)
+        ]);
+
+        return $combinedJson;
+    }
+
+    /**
+     * Construye el prompt de extracción para secciones de imagen
+     */
+    protected function buildExtractionPrompt($sectionNumber, $sections): string
+    {
+        $totalSections = is_array($sections) ? count($sections) : 1;
+        
+        return 'Eres SOLO un OCR (reconocimiento óptico de caracteres). NO eres un asistente inteligente. NO interpretes. NO completes. NO inventes.
+
+Esta es la sección ' . $sectionNumber . ' de ' . $totalSections . ' de una imagen de menú.
 
 🚨🚨🚨 ATENCIÓN CRÍTICA - LEE ESTO PRIMERO 🚨🚨🚨:
 Esta imagen tiene el ANCHO COMPLETO del menú original. Puede tener MÚLTIPLES COLUMNAS.
@@ -367,6 +502,22 @@ Lee cada línea COMPLETA de izquierda a derecha antes de pasar a la siguiente.
    - Si hay texto descriptivo debajo del nombre del plato (ingredientes, preparación, etc.) → es la descripción, cópiala EXACTAMENTE
    - Si falta el nombre O el precio → NO lo agregues
 3. ⚠️ DETECCIÓN DE CATEGORÍAS - MUY IMPORTANTE:
+   - INSTRUCCIÓN CLAVE: Todo texto que esté visualmente unido al título de una sección del menú —incluye palabras entre paréntesis, subtítulos, aclaraciones, ingredientes base o variantes— debe ser considerado parte de la categoría.
+   - Ejemplo: si aparece "VEGGIES (LENTEJA O QUINOA)", la categoría completa es "VEGGIES (LENTEJA O QUINOA)". Nunca descartes esos textos.
+   - Si una categoría tiene texto adicional en la misma línea o visualmente asociado (paréntesis, guiones, subtítulos), inclúyelo TODO en el nombre de la categoría.
+   - 🧠 REGLA DE JERARQUÍA VISUAL (CRÍTICO):
+     * Interpreta las categorías por niveles:
+       - Título grande = categoría principal
+       - Títulos medianos o destacados = subcategorías dentro de la categoría principal
+       - Títulos pequeños, variantes o estilos (como "Veggies (lenteja o quinoa)") también deben considerarse subcategorías si están dentro del área gráfica de la sección principal, aunque tengan otro diseño o fondo
+     * Nunca crees una categoría principal nueva si no hay un título principal visualmente dominante que lo justifique
+   - 🔧 REGLA VISUAL DE CONTENCIÓN (FUNDAMENTAL):
+     * Si un grupo de ítems aparece debajo de una categoría principal (como "Hamburguesas") y está en la misma columna o bloque, entonces pertenece a esa categoría, aunque tenga un diseño distinto o un recuadro propio
+     * Esto hace que "Veggies" sea subcategoría de "Hamburguesas", no categoría independiente
+   - 🎯 EJEMPLO EXPLÍCITO:
+     * En la imagen, "Hamburguesas" es la categoría principal
+     * "Clásicas", "Especiales" y "Veggies (lenteja o quinoa)" son subcategorías de Hamburguesas
+     * No deben convertirse en categorías principales separadas
    - Una categoría puede aparecer como: texto en mayúsculas, texto centrado, texto más grande, texto en negrita, o simplemente texto seguido de una lista de platos
    - Si ves texto que parece ser un encabezado o título (aunque no esté en mayúsculas), es probablemente una categoría
    - Ejemplos de categorías comunes: "Cafetería", "Para acompañar", "Pastelería", "Waffles", "Postres", "Milanesas", "Lomitos", "Hamburguesas", "Ensaladas", "Brunch", "Promos", "Licuados", etc.
@@ -377,7 +528,21 @@ Lee cada línea COMPLETA de izquierda a derecha antes de pasar a la siguiente.
    - NO ignores ninguna columna, lee TODA la imagen de izquierda a derecha
 4. Transcribe carácter por carácter, sin interpretar
 5. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
-6. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
+6. ⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
+   - Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
+   - Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE")
+   - ⚠️ DIFERENCIACIÓN CRÍTICA ENTRE TAGS:
+     * Tags de GLUTEN/SIN TACC: "GF", "Sin gluten", "Gluten free", "Libre gluten", "Libre de gluten", "Sin TACC", "Celíaco", "Celiaco", iconos/logos de espiga tachada o símbolos de gluten
+     * Tags VEGANOS: "V", "VG", "Vegano", "Veg", 🌱 (planta), iconos/logos de hoja o plantas
+     * NO confundas logos/símbolos de gluten con logos/símbolos veganos
+     * Si ves un logo/símbolo de espiga tachada o relacionado con gluten → es SIN_TACC/GLUTEN FREE, NO VEGANO
+     * Si ves un logo/símbolo de hoja/planta → es VEGANO, NO gluten free
+   - Tags específicos a buscar: VEGANO, VEGETARIANO, SIN TACC, GLUTEN FREE, LIBRE GLUTEN, CELIACO, SIN LACTOSA, SIN AZUCAR, LOW CARB, KETO, KOSHER, HALAL, DIABETICO FRIENDLY, BAJO SODIO, ALTO EN PROTEINAS, LIGHT, ORGANICO, RAW, CRUDIVEGANO
+   - Captura CUALQUIER variación de estos tags (ej: "V", "VG", "GF", "Sin gluten", "Gluten free", "Libre gluten", "🌱", "Sin TACC", "Celíaco", etc.) y escríbelo tal cual aparece
+   - Si hay múltiples tags, inclúyelos todos en el array
+   - Si NO hay ningún tag visible, deja el array vacío: []
+   - Los tags deben ser en TEXTO, no emojis ni iconos
+7. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
    - Las categorías y platos DEBEN aparecer en el JSON en el MISMO ORDEN EXACTO que aparecen en la imagen
    - Lee de ARRIBA HACIA ABAJO, línea por línea, y agrega cada categoría/plato al JSON en el mismo orden que lo lees
    - NO reordenes, NO agrupes por tipo, NO cambies el orden por NINGÚN motivo
@@ -394,12 +559,21 @@ FORMATO JSON (OBLIGATORIO - RESPETA EL ORDEN):
         {
           "nombre": "Nombre EXACTO como aparece",
           "precio": "Precio EXACTO como aparece (ej: $3500)",
-          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay"
+          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay",
+          "tags": ["VEGANO", "SIN GLUTEN", "PICANTE"] // Array de tags/etiquetas en TEXTO (no emojis), o [] si no hay
         }
       ]
     }
   ]
 }
+
+⚠️ ESTRUCTURA DE CATEGORÍAS Y SUBCATEGORÍAS:
+- Si hay una categoría principal con subcategorías (ej: "Hamburguesas" con subcategorías "Clásicas", "Especiales", "Veggies"), estructura el JSON así:
+  * Crea UNA categoría principal con el nombre de la categoría principal (ej: "Hamburguesas")
+  * Agrupa TODOS los platos de las subcategorías dentro de esa categoría principal
+  * Si las subcategorías tienen nombres visibles, puedes incluir el nombre de la subcategoría en el nombre del plato o en la descripción para mantener la información
+  * Ejemplo: Si "Hamburguesas" tiene subcategorías "Clásicas" y "Veggies", todos los platos van bajo "Hamburguesas"
+  * NO crees categorías separadas para subcategorías que pertenecen a una categoría principal
 
 ⚠️ ORDEN OBLIGATORIO - ESTO ES CRÍTICO (LEE 5 VECES):
 - Las categorías en el array "categorias" DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO, línea por línea
@@ -438,98 +612,210 @@ NO hagas esto (INCORRECTO):
   ]
 }
 
-Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explicaciones.'
-                                ],
-                                [
-                                    'type' => 'image_url',
-                                    'image_url' => [
-                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
-                                        'detail' => 'high'
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ],
-                    'max_tokens' => 16384,
-                    'temperature' => 0
-                ]);
+Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explicaciones.';
+    }
 
-                if ($response->successful()) {
-                    $data = $response->json();
-                    $content = $data['choices'][0]['message']['content'] ?? null;
-                    
-                    if ($content) {
-                        // Limpiar markdown si existe
-                        $cleanContent = $content;
-                        if (strpos($cleanContent, '```json') !== false) {
-                            $cleanContent = preg_replace('/```json\s*/', '', $cleanContent);
-                            $cleanContent = preg_replace('/```\s*$/', '', $cleanContent);
-                            $cleanContent = trim($cleanContent);
-                        } elseif (strpos($cleanContent, '```') !== false) {
-                            $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
-                            $cleanContent = trim($cleanContent);
-                        }
-                        
-                        // Guardar respuesta de OpenAI en archivo de texto para revisión
-                        $txtPath = storage_path('app/temp/openai_response_section_' . $sectionNumber . '_' . uniqid() . '.txt');
-                        if (!is_dir(storage_path('app/temp'))) {
-                            mkdir(storage_path('app/temp'), 0755, true);
-                        }
-                        file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - SECCIÓN {$sectionNumber} ===\n\n");
-                        file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
-                        file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
-                        file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
-                        Log::info('Respuesta de OpenAI guardada en archivo', [
-                            'seccion' => $sectionNumber,
-                            'archivo' => $txtPath
-                        ]);
-                        
-                        // Validar que el JSON sea válido antes de agregarlo
-                        $jsonTest = json_decode($cleanContent, true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
-                            // Validar estructura básica
-                            if (isset($jsonTest['categorias']) && is_array($jsonTest['categorias'])) {
-                                // IMPORTANTE: Guardar en el índice correcto según el número de sección original
-                                // Esto preserva el orden incluso si las secciones terminan en orden diferente
-                                $jsonResults[$sectionIndex] = $cleanContent;
-                                Log::info('Sección ' . $sectionNumber . ' procesada exitosamente', [
-                                    'section_index' => $sectionIndex,
-                                    'categorias_encontradas' => count($jsonTest['categorias']),
-                                    'total_platos' => array_sum(array_map(function($cat) {
-                                        return isset($cat['platos']) && is_array($cat['platos']) ? count($cat['platos']) : 0;
-                                    }, $jsonTest['categorias']))
-                                ]);
-                            } else {
-                                Log::warning('Sección ' . $sectionNumber . ' procesada pero sin estructura válida');
-                            }
-                        } else {
-                            Log::warning('Sección ' . $sectionNumber . ' procesada pero JSON inválido: ' . json_last_error_msg());
-                        }
-                    }
+    /**
+     * Convierte el formato "items" al formato "categorias" esperado
+     */
+    protected function convertItemsFormatToCategoriasFormat(array $data): array
+    {
+        if (!isset($data['items']) || !is_array($data['items'])) {
+            return $data;
+        }
+
+        $categorias = [];
+        $categoriasMap = []; // Para agrupar platos por categoría
+
+        foreach ($data['items'] as $item) {
+            $categoriaNombre = $item['category'] ?? 'Sin categoría';
+            $subCategoria = $item['sub_category'] ?? '';
+            
+            // Si hay subcategoría, incluirla en el nombre de la categoría
+            if (!empty($subCategoria)) {
+                $categoriaNombre = $categoriaNombre . ' - ' . $subCategoria;
+            }
+
+            // Normalizar nombre de categoría (lowercase para agrupar)
+            $categoriaKey = strtolower(trim($categoriaNombre));
+            
+            // Crear categoría si no existe
+            if (!isset($categoriasMap[$categoriaKey])) {
+                $categoriasMap[$categoriaKey] = [
+                    'nombre' => $categoriaNombre,
+                    'platos' => []
+                ];
+            }
+
+            // Crear plato
+            $precio = $item['price'] ?? '';
+            // Agregar $ si no lo tiene y no está vacío
+            if (!empty($precio) && strpos($precio, '$') === false) {
+                $precio = '$' . $precio;
+            }
+            if (empty($precio)) {
+                $precio = 'Precio no especificado';
+            }
+
+            $plato = [
+                'nombre' => $item['name'] ?? '',
+                'precio' => $precio,
+                'descripcion' => $item['description'] ?? '',
+                'tags' => $item['tags'] ?? [],
+                'imagen' => ''
+            ];
+
+            // Agregar opciones a la descripción si existen
+            if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])) {
+                $opcionesTexto = implode(', ', $item['options']);
+                if (!empty($plato['descripcion'])) {
+                    $plato['descripcion'] .= ' (' . $opcionesTexto . ')';
+                } else {
+                    $plato['descripcion'] = $opcionesTexto;
                 }
-            } catch (\Exception $e) {
-                Log::error('Error procesando sección ' . $sectionNumber . ': ' . $e->getMessage());
+            }
+
+            $categoriasMap[$categoriaKey]['platos'][] = $plato;
+        }
+
+        // Convertir map a array
+        $categorias = array_values($categoriasMap);
+
+        return [
+            'restaurante' => [
+                'nombre' => $data['restaurante']['nombre'] ?? '',
+                'descripcion' => $data['restaurante']['descripcion'] ?? ''
+            ],
+            'categorias' => $categorias
+        ];
+    }
+
+    /**
+     * Normaliza tags a una lista estándar
+     */
+    protected function normalizeTag($tag): ?string
+    {
+        if (empty($tag)) {
+            return null;
+        }
+        
+        $tagLower = strtolower(trim($tag));
+        
+        // Mapeo de variaciones a tags estándar
+        $tagMap = [
+            // Vegano
+            'vegano' => 'VEGANO',
+            'veg' => 'VEGANO',
+            'v' => 'VEGANO',
+            'vg' => 'VEGANO',
+            '🌱' => 'VEGANO',
+            
+            // Vegetariano
+            'vegetariano' => 'VEGETARIANO',
+            'veget' => 'VEGETARIANO',
+            
+            // Sin TACC / Gluten Free
+            'sin tacc' => 'SIN_TACC',
+            'sin gluten' => 'SIN_TACC',
+            'libre gluten' => 'SIN_TACC',
+            'libre de gluten' => 'SIN_TACC',
+            'gluten free' => 'SIN_TACC',
+            'free gluten' => 'SIN_TACC',
+            'glutenfree' => 'SIN_TACC',
+            'gf' => 'SIN_TACC',
+            'celiaco' => 'SIN_TACC',
+            'celíaco' => 'SIN_TACC',
+            'celiac' => 'SIN_TACC',
+            
+            // Sin Lactosa
+            'sin lactosa' => 'SIN_LACTOSA',
+            'lactose free' => 'SIN_LACTOSA',
+            'lactosefree' => 'SIN_LACTOSA',
+            'sin lacteos' => 'SIN_LACTOSA',
+            
+            // Sin Azúcar
+            'sin azúcar' => 'SIN_AZUCAR',
+            'sin azucar' => 'SIN_AZUCAR',
+            'sugar free' => 'SIN_AZUCAR',
+            'sugarfree' => 'SIN_AZUCAR',
+            
+            // Low Carb / Keto
+            'low carb' => 'LOW_CARB',
+            'lowcarb' => 'LOW_CARB',
+            'keto' => 'KETO',
+            
+            // Kosher
+            'kosher' => 'KOSHER',
+            
+            // Halal
+            'halal' => 'HALAL',
+            
+            // Diabético Friendly
+            'diabetico friendly' => 'DIABETICO_FRIENDLY',
+            'diabético friendly' => 'DIABETICO_FRIENDLY',
+            'diabetic friendly' => 'DIABETICO_FRIENDLY',
+            'apto diabeticos' => 'DIABETICO_FRIENDLY',
+            'apto diabéticos' => 'DIABETICO_FRIENDLY',
+            
+            // Bajo Sodio
+            'bajo sodio' => 'BAJO_SODIO',
+            'low sodium' => 'BAJO_SODIO',
+            'bajo en sodio' => 'BAJO_SODIO',
+            
+            // Alto en Proteínas
+            'alto en proteinas' => 'ALTO_EN_PROTEINAS',
+            'alto en proteínas' => 'ALTO_EN_PROTEINAS',
+            'high protein' => 'ALTO_EN_PROTEINAS',
+            'rico en proteinas' => 'ALTO_EN_PROTEINAS',
+            
+            // Light / Bajo en Calorías
+            'light' => 'LIGHT',
+            'bajo en calorias' => 'LIGHT',
+            'bajo en calorías' => 'LIGHT',
+            'low calorie' => 'LIGHT',
+            'low cal' => 'LIGHT',
+            
+            // Orgánico
+            'organico' => 'ORGANICO',
+            'orgánico' => 'ORGANICO',
+            'organic' => 'ORGANICO',
+            'bio' => 'ORGANICO',
+            
+            // Raw / Crudivegano
+            'raw' => 'RAW',
+            'crudivegano' => 'RAW',
+            'crudo' => 'RAW',
+        ];
+        
+        // Buscar coincidencia exacta
+        if (isset($tagMap[$tagLower])) {
+            return $tagMap[$tagLower];
+        }
+        
+        // Buscar coincidencia parcial (contiene)
+        foreach ($tagMap as $variation => $standard) {
+            if (strpos($tagLower, $variation) !== false || strpos($variation, $tagLower) !== false) {
+                return $standard;
             }
         }
-
-        if (empty($jsonResults)) {
-            throw new \Exception('No se pudo procesar ninguna sección de la imagen');
-        }
-
-        // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
-        ksort($jsonResults);
         
-        // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
-        $jsonResults = array_values($jsonResults);
+        // Si no coincide con ningún tag estándar, retornar null (se filtrará)
+        return null;
+    }
 
-        // Combinar resultados
-        $combinedJson = $this->combineMenuJsons($jsonResults);
-        Log::info('Imagen procesada exitosamente por secciones', [
-            'secciones_procesadas' => count($jsonResults),
-            'total_secciones' => count($sections)
-        ]);
-
-        return $combinedJson;
+    /**
+     * Normaliza un array de tags a la lista estándar
+     */
+    protected function normalizeTags(array $tags): array
+    {
+        $normalized = [];
+        foreach ($tags as $tag) {
+            $normalizedTag = $this->normalizeTag($tag);
+            if ($normalizedTag !== null && !in_array($normalizedTag, $normalized)) {
+                $normalized[] = $normalizedTag;
+            }
+        }
+        return $normalized;
     }
 
     /**
@@ -608,11 +894,50 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                         $timestamp = $index * 10000 + $categoriaIndex; // Multiplicar por 10000 para dejar espacio para platos
 
                         // Buscar si la categoría ya existe en categoriasConOrden
+                        // IMPORTANTE: Solo combinar si es la MISMA categoría en la MISMA posición jerárquica
+                        // No combinar si una es subcategoría de otra
                         $categoriaExistenteKey = null;
                         foreach ($categoriasConOrden as $key => $catData) {
-                            if (strtolower(trim($catData['categoria']['nombre'] ?? '')) === $nombreCategoriaLower) {
+                            $nombreExistente = strtolower(trim($catData['categoria']['nombre'] ?? ''));
+                            
+                            // Comparación exacta (mismo nombre)
+                            if ($nombreExistente === $nombreCategoriaLower) {
                                 $categoriaExistenteKey = $key;
                                 break;
+                            }
+                            
+                            // Verificar si una podría ser subcategoría de la otra
+                            // Si el nombre contiene el otro nombre + palabras de subcategoría, no combinar
+                            $palabrasSubcategoria = ['clásica', 'clasica', 'especial', 'veggie', 'veggies', 'tradicional', 'gourmet', 'premium', 'clásicas', 'especiales'];
+                            
+                            // Caso 1: La categoría actual podría ser subcategoría de una existente
+                            // Ej: existente="Hamburguesas", actual="Hamburguesas Clásicas"
+                            foreach ($palabrasSubcategoria as $palabra) {
+                                if (strpos($nombreCategoriaLower, $palabra) !== false && 
+                                    strpos($nombreCategoriaLower, $nombreExistente) === 0) {
+                                    // Es una subcategoría, no combinar
+                                    Log::info('Categoría detectada como subcategoría, no combinando', [
+                                        'categoria_padre' => $catData['categoria']['nombre'],
+                                        'subcategoria' => $nombreCategoria,
+                                        'seccion' => $index + 1
+                                    ]);
+                                    continue 2; // Continuar con la siguiente categoría existente
+                                }
+                            }
+                            
+                            // Caso 2: La categoría existente podría ser subcategoría de la actual
+                            // Ej: existente="Hamburguesas Clásicas", actual="Hamburguesas"
+                            foreach ($palabrasSubcategoria as $palabra) {
+                                if (strpos($nombreExistente, $palabra) !== false && 
+                                    strpos($nombreExistente, $nombreCategoriaLower) === 0) {
+                                    // La existente es subcategoría, no combinar
+                                    Log::info('Categoría existente es subcategoría, no combinando', [
+                                        'categoria_actual' => $nombreCategoria,
+                                        'subcategoria_existente' => $catData['categoria']['nombre'],
+                                        'seccion' => $index + 1
+                                    ]);
+                                    continue 2; // Continuar con la siguiente categoría existente
+                                }
                             }
                         }
 
@@ -656,13 +981,19 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                                     
                                     $seenPlatos[$platoKey] = true;
                                     
+                                    // Normalizar tags si existen
+                                    $tags = isset($plato['tags']) && is_array($plato['tags']) 
+                                        ? $this->normalizeTags($plato['tags']) 
+                                        : [];
+                                    
                                     // Guardar plato con información de orden (sección y posición)
                                     $platosConOrden[$nombreCategoriaLower][] = [
                                         'plato' => [
                                             'nombre' => $nombrePlato,
                                             'precio' => $precio,
                                             'descripcion' => trim($plato['descripcion'] ?? ''),
-                                            'imagen' => $plato['imagen'] ?? ''
+                                            'imagen' => $plato['imagen'] ?? '',
+                                            'tags' => $tags // Tags normalizados
                                         ],
                                         'seccion' => $index, // Índice de la sección (0, 1, 2...)
                                         'posicion' => $platoIndex // Posición dentro de la categoría en esta sección
@@ -708,12 +1039,18 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
                                     if (!isset($platosConOrden[$nombreCategoriaLower])) {
                                         $platosConOrden[$nombreCategoriaLower] = [];
                                     }
+                                    // Normalizar tags si existen
+                                    $tags = isset($plato['tags']) && is_array($plato['tags']) 
+                                        ? $this->normalizeTags($plato['tags']) 
+                                        : [];
+                                    
                                     $platosConOrden[$nombreCategoriaLower][] = [
                                         'plato' => [
                                             'nombre' => $nombrePlato,
                                             'precio' => $this->validatePrice($plato['precio'] ?? ''),
                                             'descripcion' => trim($plato['descripcion'] ?? ''),
-                                            'imagen' => $plato['imagen'] ?? ''
+                                            'imagen' => $plato['imagen'] ?? '',
+                                            'tags' => $tags // Tags normalizados
                                         ],
                                         'seccion' => $index,
                                         'posicion' => $platoIndex
@@ -747,9 +1084,47 @@ Responde SOLO con el JSON válido, sin texto adicional, sin markdown, sin explic
         ksort($categoriasConOrden);
         
         // Construir array final de categorías en el orden correcto
+        // IMPORTANTE: Detectar y prevenir mezcla de categorías padre-hijo
         $combinedCategorias = [];
+        $categoriasProcesadas = []; // Para rastrear qué categorías ya se procesaron
+        
         foreach ($categoriasConOrden as $timestamp => $catData) {
-            $combinedCategorias[] = $catData['categoria'];
+            $categoria = $catData['categoria'];
+            $nombreCategoria = trim($categoria['nombre'] ?? '');
+            $nombreCategoriaLower = strtolower($nombreCategoria);
+            
+            // Verificar si esta categoría podría ser una subcategoría de otra ya procesada
+            $palabrasSubcategoria = ['clásica', 'clasica', 'especial', 'veggie', 'veggies', 'tradicional', 'gourmet', 'premium', 'clásicas', 'especiales'];
+            $esSubcategoria = false;
+            $categoriaPadre = null;
+            
+            foreach ($categoriasProcesadas as $catProcesada) {
+                $nombreProcesada = strtolower(trim($catProcesada['nombre'] ?? ''));
+                
+                // Verificar si la categoría actual es subcategoría de una procesada
+                // Ejemplo: procesada="Hamburguesas", actual="Hamburguesas Clásicas"
+                foreach ($palabrasSubcategoria as $palabra) {
+                    if (strpos($nombreCategoriaLower, $palabra) !== false && 
+                        strpos($nombreCategoriaLower, $nombreProcesada) === 0) {
+                        // Es una subcategoría
+                        $esSubcategoria = true;
+                        $categoriaPadre = $catProcesada['nombre'];
+                        Log::warning('Categoría detectada como subcategoría en combinación final', [
+                            'categoria_padre' => $catProcesada['nombre'],
+                            'subcategoria' => $nombreCategoria,
+                            'timestamp' => $timestamp,
+                            'accion' => 'Se mantiene como categoría separada para preservar jerarquía'
+                        ]);
+                        break 2;
+                    }
+                }
+            }
+            
+            // Agregar la categoría al array final
+            // Si es subcategoría, se mantiene separada (no se combina con la padre)
+            // Esto preserva la estructura jerárquica
+            $combinedCategorias[] = $categoria;
+            $categoriasProcesadas[] = $categoria;
         }
         
         Log::info('Categorías ordenadas por timestamp', [
@@ -971,6 +1346,22 @@ Si solo lees una columna, tu respuesta será INCORRECTA e INCOMPLETA.
    - Si hay texto descriptivo debajo del nombre del plato (ingredientes, preparación, etc.) → es la descripción, cópiala EXACTAMENTE
    - Si falta el nombre O el precio → NO lo agregues
 3. ⚠️ DETECCIÓN DE CATEGORÍAS - MUY IMPORTANTE:
+   - INSTRUCCIÓN CLAVE: Todo texto que esté visualmente unido al título de una sección del menú —incluye palabras entre paréntesis, subtítulos, aclaraciones, ingredientes base o variantes— debe ser considerado parte de la categoría.
+   - Ejemplo: si aparece "VEGGIES (LENTEJA O QUINOA)", la categoría completa es "VEGGIES (LENTEJA O QUINOA)". Nunca descartes esos textos.
+   - Si una categoría tiene texto adicional en la misma línea o visualmente asociado (paréntesis, guiones, subtítulos), inclúyelo TODO en el nombre de la categoría.
+   - 🧠 REGLA DE JERARQUÍA VISUAL (CRÍTICO):
+     * Interpreta las categorías por niveles:
+       - Título grande = categoría principal
+       - Títulos medianos o destacados = subcategorías dentro de la categoría principal
+       - Títulos pequeños, variantes o estilos (como "Veggies (lenteja o quinoa)") también deben considerarse subcategorías si están dentro del área gráfica de la sección principal, aunque tengan otro diseño o fondo
+     * Nunca crees una categoría principal nueva si no hay un título principal visualmente dominante que lo justifique
+   - 🔧 REGLA VISUAL DE CONTENCIÓN (FUNDAMENTAL):
+     * Si un grupo de ítems aparece debajo de una categoría principal (como "Hamburguesas") y está en la misma columna o bloque, entonces pertenece a esa categoría, aunque tenga un diseño distinto o un recuadro propio
+     * Esto hace que "Veggies" sea subcategoría de "Hamburguesas", no categoría independiente
+   - 🎯 EJEMPLO EXPLÍCITO:
+     * En la imagen, "Hamburguesas" es la categoría principal
+     * "Clásicas", "Especiales" y "Veggies (lenteja o quinoa)" son subcategorías de Hamburguesas
+     * No deben convertirse en categorías principales separadas
    - Una categoría puede aparecer como: texto en mayúsculas, texto centrado, texto más grande, texto en negrita, o simplemente texto seguido de una lista de platos
    - Si ves texto que parece ser un encabezado o título (aunque no esté en mayúsculas), es probablemente una categoría
    - Ejemplos de categorías comunes: "Cafetería", "Para acompañar", "Pastelería", "Waffles", "Postres", "Milanesas", "Lomitos", "Hamburguesas", "Ensaladas", "Brunch", "Promos", "Licuados", etc.
@@ -981,7 +1372,21 @@ Si solo lees una columna, tu respuesta será INCORRECTA e INCOMPLETA.
    - NO ignores ninguna columna, lee TODA la imagen de izquierda a derecha
 4. Transcribe carácter por carácter, sin interpretar
 5. IMPORTANTE: Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo "descripcion"
-6. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
+6. ⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
+   - Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
+   - Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE")
+   - ⚠️ DIFERENCIACIÓN CRÍTICA ENTRE TAGS:
+     * Tags de GLUTEN/SIN TACC: "GF", "Sin gluten", "Gluten free", "Libre gluten", "Libre de gluten", "Sin TACC", "Celíaco", "Celiaco", iconos/logos de espiga tachada o símbolos de gluten
+     * Tags VEGANOS: "V", "VG", "Vegano", "Veg", 🌱 (planta), iconos/logos de hoja o plantas
+     * NO confundas logos/símbolos de gluten con logos/símbolos veganos
+     * Si ves un logo/símbolo de espiga tachada o relacionado con gluten → es SIN_TACC/GLUTEN FREE, NO VEGANO
+     * Si ves un logo/símbolo de hoja/planta → es VEGANO, NO gluten free
+   - Tags específicos a buscar: VEGANO, VEGETARIANO, SIN TACC, GLUTEN FREE, LIBRE GLUTEN, CELIACO, SIN LACTOSA, SIN AZUCAR, LOW CARB, KETO, KOSHER, HALAL, DIABETICO FRIENDLY, BAJO SODIO, ALTO EN PROTEINAS, LIGHT, ORGANICO, RAW, CRUDIVEGANO
+   - Captura CUALQUIER variación de estos tags (ej: "V", "VG", "GF", "Sin gluten", "Gluten free", "Libre gluten", "🌱", "Sin TACC", "Celíaco", etc.) y escríbelo tal cual aparece
+   - Si hay múltiples tags, inclúyelos todos en el array
+   - Si NO hay ningún tag visible, deja el array vacío: []
+   - Los tags deben ser en TEXTO, no emojis ni iconos
+7. ⚠️ ORDEN CRÍTICO - LA REGLA MÁS IMPORTANTE:
    - Las categorías y platos DEBEN aparecer en el JSON en el MISMO ORDEN EXACTO que aparecen en la imagen
    - Lee de ARRIBA HACIA ABAJO, línea por línea, y agrega cada categoría/plato al JSON en el mismo orden que lo lees
    - NO reordenes, NO agrupes por tipo, NO cambies el orden por NINGÚN motivo
@@ -998,12 +1403,21 @@ FORMATO JSON (OBLIGATORIO - RESPETA EL ORDEN):
         {
           "nombre": "Nombre EXACTO como aparece",
           "precio": "Precio EXACTO como aparece (ej: $3500)",
-          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay"
+          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay",
+          "tags": ["VEGANO", "SIN GLUTEN", "PICANTE"] // Array de tags/etiquetas en TEXTO (no emojis), o [] si no hay
         }
       ]
     }
   ]
 }
+
+⚠️ ESTRUCTURA DE CATEGORÍAS Y SUBCATEGORÍAS:
+- Si hay una categoría principal con subcategorías (ej: "Hamburguesas" con subcategorías "Clásicas", "Especiales", "Veggies"), estructura el JSON así:
+  * Crea UNA categoría principal con el nombre de la categoría principal (ej: "Hamburguesas")
+  * Agrupa TODOS los platos de las subcategorías dentro de esa categoría principal
+  * Si las subcategorías tienen nombres visibles, puedes incluir el nombre de la subcategoría en el nombre del plato o en la descripción para mantener la información
+  * Ejemplo: Si "Hamburguesas" tiene subcategorías "Clásicas" y "Veggies", todos los platos van bajo "Hamburguesas"
+  * NO crees categorías separadas para subcategorías que pertenecen a una categoría principal
 
 ⚠️ ORDEN OBLIGATORIO - ESTO ES CRÍTICO (LEE 5 VECES):
 - Las categorías en el array "categorias" DEBEN estar en el ORDEN EXACTO que aparecen en la imagen, leyendo de ARRIBA HACIA ABAJO, línea por línea
@@ -1173,6 +1587,15 @@ EJEMPLO DE LO QUE NO DEBES HACER:
 ❌ Si ves "CAFÉ- CORTADO- LÁGRIMA", NO lo cambies a "CAFÉ EXPRESSO"
 ❌ Si ves "$3500", NO lo cambies a "$8000" o "$9000"
 
+⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
+- Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
+- Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE", 🔥 → "PICANTE")
+- Ejemplos de tags comunes: V, VG, VEGANO, VEGETARIANO, GF, GLUTEN FREE, SIN GLUTEN, SIN TACC, SIN LACTOSA, PICANTE, *, (V), [VEG], etc.
+- NO limites a estos ejemplos: captura CUALQUIER indicador visual que veas y conviértelo a texto
+- Si hay múltiples tags, inclúyelos todos en el array
+- Si NO hay ningún tag visible, deja el array vacío: []
+- Los tags deben ser en TEXTO, no emojis ni iconos
+
 FORMATO JSON REQUERIDO:
 {
   "restaurante": {
@@ -1186,7 +1609,8 @@ FORMATO JSON REQUERIDO:
         {
           "nombre": "Nombre EXACTO del plato como aparece en el PDF",
           "precio": "Precio EXACTO como aparece en el PDF (ej: $3500, $4900)",
-          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay"
+          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay",
+          "tags": ["VEGANO", "SIN GLUTEN", "PICANTE"] // Array de tags/etiquetas en TEXTO (no emojis), o [] si no hay
         }
       ]
     }
@@ -1524,6 +1948,15 @@ EJEMPLOS DE LO QUE NO DEBES HACER:
 ❌ Si ves "$3500" NO lo cambies a "$8000" o "$9000"
 ❌ Si ves "CAFÉ- CORTADO- LÁGRIMA" NO lo cambies a "CAFÉ EXPRESSO"
 
+⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
+- Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
+- Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE", 🔥 → "PICANTE")
+- Ejemplos de tags comunes: V, VG, VEGANO, VEGETARIANO, GF, GLUTEN FREE, SIN GLUTEN, SIN TACC, SIN LACTOSA, PICANTE, *, (V), [VEG], etc.
+- NO limites a estos ejemplos: captura CUALQUIER indicador visual que veas y conviértelo a texto
+- Si hay múltiples tags, inclúyelos todos en el array
+- Si NO hay ningún tag visible, deja el array vacío: []
+- Los tags deben ser en TEXTO, no emojis ni iconos
+
 FORMATO JSON REQUERIDO:
 {
   "restaurante": {
@@ -1537,7 +1970,8 @@ FORMATO JSON REQUERIDO:
         {
           "nombre": "Nombre EXACTO del plato como aparece en la imagen",
           "precio": "Precio EXACTO como aparece en la imagen",
-          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay"
+          "descripcion": "Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío si no hay",
+          "tags": ["VEGANO", "SIN GLUTEN", "PICANTE"] // Array de tags/etiquetas en TEXTO (no emojis), o [] si no hay
         }
       ]
     }

@@ -23,10 +23,17 @@ class PdfProcessorService
     public function processPdfToMenu(string $pdfPath): array
     {
         try {
+            Log::info('🚀 Iniciando procesamiento de PDF con extracción de texto directa', [
+                'pdf_path' => $pdfPath
+            ]);
+            
             // Extraer texto del PDF
             $extractedText = $this->extractTextFromPdf($pdfPath);
             
             if (empty($extractedText)) {
+                Log::warning('⚠️ Texto extraído está vacío', [
+                    'pdf_path' => $pdfPath
+                ]);
                 return [
                     'success' => false,
                     'message' => 'No se pudo extraer texto del PDF. Puede ser una imagen escaneada.',
@@ -34,8 +41,16 @@ class PdfProcessorService
                 ];
             }
 
+            Log::info('✅ Texto extraído exitosamente, procesando con OpenAI', [
+                'longitud_texto' => strlen($extractedText)
+            ]);
+
             // Procesar con OpenAI
             $menuData = $this->processWithOpenAI($extractedText);
+            
+            Log::info('✅ PDF procesado exitosamente con extracción de texto directa', [
+                'longitud_respuesta' => strlen($menuData)
+            ]);
             
             return [
                 'success' => true,
@@ -44,7 +59,11 @@ class PdfProcessorService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Error procesando PDF: ' . $e->getMessage());
+            Log::error('❌ Error procesando PDF con extracción de texto: ' . $e->getMessage(), [
+                'exception_type' => get_class($e),
+                'pdf_path' => $pdfPath,
+                'exception_trace' => $e->getTraceAsString()
+            ]);
             
             return [
                 'success' => false,
@@ -60,22 +79,50 @@ class PdfProcessorService
     private function extractTextFromPdf(string $pdfPath): string
     {
         try {
+            Log::info('🔍 Intentando extraer texto directamente del PDF', [
+                'pdf_path' => $pdfPath,
+                'archivo_existe' => file_exists($pdfPath),
+                'tamaño_archivo' => file_exists($pdfPath) ? filesize($pdfPath) : 'N/A'
+            ]);
+            
             $parser = new Parser();
             $pdf = $parser->parseFile($pdfPath);
             $text = $pdf->getText();
             
+            Log::info('📝 Texto extraído del PDF (antes de limpiar)', [
+                'longitud_texto_bruto' => strlen($text),
+                'primeros_200_caracteres' => mb_substr($text, 0, 200, 'UTF-8')
+            ]);
+            
             // Limpiar el texto extraído
             $text = $this->cleanExtractedText($text);
             
+            Log::info('📝 Texto extraído del PDF (después de limpiar)', [
+                'longitud_texto_limpio' => strlen($text),
+                'texto_vacio' => empty(trim($text)),
+                'primeros_200_caracteres' => mb_substr($text, 0, 200, 'UTF-8')
+            ]);
+            
             // Verificar si se extrajo texto válido
             if (empty(trim($text))) {
+                Log::warning('⚠️ El PDF no contiene texto extraíble después de la limpieza', [
+                    'longitud_texto_bruto' => strlen($pdf->getText()),
+                    'longitud_texto_limpio' => strlen($text)
+                ]);
                 throw new \Exception('El PDF no contiene texto extraíble');
             }
+            
+            Log::info('✅ Texto extraído exitosamente del PDF', [
+                'longitud_final' => strlen($text)
+            ]);
             
             return $text;
             
         } catch (\Exception $e) {
-            Log::error('Error extrayendo texto del PDF: ' . $e->getMessage());
+            Log::error('❌ Error extrayendo texto del PDF: ' . $e->getMessage(), [
+                'exception_type' => get_class($e),
+                'exception_trace' => $e->getTraceAsString()
+            ]);
             
             // Si es un error específico de smalot/pdfparser, sugerir procesamiento como imagen
             if (strpos($e->getMessage(), 'Invalid object reference') !== false || 

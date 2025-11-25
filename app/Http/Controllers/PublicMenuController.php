@@ -20,14 +20,30 @@ class PublicMenuController extends Controller
      */
     public function chat(Comercio $comercio)
     {
-        $menus = $comercio->menus()
-            ->where('procesado', true)
-            ->orderBy('created_at', 'desc')
-            ->get();
-        
-        $categorias = $comercio->getCategoriasDelMenu();
-        
-        return view('menu.chat', compact('comercio', 'menus', 'categorias'));
+        try {
+            $menus = $comercio->menus()
+                ->where('procesado', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            $categorias = $comercio->getCategoriasDelMenu();
+            $tags = $comercio->getTagsDelMenu();
+            
+            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags'));
+        } catch (\Exception $e) {
+            \Log::error('Error en PublicMenuController@chat: ' . $e->getMessage(), [
+                'comercio_id' => $comercio->id,
+                'exception' => $e
+            ]);
+            
+            // Retornar vista con datos vacíos en caso de error
+            return view('menu.chat', [
+                'comercio' => $comercio,
+                'menus' => collect([]),
+                'categorias' => [],
+                'tags' => []
+            ]);
+        }
     }
 
     /**

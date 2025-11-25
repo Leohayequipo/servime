@@ -22,14 +22,13 @@ class ChatbotController extends Controller
      */
     public function chat(Request $request, Comercio $comercio): JsonResponse
     {
-        $request->validate([
-            'message' => 'required|string|max:500'
-        ]);
-
-        $message = $request->input('message');
-        $startTime = microtime(true);
-        
         try {
+            $request->validate([
+                'message' => 'required|string|max:500'
+            ]);
+
+            $message = $request->input('message');
+            $startTime = microtime(true);
             // DEBUG: Log del mensaje recibido
             \Log::info('Chatbot Debug - Mensaje recibido', [
                 'comercio_id' => $comercio->id,
@@ -58,28 +57,50 @@ class ChatbotController extends Controller
                 'success' => true
             ]);
             
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error de validación
+            \Log::error('Error de validación en ChatbotController: ' . $e->getMessage());
+            return response()->json([
+                'response' => 'Por favor, envía un mensaje válido.',
+                'timestamp' => now(),
+                'success' => false,
+                'error' => 'Error de validación'
+            ], 400);
         } catch (\Exception $e) {
             // Log del error para debugging
             \Log::error('Error en ChatbotController: ' . $e->getMessage(), [
-                'comercio_id' => $comercioId,
-                'message' => $message,
-                'exception' => $e
+                'comercio_id' => $comercio->id ?? null,
+                'comercio_slug' => $request->route('comercio')?->slug ?? 'unknown',
+                'message' => $message ?? 'N/A',
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
             ]);
             
             // Fallback a respuesta básica si OpenAI falla
-            $fallbackResponse = $this->generateFallbackResponse($comercio, $message);
-            $responseTime = round((microtime(true) - $startTime) * 1000);
-            
-            // Log de la conversación con fallback (generar session_id si no existe)
-            $sessionId = $this->getSessionId($request, $comercio);
-            $this->logConversation($comercio, $message, $fallbackResponse, false, $responseTime, $request, $sessionId);
-            
-            return response()->json([
-                'response' => $fallbackResponse,
-                'timestamp' => now(),
-                'success' => false,
-                'error' => 'OpenAI no disponible, usando respuesta básica'
-            ]);
+            try {
+                $fallbackResponse = $this->generateFallbackResponse($comercio, $message ?? '');
+                $responseTime = isset($startTime) ? round((microtime(true) - $startTime) * 1000) : 0;
+                
+                // Log de la conversación con fallback (generar session_id si no existe)
+                $sessionId = $this->getSessionId($request, $comercio);
+                $this->logConversation($comercio, $message ?? '', $fallbackResponse, false, $responseTime, $request, $sessionId);
+                
+                return response()->json([
+                    'response' => $fallbackResponse,
+                    'timestamp' => now(),
+                    'success' => false,
+                    'error' => 'Error al procesar el mensaje. Usando respuesta básica.'
+                ]);
+            } catch (\Exception $fallbackError) {
+                // Si incluso el fallback falla, devolver un error genérico
+                \Log::error('Error en fallback de ChatbotController: ' . $fallbackError->getMessage());
+                return response()->json([
+                    'response' => 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
+                    'timestamp' => now(),
+                    'success' => false,
+                    'error' => 'Error crítico'
+                ], 500);
+            }
         }
     }
 

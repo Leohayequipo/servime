@@ -133,6 +133,73 @@ class Comercio extends Model
     }
 
     /**
+     * Obtener todos los tags únicos del menú activo
+     */
+    public function getTagsDelMenu(): array
+    {
+        try {
+            $menuActivo = $this->menus()
+                ->where('activo', true)
+                ->where('procesado', true)
+                ->first();
+            
+            if (!$menuActivo || !$menuActivo->contexto_gpt) {
+                return [];
+            }
+
+            $jsonContent = $menuActivo->contexto_gpt;
+            $clean = trim($jsonContent);
+            
+            // Remover markdown si existe
+            if (strpos($clean, '```json') !== false) {
+                $clean = preg_replace('/```json\s*/', '', $clean);
+                $clean = preg_replace('/```\s*$/', '', $clean);
+            }
+            
+            $data = json_decode($clean, true);
+            
+            if (!is_array($data) || !isset($data['categorias']) || !is_array($data['categorias'])) {
+                return [];
+            }
+
+            $tagsUnicos = [];
+            
+            foreach ($data['categorias'] as $categoria) {
+                if (!is_array($categoria)) {
+                    continue;
+                }
+                
+                if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                    foreach ($categoria['platos'] as $plato) {
+                        if (!is_array($plato)) {
+                            continue;
+                        }
+                        
+                        if (isset($plato['tags']) && is_array($plato['tags'])) {
+                            foreach ($plato['tags'] as $tag) {
+                                if (!empty($tag) && is_string($tag) && !in_array($tag, $tagsUnicos)) {
+                                    $tagsUnicos[] = $tag;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Ordenar alfabéticamente
+            sort($tagsUnicos);
+            
+            return $tagsUnicos;
+        } catch (\Exception $e) {
+            \Log::error('Error en getTagsDelMenu: ' . $e->getMessage(), [
+                'comercio_id' => $this->id,
+                'exception' => $e
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Obtener icono para una categoría
      */
     private function getIconForCategory(string $nombre): string

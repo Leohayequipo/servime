@@ -872,6 +872,19 @@
                                                                         </p>
                                                                     @endif
                                                                     
+                                                                    <!-- Tags del plato -->
+                                                                    @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
+                                                                        <div class="flex flex-wrap gap-2 mt-2">
+                                                                            @foreach($plato['tags'] as $tag)
+                                                                                @if(!empty($tag))
+                                                                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                                                                                        {{ $tag }}
+                                                                                    </span>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                    
                                                                     <!-- Imagen del plato -->
                                                                     <div class="mt-3" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         @if(isset($plato['imagen']) && !empty($plato['imagen']))
