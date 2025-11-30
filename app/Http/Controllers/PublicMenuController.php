@@ -21,11 +21,11 @@ class PublicMenuController extends Controller
     public function chat(Comercio $comercio)
     {
         try {
-            $menus = $comercio->menus()
-                ->where('procesado', true)
-                ->orderBy('created_at', 'desc')
-                ->get();
-            
+        $menus = $comercio->menus()
+            ->where('procesado', true)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
             $categorias = $comercio->getCategoriasDelMenu();
             $tags = $comercio->getTagsDelMenu();
             

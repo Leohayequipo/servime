@@ -301,7 +301,7 @@
         @if(!empty($categorias))
             <button id="fabCategories" title="Categorías del menú" class="fab-categories-animated" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
                 <span style="font-size: 22px; display: inline-block;">📋</span>
-            </button>
+        </button>
         @endif
         @if(!empty($tags))
             <button id="fabTags" title="Filtrar por tags" style="width: 56px; height: 56px; background: #ff8c00; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
@@ -330,12 +330,12 @@
     <!-- Panel de Categorías -->
     @if(!empty($categorias))
         <div id="categoriesPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
-            <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
+        <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                     <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">Categorías</h4>
                     <button id="closeCategories" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
                             <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
@@ -344,7 +344,7 @@
                                     onmouseover="this.style.transform='scale(1.08)';"
                                     onmouseout="this.style.transform='scale(1)';">
                                 <span class="promo-fire-icon">{{ $categoria['icon'] }}</span> {{ $categoria['nombre'] }}
-                            </button>
+                    </button>
                         @else
                             <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
                                     style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer; transition: background 0.2s;"
@@ -353,10 +353,10 @@
                                 {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
                             </button>
                         @endif
-                    @endforeach
-                </div>
+                @endforeach
             </div>
         </div>
+    </div>
     @endif
 
     <!-- Panel de Tags -->

@@ -23,12 +23,12 @@ class ChatbotController extends Controller
     public function chat(Request $request, Comercio $comercio): JsonResponse
     {
         try {
-            $request->validate([
-                'message' => 'required|string|max:500'
-            ]);
+        $request->validate([
+            'message' => 'required|string|max:500'
+        ]);
 
-            $message = $request->input('message');
-            $startTime = microtime(true);
+        $message = $request->input('message');
+        $startTime = microtime(true);
             // DEBUG: Log del mensaje recibido
             \Log::info('Chatbot Debug - Mensaje recibido', [
                 'comercio_id' => $comercio->id,
@@ -80,15 +80,15 @@ class ChatbotController extends Controller
             try {
                 $fallbackResponse = $this->generateFallbackResponse($comercio, $message ?? '');
                 $responseTime = isset($startTime) ? round((microtime(true) - $startTime) * 1000) : 0;
-                
+            
                 // Log de la conversación con fallback (generar session_id si no existe)
                 $sessionId = $this->getSessionId($request, $comercio);
                 $this->logConversation($comercio, $message ?? '', $fallbackResponse, false, $responseTime, $request, $sessionId);
-                
-                return response()->json([
-                    'response' => $fallbackResponse,
-                    'timestamp' => now(),
-                    'success' => false,
+            
+            return response()->json([
+                'response' => $fallbackResponse,
+                'timestamp' => now(),
+                'success' => false,
                     'error' => 'Error al procesar el mensaje. Usando respuesta básica.'
                 ]);
             } catch (\Exception $fallbackError) {

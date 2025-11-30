@@ -157,15 +157,34 @@ class PdfProcessorService
      */
     private function processWithOpenAI(string $text): string
     {
+        // Aumentar el tiempo de ejecución de PHP para permitir que la llamada a OpenAI complete
+        set_time_limit(600); // 10 minutos
+        
         $prompt = "Analiza el siguiente texto de un menú de restaurante y extráelo en formato JSON estructurado. 
 
 INSTRUCCIONES CRÍTICAS:
 - SOLO extrae información que REALMENTE APARECE en el texto
 - NO inventes platos, precios, descripciones o categorías que no estén en el texto
-- Si no ves un precio, NO inventes uno - pon exactamente 'Precio no especificado'
-- Si no hay descripción visible, NO inventes una - deja el campo descripción vacío o pon 'Sin descripción'
+
+🚨🚨🚨 DETECCIÓN DE PRECIOS - LEE ESTO CON MUCHA ATENCIÓN 🚨🚨🚨:
+- **PRECIOS SON OBLIGATORIOS Y CRÍTICOS** - debes encontrar TODOS los precios
+- Lee el texto LINEA POR LINEA y busca patrones de precios
+- Los precios pueden estar en DIFERENTES POSICIONES:
+  * En la MISMA línea que el nombre del plato (a la derecha o separados)
+  * En la línea INMEDIATA SIGUIENTE al nombre del plato
+  * En líneas cercanas al plato (dentro de 2-3 líneas)
+- Los precios pueden tener estos formatos: \$3500, \$4.500, \$10.200, \$4,500, 3500, etc.
+- **BUSCA PATRONES**: Si ves un nombre de plato seguido de líneas con números que empiezan con \$, esos SON los precios
+- **LECTURA CONTEXTUAL**: Si hay un bloque de precios (como \$8900, \$9500, \$5500) después de una lista de platos, esos precios corresponden a esos platos en orden
+- **FORMATO CON PUNTO**: Si ves \$10.200 significa \$10,200 (diez mil doscientos), el punto es separador de miles
+- **SI VES CUALQUIER NÚMERO CON \$ EN LAS PROXIMIDADES DE UN PLATO, ESE ES SU PRECIO** - Cópialo EXACTAMENTE
+- **SOLO usa \"Precio no especificado\" si REALMENTE no hay ningún número, símbolo \$, o indicador de precio cerca del plato (ni arriba, ni abajo, ni a los lados)**
+- Si hay múltiples precios cerca de un plato, usa el que esté más cercano o el que tenga sentido contextualmente
+
+- Si hay descripción visible (texto adicional bajo el nombre del plato), cópiala EXACTAMENTE en el campo \"descripcion\"
+- Si NO hay descripción visible, deja el campo vacío: \"\" (NO escribas \"Sin descripción\")
 - Mantén los nombres de platos EXACTAMENTE como aparecen en el texto, sin modificar
-- Identifica las categorías que realmente existen en el texto
+- Identifica las categorías que realmente existen en el texto (títulos en mayúsculas o nombres de secciones)
 - Si hay información del restaurante visible, inclúyela al inicio
 - Si NO hay información del restaurante, deja el campo restaurante con nombre vacío
 
@@ -180,9 +199,9 @@ FORMATO JSON REQUERIDO:
       \"nombre\": \"Nombre de la categoría\",
       \"platos\": [
         {
-          \"nombre\": \"Nombre del plato\",
-          \"precio\": \"Precio\",
-          \"descripcion\": \"Descripción del plato\"
+          \"nombre\": \"Nombre EXACTO del plato como aparece en el texto\",
+          \"precio\": \"Precio EXACTO como aparece en el texto (ej: $3500, $4900) o 'Precio no especificado' SOLO si REALMENTE no hay precio\",
+          \"descripcion\": \"Descripción EXACTA si aparece escrita bajo el nombre del plato, o vacío \\\"\\\" si no hay\"
         }
       ]
     }
@@ -192,14 +211,21 @@ FORMATO JSON REQUERIDO:
 TEXTO DEL MENÚ:
 {$text}
 
-REGLA FINAL: NO INVENTES NADA. Solo extrae lo que REALMENTE aparece en el texto arriba. Si no está en el texto, no lo incluyas.
+🎯 ESTRATEGIA DE PROCESAMIENTO:
+1. Lee TODO el texto primero para entender la estructura
+2. Identifica las categorías (títulos en mayúsculas, nombres de secciones)
+3. Para cada categoría, busca los platos y sus precios
+4. Si los precios están en bloques separados, asócialos a los platos por posición y contexto
+5. Si un plato tiene múltiples variantes (ej: \"SOLO\", \"JAMÓN Y QUESO\", \"COMPLETO\"), créalos como platos separados con sus respectivos precios
+
+REGLA FINAL: NO INVENTES NADA. Solo extrae lo que REALMENTE aparece en el texto arriba. Si no está en el texto, no lo incluyas. Busca CUIDADOSAMENTE todos los precios - están en el texto, solo necesitas encontrarlos.
 
 Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios.";
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->openaiApiKey,
             'Content-Type' => 'application/json',
-        ])->timeout(180)->post($this->openaiBaseUrl . '/chat/completions', [
+        ])->timeout(600)->post($this->openaiBaseUrl . '/chat/completions', [
             'model' => 'gpt-4o-mini',
             'messages' => [
                 [
@@ -214,6 +240,16 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
         if ($response->successful()) {
             $data = $response->json();
             $content = $data['choices'][0]['message']['content'] ?? 'Error procesando con OpenAI';
+            
+            // Limpiar markdown si existe
+            if (strpos($content, '```json') !== false) {
+                $content = preg_replace('/```json\s*/', '', $content);
+                $content = preg_replace('/```\s*$/', '', $content);
+                $content = trim($content);
+            } elseif (strpos($content, '```') !== false) {
+                $content = preg_replace('/```\s*/', '', $content);
+                $content = trim($content);
+            }
             
             // Verificar si la respuesta fue truncada
             $finishReason = $data['choices'][0]['finish_reason'] ?? null;
