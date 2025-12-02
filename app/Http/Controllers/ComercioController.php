@@ -130,6 +130,11 @@ class ComercioController extends Controller
         // Cargar relación de usuario
         $comercio->load('user');
         
+        // Asegurar que quick_questions siempre sea un array
+        if ($comercio->quick_questions === null) {
+            $comercio->quick_questions = [];
+        }
+        
         // Obtener categorías de preguntas
         $categories = QuestionCategory::active()->ordered()->get();
         
@@ -237,19 +242,6 @@ class ComercioController extends Controller
     /**
      * Vista previa del comercio
      */
-    public function preview(Comercio $comercio)
-    {
-        $user = auth()->user();
-        
-        // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
-            abort(403, 'No tienes permiso para ver la vista previa de este comercio.');
-        }
-        
-        // Llamar al método del CustomizationController
-        $customizationController = new \App\Http\Controllers\CustomizationController();
-        return $customizationController->preview($comercio->id);
-    }
 
     /**
      * Guardar el logo en un tamaño cuadrado fijo (recorte centrado + resize)

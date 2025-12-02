@@ -154,11 +154,6 @@
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
                     </a>
-                    <a href="{{ route('comercios.preview', $comercio) }}" 
-                       target="_blank"
-                       class="btn-primary">
-                        👁️ Vista Previa
-                    </a>
                 </div>
             </div>
 

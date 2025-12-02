@@ -268,7 +268,19 @@
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
         // Variables globales para preguntas frecuentes
-        let questionIndex = {{ count($comercio->quick_questions) }};
+        @php
+            // Asegurar que quick_questions siempre sea un array
+            $quickQuestions = $comercio->quick_questions ?? null;
+            if ($quickQuestions === null || !is_array($quickQuestions)) {
+                // Si es null o no es array, intentar decodificar si es JSON string
+                if (is_string($quickQuestions)) {
+                    $quickQuestions = json_decode($quickQuestions, true) ?? [];
+                } else {
+                    $quickQuestions = [];
+                }
+            }
+        @endphp
+        let questionIndex = {{ count($quickQuestions) }};
         
         document.addEventListener('DOMContentLoaded', function() {
             // Aplicar tema predefinido
@@ -503,7 +515,7 @@
                 formData.append('current_answer', currentAnswer);
                 
                 // Solo agregar question_index si es una pregunta existente
-                const existingQuestionsCount = {{ count($comercio->quick_questions) }};
+                const existingQuestionsCount = {{ count($quickQuestions) }};
                 if (questionIndex < existingQuestionsCount) {
                     formData.append('question_index', questionIndex);
                 }

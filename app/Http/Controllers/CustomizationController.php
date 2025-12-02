@@ -49,16 +49,6 @@ class CustomizationController extends Controller
             ->with('success', 'Configuración de personalización actualizada correctamente.');
     }
 
-    /**
-     * Vista previa de la página pública
-     */
-    public function preview($comercioId)
-    {
-        $comercio = Comercio::findOrFail($comercioId);
-        $menus = $comercio->menus()->where('procesado', true)->get();
-        
-        return view('menu.chat', compact('comercio', 'menus'))->with('preview', true);
-    }
 
     /**
      * Resetear configuración a valores por defecto
@@ -92,9 +82,8 @@ class CustomizationController extends Controller
     /**
      * Generar preguntas frecuentes con IA
      */
-    public function generateQuestions(Request $request, $comercioId)
+    public function generateQuestions(Request $request, Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($comercioId);
         
         try {
             // Preparar información del comercio para la IA
@@ -310,9 +299,8 @@ class CustomizationController extends Controller
     /**
      * Mejorar respuesta específica con IA
      */
-    public function improveAnswer(Request $request, $comercioId)
+    public function improveAnswer(Request $request, Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($comercioId);
         
         $request->validate([
             'question_index' => 'nullable|integer|min:0',

@@ -16,11 +16,6 @@
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
                     </a>
-                    <a href="{{ route('comercios.preview', $comercio) }}" 
-                       target="_blank"
-                       class="btn-primary">
-                        👁️ Vista Previa
-                    </a>
                 </div>
             </div>
 
@@ -328,7 +323,7 @@
                         </div>
                         
                         <div id="quick-questions-container" class="space-y-4 flex-grow overflow-y-auto pr-2">
-                            @foreach($comercio->quick_questions as $index => $question)
+                            @foreach(($comercio->quick_questions ?? []) as $index => $question)
                                 <div class="bg-secondary-dark border border-accent-gray rounded-xl p-4 question-item" data-index="{{ $index }}">
                                     <div class="grid grid-cols-12 gap-4 items-start">
                                         <!-- Ícono -->
@@ -432,7 +427,7 @@
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
         // Variables globales para preguntas frecuentes
-        let questionIndex = {{ count($comercio->quick_questions) }};
+        let questionIndex = {{ count($comercio->quick_questions ?? []) }};
         
         document.addEventListener('DOMContentLoaded', function() {
             // Aplicar tema predefinido
@@ -646,7 +641,7 @@
                 formData.append('current_answer', currentAnswer);
                 
                 // Solo agregar question_index si es una pregunta existente
-                const existingQuestionsCount = {{ count($comercio->quick_questions) }};
+                const existingQuestionsCount = {{ count($comercio->quick_questions ?? []) }};
                 if (questionIndex < existingQuestionsCount) {
                     formData.append('question_index', questionIndex);
                 }
