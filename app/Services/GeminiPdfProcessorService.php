@@ -18,18 +18,6 @@ class GeminiPdfProcessorService
         // Para procesar PDFs, usar gemini-2.5-flash (modelo estable, rápido y soporta 1M tokens)
         $this->geminiModel = config('services.gemini.model') ?: env('GEMINI_MODEL', 'gemini-2.5-flash');
         $this->geminiBaseUrl = config('services.gemini.base_url') ?: env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta');
-        
-        // Log detallado de configuración (para debugging)
-        Log::info('🔧 Configuración de Gemini cargada', [
-            'api_key_establecida' => !empty($this->geminiApiKey),
-            'api_key_length' => $this->geminiApiKey ? strlen($this->geminiApiKey) : 0,
-            'api_key_preview' => $this->geminiApiKey ? substr($this->geminiApiKey, 0, 20) . '...' . substr($this->geminiApiKey, -10) : 'NO CONFIGURADA',
-            'api_key_completa' => $this->geminiApiKey ? $this->geminiApiKey : 'NO CONFIGURADA',
-            'model' => $this->geminiModel,
-            'base_url' => $this->geminiBaseUrl,
-            'config_api_key' => config('services.gemini.api_key') ? substr(config('services.gemini.api_key'), 0, 20) . '...' : 'null',
-            'env_api_key' => env('GEMINI_API_KEY') ? substr(env('GEMINI_API_KEY'), 0, 20) . '...' : 'null'
-        ]);
     }
 
     /**
@@ -39,30 +27,10 @@ class GeminiPdfProcessorService
     public function processPdfToMenu(string $pdfPath): array
     {
         try {
-            // Log para debugging
-            Log::info('🔑 Verificando configuración de Gemini', [
-                'api_key_establecida' => !empty($this->geminiApiKey),
-                'api_key_length' => $this->geminiApiKey ? strlen($this->geminiApiKey) : 0,
-                'api_key_preview' => $this->geminiApiKey ? substr($this->geminiApiKey, 0, 10) . '...' : 'null',
-                'model' => $this->geminiModel,
-                'base_url' => $this->geminiBaseUrl
-            ]);
-            
             if (empty($this->geminiApiKey) || $this->geminiApiKey === 'your_gemini_api_key_here') {
-                $envValue = env('GEMINI_API_KEY');
-                Log::error('❌ Gemini API key no configurada', [
-                    'config_value' => $this->geminiApiKey,
-                    'env_value' => $envValue ? substr($envValue, 0, 10) . '...' : 'null',
-                    'config_file' => config_path('services.php')
-                ]);
+                Log::error('❌ Gemini API key no configurada');
                 throw new \Exception('Gemini API key no configurada. Verifica que GEMINI_API_KEY esté en tu archivo .env');
             }
-
-            Log::info('🚀 Iniciando procesamiento de PDF con Gemini', [
-                'pdf_path' => $pdfPath,
-                'model' => $this->geminiModel,
-                'archivo_existe' => file_exists($pdfPath)
-            ]);
 
             if (!file_exists($pdfPath)) {
                 throw new \Exception('Archivo PDF no encontrado: ' . $pdfPath);
@@ -84,12 +52,6 @@ class GeminiPdfProcessorService
             $base64Pdf = base64_encode($pdfData);
             $mimeType = 'application/pdf';
 
-            Log::info('📄 PDF cargado en memoria', [
-                'tamaño_archivo' => $fileSize,
-                'tamaño_base64' => strlen($base64Pdf),
-                'mime_type' => $mimeType
-            ]);
-
             // Construir el prompt
             $prompt = $this->buildPrompt();
 
@@ -97,9 +59,6 @@ class GeminiPdfProcessorService
             $response = $this->callGeminiAPI($prompt, $base64Pdf, $mimeType);
 
             if ($response['success']) {
-                Log::info('✅ PDF procesado exitosamente con Gemini', [
-                    'tamaño_respuesta' => strlen($response['menu_data'])
-                ]);
 
                 return [
                     'success' => true,
@@ -112,11 +71,7 @@ class GeminiPdfProcessorService
             }
 
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando PDF con Gemini: ' . $e->getMessage(), [
-                'exception_type' => get_class($e),
-                'pdf_path' => $pdfPath,
-                'exception_trace' => $e->getTraceAsString()
-            ]);
+            // Log simplificado - solo errores críticos (el error se maneja arriba)
 
             return [
                 'success' => false,
@@ -234,11 +189,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 ]
             ];
 
-            Log::info('📤 Enviando PDF a Gemini API', [
-                'url' => str_replace($this->geminiApiKey, '***', $url),
-                'tamaño_payload' => strlen(json_encode($payload)),
-                'modelo' => $this->geminiModel
-            ]);
+            // Enviando PDF a Gemini API (sin log - ya se logueó el inicio arriba)
 
             $response = Http::timeout(600)
                 ->withHeaders([
@@ -263,39 +214,21 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                     
                     // Verificar si la respuesta se cortó
                     if ($finishReason === 'MAX_TOKENS') {
-                        Log::warning('⚠️ Respuesta de Gemini cortada por MAX_TOKENS - JSON puede estar incompleto', [
-                            'tamaño_respuesta' => strlen($content),
-                            'finish_reason' => $finishReason
-                        ]);
-                        
                         // Intentar arreglar JSON incompleto si termina a mitad de un objeto
                         $content = $this->fixIncompleteJson($content);
                     }
-
-                    Log::info('✅ Respuesta recibida de Gemini', [
-                        'tamaño_respuesta' => strlen($content),
-                        'finish_reason' => $finishReason
-                    ]);
 
                     return [
                         'success' => true,
                         'menu_data' => $content
                     ];
                 } else {
-                    Log::error('❌ Respuesta de Gemini sin contenido', [
-                        'response' => $response->body()
-                    ]);
                     return [
                         'success' => false,
                         'error' => 'Respuesta de Gemini sin contenido válido'
                     ];
                 }
             } else {
-                Log::error('❌ Error en respuesta de Gemini API', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-
                 return [
                     'success' => false,
                     'error' => 'Error de API: ' . $response->body()
@@ -303,7 +236,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             }
 
         } catch (\Exception $e) {
-            Log::error('❌ Excepción al llamar a Gemini API: ' . $e->getMessage());
+            // Error se maneja arriba en processPdfToMenu
             return [
                 'success' => false,
                 'error' => $e->getMessage()

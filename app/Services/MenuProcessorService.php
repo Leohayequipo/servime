@@ -21,6 +21,25 @@ class MenuProcessorService
     }
 
     /**
+     * Obtener contexto del comercio para logs
+     */
+    protected function getComercioContext(Menu $menu): array
+    {
+        try {
+            $menu->load('comercio');
+            return [
+                'comercio_id' => $menu->comercio_id,
+                'comercio_nombre' => $menu->comercio->nombre ?? 'N/A',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'comercio_id' => $menu->comercio_id ?? null,
+                'comercio_nombre' => 'Error al cargar',
+            ];
+        }
+    }
+
+    /**
      * Procesa un menú extrayendo texto y enviándolo a OpenAI
      */
     public function processMenu(Menu $menu)
@@ -29,17 +48,15 @@ class MenuProcessorService
             // Guardar ID del menú para logs
             $this->menuId = $menu->id;
             
-            // Log detallado del menú que se va a procesar
-            Log::info('🔍 INICIANDO PROCESAMIENTO DE MENÚ', [
+            // Obtener contexto del comercio
+            $comercioContext = $this->getComercioContext($menu);
+            
+            // Log simplificado del inicio de procesamiento
+            Log::info("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] 🔍 Iniciando procesamiento de menú #{$menu->id} ({$menu->formato})", [
+                'comercio_id' => $comercioContext['comercio_id'],
+                'comercio_nombre' => $comercioContext['comercio_nombre'],
                 'menu_id' => $menu->id,
-                'menu_nombre' => $menu->nombre,
-                'archivo_original' => $menu->archivo_original,
                 'formato' => $menu->formato,
-                'comercio_id' => $menu->comercio_id,
-                'archivo_path_completo' => storage_path('app/public/' . $menu->archivo_original),
-                'archivo_existe' => file_exists(storage_path('app/public/' . $menu->archivo_original)),
-                'tamaño_archivo' => file_exists(storage_path('app/public/' . $menu->archivo_original)) ? filesize(storage_path('app/public/' . $menu->archivo_original)) : 'N/A',
-                'modelo_openai' => $this->openaiModel
             ]);
             
             // 1. Extraer texto del archivo
@@ -85,21 +102,14 @@ class MenuProcessorService
                 // Validar que el JSON sea válido antes de guardar
                 $jsonValidacion = json_decode($gptResponse, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    Log::error('❌ JSON INVÁLIDO antes de guardar en BD', [
+                    Log::error("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ❌ JSON inválido antes de guardar", [
+                        'comercio_id' => $comercioContext['comercio_id'],
+                        'comercio_nombre' => $comercioContext['comercio_nombre'],
                         'menu_id' => $menu->id,
                         'json_error' => json_last_error_msg(),
-                        'json_preview' => mb_substr($gptResponse, 0, 500, 'UTF-8')
                     ]);
                     throw new \Exception('JSON inválido antes de guardar: ' . json_last_error_msg());
                 }
-                
-                Log::info('📝 Guardando JSON en base de datos', [
-                    'menu_id' => $menu->id,
-                    'tamaño_json' => strlen($gptResponse),
-                    'es_json_valido' => true,
-                    'archivo_temporal' => $jsonProcesadoPath,
-                    'primeros_100_caracteres' => mb_substr($gptResponse, 0, 100, 'UTF-8')
-                ]);
                 
                 // 4. Actualizar con la respuesta de GPT (ya procesada)
                 $menu->update([
@@ -107,50 +117,26 @@ class MenuProcessorService
                     'procesado' => true
                 ]);
                 
-                // Verificar qué se guardó realmente en la BD
-                $menu->refresh();
-                $jsonGuardado = $menu->contexto_gpt;
+                // Obtener proveedor usado (si está guardado en savedExtractedText o inferirlo del formato)
+                $provider = $this->detectProvider($menu, $gptResponse);
                 
-                // Guardar lo que realmente se guardó en BD
-                $jsonGuardadoPath = storage_path('app/temp/json_guardado_en_bd_' . $menu->id . '_' . uniqid() . '.txt');
-                file_put_contents($jsonGuardadoPath, "=== JSON GUARDADO EN BASE DE DATOS - MENÚ {$menu->id} ===\n\n");
-                file_put_contents($jsonGuardadoPath, $jsonGuardado . "\n", FILE_APPEND);
-                file_put_contents($jsonGuardadoPath, "\n=== COMPARACIÓN ===\n", FILE_APPEND);
-                file_put_contents($jsonGuardadoPath, "Tamaño original: " . strlen($gptResponse) . " caracteres\n", FILE_APPEND);
-                file_put_contents($jsonGuardadoPath, "Tamaño guardado: " . strlen($jsonGuardado ?? '') . " caracteres\n", FILE_APPEND);
-                file_put_contents($jsonGuardadoPath, "Son iguales: " . ($gptResponse === $jsonGuardado ? 'SÍ' : 'NO') . "\n", FILE_APPEND);
-                
-                if ($gptResponse !== $jsonGuardado) {
-                    Log::warning('⚠️ DIFERENCIA DETECTADA entre JSON procesado y guardado', [
-                        'menu_id' => $menu->id,
-                        'tamaño_original' => strlen($gptResponse),
-                        'tamaño_guardado' => strlen($jsonGuardado ?? ''),
-                        'archivo_procesado' => $jsonProcesadoPath,
-                        'archivo_guardado' => $jsonGuardadoPath
-                    ]);
-                }
-                
-                // Log detallado de la respuesta procesada
-                $responsePreview = mb_substr($gptResponse, 0, 500, 'UTF-8');
-                Log::info('✅ MENÚ PROCESADO EXITOSAMENTE', [
+                // Log simplificado de éxito
+                Log::info("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ✅ Menú #{$menu->id} procesado exitosamente con {$provider}", [
+                    'comercio_id' => $comercioContext['comercio_id'],
+                    'comercio_nombre' => $comercioContext['comercio_nombre'],
                     'menu_id' => $menu->id,
-                    'menu_nombre' => $menu->nombre,
-                    'archivo_original' => $menu->archivo_original,
-                    'tamaño_respuesta' => strlen($gptResponse),
-                    'tamaño_guardado' => strlen($jsonGuardado ?? ''),
                     'formato' => $menu->formato,
-                    'preview_respuesta' => $responsePreview . '...',
-                    'archivos_temporales' => [
-                        'procesado' => $jsonProcesadoPath,
-                        'guardado' => $jsonGuardadoPath
-                    ]
+                    'provider' => $provider,
+                    'tamaño_json' => strlen($gptResponse),
                 ]);
                 
                 return true;
             }
 
             // Si no hay respuesta procesada, queda marcado como procesado = false
-            Log::warning('Menú no procesado - respuesta vacía', [
+            Log::warning("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ⚠️ Menú #{$menu->id} no procesado - respuesta vacía", [
+                'comercio_id' => $comercioContext['comercio_id'],
+                'comercio_nombre' => $comercioContext['comercio_nombre'],
                 'menu_id' => $menu->id,
                 'formato' => $menu->formato
             ]);
@@ -158,9 +144,40 @@ class MenuProcessorService
             return false;
 
         } catch (\Exception $e) {
-            Log::error('Error procesando menú: ' . $e->getMessage());
+            $comercioContext = $this->getComercioContext($menu);
+            Log::error("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ❌ Error procesando menú #{$menu->id}: {$e->getMessage()}", [
+                'comercio_id' => $comercioContext['comercio_id'],
+                'comercio_nombre' => $comercioContext['comercio_nombre'],
+                'menu_id' => $menu->id,
+                'error' => $e->getMessage(),
+            ]);
             return false;
         }
+    }
+
+    /**
+     * Detectar qué proveedor se usó para procesar el menú
+     */
+    protected function detectProvider(Menu $menu, string $gptResponse): string
+    {
+        // Verificar si hay archivo temporal de respuesta de Gemini
+        $geminiFiles = glob(storage_path('app/temp/respuesta_gemini_pdf_*_' . basename($menu->archivo_original, '.pdf') . '_*.json'));
+        if (!empty($geminiFiles)) {
+            return 'Gemini';
+        }
+        
+        // Si el texto extraído contiene "PDF procesado con OpenAI Vision" o "Imagen procesada con OpenAI Vision"
+        $textoExtraido = $menu->texto_extraido ?? '';
+        if (strpos($textoExtraido, 'OpenAI Vision') !== false) {
+            return 'OpenAI Vision';
+        }
+        
+        // Si hay texto extraído pero no es vision, probablemente fue extracción de texto + OpenAI
+        if (!empty($textoExtraido) && strlen($textoExtraido) > 100) {
+            return 'OpenAI (extracción de texto)';
+        }
+        
+        return 'OpenAI';
     }
 
     /**
@@ -172,27 +189,14 @@ class MenuProcessorService
         $menu->refresh();
         
         $filePath = storage_path('app/public/' . $menu->archivo_original);
-        
-        Log::info('📄 EXTRAYENDO TEXTO DEL ARCHIVO', [
-            'menu_id' => $menu->id,
-            'menu_nombre' => $menu->nombre,
-            'archivo_original' => $menu->archivo_original,
-            'file_path' => $filePath,
-            'archivo_existe' => file_exists($filePath),
-            'tamaño_archivo' => file_exists($filePath) ? filesize($filePath) : 'N/A',
-            'formato' => $menu->formato,
-            'comercio_id' => $menu->comercio_id,
-            'hash_archivo' => file_exists($filePath) ? md5_file($filePath) : 'N/A'
-        ]);
+        $comercioContext = $this->getComercioContext($menu);
         
         if (!file_exists($filePath)) {
-            Log::error('❌ ARCHIVO NO ENCONTRADO', [
+            Log::error("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ❌ Archivo no encontrado para menú #{$menu->id}", [
+                'comercio_id' => $comercioContext['comercio_id'],
+                'comercio_nombre' => $comercioContext['comercio_nombre'],
                 'menu_id' => $menu->id,
-                'menu_nombre' => $menu->nombre,
-                'archivo_original' => $menu->archivo_original,
                 'file_path' => $filePath,
-                'directorio_existe' => is_dir(dirname($filePath)),
-                'archivos_en_directorio' => is_dir(dirname($filePath)) ? implode(', ', array_slice(scandir(dirname($filePath)), 0, 10)) : 'N/A'
             ]);
             throw new \Exception('Archivo no encontrado: ' . $filePath);
         }
@@ -212,10 +216,7 @@ class MenuProcessorService
      */
     protected function processPDFWithOpenAI($filePath)
     {
-        Log::info('📄 PROCESANDO PDF - Estrategia híbrida con múltiples proveedores', [
-            'file_path' => $filePath,
-            'archivo_existe' => file_exists($filePath)
-        ]);
+        // Log simplificado - ya se logueó el inicio en processMenu
         
         // ESTRATEGIA 1: Intentar con Gemini (procesa PDFs directamente)
         try {
@@ -223,21 +224,13 @@ class MenuProcessorService
             $result = $geminiProcessor->processPdfToMenu($filePath);
             
             if ($result['success'] && !empty($result['menu_data'])) {
-                Log::info('✅ PDF procesado exitosamente con Gemini', [
-                    'tamaño_respuesta' => strlen($result['menu_data']),
-                    'provider' => 'gemini'
-                ]);
-                
                 // Guardar respuesta de Gemini en archivo temporal
                 $this->saveGeminiResponseToTemp($filePath, $result['menu_data']);
                 
                 return $result['menu_data'];
             }
         } catch (\Exception $e) {
-            Log::warning('⚠️ No se pudo procesar PDF con Gemini, intentando con extracción de texto', [
-                'error' => $e->getMessage(),
-                'file_path' => $filePath
-            ]);
+            // Log solo si es un error crítico, no warnings de fallbacks
         }
         
         // ESTRATEGIA 2: Intentar extraer texto directamente del PDF
@@ -254,120 +247,20 @@ class MenuProcessorService
                 $textoExtraidoFile = null;
                 $respuestaOpenAIFile = null;
                 
-                // GUARDAR TEXTO EXTRAÍDO EN ARCHIVO TEMPORAL PARA ANÁLISIS
-                if (!empty($extractedText)) {
-                    $tempDir = storage_path('app/temp');
-                    if (!is_dir($tempDir)) {
-                        mkdir($tempDir, 0755, true);
-                    }
-                    
-                    $textoExtraidoFile = $tempDir . '/texto_extraido_pdf_' . basename($filePath, '.pdf') . '_' . date('Y-m-d_His') . '_' . uniqid() . '.txt';
-                    
-                    $contenidoArchivo = "=== TEXTO EXTRAÍDO DEL PDF ===\n";
-                    $contenidoArchivo .= "Fecha: " . date('Y-m-d H:i:s') . "\n";
-                    $contenidoArchivo .= "Archivo PDF original: " . basename($filePath) . "\n";
-                    $contenidoArchivo .= "Ruta completa: " . $filePath . "\n";
-                    $contenidoArchivo .= "Tamaño del texto: " . strlen($extractedText) . " caracteres\n";
-                    $contenidoArchivo .= "Tamaño del texto: " . number_format(strlen($extractedText) / 1024, 2) . " KB\n";
-                    $contenidoArchivo .= "Método: Extracción directa de texto (PdfProcessorService)\n";
-                    $contenidoArchivo .= "Estado: Texto extraído exitosamente, listo para procesar con OpenAI\n";
-                    $contenidoArchivo .= "\n";
-                    $contenidoArchivo .= "=== CONTENIDO DEL TEXTO EXTRAÍDO ===\n";
-                    $contenidoArchivo .= "\n";
-                    $contenidoArchivo .= $extractedText;
-                    $contenidoArchivo .= "\n\n";
-                    $contenidoArchivo .= "=== FIN DEL TEXTO EXTRAÍDO ===\n";
-                    
-                    file_put_contents($textoExtraidoFile, $contenidoArchivo);
-                    
-                    Log::info('💾 Texto extraído del PDF guardado en archivo temporal', [
-                        'archivo_temporal' => $textoExtraidoFile,
-                        'tamaño_texto' => strlen($extractedText),
-                        'tiene_texto' => !empty($extractedText)
-                    ]);
-                }
-                
-                // GUARDAR RESPUESTA DE OPENAI EN ARCHIVO TEMPORAL PARA ANÁLISIS
-                if (!empty($result['menu_data'])) {
-                    $menuData = $result['menu_data'];
-                    $tempDir = storage_path('app/temp');
-                    if (!is_dir($tempDir)) {
-                        mkdir($tempDir, 0755, true);
-                    }
-                    
-                    $respuestaOpenAIFile = $tempDir . '/respuesta_openai_pdf_' . basename($filePath, '.pdf') . '_' . date('Y-m-d_His') . '_' . uniqid() . '.json';
-                    
-                    $contenidoRespuesta = [
-                        'metadata' => [
-                            'fecha' => date('Y-m-d H:i:s'),
-                            'archivo_pdf_original' => basename($filePath),
-                            'ruta_completa_pdf' => $filePath,
-                            'metodo' => 'Extracción directa de texto + OpenAI (no Vision)',
-                            'tamaño_respuesta' => strlen($menuData) . ' caracteres',
-                            'tamaño_respuesta_kb' => number_format(strlen($menuData) / 1024, 2) . ' KB',
-                            'archivo_texto_extraido' => isset($textoExtraidoFile) ? basename($textoExtraidoFile) : null,
-                            'tiene_texto_extraido' => !empty($extractedText),
-                            'tamaño_texto_extraido' => !empty($extractedText) ? strlen($extractedText) . ' caracteres' : null
-                        ],
-                        'respuesta_openai' => $menuData
-                    ];
-                    
-                    // Intentar parsear como JSON para validar
-                    $jsonData = json_decode($menuData, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        $contenidoRespuesta['es_json_valido'] = true;
-                        $contenidoRespuesta['estructura_json'] = [
-                            'tiene_restaurante' => isset($jsonData['restaurante']),
-                            'tiene_categorias' => isset($jsonData['categorias']),
-                            'numero_categorias' => isset($jsonData['categorias']) ? count($jsonData['categorias']) : 0
-                        ];
-                    } else {
-                        $contenidoRespuesta['es_json_valido'] = false;
-                        $contenidoRespuesta['error_json'] = json_last_error_msg();
-                    }
-                    
-                    file_put_contents($respuestaOpenAIFile, json_encode($contenidoRespuesta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-                    
-                    Log::info('💾 Respuesta de OpenAI guardada en archivo temporal', [
-                        'archivo_temporal' => $respuestaOpenAIFile,
-                        'tamaño_respuesta' => strlen($menuData),
-                        'es_json_valido' => isset($contenidoRespuesta['es_json_valido']) ? $contenidoRespuesta['es_json_valido'] : 'desconocido'
-                    ]);
-                }
-                
-                Log::info('✅ PDF procesado exitosamente con extracción de texto directa', [
-                    'tiene_texto_extraido' => !empty($result['extracted_text']),
-                    'tamaño_respuesta' => strlen($result['menu_data']),
-                    'archivo_texto_temp' => isset($textoExtraidoFile) ? basename($textoExtraidoFile) : null,
-                    'archivo_respuesta_temp' => isset($respuestaOpenAIFile) ? basename($respuestaOpenAIFile) : null
-                ]);
+                // Texto extraído guardado en savedExtractedText para referencia
                 
                 return $result['menu_data'];
             }
         } catch (\Exception $e) {
-            Log::warning('⚠️ No se pudo extraer texto del PDF (probablemente es escaneado), intentando con Vision', [
-                'error' => $e->getMessage(),
-                'file_path' => $filePath
-            ]);
+            // Error silencioso - continuar con siguiente estrategia
         }
         
         // ESTRATEGIA 3: Si falló la extracción de texto, convertir a imágenes y usar OpenAI Vision
-        // (OpenAI Vision NO acepta PDFs directamente, solo imágenes)
-        Log::info('📄 PDF no tiene texto extraíble, convirtiendo a imágenes para OpenAI Vision', [
-            'file_path' => $filePath
-        ]);
-        
         try {
             $result = $this->processPdfDirectlyWithOpenAI($filePath);
-            
-            Log::info('✅ PDF procesado exitosamente con OpenAI Vision (convertido a imágenes)');
             return $result;
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando PDF con OpenAI Vision: ' . $e->getMessage(), [
-                'exception_type' => get_class($e),
-                'file_path' => $filePath
-            ]);
-            
+            // El error final se loguea en el catch principal de processMenu
             throw new \Exception('No se pudo procesar el PDF. Intentó con Gemini, extracción de texto y conversión a imágenes, todos fallaron: ' . $e->getMessage());
         }
     }
@@ -413,14 +306,8 @@ class MenuProcessorService
             }
             
             file_put_contents($respuestaGeminiFile, json_encode($contenidoRespuesta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-            
-            Log::info('💾 Respuesta de Gemini guardada en archivo temporal', [
-                'archivo_temporal' => $respuestaGeminiFile,
-                'tamaño_respuesta' => strlen($menuData),
-                'es_json_valido' => isset($contenidoRespuesta['es_json_valido']) ? $contenidoRespuesta['es_json_valido'] : 'desconocido'
-            ]);
         } catch (\Exception $e) {
-            Log::warning('⚠️ No se pudo guardar respuesta de Gemini en archivo temporal: ' . $e->getMessage());
+            // Error silencioso - no crítico
         }
     }
 
