@@ -851,21 +851,28 @@
                                                             @endphp
                                                             <div class="group plato-item bg-primary-dark border-l-4 border-l-accent-blue border-r border-t border-b border-accent-gray/50 rounded-r-lg p-4 mb-3 hover:bg-primary-dark/90 hover:shadow-xl hover:border-accent-blue/60 transition-all duration-300 cursor-move shadow-lg" 
                                                                  data-plato-index="{{ $platoIndex }}">
-                                                                <div class="flex gap-4 items-start align-top">
+                                                                <!-- Nombre del producto (arriba, línea completa) -->
+                                                                <div class="flex items-center gap-2 mb-3">
                                                                     <!-- Drag Handle -->
-                                                                    <div class="flex items-start pt-1.5">
-                                                                        <div class="flex items-center justify-center w-5 h-5 text-accent-blue opacity-50 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
-                                                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                                                <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
-                                                                            </svg>
-                                                                        </div>
+                                                                    <div class="flex items-center justify-center w-5 h-5 text-accent-blue opacity-50 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0">
+                                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                                            <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
+                                                                        </svg>
                                                                     </div>
-                                                                    
-                                                                    <!-- Imagen del plato (izquierda) -->
+                                                                    <h5 class="text-white font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors capitalize whitespace-normal flex-1"
+                                                                        ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                        id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        {{ $nombrePlato }}
+                                                                    </h5>
+                                                                </div>
+                                                                
+                                                                <!-- Foto y Precio (misma línea) -->
+                                                                <div class="flex flex-row items-center gap-4 mb-4 pb-3 border-b border-accent-gray/40">
+                                                                    <!-- Imagen -->
                                                                     <div class="flex-shrink-0" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         @if(isset($plato['imagen']) && !empty($plato['imagen']))
                                                                             <div class="relative group/image">
-                                                                                <div class="w-24 h-24 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-lg bg-secondary-dark">
+                                                                                <div class="w-20 h-20 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-md bg-secondary-dark">
                                                                                     <img src="{{ asset($plato['imagen']) }}" 
                                                                                          alt="{{ $nombrePlato }}"
                                                                                          class="w-full h-full object-cover"
@@ -879,8 +886,8 @@
                                                                                                class="hidden"
                                                                                                onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                                id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                        <span class="inline-flex items-center px-3 py-1.5 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
-                                                                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                                                                             </svg>
                                                                                             Cambiar
@@ -888,9 +895,9 @@
                                                                                     </label>
                                                                                     <button type="button"
                                                                                             onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
-                                                                                            class="inline-flex items-center justify-center w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                                                                            class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
                                                                                             title="Eliminar imagen">
-                                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                                                         </svg>
                                                                                     </button>
@@ -903,87 +910,83 @@
                                                                                        class="hidden"
                                                                                        onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                        id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                <div class="w-24 h-24 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
-                                                                                    <svg class="w-7 h-7 mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <div class="w-20 h-20 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
+                                                                                    <svg class="w-5 h-5 mb-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                                                                     </svg>
-                                                                                    <span class="text-xs font-semibold text-accent-blue">Imagen</span>
+                                                                                    <span class="text-[9px] font-semibold text-accent-blue">Imagen</span>
                                                                                 </div>
                                                                             </label>
                                                                         @endif
                                                                     </div>
                                                                     
-                                                                    <!-- Contenido principal (derecha) -->
-                                                                    <div class="flex-1 min-w-0 pr-2">
-                                                                        <!-- Header: Nombre y Precio en la misma línea -->
-                                                                        <div class="flex items-start justify-between gap-4 mb-2 flex-wrap">
-                                                                            <h5 class="text-white font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors flex-1 min-w-0 break-words capitalize"
-                                                                                ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}"
-                                                                                style="word-break: break-word; hyphens: auto;">
-                                                                                {{ $nombrePlato }}
-                                                                            </h5>
-                                                                            <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
-                                                                                <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
-                                                                                    <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
-                                                                                    <input type="text" 
-                                                                                           value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
-                                                                                           placeholder="0"
-                                                                                           data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
-                                                                                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                                                                           onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
-                                                                                           class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
-                                                                                           id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                </div>
-                                                                                <span class="text-accent-blue text-xs min-w-[16px]" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
-                                                                            </div>
+                                                                    <!-- Precio (alineado a la derecha) -->
+                                                                    <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                                                        <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
+                                                                            <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
+                                                                            <input type="text" 
+                                                                                   value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
+                                                                                   placeholder="0"
+                                                                                   data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
+                                                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                                                                   onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
+                                                                                   class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
+                                                                                   id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         </div>
-                                                                        
-                                                                        <!-- Descripción -->
-                                                                        <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="mb-2">
-                                                                            @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
-                                                                                <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors line-clamp-2"
-                                                                                   ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                   id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                    {{ $plato['descripcion'] }}
-                                                                                </p>
-                                                                            @else
-                                                                                <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic"
-                                                                                   ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                   id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                    Click para agregar descripción...
-                                                                                </p>
+                                                                        <span class="text-accent-blue text-xs min-w-[16px]" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <!-- Bloque 2: Cuerpo (mt-2 o mt-4) -->
+                                                                <div class="mt-4 space-y-3">
+                                                                    <!-- Descripción -->
+                                                                    <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full">
+                                                                        @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
+                                                                            <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors w-full whitespace-normal"
+                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                {{ $plato['descripcion'] }}
+                                                                            </p>
+                                                                        @else
+                                                                            <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic w-full whitespace-normal"
+                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                Click para agregar descripción...
+                                                                            </p>
+                                                                        @endif
+                                                                    </div>
+                                                                    
+                                                                    <!-- Tags -->
+                                                                    <div id="tags-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full">
+                                                                        <div class="flex flex-wrap gap-1.5 mb-1.5" id="tags-list-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                            @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
+                                                                                @foreach($plato['tags'] as $tagIndex => $tag)
+                                                                                    @if(!empty($tag))
+                                                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-colors tag-item" 
+                                                                                              data-tag-index="{{ $tagIndex }}">
+                                                                                            {{ $tag }}
+                                                                                            <button type="button" 
+                                                                                                    onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
+                                                                                                    class="hover:text-orange-100 transition-colors p-0.5 rounded"
+                                                                                                    title="Eliminar tag">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                                                </svg>
+                                                                                            </button>
+                                                                                        </span>
+                                                                                    @endif
+                                                                                @endforeach
                                                                             @endif
                                                                         </div>
-                                                                        
-                                                                        <!-- Tags -->
-                                                                        <div id="tags-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                            <div class="flex flex-wrap gap-1.5 mb-1.5" id="tags-list-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
-                                                                                    @foreach($plato['tags'] as $tagIndex => $tag)
-                                                                                        @if(!empty($tag))
-                                                                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-colors tag-item" 
-                                                                                                  data-tag-index="{{ $tagIndex }}">
-                                                                                                {{ $tag }}
-                                                                                                <button type="button" 
-                                                                                                        onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
-                                                                                                        class="hover:text-orange-100 transition-colors p-0.5 rounded"
-                                                                                                        title="Eliminar tag">
-                                                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                                                                    </svg>
-                                                                                                </button>
-                                                                                            </span>
-                                                                                        @endif
-                                                                                    @endforeach
-                                                                                @endif
-                                                                            </div>
+                                                                        <div class="w-full max-w-xs">
                                                                             <input type="text" 
-                                                                                   placeholder="+ Agregar tag"
-                                                                                   class="text-xs bg-secondary-dark/80 border-2 border-slate-500/60 rounded-md px-2.5 py-1.5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-slate-400/80 hover:bg-secondary-dark transition-all w-full max-w-[180px]"
+                                                                                   placeholder="Escribe un tag y presiona Enter o coma"
+                                                                                   title="Escribe el nombre del tag y presiona Enter o la tecla coma (,) para agregarlo"
+                                                                                   class="text-xs bg-secondary-dark/80 border-2 border-slate-500/60 rounded-md px-2.5 py-1.5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-slate-400/80 hover:bg-secondary-dark transition-all w-full"
                                                                                    id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
                                                                                    onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                    autocomplete="off">
+                                                                            <p class="text-[10px] text-slate-500 mt-1 ml-0.5">💡 Presiona Enter o coma (,) para agregar</p>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2096,38 +2099,57 @@
             const reader = new FileReader();
             
             reader.onload = function(e) {
-                // Eliminar placeholder si existe
-                const placeholder = document.getElementById(`plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`);
-                if (placeholder) placeholder.remove();
-
-                // Crear o actualizar imagen
-                let img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
-                if (!img) {
-                    const imgContainer = document.createElement('div');
-                    imgContainer.className = 'relative inline-block';
-                    imgContainer.id = `plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`;
-                    
-                    img = document.createElement('img');
-                    img.id = `plato-imagen-${categoriaIndex}-${platoIndex}`;
-                    img.className = 'w-24 h-24 object-cover rounded-lg border border-accent-gray shadow-md';
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors';
-                    removeBtn.title = 'Eliminar imagen';
-                    removeBtn.innerHTML = '×';
-                    removeBtn.onclick = () => removePlatoImagen(categoriaIndex, platoIndex, null);
-                    
-                    imgContainer.appendChild(img);
-                    imgContainer.appendChild(removeBtn);
-                    container.appendChild(imgContainer);
+                // Mostrar preview mientras se sube
+                const previewUrl = e.target.result;
+                
+                // Si ya existe una imagen, solo actualizar el src
+                const existingImg = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
+                if (existingImg) {
+                    existingImg.src = previewUrl;
+                    existingImg.style.opacity = '0.6';
+                    return;
                 }
                 
-                img.src = e.target.result;
-                img.alt = 'Vista previa';
-                
-                // Agregar indicador de carga
-                img.style.opacity = '0.6';
+                // Si no hay imagen, eliminar todo el contenido del contenedor (incluyendo label)
+                // y reemplazar con la estructura de imagen
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+                container.innerHTML = `
+                    <div class="relative group/image">
+                        <div class="w-20 h-20 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-md bg-secondary-dark">
+                            <img src="${previewUrl}" 
+                                 alt="Vista previa"
+                                 class="w-full h-full object-cover"
+                                 id="plato-imagen-${categoriaIndex}-${platoIndex}"
+                                 style="opacity: 0.6;">
+                        </div>
+                        <!-- Overlay con botones al hover -->
+                        <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
+                            <label class="cursor-pointer">
+                                <input type="file" 
+                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                       class="hidden"
+                                       onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
+                                       id="imagen-input-${categoriaIndex}-${platoIndex}">
+                                <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Cambiar
+                                </span>
+                            </label>
+                            <button type="button"
+                                    onclick="removePlatoImagen(${categoriaIndex}, ${platoIndex}, null)"
+                                    class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                    title="Eliminar imagen">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
             };
             
             reader.readAsDataURL(file);
@@ -2139,13 +2161,10 @@
             formData.append('plato_index', platoIndex);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
-            // Mostrar loader
-            const button = event.target.closest('label').querySelector('span');
-            const originalText = button.innerHTML;
-            button.innerHTML = '<span class="mr-2">⏳</span>Subiendo...';
-            button.style.opacity = '0.7';
-            button.style.cursor = 'not-allowed';
+            // Deshabilitar el input mientras se sube
             event.target.disabled = true;
+            
+            // Mostrar indicador de carga en la imagen (ya se muestra con opacity en el preview)
 
             try {
                 const menuId = {{ $menu->id ?? 'null' }};
@@ -2183,36 +2202,82 @@
                     if (img) {
                         img.src = data.imagen_url;
                         img.style.opacity = '1';
+                        img.alt = img.alt || 'Imagen del plato';
+                    } else {
+                        // Si no existe la imagen, crear toda la estructura
+                        container.innerHTML = `
+                            <div class="relative group/image">
+                                <div class="w-20 h-20 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-md bg-secondary-dark">
+                                    <img src="${data.imagen_url}" 
+                                         alt="Imagen del plato"
+                                         class="w-full h-full object-cover"
+                                         id="plato-imagen-${categoriaIndex}-${platoIndex}">
+                                </div>
+                                <!-- Overlay con botones al hover -->
+                                <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
+                                    <label class="cursor-pointer">
+                                        <input type="file" 
+                                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                                               class="hidden"
+                                               onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
+                                               id="imagen-input-${categoriaIndex}-${platoIndex}">
+                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Cambiar
+                                        </span>
+                                    </label>
+                                    <button type="button"
+                                            onclick="removePlatoImagen(${categoriaIndex}, ${platoIndex}, null)"
+                                            class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                            title="Eliminar imagen">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
                     }
                     
-                    // Actualizar texto del botón
-                    button.innerHTML = '<span class="mr-2">📷</span>Cambiar';
+                    showNotification('✅ Imagen subida correctamente', 'success');
                 } else {
                     throw new Error(data.error || 'Error al subir la imagen');
                 }
             } catch (error) {
                 console.error('Error completo al subir imagen:', error);
                 console.error('Stack:', error.stack);
-                alert('Error al subir la imagen: ' + (error.message || 'Error desconocido'));
+                showNotification('❌ Error al subir la imagen: ' + (error.message || 'Error desconocido'), 'error');
                 
-                // Remover preview si falló
+                // Si falló y no había imagen antes, restaurar placeholder
                 const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
                 if (img) {
-                    const wrapper = img.closest(`#plato-imagen-wrapper-${categoriaIndex}-${platoIndex}`);
-                    if (wrapper) wrapper.remove();
-                    
-                    // Restaurar placeholder
-                    const placeholder = document.createElement('div');
-                    placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
-                    placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
-                    placeholder.textContent = 'Sin imagen';
-                    container.appendChild(placeholder);
+                    const imageWrapper = img.closest('.relative.group\\/image');
+                    if (imageWrapper && !imageWrapper.querySelector('input[type="file"]')) {
+                        // Restaurar placeholder
+                        container.innerHTML = `
+                            <label class="cursor-pointer">
+                                <input type="file" 
+                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                       class="hidden"
+                                       onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
+                                       id="imagen-input-${categoriaIndex}-${platoIndex}">
+                                <div class="w-20 h-20 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
+                                    <svg class="w-5 h-5 mb-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-[9px] font-semibold text-accent-blue">Imagen</span>
+                                </div>
+                            </label>
+                        `;
+                    } else {
+                        // Si había imagen antes, restaurar opacidad
+                        img.style.opacity = '1';
+                    }
                 }
             } finally {
-                // Restaurar botón
-                button.innerHTML = originalText;
-                button.style.opacity = '1';
-                button.style.cursor = 'pointer';
+                // Restaurar input
                 event.target.disabled = false;
                 event.target.value = '';
             }
