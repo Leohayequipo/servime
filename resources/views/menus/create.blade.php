@@ -836,87 +836,156 @@
                                                 <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
                                                     {{ $categoria['nombre'] ?? 'Sin nombre' }}
                                                 </h4>
-                                                <div class="space-y-4">
+                                                <div class="space-y-4" id="platos-container-{{ $categoriaIndex }}" data-categoria-index="{{ $categoriaIndex }}">
                                                     @if(isset($categoria['platos']) && is_array($categoria['platos']))
                                                         @foreach($categoria['platos'] as $platoIndex => $plato)
-                                                            <div class="flex justify-between items-start py-3 border-b border-accent-gray/50 last:border-b-0 gap-4">
-                                                                <!-- Información del plato -->
-                                                                <div class="flex-1 min-w-0">
-                                                                    <div class="flex items-start justify-between gap-3 mb-1">
-                                                                        <h5 class="text-text-primary font-semibold text-base leading-tight">
-                                                                    {{ $plato['nombre'] ?? 'Sin nombre' }}
-                                                                        </h5>
-                                                                        <div class="flex items-center gap-2 flex-shrink-0">
-                                                                            <div class="flex items-center bg-secondary-dark border border-accent-gray/50 rounded-lg overflow-hidden">
-                                                                                <span class="text-accent-blue font-bold text-base px-2 py-1 border-r border-accent-gray/50">$</span>
-                                                                                <input type="text" 
-                                                                                       value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
-                                                                                       placeholder="0"
-                                                                                       data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
-                                                                                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                                                                       onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
-                                                                                       class="text-accent-blue font-bold text-base whitespace-nowrap bg-transparent px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all w-20 text-right"
-                                                                                       id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                            </div>
-                                                                            <span class="text-accent-blue text-xs opacity-70" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
+                                                            @php
+                                                                // Transformar nombre: eliminar guiones y normalizar capitalización
+                                                                $nombrePlato = $plato['nombre'] ?? 'Sin nombre';
+                                                                // Eliminar guiones y underscores
+                                                                $nombrePlato = str_replace(['-', '_'], ' ', $nombrePlato);
+                                                                // Normalizar: primera letra de cada palabra en mayúscula, resto en minúscula
+                                                                $nombrePlato = mb_convert_case($nombrePlato, MB_CASE_TITLE, 'UTF-8');
+                                                                // Limpiar espacios múltiples
+                                                                $nombrePlato = preg_replace('/\s+/', ' ', trim($nombrePlato));
+                                                            @endphp
+                                                            <div class="group plato-item bg-primary-dark border-l-4 border-l-accent-blue border-r border-t border-b border-accent-gray/50 rounded-r-lg p-4 mb-3 hover:bg-primary-dark/90 hover:shadow-xl hover:border-accent-blue/60 transition-all duration-300 cursor-move shadow-lg" 
+                                                                 data-plato-index="{{ $platoIndex }}">
+                                                                <div class="flex gap-4 items-start align-top">
+                                                                    <!-- Drag Handle -->
+                                                                    <div class="flex items-start pt-1.5">
+                                                                        <div class="flex items-center justify-center w-5 h-5 text-accent-blue opacity-50 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+                                                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                                                <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
+                                                                            </svg>
                                                                         </div>
                                                                     </div>
-                                                                    @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
-                                                                        <p class="text-text-secondary text-sm leading-relaxed mt-1.5">
-                                                                            {{ $plato['descripcion'] }}
-                                                                        </p>
-                                                                    @endif
                                                                     
-                                                                    <!-- Tags del plato -->
-                                                                    @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
-                                                                        <div class="flex flex-wrap gap-2 mt-2">
-                                                                            @foreach($plato['tags'] as $tag)
-                                                                                @if(!empty($tag))
-                                                                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                                                                                        {{ $tag }}
-                                                                                    </span>
-                                                                                @endif
-                                                                            @endforeach
-                                                                        </div>
-                                                                    @endif
-                                                                    
-                                                                    <!-- Imagen del plato -->
-                                                                    <div class="mt-3" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                    <!-- Imagen del plato (izquierda) -->
+                                                                    <div class="flex-shrink-0" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         @if(isset($plato['imagen']) && !empty($plato['imagen']))
-                                                                            <div class="relative inline-block">
-                                                                                <img src="{{ asset($plato['imagen']) }}" 
-                                                                                     alt="{{ $plato['nombre'] ?? 'Plato' }}"
-                                                                                     class="w-24 h-24 object-cover rounded-lg border border-accent-gray shadow-md"
-                                                                                     id="plato-imagen-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                <button type="button"
-                                                                                        onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
-                                                                                        class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors"
-                                                                                        title="Eliminar imagen">
-                                                                                    ×
-                                                                                </button>
+                                                                            <div class="relative group/image">
+                                                                                <div class="w-24 h-24 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-lg bg-secondary-dark">
+                                                                                    <img src="{{ asset($plato['imagen']) }}" 
+                                                                                         alt="{{ $nombrePlato }}"
+                                                                                         class="w-full h-full object-cover"
+                                                                                         id="plato-imagen-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                </div>
+                                                                                <!-- Overlay con botones al hover -->
+                                                                                <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
+                                                                                    <label class="cursor-pointer">
+                                                                                        <input type="file" 
+                                                                                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                                               class="hidden"
+                                                                                               onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                               id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                        <span class="inline-flex items-center px-3 py-1.5 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                                                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                                                            </svg>
+                                                                                            Cambiar
+                                                                                        </span>
+                                                                                    </label>
+                                                                                    <button type="button"
+                                                                                            onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
+                                                                                            class="inline-flex items-center justify-center w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                                                                            title="Eliminar imagen">
+                                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                                        </svg>
+                                                                                    </button>
+                                                                                </div>
                                                                             </div>
                                                                         @else
-                                                                            <div class="w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden"
-                                                                                 id="plato-imagen-placeholder-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                Sin imagen
-                                                                            </div>
+                                                                            <label class="cursor-pointer">
+                                                                                <input type="file" 
+                                                                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                                       class="hidden"
+                                                                                       onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                       id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                <div class="w-24 h-24 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
+                                                                                    <svg class="w-7 h-7 mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                                                    </svg>
+                                                                                    <span class="text-xs font-semibold text-accent-blue">Imagen</span>
+                                                                                </div>
+                                                                            </label>
                                                                         @endif
                                                                     </div>
-                                                                </div>
-                                                                
-                                                                <!-- Botón de subir imagen -->
-                                                                <div class="flex-shrink-0">
-                                                                    <label class="cursor-pointer">
-                                                                        <input type="file" 
-                                                                               accept="image/jpeg,image/png,image/jpg,image/gif"
-                                                                               class="hidden"
-                                                                               onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                               id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                        <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
-                                                                            <span class="mr-2">📷</span>
-                                                                            {{ isset($plato['imagen']) && !empty($plato['imagen']) ? 'Cambiar' : 'Subir' }}
-                                                                        </span>
-                                                                    </label>
+                                                                    
+                                                                    <!-- Contenido principal (derecha) -->
+                                                                    <div class="flex-1 min-w-0 pr-2">
+                                                                        <!-- Header: Nombre y Precio en la misma línea -->
+                                                                        <div class="flex items-start justify-between gap-4 mb-2 flex-wrap">
+                                                                            <h5 class="text-white font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors flex-1 min-w-0 break-words capitalize"
+                                                                                ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                                style="word-break: break-word; hyphens: auto;">
+                                                                                {{ $nombrePlato }}
+                                                                            </h5>
+                                                                            <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                                                                <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
+                                                                                    <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
+                                                                                    <input type="text" 
+                                                                                           value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
+                                                                                           placeholder="0"
+                                                                                           data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
+                                                                                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                                                                           onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
+                                                                                           class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
+                                                                                           id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                </div>
+                                                                                <span class="text-accent-blue text-xs min-w-[16px]" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        <!-- Descripción -->
+                                                                        <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="mb-2">
+                                                                            @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
+                                                                                <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors line-clamp-2"
+                                                                                   ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                   id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                    {{ $plato['descripcion'] }}
+                                                                                </p>
+                                                                            @else
+                                                                                <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic"
+                                                                                   ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                   id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                    Click para agregar descripción...
+                                                                                </p>
+                                                                            @endif
+                                                                        </div>
+                                                                        
+                                                                        <!-- Tags -->
+                                                                        <div id="tags-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                            <div class="flex flex-wrap gap-1.5 mb-1.5" id="tags-list-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
+                                                                                    @foreach($plato['tags'] as $tagIndex => $tag)
+                                                                                        @if(!empty($tag))
+                                                                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-colors tag-item" 
+                                                                                                  data-tag-index="{{ $tagIndex }}">
+                                                                                                {{ $tag }}
+                                                                                                <button type="button" 
+                                                                                                        onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
+                                                                                                        class="hover:text-orange-100 transition-colors p-0.5 rounded"
+                                                                                                        title="Eliminar tag">
+                                                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                                                    </svg>
+                                                                                                </button>
+                                                                                            </span>
+                                                                                        @endif
+                                                                                    @endforeach
+                                                                                @endif
+                                                                            </div>
+                                                                            <input type="text" 
+                                                                                   placeholder="+ Agregar tag"
+                                                                                   class="text-xs bg-secondary-dark/80 border-2 border-slate-500/60 rounded-md px-2.5 py-1.5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-slate-400/80 hover:bg-secondary-dark transition-all w-full max-w-[180px]"
+                                                                                   id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                                   onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                   autocomplete="off">
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         @endforeach
@@ -1020,6 +1089,9 @@
         // Configurar PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    
+    <!-- SortableJS for drag & drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
@@ -1360,6 +1432,9 @@
             
             // Inicializar vista previa
             setTimeout(updatePreview, 100);
+            
+            // Inicializar drag & drop para platos
+            initializeSortable();
         });
         
         // Función para sincronizar promociones al form principal
@@ -2375,12 +2450,609 @@
             }
         }
 
-        // Función helper para mensajes de éxito
-        function showSuccessMessage(message) {
-            // Puedes usar tu sistema de notificaciones existente
-            // Por ahora un simple log
-            console.log('✅', message);
+        // Función para habilitar edición inline del nombre
+        function enableEditNombre(categoriaIndex, platoIndex) {
+            const displayElement = document.getElementById(`nombre-display-${categoriaIndex}-${platoIndex}`);
+            if (!displayElement) return;
+            
+            const currentValue = displayElement.textContent.trim();
+            
+            // Crear input
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentValue;
+            input.className = 'text-text-primary font-semibold text-base leading-tight bg-secondary-dark border border-accent-blue rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-accent-blue';
+            input.id = `nombre-input-${categoriaIndex}-${platoIndex}`;
+            
+            // Reemplazar display con input
+            displayElement.style.display = 'none';
+            displayElement.parentNode.insertBefore(input, displayElement);
+            
+            // Enfocar y seleccionar texto
+            input.focus();
+            input.select();
+            
+            // Guardar al perder foco o Enter
+            const save = async () => {
+                const newValue = input.value.trim();
+                input.remove();
+                displayElement.style.display = '';
+                
+                if (newValue !== currentValue && newValue !== '') {
+                    await updatePlatoNombre(categoriaIndex, platoIndex, newValue);
+                }
+            };
+            
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    input.blur();
+                } else if (e.key === 'Escape') {
+                    input.remove();
+                    displayElement.style.display = '';
+                }
+            });
         }
+
+        // Función para actualizar nombre de plato
+        async function updatePlatoNombre(categoriaIndex, platoIndex, nuevoNombre) {
+            const displayElement = document.getElementById(`nombre-display-${categoriaIndex}-${platoIndex}`);
+            const statusElement = document.getElementById(`nombre-status-${categoriaIndex}-${platoIndex}`) || createStatusElement(`nombre-status-${categoriaIndex}-${platoIndex}`, displayElement.parentNode);
+            
+            if (!displayElement) return;
+            
+            const valorOriginal = displayElement.textContent.trim();
+            
+            // Guardar en historial para undo
+            undoHistory.save({
+                type: 'nombre',
+                categoriaIndex: categoriaIndex,
+                platoIndex: platoIndex
+            }, valorOriginal);
+            
+            // Mostrar indicador de carga
+            if (statusElement) {
+                statusElement.textContent = '⏳';
+                statusElement.className = 'text-accent-blue text-xs opacity-70';
+            }
+            
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    throw new Error('El menú no está disponible');
+                }
+
+                const formData = new FormData();
+                formData.append('nombre', nuevoNombre);
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const updateUrl = `{{ route('menus.update.plato.nombre', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+
+                // Transformar y actualizar display (normalizar capitalización)
+                const nombreTransformado = nuevoNombre
+                    .replace(/[-_]/g, ' ')
+                    .split(' ')
+                    .map(word => {
+                        if (word.length === 0) return word;
+                        // Primera letra en mayúscula, resto en minúscula
+                        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                    })
+                    .filter(word => word.length > 0)
+                    .join(' ')
+                    .trim();
+                displayElement.textContent = nombreTransformado;
+                
+                // Mostrar éxito
+                if (statusElement) {
+                    statusElement.textContent = '✓';
+                    statusElement.className = 'text-green-500 text-xs';
+                    setTimeout(() => {
+                        statusElement.textContent = '';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error al actualizar nombre:', error);
+                
+                // Restaurar valor original
+                displayElement.textContent = valorOriginal;
+                
+                // Mostrar error
+                if (statusElement) {
+                    statusElement.textContent = '✗';
+                    statusElement.className = 'text-red-500 text-xs';
+                    setTimeout(() => {
+                        statusElement.textContent = '';
+                    }, 3000);
+                }
+                
+                showError('Error al actualizar el nombre: ' + (error.message || 'Error desconocido'));
+            }
+        }
+
+        // Función para habilitar edición inline de la descripción
+        function enableEditDescripcion(categoriaIndex, platoIndex) {
+            const displayElement = document.getElementById(`descripcion-display-${categoriaIndex}-${platoIndex}`);
+            if (!displayElement) return;
+            
+            const currentValue = displayElement.textContent.trim();
+            const isPlaceholder = displayElement.classList.contains('opacity-50');
+            
+            // Crear textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = isPlaceholder ? '' : currentValue;
+            textarea.className = 'text-text-secondary text-sm leading-relaxed bg-secondary-dark border border-accent-blue rounded px-2 py-1 w-full min-h-[60px] focus:outline-none focus:ring-2 focus:ring-accent-blue resize-y';
+            textarea.id = `descripcion-input-${categoriaIndex}-${platoIndex}`;
+            textarea.style.fontFamily = 'inherit';
+            
+            // Reemplazar display con textarea
+            displayElement.style.display = 'none';
+            displayElement.parentNode.insertBefore(textarea, displayElement);
+            
+            // Enfocar
+            textarea.focus();
+            
+            // Guardar al perder foco o Ctrl+Enter
+            const save = async () => {
+                const newValue = textarea.value.trim();
+                textarea.remove();
+                displayElement.style.display = '';
+                
+                if (newValue !== currentValue) {
+                    await updatePlatoDescripcion(categoriaIndex, platoIndex, newValue);
+                }
+            };
+            
+            textarea.addEventListener('blur', save);
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    textarea.blur();
+                } else if (e.key === 'Escape') {
+                    textarea.remove();
+                    displayElement.style.display = '';
+                }
+            });
+        }
+
+        // Función para actualizar descripción de plato
+        async function updatePlatoDescripcion(categoriaIndex, platoIndex, nuevaDescripcion) {
+            const displayElement = document.getElementById(`descripcion-display-${categoriaIndex}-${platoIndex}`);
+            const containerElement = document.getElementById(`descripcion-container-${categoriaIndex}-${platoIndex}`);
+            
+            if (!displayElement || !containerElement) return;
+            
+            const valorOriginal = displayElement.textContent.trim();
+            const isPlaceholder = displayElement.classList.contains('opacity-50');
+            
+            // Guardar en historial para undo (solo si no es placeholder)
+            if (!isPlaceholder && valorOriginal) {
+                undoHistory.save({
+                    type: 'descripcion',
+                    categoriaIndex: categoriaIndex,
+                    platoIndex: platoIndex
+                }, valorOriginal);
+            }
+            
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    throw new Error('El menú no está disponible');
+                }
+
+                const formData = new FormData();
+                formData.append('descripcion', nuevaDescripcion);
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const updateUrl = `{{ route('menus.update.plato.descripcion', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+
+                // Actualizar display
+                if (nuevaDescripcion) {
+                    displayElement.textContent = nuevaDescripcion;
+                    displayElement.classList.remove('opacity-50', 'italic');
+                    displayElement.classList.add('whitespace-pre-wrap');
+                } else {
+                    displayElement.textContent = 'Click para agregar descripción...';
+                    displayElement.classList.add('opacity-50', 'italic');
+                    displayElement.classList.remove('whitespace-pre-wrap');
+                }
+                
+                // Mostrar feedback visual
+                containerElement.classList.add('opacity-50');
+                setTimeout(() => {
+                    containerElement.classList.remove('opacity-50');
+                }, 300);
+            } catch (error) {
+                console.error('Error al actualizar descripción:', error);
+                
+                // Restaurar valor original
+                displayElement.textContent = isPlaceholder ? 'Click para agregar descripción...' : valorOriginal;
+                
+                showError('Error al actualizar la descripción: ' + (error.message || 'Error desconocido'));
+            }
+        }
+
+        // Función para manejar input de tags
+        function handleTagInput(event, categoriaIndex, platoIndex) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                const input = event.target;
+                const tagValue = input.value.trim();
+                
+                if (tagValue) {
+                    addTag(categoriaIndex, platoIndex, tagValue);
+                    input.value = '';
+                }
+            }
+        }
+
+        // Función para agregar tag
+        async function addTag(categoriaIndex, platoIndex, tagValue) {
+            // Obtener tags actuales
+            const tagsList = document.getElementById(`tags-list-${categoriaIndex}-${platoIndex}`);
+            if (!tagsList) return;
+            
+            const currentTags = Array.from(tagsList.querySelectorAll('.tag-item')).map(tag => tag.textContent.trim().replace('×', '').trim());
+            
+            // Verificar si el tag ya existe
+            if (currentTags.includes(tagValue)) {
+                return;
+            }
+            
+            // Agregar tag al DOM
+            const tagElement = document.createElement('span');
+            tagElement.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30 tag-item';
+            tagElement.innerHTML = `
+                ${tagValue}
+                <button type="button" 
+                        onclick="removeTag(${categoriaIndex}, ${platoIndex}, '${tagValue.replace(/'/g, "\\'")}')"
+                        class="ml-1 hover:text-orange-100 transition-colors"
+                        title="Eliminar tag">
+                    ×
+                </button>
+            `;
+            tagsList.appendChild(tagElement);
+            
+            // Actualizar tags en el servidor
+            await updatePlatoTags(categoriaIndex, platoIndex, [...currentTags, tagValue]);
+        }
+
+        // Función para eliminar tag
+        async function removeTag(categoriaIndex, platoIndex, tagValue) {
+            const tagsList = document.getElementById(`tags-list-${categoriaIndex}-${platoIndex}`);
+            if (!tagsList) return;
+            
+            // Eliminar tag del DOM
+            const tagElements = tagsList.querySelectorAll('.tag-item');
+            tagElements.forEach(tagEl => {
+                const text = tagEl.textContent.trim().replace('×', '').trim();
+                if (text === tagValue) {
+                    tagEl.remove();
+                }
+            });
+            
+            // Obtener tags restantes
+            const remainingTags = Array.from(tagsList.querySelectorAll('.tag-item')).map(tag => tag.textContent.trim().replace('×', '').trim());
+            
+            // Actualizar tags en el servidor
+            await updatePlatoTags(categoriaIndex, platoIndex, remainingTags);
+        }
+
+        // Función para actualizar tags de plato
+        async function updatePlatoTags(categoriaIndex, platoIndex, tags) {
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    throw new Error('El menú no está disponible');
+                }
+
+                const formData = new FormData();
+                tags.forEach(tag => {
+                    formData.append('tags[]', tag);
+                });
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const updateUrl = `{{ route('menus.update.plato.tags', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+
+                // Mostrar feedback visual
+                const container = document.getElementById(`tags-container-${categoriaIndex}-${platoIndex}`);
+                if (container) {
+                    container.classList.add('opacity-50');
+                    setTimeout(() => {
+                        container.classList.remove('opacity-50');
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error al actualizar tags:', error);
+                showError('Error al actualizar los tags: ' + (error.message || 'Error desconocido'));
+            }
+        }
+
+        // Inicializar SortableJS para drag & drop de platos
+        function initializeSortable() {
+            const categoriaContainers = document.querySelectorAll('[id^="platos-container-"]');
+            
+            categoriaContainers.forEach(container => {
+                const categoriaIndex = container.dataset.categoriaIndex;
+                
+                new Sortable(container, {
+                    animation: 150,
+                    ghostClass: 'opacity-50',
+                    chosenClass: 'bg-secondary-dark/50',
+                    dragClass: 'bg-accent-blue/20',
+                    filter: 'input, textarea, button, label',
+                    preventOnFilter: false,
+                    onEnd: async function(evt) {
+                        const oldIndex = evt.oldIndex;
+                        const newIndex = evt.newIndex;
+                        
+                        if (oldIndex === newIndex) return;
+                        
+                        // Obtener el nuevo orden de índices basado en la posición original
+                        const items = Array.from(container.querySelectorAll('.plato-item'));
+                        const newOrder = items.map((item, index) => {
+                            // Obtener el índice original del plato
+                            return parseInt(item.dataset.platoIndex);
+                        });
+                        
+                        // Reordenar en el servidor
+                        await reordenarPlatos(categoriaIndex, newOrder);
+                    }
+                });
+            });
+        }
+
+        // Función para reordenar platos
+        async function reordenarPlatos(categoriaIndex, nuevoOrden) {
+            try {
+                const menuId = {{ $menu->id ?? 'null' }};
+                if (!menuId) {
+                    throw new Error('El menú no está disponible');
+                }
+
+                const formData = new FormData();
+                formData.append('categoria_index', categoriaIndex);
+                nuevoOrden.forEach(index => {
+                    formData.append('platos_order[]', index);
+                });
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const updateUrl = `{{ route('menus.reordenar.platos', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Respuesta del servidor no válida (${response.status}): ${text.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+
+                // Actualizar data-plato-index de cada item según el nuevo orden
+                const container = document.getElementById(`platos-container-${categoriaIndex}`);
+                if (container) {
+                    const items = container.querySelectorAll('.plato-item');
+                    items.forEach((item, index) => {
+                        item.dataset.platoIndex = nuevoOrden[index];
+                    });
+                }
+
+                // Mostrar feedback visual
+                showSuccessMessage('Platos reordenados exitosamente');
+            } catch (error) {
+                console.error('Error al reordenar platos:', error);
+                showError('Error al reordenar los platos: ' + (error.message || 'Error desconocido'));
+            }
+        }
+
+        // Helper para crear elemento de estado
+        function createStatusElement(id, parent) {
+            const status = document.createElement('span');
+            status.id = id;
+            status.className = 'text-accent-blue text-xs opacity-70';
+            parent.appendChild(status);
+            return status;
+        }
+
+        // Sistema de notificaciones mejorado
+        function showSuccessMessage(message, duration = 2000) {
+            console.log('✅', message);
+            
+            // Crear notificación visual
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
+            notification.innerHTML = `
+                <span>✓</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            // Remover después de la duración
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                notification.style.transition = 'all 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // Función para mostrar errores mejorada
+        function showError(message, duration = 4000) {
+            console.error('❌', message);
+            
+            // Crear notificación de error
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
+            notification.innerHTML = `
+                <span>✗</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            // Remover después de la duración
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                notification.style.transition = 'all 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // Sistema de historial simple para undo básico (último cambio)
+        const undoHistory = {
+            lastAction: null,
+            lastState: null,
+            
+            save: function(action, state) {
+                this.lastAction = action;
+                this.lastState = state;
+                
+                // Mostrar botón de undo temporalmente
+                this.showUndoButton();
+            },
+            
+            undo: async function() {
+                if (!this.lastAction || !this.lastState) {
+                    showError('No hay acciones para deshacer');
+                    return;
+                }
+                
+                try {
+                    // Restaurar estado anterior según el tipo de acción
+                    switch(this.lastAction.type) {
+                        case 'nombre':
+                            await updatePlatoNombre(this.lastAction.categoriaIndex, this.lastAction.platoIndex, this.lastState);
+                            break;
+                        case 'descripcion':
+                            await updatePlatoDescripcion(this.lastAction.categoriaIndex, this.lastAction.platoIndex, this.lastState);
+                            break;
+                        case 'precio':
+                            await updatePlatoPrecio(this.lastAction.categoriaIndex, this.lastAction.platoIndex, this.lastState);
+                            break;
+                    }
+                    
+                    showSuccessMessage('Cambio deshecho');
+                    this.clear();
+                } catch (error) {
+                    showError('Error al deshacer el cambio');
+                }
+            },
+            
+            showUndoButton: function() {
+                // Remover botón anterior si existe
+                const existingBtn = document.getElementById('undo-btn');
+                if (existingBtn) {
+                    existingBtn.remove();
+                }
+                
+                // Crear botón de undo
+                const btn = document.createElement('button');
+                btn.id = 'undo-btn';
+                btn.className = 'fixed bottom-20 right-6 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all';
+                btn.innerHTML = `
+                    <span>↶</span>
+                    <span>Deshacer</span>
+                `;
+                btn.onclick = () => this.undo();
+                document.body.appendChild(btn);
+                
+                // Ocultar después de 5 segundos
+                setTimeout(() => {
+                    if (btn.parentNode) {
+                        btn.style.opacity = '0';
+                        setTimeout(() => btn.remove(), 300);
+                    }
+                }, 5000);
+            },
+            
+            clear: function() {
+                this.lastAction = null;
+                this.lastState = null;
+                const btn = document.getElementById('undo-btn');
+                if (btn) btn.remove();
+            }
+        };
+        
+        // Agregar atajo de teclado Ctrl+Z para undo
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z' && !e.target.tagName.match(/INPUT|TEXTAREA/)) {
+                e.preventDefault();
+                undoHistory.undo();
+            }
+        });
 
         // Detectar mensajes de sesión y mostrarlos en modal mejorado
         @if (session('success'))

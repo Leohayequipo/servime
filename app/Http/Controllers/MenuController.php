@@ -736,47 +736,19 @@ class MenuController extends Controller
         ]);
 
         try {
-            // Obtener y decodificar JSON actual
-            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+            $contenido = $this->getMenuContent($menu);
             
-            if (empty($rawContent)) {
-                return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
-            }
-
-            // Limpiar el contenido JSON
-            $jsonContent = $rawContent;
-            if (strpos($jsonContent, '```json') !== false) {
-                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
-                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
-            }
-            
-            $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
-                return response()->json(['error' => 'Formato de menú inválido.'], 400);
-            }
-
-            // Validar índices
             $categoriaIndex = $validated['categoria_index'];
             $platoIndex = $validated['plato_index'];
             
-            if (!isset($contenido['categorias'][$categoriaIndex]) || !isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
-            // Actualizar precio
             $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
             $plato['precio'] = $validated['precio'] ?? '';
 
-            // Guardar JSON actualizado
-            $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
-            if ($jsonResult === false) {
-                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
-            }
-            
-            $menu->contexto_gpt = $jsonResult;
-            $menu->save();
+            $this->saveMenuContent($menu, $contenido);
 
             return response()->json([
                 'success' => true,
@@ -790,6 +762,268 @@ class MenuController extends Controller
                 'error' => 'Error al actualizar el precio: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Actualizar nombre de plato
+     */
+    public function updatePlatoNombre(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+            
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            $plato['nombre'] = trim($validated['nombre']);
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'nombre' => $plato['nombre'],
+                'message' => 'Nombre actualizado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar nombre de plato: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al actualizar el nombre: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar descripción de plato
+     */
+    public function updatePlatoDescripcion(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'descripcion' => 'nullable|string',
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+            
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            $plato['descripcion'] = trim($validated['descripcion'] ?? '');
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'descripcion' => $plato['descripcion'],
+                'message' => 'Descripción actualizada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar descripción de plato: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al actualizar la descripción: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar tags de plato
+     */
+    public function updatePlatoTags(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+            
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            
+            // Filtrar tags vacíos y normalizar
+            $tags = array_filter(array_map('trim', $validated['tags'] ?? []), function($tag) {
+                return !empty($tag);
+            });
+            
+            $plato['tags'] = array_values($tags); // Reindexar array
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'tags' => $plato['tags'],
+                'message' => 'Tags actualizados exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar tags de plato: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al actualizar los tags: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reordenar platos dentro de una categoría
+     */
+    public function reordenarPlatos(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'categoria_index' => 'required|integer',
+            'platos_order' => 'required|array',
+            'platos_order.*' => 'integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+            
+            $categoriaIndex = $validated['categoria_index'];
+            
+            if (!isset($contenido['categorias'][$categoriaIndex])) {
+                return response()->json(['error' => 'Categoría inválida.'], 400);
+            }
+
+            $categoria = &$contenido['categorias'][$categoriaIndex];
+            $platosOrden = $validated['platos_order'];
+            
+            // Validar que los índices coincidan con la cantidad de platos
+            if (count($platosOrden) !== count($categoria['platos'])) {
+                return response()->json(['error' => 'El orden no coincide con la cantidad de platos.'], 400);
+            }
+
+            // Reordenar platos según el nuevo orden
+            $nuevosPlatos = [];
+            foreach ($platosOrden as $indiceOriginal) {
+                if (isset($categoria['platos'][$indiceOriginal])) {
+                    $nuevosPlatos[] = $categoria['platos'][$indiceOriginal];
+                }
+            }
+            
+            $categoria['platos'] = $nuevosPlatos;
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Platos reordenados exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al reordenar platos: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al reordenar los platos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Obtener y decodificar contenido del menú
+     */
+    private function getMenuContent(Menu $menu): array
+    {
+        $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
+        
+        if (empty($rawContent)) {
+            throw new \Exception('No hay contenido procesado en este menú.');
+        }
+
+        $jsonContent = $rawContent;
+        if (strpos($jsonContent, '```json') !== false) {
+            $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+            $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+        }
+        
+        $contenido = json_decode(trim($jsonContent), true);
+        
+        if (!$contenido || !isset($contenido['categorias'])) {
+            throw new \Exception('Formato de menú inválido.');
+        }
+
+        return $contenido;
+    }
+
+    /**
+     * Helper: Guardar contenido del menú
+     */
+    private function saveMenuContent(Menu $menu, array $contenido): void
+    {
+        $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        
+        if ($jsonResult === false) {
+            throw new \Exception('Error al actualizar el menú: ' . json_last_error_msg());
+        }
+        
+        $menu->contexto_gpt = $jsonResult;
+        $menu->save();
     }
 
     /**
