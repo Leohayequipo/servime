@@ -861,9 +861,19 @@
                                                                     </div>
                                                                     <h5 class="text-white font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors capitalize whitespace-normal flex-1"
                                                                         ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                        onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'nombre')"
                                                                         id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         {{ $nombrePlato }}
                                                                     </h5>
+                                                                    <!-- Botón de edición visible en móvil -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                            class="md:hidden flex-shrink-0 inline-flex items-center justify-center w-8 h-8 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
+                                                                            title="Editar nombre">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                        </svg>
+                                                                    </button>
                                                                 </div>
                                                                 
                                                                 <!-- Foto y Precio (misma línea) -->
@@ -940,20 +950,31 @@
                                                                 <!-- Bloque 2: Cuerpo (mt-2 o mt-4) -->
                                                                 <div class="mt-4 space-y-3">
                                                                     <!-- Descripción -->
-                                                                    <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full">
+                                                                    <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full relative">
                                                                         @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
-                                                                            <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors w-full whitespace-normal"
+                                                                            <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors w-full whitespace-normal pr-8"
                                                                                ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
                                                                                id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                                 {{ $plato['descripcion'] }}
                                                                             </p>
                                                                         @else
-                                                                            <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic w-full whitespace-normal"
+                                                                            <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic w-full whitespace-normal pr-8"
                                                                                ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
                                                                                id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                                 Click para agregar descripción...
                                                                             </p>
                                                                         @endif
+                                                                        <!-- Botón de edición visible en móvil -->
+                                                                        <button type="button"
+                                                                                onclick="event.stopPropagation(); enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                class="md:hidden absolute top-0 right-0 inline-flex items-center justify-center w-7 h-7 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
+                                                                                title="Editar descripción">
+                                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                            </svg>
+                                                                        </button>
                                                                     </div>
                                                                     
                                                                     <!-- Tags -->
@@ -2512,6 +2533,38 @@
                     inputElement.disabled = false;
                     inputElement.style.opacity = '1';
                 }
+            }
+        }
+
+        // Detectar si es dispositivo móvil
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   (window.innerWidth <= 768);
+        }
+
+        // Manejar clicks para edición (móvil: un toque, desktop: doble clic)
+        let lastClickTime = {};
+        let lastClickTarget = {};
+        
+        function handleEditClick(event, categoriaIndex, platoIndex, tipo) {
+            const isMobile = isMobileDevice();
+            const clickKey = `${categoriaIndex}-${platoIndex}-${tipo}`;
+            const currentTime = Date.now();
+            
+            if (isMobile) {
+                // En móvil, un solo toque permite editar
+                event.preventDefault();
+                event.stopPropagation();
+                
+                if (tipo === 'nombre') {
+                    enableEditNombre(categoriaIndex, platoIndex);
+                } else if (tipo === 'descripcion') {
+                    enableEditDescripcion(categoriaIndex, platoIndex);
+                }
+            } else {
+                // En desktop, solo doble clic (ondblclick se encarga)
+                // Esta función solo previene el comportamiento por defecto en desktop
+                return;
             }
         }
 
