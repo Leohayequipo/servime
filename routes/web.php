@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio:slug}/menus/{menu}/export', [App\Http\Controllers\MenuController::class, 'export'])->name('menus.export');
     Route::post('/comercios/{comercio:slug}/menus/preview-import', [App\Http\Controllers\MenuController::class, 'previewImport'])->name('menus.preview.import');
     Route::post('/comercios/{comercio:slug}/menus/import', [App\Http\Controllers\MenuController::class, 'import'])->name('menus.import');
+    Route::post('/comercios/{comercio:slug}/menus/update-theme-colors', [App\Http\Controllers\MenuController::class, 'updateThemeColors'])->name('menus.update.theme.colors');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones');

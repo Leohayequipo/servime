@@ -239,175 +239,175 @@
 
             <!-- Formulario Principal del Menú -->
             <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6 mb-8" id="menu-form">
-                @csrf
-                @if($isEdit)
-                    @method('PUT')
-                    <!-- Campo oculto para mantener el formato actual -->
-                    <input type="hidden" name="formato" value="{{ $menu->formato }}">
-                @endif
-
-                <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
-                <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
-                <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
-                
-                <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
-                <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
-                <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
-                <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
-                <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
-                
-                <!-- Información del Comercio -->
-                <div class="metric-card">
-                    <div class="bg-secondary-dark p-4 rounded-xl mb-6">
-                        <h3 class="text-lg font-medium text-text-primary mb-2">Comercio: {{ $comercio->nombre }}</h3>
-                        @if($comercio->descripcion)
-                            <p class="text-sm text-text-secondary">{{ $comercio->descripcion }}</p>
-                        @endif
-                    </div>
-
-                    <!-- Nombre del Menú -->
-                    <div class="mb-6">
-                        <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
-                            Nombre del Menú
-                        </label>
-                        <input type="text" 
-                               id="nombre" 
-                               name="nombre"
-                               value="{{ $menu->nombre ?? '' }}"
-                               placeholder="Ej: Menú Principal, Menú de Temporada, etc."
-                               class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                        <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                    </div>
-
-                    <!-- Menú Actual (solo en edición) -->
-                    @if($isEdit && $menu && $menu->archivo_original)
-                        <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div class="flex items-center space-x-4 flex-1 min-w-0">
-                                    @if($menu->formato === 'pdf')
-                                        <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                            <span class="text-red-400 text-2xl">📄</span>
-                                        </div>
-                                    @else
-                                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                            <span class="text-blue-400 text-2xl">🍽️</span>
-                                        </div>
-                                    @endif
-                                    <div class="min-w-0 flex-1">
-                                        <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
-                                        <div class="flex items-center space-x-2">
-                                            <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                {{ $menu->updated_at->format('d/m/Y') }}
-                                            </span>
-                                            <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                {{ $menu->updated_at->format('H:i') }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-                                    <button type="button" 
-                                            onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
-                                            class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
-                                        👁️ Ver
-                                    </button>
-                                    <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                       download
-                                       class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                                        <span>📥</span>
-                                        <span>Descargar</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Archivo del Menú -->
-                    <div class="mb-6">
-                        <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
-                            {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
-                        </label>
-                        <input type="file" 
-                               id="archivo" 
-                               name="archivo" 
-                               accept=".pdf,.jpeg,.jpg,.png,.gif" 
-                               {{ $isEdit ? '' : 'required' }} 
-                               class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
-                        <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
-                        <p class="mt-2 text-sm text-text-secondary">
+                            @csrf
                             @if($isEdit)
-                                Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
-                            @else
-                                Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
+                                @method('PUT')
+                <!-- Campo oculto para mantener el formato actual -->
+                <input type="hidden" name="formato" value="{{ $menu->formato }}">
                             @endif
-                        </p>
-                    </div>
-
-                    <!-- Información sobre el procesamiento -->
-                    <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mb-6">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
-                                    <span class="text-accent-blue text-sm">ℹ️</span>
-                                </div>
+            
+            <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
+            <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
+            <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
+            
+            <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
+            <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
+            <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
+            <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
+            <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
+                            
+                            <!-- Información del Comercio -->
+                <div class="metric-card">
+                            <div class="bg-secondary-dark p-4 rounded-xl mb-6">
+                                <h3 class="text-lg font-medium text-text-primary mb-2">Comercio: {{ $comercio->nombre }}</h3>
+                                @if($comercio->descripcion)
+                                    <p class="text-sm text-text-secondary">{{ $comercio->descripcion }}</p>
+                                @endif
                             </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-accent-blue">
-                                    Procesamiento Automático
-                                </h3>
-                                <div class="mt-2 text-sm text-text-secondary">
-                                    <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    @if($isEdit)
-                        <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
-                            <div class="relative p-6">
-                                <!-- Texto arriba -->
-                                <div class="mb-5">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
-                                        @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                            <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
-                                                <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                                                <span class="text-xs font-semibold text-green-300">ACTIVO</span>
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
-                                </div>
-                                
-                                <!-- Icono y botón abajo -->
-                                <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
-                                    <div class="relative flex-shrink-0">
-                                        <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
-                                            <span class="text-2xl filter drop-shadow-lg">🛒</span>
-                                            @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
+                            <!-- Nombre del Menú -->
+                    <div class="mb-6">
+                                <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
+                                    Nombre del Menú
+                                </label>
+                                <input type="text" 
+                                       id="nombre" 
+                                       name="nombre"
+                                       value="{{ $menu->nombre ?? '' }}"
+                                       placeholder="Ej: Menú Principal, Menú de Temporada, etc."
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
+                            </div>
+
+                            <!-- Menú Actual (solo en edición) -->
+                            @if($isEdit && $menu && $menu->archivo_original)
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="flex items-center space-x-4 flex-1 min-w-0">
+                                            @if($menu->formato === 'pdf')
+                                                <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-red-400 text-2xl">📄</span>
+                                                </div>
+                                            @else
+                                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-blue-400 text-2xl">🍽️</span>
+                                                </div>
                                             @endif
+                                            <div class="min-w-0 flex-1">
+                                                <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('d/m/Y') }}
+                                                    </span>
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('H:i') }}
+                                                    </span>
+                                            </div>
+                                        </div>
+                                        </div>
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+                                            <button type="button" 
+                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
+                                                    class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
+                                                👁️ Ver
+                                            </button>
+                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
+                                               download
+                                               class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                                                <span>📥</span>
+                                                <span>Descargar</span>
+                                            </a>
                                         </div>
                                     </div>
-                                    
-                                    <div class="flex items-center gap-4 flex-1 justify-end">
-                                        <label class="relative inline-flex items-center cursor-pointer group">
-                                            <input type="checkbox"
-                                                   name="pedido_habilitado"
-                                                   value="1"
-                                                   {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
-                                                   class="sr-only peer pedido-toggle"
-                                                   onchange="updatePedidoStatus(this.checked)">
-                                            <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
-                                        </label>
-                                        <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
-                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
+                                </div>
+                            @endif
+
+                            <!-- Archivo del Menú -->
+                    <div class="mb-6">
+                                <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
+                                    {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
+                                </label>
+                                <input type="file" 
+                                       id="archivo" 
+                                       name="archivo" 
+                                       accept=".pdf,.jpeg,.jpg,.png,.gif" 
+                                       {{ $isEdit ? '' : 'required' }} 
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
+                                <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
+                                <p class="mt-2 text-sm text-text-secondary">
+                                    @if($isEdit)
+                                        Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                                    @else
+                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
+                                    @endif
+                                </p>
+                            </div>
+
+                            <!-- Información sobre el procesamiento -->
+                    <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mb-6">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
+                                            <span class="text-accent-blue text-sm">ℹ️</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-medium text-accent-blue">
+                                            Procesamiento Automático
+                                        </h3>
+                                        <div class="mt-2 text-sm text-text-secondary">
+                                            <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    @endif
+
+                            @if($isEdit)
+                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                                    <div class="relative p-6">
+                                        <!-- Texto arriba -->
+                                        <div class="mb-5">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
+                                                @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
+                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                                                        <span class="text-xs font-semibold text-green-300">ACTIVO</span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
+                                        </div>
+                                        
+                                        <!-- Icono y botón abajo -->
+                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+                                            <div class="relative flex-shrink-0">
+                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                                    <span class="text-2xl filter drop-shadow-lg">🛒</span>
+                                                    @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="flex items-center gap-4 flex-1 justify-end">
+                                                <label class="relative inline-flex items-center cursor-pointer group">
+                                                    <input type="checkbox"
+                                                           name="pedido_habilitado"
+                                                           value="1"
+                                                           {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
+                                                           class="sr-only peer pedido-toggle"
+                                                           onchange="updatePedidoStatus(this.checked)">
+                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                                </label>
+                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
+                                                    {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
 
                     <!-- Botón de Guardar -->
                     <div class="flex justify-end">
@@ -540,7 +540,7 @@
                                         data-theme="obsidian"
                                         title="Obsidiana">
                                 </button>
-                            </div>
+                                    </div>
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
@@ -1409,23 +1409,93 @@
                 
                 const selectedTheme = themes[theme];
                 if (selectedTheme) {
-                    console.log('Aplicando tema:', theme, selectedTheme);
                     document.getElementById('primary_color').value = selectedTheme.primary;
                     document.getElementById('secondary_color').value = selectedTheme.secondary;
                     document.getElementById('accent_color').value = selectedTheme.accent;
                     document.getElementById('background_color').value = selectedTheme.background;
                     
-                    console.log('Valores actualizados:', {
-                        primary: document.getElementById('primary_color').value,
-                        secondary: document.getElementById('secondary_color').value,
-                        accent: document.getElementById('accent_color').value,
-                        background: document.getElementById('background_color').value
-                    });
-                    
                     updatePreview();
                     // Actualizar el estado activo del swatch
                     updateActiveSwatch(theme);
+                    
+                    // Guardar automáticamente en la base de datos
+                    saveThemeColors(selectedTheme);
                 }
+            }
+            
+            // Función para guardar los colores automáticamente
+            async function saveThemeColors(colors) {
+                try {
+                    const url = '{{ route("menus.update.theme.colors", $comercio) }}';
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    
+                    // Crear FormData en lugar de JSON
+                    const formData = new FormData();
+                    formData.append('primary_color', colors.primary);
+                    formData.append('secondary_color', colors.secondary);
+                    formData.append('accent_color', colors.accent);
+                    formData.append('background_color', colors.background);
+                    formData.append('_token', token);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        console.error('Error al parsear respuesta:', e);
+                        throw new Error('Error al procesar la respuesta del servidor');
+                    }
+                    
+                    if (response.ok && data.success) {
+                        showTemporaryMessage('Tema guardado', 'success');
+                    } else {
+                        const errorMsg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : 'Error desconocido');
+                        console.error('Error al guardar colores:', errorMsg);
+                        showTemporaryMessage('Error al guardar el tema', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al guardar colores:', error);
+                    showTemporaryMessage('Error al guardar el tema', 'error');
+                }
+            }
+            
+            // Función para mostrar mensaje temporal
+            function showTemporaryMessage(message, type) {
+                // Crear elemento de mensaje si no existe
+                let messageEl = document.getElementById('theme-save-message');
+                if (!messageEl) {
+                    messageEl = document.createElement('div');
+                    messageEl.id = 'theme-save-message';
+                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300';
+                    document.body.appendChild(messageEl);
+                }
+                
+                // Estilos según el tipo
+                if (type === 'success') {
+                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-green-500 text-white';
+                } else {
+                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-red-500 text-white';
+                }
+                
+                messageEl.textContent = message;
+                messageEl.style.opacity = '1';
+                
+                // Ocultar después de 2 segundos
+                setTimeout(() => {
+                    messageEl.style.opacity = '0';
+                    setTimeout(() => {
+                        messageEl.style.display = 'none';
+                    }, 300);
+                }, 2000);
             }
             
             // Actualizar vista previa

@@ -1950,4 +1950,46 @@ class MenuController extends Controller
                 ->with('error', 'Error al importar el menú: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Actualizar colores del tema automáticamente
+     */
+    public function updateThemeColors(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar los colores.'], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'accent_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'background_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            ]);
+
+            $comercio->primary_color = $validated['primary_color'];
+            $comercio->secondary_color = $validated['secondary_color'];
+            $comercio->accent_color = $validated['accent_color'];
+            $comercio->background_color = $validated['background_color'];
+            $comercio->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Colores actualizados correctamente'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Error de validación al actualizar colores: ' . json_encode($e->errors()));
+            return response()->json([
+                'error' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar colores: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al actualizar los colores: ' . $e->getMessage()], 500);
+        }
+    }
 }
