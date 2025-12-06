@@ -99,44 +99,6 @@
                     <span class="mr-2">➕</span>
                     Crear Menú
                 </a>
-                <form id="importFormIndex" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data" class="inline-block">
-                    @csrf
-                    <label for="importFile" class="cursor-pointer">
-                        <span id="importButtonText" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
-                            📊 Importar desde Excel
-                        </span>
-                        <input type="file" 
-                               id="importFile" 
-                               name="archivo" 
-                               accept=".xlsx,.xls" 
-                               required 
-                               class="hidden">
-                    </label>
-                </form>
-                
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const importFile = document.getElementById('importFile');
-                        const importForm = document.getElementById('importFormIndex');
-                        const buttonText = document.getElementById('importButtonText');
-                        
-                        if (importFile && importForm && buttonText) {
-                            importFile.addEventListener('change', function(e) {
-                                if (this.files && this.files.length > 0) {
-                                    // Mostrar indicador de carga
-                                    buttonText.innerHTML = '<span class="mr-2">⏳</span> Cargando...';
-                                    buttonText.style.opacity = '0.7';
-                                    buttonText.style.pointerEvents = 'none';
-                                    // Enviar formulario
-                                    importForm.submit();
-                                }
-                            });
-                        }
-                    });
-                </script>
                 <a href="{{ route('menu.public', $comercio) }}" 
                    target="_blank"
                    class="btn-primary inline-flex items-center">
