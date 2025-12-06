@@ -150,16 +150,60 @@
                     <p class="text-sm text-text-secondary mt-1">Sube tu menú y personaliza la experiencia</p>
                 </div>
                 <div class="flex space-x-3">
-                    @if($isEdit && $menu && $menu->procesado)
-                        <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
-                           class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                    <!-- Dropdown Gestión Excel -->
+                    <div class="relative" id="excelDropdown">
+                        <button id="excelDropdownButton" 
+                                class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18"/>
                             </svg>
-                            Exportar a Excel
-                        </a>
-                    @endif
+                            Gestión Excel
+                            <svg id="excelDropdownChevron" class="w-4 h-4 ml-2 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="excelDropdownMenu" 
+                             class="absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-secondary-dark border border-accent-gray z-50 hidden">
+                            <div class="py-2">
+                                <!-- Importar desde Excel -->
+                                <form id="importFormDropdown" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data">
+                                    @csrf
+                                    @if($isEdit && $menu)
+                                        <input type="hidden" name="menu_id" value="{{ $menu->id }}">
+                                    @endif
+                                    <label for="importFileDropdown" class="cursor-pointer block">
+                                        <div class="px-4 py-3 text-sm text-text-primary hover:bg-accent-gray/50 transition-colors duration-200 flex items-center">
+                                            <svg class="w-5 h-5 mr-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                            </svg>
+                                            <span>⬆️ Importar desde Excel</span>
+                                        </div>
+                                        <input type="file" 
+                                               id="importFileDropdown" 
+                                               name="archivo" 
+                                               accept=".xlsx,.xls" 
+                                               required 
+                                               class="hidden">
+                                    </label>
+                                </form>
+                                
+                                <!-- Exportar a Excel -->
+                                @if($isEdit && $menu && $menu->procesado)
+                                    <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
+                                       class="block px-4 py-3 text-sm text-text-primary hover:bg-accent-gray/50 transition-colors duration-200 flex items-center">
+                                        <svg class="w-5 h-5 mr-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                        </svg>
+                                        <span>⬇️ Exportar a Excel</span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    
                     <a href="{{ route('menus.index', $comercio) }}" 
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
@@ -177,276 +221,192 @@
                 <div class="hidden" id="error-message" data-message="{{ session('error') }}"></div>
             @endif
 
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <!-- Formulario Principal del Menú -->
+            <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6 mb-8" id="menu-form">
+                @csrf
+                @if($isEdit)
+                    @method('PUT')
+                    <!-- Campo oculto para mantener el formato actual -->
+                    <input type="hidden" name="formato" value="{{ $menu->formato }}">
+                @endif
+
+                <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
+                <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
+                <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
                 
-                <!-- Columna Izquierda: Subir Menú -->
-                <div class="xl:col-span-1 space-y-6">
-                    
-                    <!-- 📋 Subir Menú -->
-                    <div class="metric-card">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                    <span class="text-white text-lg">📋</span>
-                                </div>
-                                <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
-                            </div>
-                        </div>
-                        
-                        <!-- Opción de Importar desde Excel -->
-                        <div class="mb-6 p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-lg">
-                            <p class="text-sm text-text-secondary mb-3">¿Tienes un archivo Excel con tu menú?</p>
-                            <form id="importFormCreate" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data">
-                                @csrf
-                                @if($isEdit && $menu)
-                                    <input type="hidden" name="menu_id" value="{{ $menu->id }}">
-                                @endif
-                                <div class="relative">
-                                    <label for="importFileCreate" class="cursor-pointer block">
-                                        <span id="importButtonSpan" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 inline-flex items-center justify-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                            </svg>
-                                            Importar desde Excel
-                                        </span>
-                                        <input type="file" 
-                                               id="importFileCreate" 
-                                               name="archivo" 
-                                               accept=".xlsx,.xls" 
-                                               required 
-                                               class="absolute opacity-0 w-0 h-0 pointer-events-none">
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
-                        
-                        <script>
-                            (function() {
-                                'use strict';
-                                document.addEventListener('DOMContentLoaded', function() {
-                                    const importFile = document.getElementById('importFileCreate');
-                                    const importForm = document.getElementById('importFormCreate');
-                                    const buttonSpan = document.getElementById('importButtonSpan');
-                                    
-                                    if (importFile && importForm && buttonSpan) {
-                                        importFile.addEventListener('change', function(e) {
-                                            if (this.files && this.files.length > 0) {
-                                                // Mostrar indicador de carga
-                                                buttonSpan.innerHTML = '<span class="mr-2">⏳</span> Cargando...';
-                                                buttonSpan.style.opacity = '0.7';
-                                                buttonSpan.style.pointerEvents = 'none';
-                                                // Enviar formulario
-                                                importForm.submit();
-                                            }
-                                        });
-                                    }
-                                });
-                            })();
-                        </script>
-                        
-                        <div class="text-center text-text-secondary text-sm mb-4">O</div>
-                        
-                        <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6" id="menu-form">
-                            @csrf
-                            @if($isEdit)
-                                @method('PUT')
-                <!-- Campo oculto para mantener el formato actual -->
-                <input type="hidden" name="formato" value="{{ $menu->formato }}">
-                            @endif
-            
-            <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
-            <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
-            <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
-            
-            <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
-            <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
-            <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
-            <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
-            <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
-                            
-                            <!-- Información del Comercio -->
-                            <div class="bg-secondary-dark p-4 rounded-xl mb-6">
-                                <h3 class="text-lg font-medium text-text-primary mb-2">Comercio: {{ $comercio->nombre }}</h3>
-                                @if($comercio->descripcion)
-                                    <p class="text-sm text-text-secondary">{{ $comercio->descripcion }}</p>
-                                @endif
-                            </div>
-
-                            <!-- Nombre del Menú -->
-                            <div>
-                                <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Nombre del Menú
-                                </label>
-                                <input type="text" 
-                                       id="nombre" 
-                                       name="nombre"
-                                       value="{{ $menu->nombre ?? '' }}"
-                                       placeholder="Ej: Menú Principal, Menú de Temporada, etc."
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                                <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                            </div>
-
-                            <!-- Menú Actual (solo en edición) -->
-                            @if($isEdit && $menu && $menu->archivo_original)
-                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div class="flex items-center space-x-4 flex-1 min-w-0">
-                                            @if($menu->formato === 'pdf')
-                                                <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-red-400 text-2xl">📄</span>
-                                                </div>
-                                            @else
-                                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-blue-400 text-2xl">🍽️</span>
-                                                </div>
-                                            @endif
-                                            <div class="min-w-0 flex-1">
-                                                <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                        {{ $menu->updated_at->format('d/m/Y') }}
-                                                    </span>
-                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                        {{ $menu->updated_at->format('H:i') }}
-                                                    </span>
-                                            </div>
-                                        </div>
-                                        </div>
-                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-                                            <button type="button" 
-                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
-                                                    class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
-                                                👁️ Ver
-                                            </button>
-                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                               download
-                                               class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                                                <span>📥</span>
-                                                <span>Descargar</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            @else
-                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-5 mb-6 opacity-50">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-4">
-                                            <div class="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
-                                                <span class="text-blue-400 text-xl">📷</span>
-                                            </div>
-                                            <div>
-                                                <h4 class="text-text-primary font-medium">Menú Actual</h4>
-                                                <p class="text-text-secondary text-sm">-</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex space-x-3">
-                                            <button type="button" 
-                                                    disabled
-                                                    class="bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed opacity-50">
-                                                Ver
-                                            </button>
-                                            <button type="button" 
-                                                    disabled
-                                                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed opacity-50">
-                                                Descargar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- Archivo del Menú -->
-                            <div>
-                                <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
-                                    {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
-                                </label>
-                                <input type="file" 
-                                       id="archivo" 
-                                       name="archivo" 
-                                       accept=".pdf,.jpeg,.jpg,.png,.gif" 
-                                       {{ $isEdit ? '' : 'required' }} 
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
-                                <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
-                                <p class="mt-2 text-sm text-text-secondary">
-                                    @if($isEdit)
-                                        Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
-                                    @else
-                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
-                                    @endif
-                                </p>
-                            </div>
-
-                            <!-- Información sobre el procesamiento -->
-                            <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4">
-                                <div class="flex">
-                                    <div class="flex-shrink-0">
-                                        <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
-                                            <span class="text-accent-blue text-sm">ℹ️</span>
-                                        </div>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h3 class="text-sm font-medium text-accent-blue">
-                                            Procesamiento Automático
-                                        </h3>
-                                        <div class="mt-2 text-sm text-text-secondary">
-                                            <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @if($isEdit)
-                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
-                                    <div class="relative p-6">
-                                        <!-- Texto arriba -->
-                                        <div class="mb-5">
-                                            <div class="flex items-center gap-3 mb-2">
-                                                <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
-                                                @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
-                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                                                        <span class="text-xs font-semibold text-green-300">ACTIVO</span>
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
-                                        </div>
-                                        
-                                        <!-- Icono y botón abajo -->
-                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
-                                            <div class="relative flex-shrink-0">
-                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
-                                                    <span class="text-2xl filter drop-shadow-lg">🛒</span>
-                                                    @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="flex items-center gap-4 flex-1 justify-end">
-                                                <label class="relative inline-flex items-center cursor-pointer group">
-                                                    <input type="checkbox"
-                                                           name="pedido_habilitado"
-                                                           value="1"
-                                                           {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
-                                                           class="sr-only peer pedido-toggle"
-                                                           onchange="updatePedidoStatus(this.checked)">
-                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
-                                                </label>
-                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
-                                                    {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- Botones de Subir Menú -->
-                        </form>
+                <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
+                <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
+                <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
+                <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
+                <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
+                
+                <!-- Información del Comercio -->
+                <div class="metric-card">
+                    <div class="bg-secondary-dark p-4 rounded-xl mb-6">
+                        <h3 class="text-lg font-medium text-text-primary mb-2">Comercio: {{ $comercio->nombre }}</h3>
+                        @if($comercio->descripcion)
+                            <p class="text-sm text-text-secondary">{{ $comercio->descripcion }}</p>
+                        @endif
                     </div>
 
-                    <!-- 🤖 Configuración del Chatbot -->
+                    <!-- Nombre del Menú -->
+                    <div class="mb-6">
+                        <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
+                            Nombre del Menú
+                        </label>
+                        <input type="text" 
+                               id="nombre" 
+                               name="nombre"
+                               value="{{ $menu->nombre ?? '' }}"
+                               placeholder="Ej: Menú Principal, Menú de Temporada, etc."
+                               class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                        <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
+                    </div>
+
+                    <!-- Menú Actual (solo en edición) -->
+                    @if($isEdit && $menu && $menu->archivo_original)
+                        <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div class="flex items-center space-x-4 flex-1 min-w-0">
+                                    @if($menu->formato === 'pdf')
+                                        <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                            <span class="text-red-400 text-2xl">📄</span>
+                                        </div>
+                                    @else
+                                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                            <span class="text-blue-400 text-2xl">🍽️</span>
+                                        </div>
+                                    @endif
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                {{ $menu->updated_at->format('d/m/Y') }}
+                                            </span>
+                                            <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                {{ $menu->updated_at->format('H:i') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+                                    <button type="button" 
+                                            onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
+                                            class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
+                                        👁️ Ver
+                                    </button>
+                                    <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
+                                       download
+                                       class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                                        <span>📥</span>
+                                        <span>Descargar</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Archivo del Menú -->
+                    <div class="mb-6">
+                        <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
+                            {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
+                        </label>
+                        <input type="file" 
+                               id="archivo" 
+                               name="archivo" 
+                               accept=".pdf,.jpeg,.jpg,.png,.gif" 
+                               {{ $isEdit ? '' : 'required' }} 
+                               class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
+                        <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
+                        <p class="mt-2 text-sm text-text-secondary">
+                            @if($isEdit)
+                                Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
+                            @else
+                                Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
+                            @endif
+                        </p>
+                    </div>
+
+                    <!-- Información sobre el procesamiento -->
+                    <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mb-6">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
+                                    <span class="text-accent-blue text-sm">ℹ️</span>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-accent-blue">
+                                    Procesamiento Automático
+                                </h3>
+                                <div class="mt-2 text-sm text-text-secondary">
+                                    <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($isEdit)
+                        <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                            <div class="relative p-6">
+                                <!-- Texto arriba -->
+                                <div class="mb-5">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
+                                        @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                            <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
+                                                <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                                                <span class="text-xs font-semibold text-green-300">ACTIVO</span>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
+                                </div>
+                                
+                                <!-- Icono y botón abajo -->
+                                <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+                                    <div class="relative flex-shrink-0">
+                                        <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                            <span class="text-2xl filter drop-shadow-lg">🛒</span>
+                                            @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex items-center gap-4 flex-1 justify-end">
+                                        <label class="relative inline-flex items-center cursor-pointer group">
+                                            <input type="checkbox"
+                                                   name="pedido_habilitado"
+                                                   value="1"
+                                                   {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
+                                                   class="sr-only peer pedido-toggle"
+                                                   onchange="updatePedidoStatus(this.checked)">
+                                            <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                        </label>
+                                        <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
+                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Botón de Guardar -->
+                    <div class="flex justify-end">
+                        <button type="submit" 
+                                class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl">
+                            {{ $isEdit ? 'Actualizar Menú' : 'Crear Menú' }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                <!-- Columna Izquierda: Configuración del Chatbot -->
+                <div class="space-y-6">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
                             <div class="w-10 h-10 bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl flex items-center justify-center mr-3 neon-glow">
@@ -487,7 +447,7 @@
                 </div>
 
                 <!-- Columna Derecha: Personalización -->
-                <div class="xl:col-span-2 space-y-6">
+                <div class="space-y-6">
                     
                     <!-- 🎨 Colores del Tema -->
                     <div class="metric-card">
@@ -3892,5 +3852,56 @@
                 }
             });
         }
+
+        // Script para el dropdown de Gestión Excel
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('excelDropdown');
+            const dropdownButton = document.getElementById('excelDropdownButton');
+            const dropdownMenu = document.getElementById('excelDropdownMenu');
+            const dropdownChevron = document.getElementById('excelDropdownChevron');
+            const importFileDropdown = document.getElementById('importFileDropdown');
+            const importFormDropdown = document.getElementById('importFormDropdown');
+            
+            let isOpen = false;
+            
+            // Toggle dropdown
+            if (dropdownButton && dropdownMenu) {
+                dropdownButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    isOpen = !isOpen;
+                    
+                    if (isOpen) {
+                        dropdownMenu.classList.remove('hidden');
+                        dropdownChevron.style.transform = 'rotate(180deg)';
+                    } else {
+                        dropdownMenu.classList.add('hidden');
+                        dropdownChevron.style.transform = 'rotate(0deg)';
+                    }
+                });
+                
+                // Cerrar al hacer clic fuera
+                document.addEventListener('click', function(e) {
+                    if (isOpen && !dropdown.contains(e.target)) {
+                        isOpen = false;
+                        dropdownMenu.classList.add('hidden');
+                        dropdownChevron.style.transform = 'rotate(0deg)';
+                    }
+                });
+            }
+            
+            // Manejar importación
+            if (importFileDropdown && importFormDropdown) {
+                importFileDropdown.addEventListener('change', function(e) {
+                    if (this.files && this.files.length > 0) {
+                        // Cerrar el dropdown
+                        isOpen = false;
+                        dropdownMenu.classList.add('hidden');
+                        dropdownChevron.style.transform = 'rotate(0deg)';
+                        // Enviar formulario
+                        importFormDropdown.submit();
+                    }
+                });
+            }
+        });
     </script>
 </x-app-layout>
