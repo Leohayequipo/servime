@@ -136,6 +136,22 @@
             border: none;
             border-radius: 0.5rem;
         }
+        
+        /* Estilos específicos para los swatches de temas */
+        .theme-swatch {
+            border: none !important;
+            cursor: pointer !important;
+            /* No forzar background-color aquí, dejar que los estilos inline funcionen */
+        }
+        
+        .theme-swatch:hover {
+            transform: scale(1.1) !important;
+            opacity: 0.9 !important;
+        }
+        
+        .theme-swatch:focus {
+            outline: none !important;
+        }
     </style>
     <div class="min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -449,113 +465,6 @@
                 <!-- Columna Derecha: Personalización -->
                 <div class="space-y-6">
                     
-                    <!-- 🎨 Colores del Tema -->
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">🎨</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Colores del Tema</h3>
-                        </div>
-                        
-                        <!-- Combinaciones Predefinidas -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-text-secondary mb-4">
-                                Combinaciones Predefinidas
-                            </label>
-                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <!-- Combinación 1: Azul Profesional -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="professional">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #3B82F6;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #6B7280;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #10B981;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #FFFFFF;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Profesional</p>
-                                </div>
-                                
-                                <!-- Combinación 2: Verde Natural -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="natural">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #10B981;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #84CC16;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #F59E0B;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #F9FAFB;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Natural</p>
-                                </div>
-                                
-                                <!-- Combinación 3: Púrpura Elegante -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="elegant">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #8B5CF6;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #A78BFA;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #EC4899;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #FAFAFA;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Elegante</p>
-                                </div>
-                                
-                                <!-- Combinación 4: Naranja Energético -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="energetic">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #F97316;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #EF4444;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #F59E0B;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #FFFBEB;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Energético</p>
-                                </div>
-                                
-                                <!-- Combinación 5: Noche Azul -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="midnight-blue">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1E293B;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #334155;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #06B6D4;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0F172A;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Noche Azul</p>
-                                </div>
-                                
-                                <!-- Combinación 6: Oro Oscuro -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="dark-gold">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1C1917;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #292524;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #FBBF24;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0C0A09;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Oro Oscuro</p>
-                                </div>
-                                
-                                <!-- Combinación 7: Púrpura Profundo -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="deep-purple">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #1E1B4B;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #312E81;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #A78BFA;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #0F0D2B;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Púrpura Profundo</p>
-                                </div>
-                                
-                                <!-- Combinación 8: Obsidiana -->
-                                <div class="theme-preset cursor-pointer metric-card hover-lift rounded-xl p-4 transition-all duration-300 hover:scale-105" data-theme="obsidian">
-                                    <div class="flex space-x-2 mb-3">
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #111827;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #1F2937;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg" style="background-color: #14B8A6;"></div>
-                                        <div class="w-6 h-6 rounded-lg shadow-lg border border-accent-gray" style="background-color: #030712;"></div>
-                                    </div>
-                                    <p class="text-sm font-medium text-text-secondary text-center">Obsidiana</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </div>
-                    
                     <!-- 👁️ Vista Previa del Tema -->
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
@@ -563,6 +472,75 @@
                                 <span class="text-white text-lg">👁️</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Vista Previa</h3>
+                        </div>
+                        
+                        <!-- Selector de Temas (Swatches) -->
+                        <div class="mb-6">
+                            <div class="flex items-center justify-center gap-3 flex-wrap">
+                                <!-- Profesional - Azul profesional -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #3B82F6 !important; border: none !important;"
+                                        data-theme="professional"
+                                        title="Profesional">
+                                </button>
+                                
+                                <!-- Natural - Verde natural -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #10B981 !important; border: none !important;"
+                                        data-theme="natural"
+                                        title="Natural">
+                                </button>
+                                
+                                <!-- Elegante - Púrpura elegante -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #8B5CF6 !important; border: none !important;"
+                                        data-theme="elegant"
+                                        title="Elegante">
+                                </button>
+                                
+                                <!-- Energético - Naranja energético -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #F97316 !important; border: none !important;"
+                                        data-theme="energetic"
+                                        title="Energético">
+                                </button>
+                                
+                                <!-- Noche Azul - Cyan brillante -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #06B6D4 !important; border: none !important;"
+                                        data-theme="midnight-blue"
+                                        title="Noche Azul">
+                                </button>
+                                
+                                <!-- Oro Oscuro - Dorado -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #FBBF24 !important; border: none !important;"
+                                        data-theme="dark-gold"
+                                        title="Oro Oscuro">
+                                </button>
+                                
+                                <!-- Púrpura Profundo - Púrpura claro -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #A78BFA !important; border: none !important;"
+                                        data-theme="deep-purple"
+                                        title="Púrpura Profundo">
+                                </button>
+                                
+                                <!-- Obsidiana - Turquesa -->
+                                <button type="button" 
+                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
+                                        style="background-color: #14B8A6 !important; border: none !important;"
+                                        data-theme="obsidian"
+                                        title="Obsidiana">
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
@@ -1445,6 +1423,8 @@
                     });
                     
                     updatePreview();
+                    // Actualizar el estado activo del swatch
+                    updateActiveSwatch(theme);
                 }
             }
             
@@ -1467,14 +1447,55 @@
                 document.getElementById('preview-welcome-message').textContent = welcomeMessage;
             }
             
-            // Event listeners
-            document.querySelectorAll('.theme-preset').forEach(preset => {
-                preset.addEventListener('click', function(e) {
+            // Función para actualizar el estado activo de los swatches
+            function updateActiveSwatch(activeTheme) {
+                document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                    const theme = swatch.dataset.theme;
+                    if (theme === activeTheme) {
+                        // Agregar anillo para el tema activo con color blanco/azul claro
+                        swatch.classList.add('ring-2', 'ring-offset-2');
+                        swatch.classList.add('ring-white', 'ring-opacity-80');
+                        swatch.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px rgba(59, 130, 246, 0.4)';
+                        swatch.style.transform = 'scale(1.1)';
+                    } else {
+                        // Remover anillo de los temas no activos
+                        swatch.classList.remove('ring-2', 'ring-offset-2', 'ring-white', 'ring-opacity-80');
+                        swatch.style.boxShadow = '';
+                        swatch.style.transform = '';
+                    }
+                });
+            }
+            
+            // Event listeners para los swatches
+            document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                swatch.addEventListener('click', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const theme = this.dataset.theme;
                     applyTheme(theme);
+                    updateActiveSwatch(theme);
                 });
             });
+            
+            // Inicializar el estado activo basado en el tema actual
+            function initializeActiveTheme() {
+                const currentPrimary = document.getElementById('primary_color').value;
+                const themeMap = {
+                    '#3B82F6': 'professional',     // Azul
+                    '#10B981': 'natural',          // Verde
+                    '#8B5CF6': 'elegant',          // Púrpura
+                    '#F97316': 'energetic',        // Naranja
+                    '#1E293B': 'midnight-blue',    // Azul oscuro
+                    '#1C1917': 'dark-gold',        // Negro
+                    '#1E1B4B': 'deep-purple',      // Púrpura oscuro
+                    '#111827': 'obsidian'          // Negro
+                };
+                const activeTheme = themeMap[currentPrimary] || 'professional';
+                updateActiveSwatch(activeTheme);
+            }
+            
+            // Inicializar después de que se cargue el DOM
+            setTimeout(initializeActiveTheme, 100);
             
             document.getElementById('chatbot_name').addEventListener('input', updatePreview);
             document.getElementById('welcome_message').addEventListener('input', updatePreview);
