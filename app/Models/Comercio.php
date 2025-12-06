@@ -8,6 +8,7 @@ class Comercio extends Model
 {
     protected $fillable = [
         'nombre',
+        'slug',
         'descripcion',
         'logo_url',
         'user_id',
@@ -26,6 +27,14 @@ class Comercio extends Model
         'favicon_url',
         'pedido_habilitado'
     ];
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
 
     protected $casts = [
         'show_contact_info' => 'boolean',

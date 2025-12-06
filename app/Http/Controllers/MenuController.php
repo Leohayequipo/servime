@@ -9,6 +9,11 @@ use App\Models\QuestionCategory;
 use App\Services\MenuProcessorService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Exports\MenuExport;
+use App\Imports\MenuImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelType;
+use Illuminate\Support\Facades\Validator;
 
 class MenuController extends Controller
 {
@@ -1777,6 +1782,172 @@ class MenuController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error al guardar promociones: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar menú a Excel
+     */
+    public function export(Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para exportar este menú.');
+        }
+        
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
+        
+        $nombreBase = ($menu->nombre ?: 'menu') . '_' . date('Y-m-d');
+        $nombreBase = preg_replace('/[^a-zA-Z0-9_-]/', '_', $nombreBase);
+        $nombreArchivo = $nombreBase . '.xlsx';
+        
+        return Excel::download(new MenuExport($menu), $nombreArchivo, ExcelType::XLSX);
+    }
+
+    /**
+     * Previsualizar importación de Excel
+     */
+    public function previewImport(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para importar menús en este comercio.');
+        }
+
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls|max:10240',
+            'menu_id' => 'nullable|exists:menus,id',
+        ]);
+
+        try {
+            $file = $request->file('archivo');
+            $import = new MenuImport($comercio->id);
+            
+            // Leer el archivo sin guardar
+            $rows = Excel::toCollection($import, $file)->first();
+            
+            // Validar estructura
+            $structureErrors = MenuImport::validateStructure($rows);
+            if (!empty($structureErrors)) {
+                $redirectRoute = $request->has('menu_id') 
+                    ? route('menus.edit', [$comercio, $request->input('menu_id')])
+                    : route('menus.index', $comercio);
+                return redirect($redirectRoute)
+                    ->with('error', 'Error en la estructura del archivo: ' . implode(', ', $structureErrors));
+            }
+
+            // Procesar datos
+            $import->collection($rows);
+            $data = $import->getData();
+
+            // Guardar datos procesados en sesión en lugar de archivo temporal
+            $sessionKey = 'menu_import_data_' . $comercio->id . '_' . time();
+            session([$sessionKey => $data]);
+            
+            // Obtener menús existentes para seleccionar cuál actualizar
+            $menusExistentes = $comercio->menus()->orderBy('created_at', 'desc')->get();
+            
+            // Si viene desde edición de un menú específico, usar ese menú
+            $menuIdFromRequest = $request->input('menu_id');
+            $menuEditando = null;
+            if ($menuIdFromRequest) {
+                $menuEditando = Menu::where('id', $menuIdFromRequest)
+                    ->where('comercio_id', $comercio->id)
+                    ->first();
+            }
+            
+            return view('menus.preview-import', compact('comercio', 'data', 'sessionKey', 'menusExistentes', 'menuEditando'));
+            
+        } catch (\Exception $e) {
+            Log::error('Error al previsualizar importación: ' . $e->getMessage());
+            $redirectRoute = $request->has('menu_id') 
+                ? route('menus.edit', [$comercio, $request->input('menu_id')])
+                : route('menus.index', $comercio);
+            return redirect($redirectRoute)
+                ->with('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Importar menú desde Excel
+     */
+    public function import(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para importar menús en este comercio.');
+        }
+
+        $request->validate([
+            'session_key' => 'required|string',
+            'nombre' => 'nullable|string|max:255',
+            'menu_id' => 'nullable|exists:menus,id',
+            'accion' => 'required|in:actualizar,crear',
+        ]);
+
+        try {
+            $sessionKey = $request->input('session_key');
+            $data = session($sessionKey);
+            
+            if (!$data || !is_array($data)) {
+                return redirect()->route('menus.index', $comercio)
+                    ->with('error', 'Los datos de importación han expirado. Por favor, vuelve a subir el archivo.');
+            }
+
+            // Limpiar la sesión después de obtener los datos
+            session()->forget($sessionKey);
+
+            $accion = $request->input('accion');
+            
+            if ($accion === 'actualizar' && $request->has('menu_id')) {
+                // Actualizar menú existente
+                $menu = Menu::where('id', $request->input('menu_id'))
+                    ->where('comercio_id', $comercio->id)
+                    ->firstOrFail();
+                
+                // Guardar estado activo actual
+                $estabaActivo = $menu->activo;
+                
+                // Actualizar datos
+                if ($request->filled('nombre')) {
+                    $menu->nombre = $request->input('nombre');
+                }
+                $menu->formato = 'excel';
+                $menu->procesado = true;
+                $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                $menu->activo = $estabaActivo; // Mantener estado activo
+                $menu->save();
+                
+                $mensaje = 'Menú actualizado exitosamente desde Excel.';
+            } else {
+                // Crear nuevo menú
+                $menu = new Menu();
+                $menu->comercio_id = $comercio->id;
+                $menu->nombre = $request->input('nombre') ?: 'Menú Importado ' . date('Y-m-d');
+                $menu->formato = 'excel';
+                $menu->procesado = true;
+                $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                $menu->activo = false; // No activar automáticamente
+                $menu->save();
+                
+                $mensaje = 'Menú importado exitosamente desde Excel. Puedes editarlo y activarlo cuando esté listo.';
+            }
+
+            return redirect()->route('menus.index', $comercio)
+                ->with('success', $mensaje);
+                
+        } catch (\Exception $e) {
+            Log::error('Error al importar menú: ' . $e->getMessage());
+            return redirect()->route('menus.index', $comercio)
+                ->with('error', 'Error al importar el menú: ' . $e->getMessage());
         }
     }
 }

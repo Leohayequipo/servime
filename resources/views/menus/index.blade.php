@@ -99,6 +99,44 @@
                     <span class="mr-2">➕</span>
                     Crear Menú
                 </a>
+                <form id="importFormIndex" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data" class="inline-block">
+                    @csrf
+                    <label for="importFile" class="cursor-pointer">
+                        <span id="importButtonText" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            📊 Importar desde Excel
+                        </span>
+                        <input type="file" 
+                               id="importFile" 
+                               name="archivo" 
+                               accept=".xlsx,.xls" 
+                               required 
+                               class="hidden">
+                    </label>
+                </form>
+                
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const importFile = document.getElementById('importFile');
+                        const importForm = document.getElementById('importFormIndex');
+                        const buttonText = document.getElementById('importButtonText');
+                        
+                        if (importFile && importForm && buttonText) {
+                            importFile.addEventListener('change', function(e) {
+                                if (this.files && this.files.length > 0) {
+                                    // Mostrar indicador de carga
+                                    buttonText.innerHTML = '<span class="mr-2">⏳</span> Cargando...';
+                                    buttonText.style.opacity = '0.7';
+                                    buttonText.style.pointerEvents = 'none';
+                                    // Enviar formulario
+                                    importForm.submit();
+                                }
+                            });
+                        }
+                    });
+                </script>
                 <a href="{{ route('menu.public', $comercio) }}" 
                    target="_blank"
                    class="btn-primary inline-flex items-center">
@@ -200,6 +238,17 @@
                                             <span class="mr-2">✏️</span>
                                             Editar Menú
                                             <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
+                                        </a>
+                                    @endif
+                                    
+                                    @if($menu->procesado)
+                                        <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
+                                           class="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm shadow-lg">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18"/>
+                                            </svg>
+                                            Exportar a Excel
                                         </a>
                                     @endif
                                     

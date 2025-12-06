@@ -150,6 +150,16 @@
                     <p class="text-sm text-text-secondary mt-1">Sube tu menú y personaliza la experiencia</p>
                 </div>
                 <div class="flex space-x-3">
+                    @if($isEdit && $menu && $menu->procesado)
+                        <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
+                           class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18"/>
+                            </svg>
+                            Exportar a Excel
+                        </a>
+                    @endif
                     <a href="{{ route('menus.index', $comercio) }}" 
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
@@ -174,12 +184,67 @@
                     
                     <!-- 📋 Subir Menú -->
                     <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">📋</span>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-3 neon-glow">
+                                    <span class="text-white text-lg">📋</span>
+                                </div>
+                                <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
                             </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Subir Menú</h3>
                         </div>
+                        
+                        <!-- Opción de Importar desde Excel -->
+                        <div class="mb-6 p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-lg">
+                            <p class="text-sm text-text-secondary mb-3">¿Tienes un archivo Excel con tu menú?</p>
+                            <form id="importFormCreate" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data">
+                                @csrf
+                                @if($isEdit && $menu)
+                                    <input type="hidden" name="menu_id" value="{{ $menu->id }}">
+                                @endif
+                                <div class="relative">
+                                    <label for="importFileCreate" class="cursor-pointer block">
+                                        <span id="importButtonSpan" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 inline-flex items-center justify-center">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                            </svg>
+                                            Importar desde Excel
+                                        </span>
+                                        <input type="file" 
+                                               id="importFileCreate" 
+                                               name="archivo" 
+                                               accept=".xlsx,.xls" 
+                                               required 
+                                               class="absolute opacity-0 w-0 h-0 pointer-events-none">
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <script>
+                            (function() {
+                                'use strict';
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const importFile = document.getElementById('importFileCreate');
+                                    const importForm = document.getElementById('importFormCreate');
+                                    const buttonSpan = document.getElementById('importButtonSpan');
+                                    
+                                    if (importFile && importForm && buttonSpan) {
+                                        importFile.addEventListener('change', function(e) {
+                                            if (this.files && this.files.length > 0) {
+                                                // Mostrar indicador de carga
+                                                buttonSpan.innerHTML = '<span class="mr-2">⏳</span> Cargando...';
+                                                buttonSpan.style.opacity = '0.7';
+                                                buttonSpan.style.pointerEvents = 'none';
+                                                // Enviar formulario
+                                                importForm.submit();
+                                            }
+                                        });
+                                    }
+                                });
+                            })();
+                        </script>
+                        
+                        <div class="text-center text-text-secondary text-sm mb-4">O</div>
                         
                         <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6" id="menu-form">
                             @csrf
