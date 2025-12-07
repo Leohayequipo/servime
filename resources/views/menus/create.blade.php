@@ -250,11 +250,11 @@
             <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
             <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
             
-            <!-- Campos ocultos de colores para que se envíen con el formulario del menú -->
-            <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color }}">
-            <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color }}">
-            <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color }}">
-            <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color }}">
+            <!-- Campos ocultos de colores (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
+            <input type="hidden" id="primary_color" value="{{ $comercio->primary_color }}">
+            <input type="hidden" id="secondary_color" value="{{ $comercio->secondary_color }}">
+            <input type="hidden" id="accent_color" value="{{ $comercio->accent_color }}">
+            <input type="hidden" id="background_color" value="{{ $comercio->background_color }}">
                             
                             <!-- Información del Comercio -->
                 <div class="metric-card">
@@ -1266,18 +1266,7 @@
                             
                             if (welcomeMessageHidden) formData.append('welcome_message', welcomeMessageHidden.value);
                             
-                            // Agregar campos de colores
-                            const primaryColor = document.getElementById('primary_color');
-                            if (primaryColor) formData.append('primary_color', primaryColor.value);
-                            
-                            const secondaryColor = document.getElementById('secondary_color');
-                            if (secondaryColor) formData.append('secondary_color', secondaryColor.value);
-                            
-                            const accentColor = document.getElementById('accent_color');
-                            if (accentColor) formData.append('accent_color', accentColor.value);
-                            
-                            const backgroundColor = document.getElementById('background_color');
-                            if (backgroundColor) formData.append('background_color', backgroundColor.value);
+                            // NOTA: Los colores NO se envían aquí - se guardan automáticamente cuando se cambia el tema
                             
                             // Agregar promociones
                             const promoInputs = menuForm.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
