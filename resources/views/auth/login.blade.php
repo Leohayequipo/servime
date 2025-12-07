@@ -57,15 +57,38 @@
         
         body {
             font-family: 'Roboto', system-ui, sans-serif;
-            background: linear-gradient(135deg, var(--background) 0%, var(--primary-dark) 100%);
             color: var(--text-primary);
             min-height: 100vh;
+            position: relative;
+        }
+        
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -20;
+            filter: blur(8px);
+            -webkit-filter: blur(8px);
+        }
+        
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: -10;
         }
         
         .glass-effect {
-            background: rgba(42, 58, 85, 0.8);
+            background: rgba(42, 58, 85, 0.5);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 196, 255, 0.2);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 196, 255, 0.3);
         }
         
         .neon-glow {
@@ -118,7 +141,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 1;
+            z-index: 0;
         }
         
         .particle {
@@ -145,7 +168,16 @@
         }
     </style>
 </head>
-<body class="bg-background text-text-primary min-h-screen flex items-center justify-center relative overflow-hidden">
+<body class="text-text-primary min-h-screen flex items-center justify-center relative overflow-hidden">
+    
+    <!-- Video de Fondo con Blur -->
+    <video class="video-background" autoplay loop muted playsinline>
+        <source src="{{ asset('videos/background_principal.mp4') }}" type="video/mp4">
+        Tu navegador no soporta videos HTML5.
+    </video>
+    
+    <!-- Overlay Oscuro -->
+    <div class="video-overlay"></div>
     
     <!-- Floating Particles Background -->
     <div class="floating-particles">
@@ -160,7 +192,7 @@
         <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
     </div>
 
-    <div class="w-full max-w-md mx-auto px-6 relative z-10">
+    <div class="w-full max-w-md mx-auto px-6 relative z-20">
         
         <!-- Logo Section -->
         <div class="text-center mb-8 logo-container">
