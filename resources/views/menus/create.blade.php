@@ -693,7 +693,6 @@
                                                     <input type="text" 
                                                            data-promo-field="nombre"
                                                            data-promo-index="{{ $promoIndex }}"
-                                                           name="promociones[{{ $promoIndex }}][nombre]" 
                                                            value="{{ old("promociones.{$promoIndex}.nombre", $promo['nombre'] ?? '') }}"
                                                            placeholder="Nombre de la promoción"
                                                            class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -707,7 +706,6 @@
                                                         <input type="text" 
                                                                data-promo-field="precio"
                                                                data-promo-index="{{ $promoIndex }}"
-                                                               name="promociones[{{ $promoIndex }}][precio]" 
                                                                value="{{ preg_replace('/[^0-9]/', '', old("promociones.{$promoIndex}.precio", $promo['precio'] ?? '')) }}"
                                                                placeholder="0"
                                                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
@@ -720,7 +718,6 @@
                                                     <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
                                                     <textarea data-promo-field="descripcion"
                                                               data-promo-index="{{ $promoIndex }}"
-                                                              name="promociones[{{ $promoIndex }}][descripcion]" 
                                                               rows="2"
                                                               placeholder="Descripción de la promoción"
                                                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none">{{ old("promociones.{$promoIndex}.descripcion", $promo['descripcion'] ?? '') }}</textarea>
@@ -1656,6 +1653,91 @@
             
             // Inicializar drag & drop para platos
             initializeSortable();
+            
+            // Función para guardar promociones automáticamente (global para que pueda ser llamada desde otras funciones)
+            let promocionesTimeout;
+            window.savePromocionesAuto = function() {
+                clearTimeout(promocionesTimeout);
+                promocionesTimeout = setTimeout(async () => {
+                    try {
+                        @if(!isset($isEdit) || !$isEdit || !isset($menu) || !$menu)
+                            return; // Menú nuevo, no guardar aún
+                        @endif
+                        
+                        const promociones = collectPromocionesData();
+                        const saveUrl = `{{ route('menus.save.promociones', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                        
+                        const response = await fetch(saveUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                promociones: promociones
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || `Error HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showTemporaryMessage('Promociones guardadas', 'success');
+                        } else {
+                            throw new Error(data.error || 'Error al guardar las promociones');
+                        }
+                    } catch (error) {
+                        console.error('Error al guardar promociones:', error);
+                        showTemporaryMessage('Error al guardar promociones', 'error');
+                    }
+                }, 1500); // Guardar 1.5 segundos después de dejar de escribir
+            }
+            
+            // Agregar event listeners a todos los campos de promociones
+            function setupPromocionesAutoSave() {
+                const container = document.getElementById('promociones-container');
+                if (!container) return;
+                
+                // Usar delegación de eventos para capturar cambios en cualquier campo de promoción
+                container.addEventListener('input', function(e) {
+                    if (e.target.hasAttribute('data-promo-field')) {
+                        savePromocionesAuto();
+                    }
+                });
+                
+                // También escuchar cambios en textareas
+                container.addEventListener('change', function(e) {
+                    if (e.target.hasAttribute('data-promo-field')) {
+                        savePromocionesAuto();
+                    }
+                });
+            }
+            
+            // Inicializar auto-guardado de promociones
+            setupPromocionesAutoSave();
+            
+            // Observar cuando se agregan nuevas promociones al DOM
+            const promoObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        // Se agregó una nueva promoción, guardar automáticamente
+                        setTimeout(savePromocionesAuto, 500);
+                    }
+                });
+            });
+            
+            const promocionesContainer = document.getElementById('promociones-container');
+            if (promocionesContainer) {
+                promoObserver.observe(promocionesContainer, {
+                    childList: true,
+                    subtree: true
+                });
+            }
         });
         
         // Función para sincronizar promociones al form principal
@@ -3501,7 +3583,6 @@
                         <input type="text" 
                                data-promo-field="nombre"
                                data-promo-index="${promocionIndex}"
-                               name="promociones[${promocionIndex}][nombre]" 
                                value=""
                                placeholder="Nombre de la promoción"
                                class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -3515,7 +3596,6 @@
                             <input type="text" 
                                    data-promo-field="precio"
                                    data-promo-index="${promocionIndex}"
-                                   name="promociones[${promocionIndex}][precio]" 
                                    value=""
                                    placeholder="0"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
@@ -3528,7 +3608,6 @@
                         <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
                         <textarea data-promo-field="descripcion"
                                   data-promo-index="${promocionIndex}"
-                                  name="promociones[${promocionIndex}][descripcion]" 
                                   rows="2"
                                   placeholder="Descripción de la promoción"
                                   class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
@@ -3573,6 +3652,19 @@
         }
         
         // Función para guardar promociones vía AJAX
+        // Almacenar imágenes originales de promociones para preservarlas si no se cargan en el DOM (GLOBAL)
+        window.promocionesImagenesOriginales = {};
+        @if(isset($promocionesCategoria['platos']) && is_array($promocionesCategoria['platos']))
+            @foreach($promocionesCategoria['platos'] as $promoIndex => $promo)
+                @if(isset($promo['imagen']) && !empty($promo['imagen']))
+                    window.promocionesImagenesOriginales[{{ $promoIndex }}] = '{{ $promo['imagen'] }}';
+                    @if(isset($promo['nombre']) && !empty($promo['nombre']))
+                        window.promocionesImagenesOriginales['{{ mb_strtolower(trim($promo['nombre'])) }}'] = '{{ $promo['imagen'] }}';
+                    @endif
+                @endif
+            @endforeach
+        @endif
+        
         // Función auxiliar para recopilar datos de promociones
         function collectPromocionesData() {
             const container = document.getElementById('promociones-container');
@@ -3634,7 +3726,8 @@
                     }
                 });
                 
-                // Buscar imagen - SOLO si realmente existe y es válida
+                // Buscar imagen - primero en el DOM, luego en las imágenes originales
+                let imagenEncontrada = '';
                 const img = item.querySelector('img[id^="promo-imagen-"]');
                 if (img && img.src) {
                     const imgPath = img.src.replace(window.location.origin, '');
@@ -3643,17 +3736,33 @@
                         !imgPath.includes('placeholder') && 
                         !imgPath.includes('data:') && 
                         imgPath.startsWith('/storage/')) {
-                        promo.imagen = imgPath;
-                        console.log(`    - Imagen: "${imgPath}"`);
-                    } else {
-                        // Si no hay imagen válida, asegurar que el campo esté vacío
-                        promo.imagen = '';
-                        console.log(`    - Sin imagen válida (path: "${imgPath}")`);
+                        imagenEncontrada = imgPath;
+                        console.log(`    - Imagen desde DOM: "${imgPath}"`);
                     }
-                } else {
-                    // No hay imagen, asegurar que el campo esté vacío explícitamente
-                    promo.imagen = '';
-                    console.log(`    - Sin imagen en el DOM`);
+                }
+                
+                // Si no se encontró en el DOM, buscar en las imágenes originales
+                if (!imagenEncontrada) {
+                    const originales = window.promocionesImagenesOriginales || {};
+                    // Buscar por índice original
+                    if (originales[index]) {
+                        imagenEncontrada = originales[index];
+                        console.log(`    - Imagen preservada desde originales (índice ${index}): "${imagenEncontrada}"`);
+                    }
+                    // También buscar por nombre normalizado
+                    else if (promo.nombre && promo.nombre.trim()) {
+                        const nombreNormalizado = promo.nombre.trim().toLowerCase();
+                        if (originales[nombreNormalizado]) {
+                            imagenEncontrada = originales[nombreNormalizado];
+                            console.log(`    - Imagen preservada desde originales (nombre "${nombreNormalizado}"): "${imagenEncontrada}"`);
+                        }
+                    }
+                }
+                
+                // Asignar imagen encontrada o vacía
+                promo.imagen = imagenEncontrada || '';
+                if (!imagenEncontrada) {
+                    console.log(`    - Sin imagen (ni en DOM ni en originales)`);
                 }
                 
                 // Verificar si tiene nombre o precio (requisitos del backend)
@@ -3855,6 +3964,10 @@
                     setTimeout(() => {
                         promoItem.remove();
                         console.log(`✅ PROMOCIÓN ${index} ELIMINADA COMPLETAMENTE (JSON + DOM)`);
+                        // Guardar automáticamente después de eliminar
+                        setTimeout(() => {
+                            savePromocionesAuto();
+                        }, 500);
                     }, 300);
                     
                 } catch (error) {
@@ -3950,6 +4063,21 @@
                             </button>
                         </div>
                     `;
+                    // Actualizar imagen en el objeto de imágenes originales
+                    if (window.promocionesImagenesOriginales) {
+                        window.promocionesImagenesOriginales[promoIndex] = data.imagen_path;
+                        // También actualizar por nombre si existe
+                        const nombreInput = document.querySelector(`[data-promo-index="${promoIndex}"][data-promo-field="nombre"]`);
+                        if (nombreInput && nombreInput.value) {
+                            window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()] = data.imagen_path;
+                        }
+                    }
+                    // Guardar automáticamente después de subir imagen
+                    setTimeout(() => {
+                        if (typeof savePromocionesAuto === 'function') {
+                            savePromocionesAuto();
+                        }
+                    }, 500);
                 } else {
                     throw new Error(data.error || 'Error desconocido');
                 }
@@ -3995,6 +4123,16 @@
                         const data = await response.json();
                         
                         if (data.success) {
+                            // Eliminar imagen del objeto de imágenes originales
+                            if (window.promocionesImagenesOriginales) {
+                                delete window.promocionesImagenesOriginales[promoIndex];
+                                // También eliminar por nombre si existe
+                                const nombreInput = document.querySelector(`[data-promo-index="${promoIndex}"][data-promo-field="nombre"]`);
+                                if (nombreInput && nombreInput.value) {
+                                    delete window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()];
+                                }
+                            }
+                            
                             const container = document.getElementById(`promo-imagen-container-${promoIndex}`);
                             if (container) {
                                 container.innerHTML = `
@@ -4010,9 +4148,21 @@
                                     </label>
                                 `;
                                 showSuccess('Imagen eliminada exitosamente');
+                                // Guardar automáticamente después de eliminar imagen
+                                setTimeout(() => {
+                                    if (typeof savePromocionesAuto === 'function') {
+                                        savePromocionesAuto();
+                                    }
+                                }, 500);
                             } else {
                                 console.warn(`Contenedor promo-imagen-container-${promoIndex} no encontrado, pero la imagen fue eliminada del servidor`);
                                 showSuccess('Imagen eliminada exitosamente');
+                                // Guardar automáticamente después de eliminar imagen
+                                setTimeout(() => {
+                                    if (typeof savePromocionesAuto === 'function') {
+                                        savePromocionesAuto();
+                                    }
+                                }, 500);
                             }
                         } else {
                             throw new Error(data.error || 'Error desconocido');
