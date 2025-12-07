@@ -246,9 +246,9 @@
                 <input type="hidden" name="formato" value="{{ $menu->formato }}">
                             @endif
             
-            <!-- Campos ocultos del chatbot para que se envíen con el formulario del menú -->
-            <input type="hidden" name="chatbot_name" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
-            <input type="hidden" name="welcome_message" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
+            <!-- Campos ocultos del chatbot (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
+            <input type="hidden" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
+            <input type="hidden" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
             
             <!-- Campos ocultos de colores (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
             <input type="hidden" id="primary_color" value="{{ $comercio->primary_color }}">
@@ -393,11 +393,11 @@
                                             <div class="flex items-center gap-4 flex-1 justify-end">
                                                 <label class="relative inline-flex items-center cursor-pointer group">
                                                     <input type="checkbox"
-                                                           name="pedido_habilitado"
+                                                           id="pedido_habilitado"
                                                            value="1"
                                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
                                                            class="sr-only peer pedido-toggle"
-                                                           onchange="updatePedidoStatus(this.checked)">
+                                                           onchange="updatePedidoStatus(this.checked); savePedidoStatus(this.checked);">
                                                     <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
                                                 </label>
                                                 <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
@@ -439,7 +439,6 @@
                                 </label>
                                 <input type="text" 
                                        id="chatbot_name" 
-                                       name="chatbot_name"
                                        value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}"
                                        class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
                             </div>
@@ -450,7 +449,6 @@
                                     Mensaje de Bienvenida
                                 </label>
                                 <textarea id="welcome_message" 
-                                          name="welcome_message"
                                           rows="4"
                                           maxlength="500"
                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</textarea>
@@ -1261,12 +1259,7 @@
                         // Agregar todos los campos ocultos del formulario
                         const menuForm = document.getElementById('menu-form');
                         if (menuForm) {
-                            // Agregar campos del chatbot (ya sincronizados arriba)
-                            if (chatbotNameHidden) formData.append('chatbot_name', chatbotNameHidden.value);
-                            
-                            if (welcomeMessageHidden) formData.append('welcome_message', welcomeMessageHidden.value);
-                            
-                            // NOTA: Los colores NO se envían aquí - se guardan automáticamente cuando se cambia el tema
+                            // NOTA: chatbot_name, welcome_message y colores NO se envían aquí - se guardan automáticamente
                             
                             // Agregar promociones
                             const promoInputs = menuForm.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
@@ -1556,8 +1549,107 @@
             // Inicializar después de que se cargue el DOM
             setTimeout(initializeActiveTheme, 100);
             
-            document.getElementById('chatbot_name').addEventListener('input', updatePreview);
-            document.getElementById('welcome_message').addEventListener('input', updatePreview);
+            // Función para guardar configuración del chatbot automáticamente
+            async function saveChatbotConfig() {
+                try {
+                    const url = '{{ route("menus.update.chatbot.config", $comercio) }}';
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    
+                    const formData = new FormData();
+                    formData.append('chatbot_name', document.getElementById('chatbot_name').value);
+                    formData.append('welcome_message', document.getElementById('welcome_message').value);
+                    formData.append('_token', token);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        throw new Error('Error al procesar la respuesta del servidor');
+                    }
+                    
+                    if (response.ok && data.success) {
+                        showTemporaryMessage('Configuración del chatbot guardada', 'success');
+                    } else {
+                        const errorMsg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : 'Error desconocido');
+                        console.error('Error al guardar configuración del chatbot:', errorMsg);
+                        showTemporaryMessage('Error al guardar configuración', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al guardar configuración del chatbot:', error);
+                    showTemporaryMessage('Error al guardar configuración', 'error');
+                }
+            }
+            
+            // Función para guardar estado de pedidos automáticamente
+            async function savePedidoStatus(isEnabled) {
+                try {
+                    const url = '{{ route("menus.update.chatbot.config", $comercio) }}';
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    
+                    const formData = new FormData();
+                    formData.append('pedido_habilitado', isEnabled ? '1' : '0');
+                    formData.append('_token', token);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        throw new Error('Error al procesar la respuesta del servidor');
+                    }
+                    
+                    if (response.ok && data.success) {
+                        showTemporaryMessage(isEnabled ? 'Pedidos en línea activados' : 'Pedidos en línea desactivados', 'success');
+                    } else {
+                        const errorMsg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : 'Error desconocido');
+                        console.error('Error al guardar estado de pedidos:', errorMsg);
+                        showTemporaryMessage('Error al guardar estado de pedidos', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al guardar estado de pedidos:', error);
+                    showTemporaryMessage('Error al guardar estado de pedidos', 'error');
+                }
+            }
+            
+            // Event listeners para guardar automáticamente y actualizar preview
+            let chatbotNameTimeout;
+            document.getElementById('chatbot_name').addEventListener('input', function() {
+                updatePreview();
+                // Guardar automáticamente después de 1 segundo sin escribir
+                clearTimeout(chatbotNameTimeout);
+                chatbotNameTimeout = setTimeout(() => {
+                    saveChatbotConfig();
+                }, 1000);
+            });
+            
+            let welcomeMessageTimeout;
+            document.getElementById('welcome_message').addEventListener('input', function() {
+                updatePreview();
+                // Guardar automáticamente después de 1 segundo sin escribir
+                clearTimeout(welcomeMessageTimeout);
+                welcomeMessageTimeout = setTimeout(() => {
+                    saveChatbotConfig();
+                }, 1000);
+            });
             
             // Inicializar vista previa
             setTimeout(updatePreview, 100);

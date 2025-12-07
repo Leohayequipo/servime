@@ -1992,4 +1992,51 @@ class MenuController extends Controller
             return response()->json(['error' => 'Error al actualizar los colores: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Actualizar configuración del chatbot y pedidos automáticamente
+     */
+    public function updateChatbotConfig(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+        
+        // Validar permisos
+        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'chatbot_name' => 'nullable|string|max:50',
+                'welcome_message' => 'nullable|string|max:500',
+                'pedido_habilitado' => 'nullable|boolean',
+            ]);
+
+            if ($request->has('chatbot_name')) {
+                $comercio->chatbot_name = $validated['chatbot_name'] ?? null;
+            }
+            if ($request->has('welcome_message')) {
+                $comercio->welcome_message = $validated['welcome_message'] ?? null;
+            }
+            if ($request->has('pedido_habilitado')) {
+                $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
+            }
+            
+            $comercio->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Configuración actualizada correctamente'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Error de validación al actualizar configuración: ' . json_encode($e->errors()));
+            return response()->json([
+                'error' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar configuración: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al actualizar la configuración: ' . $e->getMessage()], 500);
+        }
+    }
 }
