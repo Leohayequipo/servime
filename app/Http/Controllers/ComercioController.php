@@ -96,12 +96,16 @@ class ComercioController extends Controller
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
 
-        // Procesar logo si se subió
-        if ($request->hasFile('logo')) {
-            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512);
-        }
-
         $comercio->save();
+        
+        // Crear estructura de carpetas para el comercio
+        $this->createComercioDirectories($comercio->id);
+        
+        // Procesar logo si se subió (después de crear carpetas)
+        if ($request->hasFile('logo')) {
+            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512, $comercio->id);
+            $comercio->save();
+        }
 
         // Redirigir con mensaje de éxito
         return redirect()->route('dashboard')->with('success', 'Comercio creado exitosamente');
@@ -215,7 +219,7 @@ class ComercioController extends Controller
         elseif ($request->hasFile('logo')) {
             // Eliminar logo anterior si existe
             $this->deleteLogoSafely($comercio->logo_url);
-            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512);
+            $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512, $comercio->id);
         }
 
         $comercio->save();
@@ -244,11 +248,73 @@ class ComercioController extends Controller
      */
 
     /**
+     * Crear estructura de carpetas para un comercio
+     */
+    private function createComercioDirectories(int $comercioId): void
+    {
+        try {
+            // Crear en storage/app/public
+            $basePath = "comercios/{$comercioId}";
+            $directories = [
+                "{$basePath}/menu-items",
+                "{$basePath}/menus",
+                "{$basePath}/logos"
+            ];
+            
+            foreach ($directories as $dir) {
+                $fullPath = storage_path("app/public/{$dir}");
+                if (!is_dir($fullPath)) {
+                    @mkdir($fullPath, 0775, true);
+                    @chmod($fullPath, 0775);
+                }
+            }
+            
+            // Crear en public_html si estamos en producción
+            if (file_exists('/home/u560898880/domains')) {
+                $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
+                $publicHtmlDirs = [
+                    "{$publicHtmlBase}/menu-items",
+                    "{$publicHtmlBase}/menus",
+                    "{$publicHtmlBase}/logos"
+                ];
+                
+                foreach ($publicHtmlDirs as $dir) {
+                    if (!is_dir($dir)) {
+                        @mkdir($dir, 0775, true);
+                        @chmod($dir, 0775);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // No fallar si hay error, solo loguear
+            \Log::warning('Error al crear directorios del comercio', [
+                'comercio_id' => $comercioId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
      * Guardar el logo en un tamaño cuadrado fijo (recorte centrado + resize)
      */
-    private function saveSquareLogo(\Illuminate\Http\UploadedFile $file, int $size = 512): string
+    private function saveSquareLogo(\Illuminate\Http\UploadedFile $file, int $size = 512, ?int $comercioId = null): string
     {
-        $path = storage_path('app/public/logos');
+        // Si no se pasa comercio_id, intentar obtenerlo del request
+        if (!$comercioId && request()->route('comercio')) {
+            $comercioId = request()->route('comercio')->id;
+        }
+        
+        // Si aún no tenemos comercio_id, usar estructura antigua (compatibilidad)
+        if (!$comercioId) {
+            $path = storage_path('app/public/logos');
+            $logoPath = 'logos';
+        } else {
+            // Asegurar que existan las carpetas del comercio
+            $this->createComercioDirectories($comercioId);
+            $path = storage_path("app/public/comercios/{$comercioId}/logos");
+            $logoPath = "comercios/{$comercioId}/logos";
+        }
+        
         if (!is_dir($path)) {
             mkdir($path, 0775, true);
             chmod($path, 0775);
@@ -259,6 +325,10 @@ class ComercioController extends Controller
 
         // Si no está disponible la librería GD, hacer fallback al almacenamiento directo
         if (!function_exists('imagecreatetruecolor')) {
+            if ($comercioId) {
+                $this->createComercioDirectories($comercioId);
+                return $file->store("comercios/{$comercioId}/logos", 'public');
+            }
             return $file->store('logos', 'public');
         }
 
@@ -277,6 +347,10 @@ class ComercioController extends Controller
                 break;
             default:
                 // fallback: usar el almacenamiento directo
+                if ($comercioId) {
+                    $this->createComercioDirectories($comercioId);
+                    return $file->store("comercios/{$comercioId}/logos", 'public');
+                }
                 return $file->store('logos', 'public');
         }
 
@@ -312,21 +386,25 @@ class ComercioController extends Controller
         
         // SIEMPRE intentar copiar a public_html/storage (incluso si file_exists falló)
         // Esto asegura que se ejecute siempre
-        $this->copyLogoToPublicHtml($full, $filename);
+        $this->copyLogoToPublicHtml($full, $filename, $comercioId);
 
         \imagedestroy($src);
         \imagedestroy($dst);
 
-        return 'logos/' . $filename;
+        return $logoPath . '/' . $filename;
     }
 
     /**
      * Copiar logo a public_html/storage automáticamente
      */
-    private function copyLogoToPublicHtml(string $sourceFile, string $filename): void
+    private function copyLogoToPublicHtml(string $sourceFile, string $filename, ?int $comercioId = null): void
     {
-        // Ruta directa conocida para servime.net en producción
-        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/logos';
+        // Nueva estructura: comercios/{id}/logos o estructura antigua logos/
+        if ($comercioId) {
+            $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/logos";
+        } else {
+            $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/logos';
+        }
         
         // Verificar si estamos en producción (Hostinger)
         if (!file_exists('/home/u560898880/domains')) {

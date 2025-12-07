@@ -108,9 +108,12 @@ class MenuController extends Controller
 
         // Subir archivo preservando la extensión original
         $archivo = $request->file('archivo');
+        // Asegurar que existan las carpetas del comercio
+        $this->createComercioDirectories($comercio->id);
+        
         $extension = $archivo->getClientOriginalExtension();
         $nombreArchivo = uniqid() . '.' . $extension;
-        $archivoPath = $archivo->storeAs('menus', $nombreArchivo, 'public');
+        $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
         
         Log::info('📤 ARCHIVO SUBIDO', [
             'archivo_path' => $archivoPath,
@@ -125,7 +128,7 @@ class MenuController extends Controller
         
         // Copiar archivo a public_html en producción (con manejo de errores)
         try {
-            $this->copyMenuToPublicHtml($archivoPath);
+            $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
         } catch (\Exception $e) {
             // No fallar si hay error al copiar a public_html (solo es para producción)
             Log::warning('Error al copiar archivo a public_html (no crítico)', [
@@ -249,7 +252,7 @@ class MenuController extends Controller
         
         // Asegurar que el archivo del menú esté disponible en public_html (si existe)
         if ($menu->archivo_original) {
-            $this->ensureMenuFileInPublicHtml($menu->archivo_original);
+            $this->ensureMenuFileInPublicHtml($menu->archivo_original, $comercio->id);
         }
         
         $categories = QuestionCategory::active()->ordered()->get();
@@ -299,14 +302,17 @@ class MenuController extends Controller
             // Eliminar archivo anterior de ambos lugares
             $this->deleteMenuSafely($menu->archivo_original);
             
+            // Asegurar que existan las carpetas del comercio
+            $this->createComercioDirectories($comercio->id);
+            
             // Preservar extensión original al actualizar
             $archivo = $request->file('archivo');
             $extension = $archivo->getClientOriginalExtension();
             $nombreArchivo = uniqid() . '.' . $extension;
-            $archivoPath = $archivo->storeAs('menus', $nombreArchivo, 'public');
+            $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
             
             // Copiar archivo a public_html en producción
-            $this->copyMenuToPublicHtml($archivoPath);
+            $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
             
             $menu->archivo_original = $archivoPath;
             
@@ -585,8 +591,11 @@ class MenuController extends Controller
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
-            // Guardar imagen
-            $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+            // Asegurar que existan las carpetas del comercio
+            $this->createComercioDirectories($comercio->id);
+            
+            // Guardar imagen en la nueva estructura
+            $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
             
             // Preparar referencia a la imagen anterior (si existe)
             $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
@@ -1032,9 +1041,57 @@ class MenuController extends Controller
     }
 
     /**
+     * Crear estructura de carpetas para un comercio (menu-items, menus, logos)
+     * Esto asegura que las carpetas existan tanto en storage como en public_html
+     */
+    private function createComercioDirectories(int $comercioId): void
+    {
+        try {
+            // Crear en storage/app/public
+            $basePath = "comercios/{$comercioId}";
+            $directories = [
+                "{$basePath}/menu-items",
+                "{$basePath}/menus",
+                "{$basePath}/logos"
+            ];
+            
+            foreach ($directories as $dir) {
+                $fullPath = storage_path("app/public/{$dir}");
+                if (!is_dir($fullPath)) {
+                    @mkdir($fullPath, 0775, true);
+                    @chmod($fullPath, 0775);
+                }
+            }
+            
+            // Crear en public_html si estamos en producción
+            if (file_exists('/home/u560898880/domains')) {
+                $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
+                $publicHtmlDirs = [
+                    "{$publicHtmlBase}/menu-items",
+                    "{$publicHtmlBase}/menus",
+                    "{$publicHtmlBase}/logos"
+                ];
+                
+                foreach ($publicHtmlDirs as $dir) {
+                    if (!is_dir($dir)) {
+                        @mkdir($dir, 0775, true);
+                        @chmod($dir, 0775);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // No fallar si hay error, solo loguear
+            Log::warning('Error al crear directorios del comercio', [
+                'comercio_id' => $comercioId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
      * Asegurar que el archivo del menú esté en public_html/storage (sin errores si falla)
      */
-    private function ensureMenuFileInPublicHtml(string $archivoPath): void
+    private function ensureMenuFileInPublicHtml(string $archivoPath, int $comercioId): void
     {
         // Solo verificar/copiar si estamos en producción
         if (!file_exists('/home/u560898880/domains')) {
@@ -1042,7 +1099,7 @@ class MenuController extends Controller
         }
         
         $filename = basename($archivoPath);
-        $targetFile = '/home/u560898880/domains/servime.net/public_html/storage/menus/' . $filename;
+        $targetFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/" . $filename;
         
         // Si ya existe en public_html, no hacer nada
         if (file_exists($targetFile)) {
@@ -1050,13 +1107,13 @@ class MenuController extends Controller
         }
         
         // Si no existe, copiarlo automáticamente
-        $this->copyMenuToPublicHtml($archivoPath);
+        $this->copyMenuToPublicHtml($archivoPath, $comercioId);
     }
 
     /**
-     * Copiar imagen de plato a public_html/storage/menu-items automáticamente
+     * Copiar imagen de plato/promoción a public_html/storage/comercios/{id}/menu-items automáticamente
      */
-    private function copyMenuItemToPublicHtml(string $archivoPath): void
+    private function copyMenuItemToPublicHtml(string $archivoPath, int $comercioId): void
     {
         if (empty($archivoPath)) {
             return;
@@ -1067,7 +1124,8 @@ class MenuController extends Controller
             return;
         }
 
-        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menu-items';
+        // Nueva estructura: comercios/{id}/menu-items
+        $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menu-items";
         $sourceFile = storage_path('app/public/' . $archivoPath);
         
         // Verificaciones rápidas sin logs excesivos
@@ -1096,12 +1154,12 @@ class MenuController extends Controller
     }
 
     /**
-     * Copiar archivo de menú a public_html/storage automáticamente
+     * Copiar archivo de menú a public_html/storage/comercios/{id}/menus automáticamente
      */
-    private function copyMenuToPublicHtml(string $archivoPath): void
+    private function copyMenuToPublicHtml(string $archivoPath, int $comercioId): void
     {
-        // Ruta directa conocida para servime.net en producción
-        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menus';
+        // Nueva estructura: comercios/{id}/menus
+        $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus";
         
         // Verificar si estamos en producción (Hostinger)
         if (!file_exists('/home/u560898880/domains')) {
@@ -1175,28 +1233,25 @@ class MenuController extends Controller
             Storage::disk('public')->delete($archivoPath);
         }
         
-        // Eliminar también de public_html/storage si existe (producción)
-        $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-        $domainsDir = $homeDir . '/domains';
+        // Extraer comercio_id de la ruta (formato: comercios/{id}/menus/filename)
+        $comercioId = null;
+        if (preg_match('/comercios\/(\d+)\/menus\//', $archivoPath, $matches)) {
+            $comercioId = $matches[1];
+        }
         
-        // Buscar el dominio correcto
-        if (is_dir($domainsDir)) {
-            $domains = scandir($domainsDir);
-            foreach ($domains as $domain) {
-                if ($domain === '.' || $domain === '..') continue;
-                $filename = basename($archivoPath);
-                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/menus/' . $filename;
-                if (file_exists($publicHtmlFile)) {
-                    @unlink($publicHtmlFile);
-                    Log::info('Archivo de menú eliminado de public_html', ['file' => $publicHtmlFile]);
-                    break; // Ya lo eliminamos, no necesitamos seguir buscando
-                }
+        // Eliminar también de public_html/storage si existe (producción)
+        if ($comercioId && file_exists('/home/u560898880/domains')) {
+            $filename = basename($archivoPath);
+            $publicHtmlFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/{$filename}";
+            if (file_exists($publicHtmlFile)) {
+                @unlink($publicHtmlFile);
+                Log::info('Archivo de menú eliminado de public_html', ['file' => $publicHtmlFile]);
             }
         }
     }
 
     /**
-     * Eliminar imagen de plato de forma segura (storage + public_html)
+     * Eliminar imagen de plato/promoción de forma segura (storage + public_html)
      */
     private function deleteMenuItemSafely(?string $archivoPath): void
     {
@@ -1209,22 +1264,19 @@ class MenuController extends Controller
             Storage::disk('public')->delete($archivoPath);
         }
 
-        $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-        $domainsDir = $homeDir . '/domains';
-
-        if (is_dir($domainsDir)) {
-            $domains = scandir($domainsDir);
-            foreach ($domains as $domain) {
-                if ($domain === '.' || $domain === '..') {
-                    continue;
-                }
-                $filename = basename($archivoPath);
-                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/menu-items/' . $filename;
-                if (file_exists($publicHtmlFile)) {
-                    @unlink($publicHtmlFile);
-                    Log::info('Imagen de plato eliminada de public_html', ['file' => $publicHtmlFile]);
-                    break;
-                }
+        // Extraer comercio_id de la ruta (formato: comercios/{id}/menu-items/filename)
+        $comercioId = null;
+        if (preg_match('/comercios\/(\d+)\/menu-items\//', $archivoPath, $matches)) {
+            $comercioId = $matches[1];
+        }
+        
+        // Eliminar también de public_html/storage si existe (producción)
+        if ($comercioId && file_exists('/home/u560898880/domains')) {
+            $filename = basename($archivoPath);
+            $publicHtmlFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menu-items/{$filename}";
+            if (file_exists($publicHtmlFile)) {
+                @unlink($publicHtmlFile);
+                Log::info('Imagen de plato/promoción eliminada de public_html', ['file' => $publicHtmlFile]);
             }
         }
     }
@@ -1316,8 +1368,11 @@ class MenuController extends Controller
                 ]);
             }
 
-            // Guardar imagen
-            $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+            // Asegurar que existan las carpetas del comercio
+            $this->createComercioDirectories($comercio->id);
+            
+            // Guardar imagen en la nueva estructura
+            $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
             
             // Preparar referencia a la imagen anterior (si existe)
             $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
@@ -1340,7 +1395,7 @@ class MenuController extends Controller
             $menu->save();
 
             // Copiar y eliminar después del guardado
-            $this->copyMenuItemToPublicHtml($imagenPath);
+            $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
             
             if ($oldImageRelativePath) {
                 $this->deleteMenuItemSafely($oldImageRelativePath);

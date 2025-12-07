@@ -151,153 +151,122 @@
                 @endif
             </div>
 
-            <!-- Formulario de Confirmación -->
-            <form method="POST" action="{{ route('menus.import', $comercio) }}" class="metric-card">
+            <!-- Formulario oculto para el submit -->
+            <form id="importForm" method="POST" action="{{ route('menus.import', $comercio) }}" style="display: none;">
                 @csrf
                 <input type="hidden" name="session_key" value="{{ $sessionKey }}">
-                
-                <h2 class="text-2xl font-bold text-text-primary mb-4">Confirmar Importación</h2>
-                
                 @if($menuEditando)
-                    <!-- Si viene desde edición, actualizar directamente ese menú -->
                     <input type="hidden" name="accion" value="actualizar">
                     <input type="hidden" name="menu_id" value="{{ $menuEditando->id }}">
-                    <div class="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
-                        <div class="flex items-center mb-2">
-                            <span class="text-accent-blue text-xl mr-2">ℹ️</span>
-                            <div class="font-semibold text-text-primary">Actualizando menú: "{{ $menuEditando->nombre }}"</div>
-                        </div>
-                        <p class="text-sm text-text-secondary">
-                            El contenido de este menú será reemplazado con los datos del Excel.
-                        </p>
-                    </div>
                 @else
-                    <!-- Seleccionar acción -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-text-secondary mb-3">
-                            ¿Qué deseas hacer?
-                        </label>
-                        <div class="space-y-3">
-                            <label class="flex items-center p-4 bg-secondary-dark border-2 border-accent-blue/30 rounded-lg cursor-pointer hover:bg-secondary-dark/80 transition-colors">
-                                <input type="radio" name="accion" value="actualizar" class="mr-3 text-accent-blue focus:ring-accent-blue" 
-                                       {{ old('accion', $menusExistentes->isNotEmpty() ? 'actualizar' : 'crear') === 'actualizar' ? 'checked' : '' }}
-                                       onchange="toggleMenuSelect()">
-                                <div class="flex-1">
-                                    <div class="font-semibold text-text-primary">Actualizar menú existente</div>
-                                    <div class="text-sm text-text-secondary">Reemplazará el contenido del menú seleccionado</div>
-                                </div>
-                            </label>
-                            <label class="flex items-center p-4 bg-secondary-dark border-2 border-accent-gray/30 rounded-lg cursor-pointer hover:bg-secondary-dark/80 transition-colors">
-                                <input type="radio" name="accion" value="crear" class="mr-3 text-accent-blue focus:ring-accent-blue"
-                                       {{ old('accion', $menusExistentes->isNotEmpty() ? 'actualizar' : 'crear') === 'crear' ? 'checked' : '' }}
-                                       onchange="toggleMenuSelect()">
-                                <div class="flex-1">
-                                    <div class="font-semibold text-text-primary">Crear nuevo menú</div>
-                                    <div class="text-sm text-text-secondary">Creará un menú nuevo con el contenido importado</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
+                    <input type="hidden" name="accion" value="{{ $menusExistentes->isNotEmpty() ? 'actualizar' : 'crear' }}" id="accionInput">
+                    <input type="hidden" name="menu_id" value="" id="menuIdInput">
+                    <input type="hidden" name="nombre" value="Menú Importado {{ date('d/m/Y') }}" id="nombreInput">
                 @endif
-
-                @if(!$menuEditando)
-                    <!-- Seleccionar menú a actualizar -->
-                    <div id="menuSelectContainer" class="mb-6" style="display: {{ old('accion', $menusExistentes->isNotEmpty() ? 'actualizar' : 'crear') === 'actualizar' ? 'block' : 'none' }};">
-                        <label for="menu_id" class="block text-sm font-medium text-text-secondary mb-2">
-                            Seleccionar menú a actualizar
-                        </label>
-                        <select id="menu_id" 
-                                name="menu_id"
-                                class="w-full px-4 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                            <option value="">-- Selecciona un menú --</option>
-                            @foreach($menusExistentes ?? [] as $menuExistente)
-                                <option value="{{ $menuExistente->id }}" {{ old('menu_id') == $menuExistente->id ? 'selected' : '' }}>
-                                    {{ $menuExistente->nombre ?? 'Sin nombre' }}
-                                    @if($menuExistente->activo)
-                                        (⭐ Activo)
-                                    @endif
-                                </option>
-                            @endforeach
-                        </select>
-                        @if(($menusExistentes ?? collect())->isEmpty())
-                            <p class="text-xs text-yellow-400 mt-2">⚠️ No hay menús existentes. Se creará uno nuevo.</p>
-                        @endif
-                    </div>
-
-                    <!-- Nombre del menú (solo para crear nuevo) -->
-                    <div id="nombreContainer" class="mb-6" style="display: {{ old('accion', $menusExistentes->isNotEmpty() ? 'actualizar' : 'crear') === 'crear' ? 'block' : 'none' }};">
-                        <label for="nombre" class="block text-sm font-medium text-text-secondary mb-2">
-                            Nombre del Menú
-                        </label>
-                        <input type="text" 
-                               id="nombre" 
-                               name="nombre"
-                               value="Menú Importado {{ date('d/m/Y') }}"
-                               class="w-full px-4 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                               placeholder="Ej: Menú Principal">
-                    </div>
-                @endif
-
-                <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
-                    <div class="flex items-start">
-                        <span class="text-yellow-500 text-xl mr-3">⚠️</span>
-                        <div>
-                            <h4 class="font-semibold text-text-primary mb-1">Importante</h4>
-                            <ul class="text-sm text-text-secondary space-y-1 list-disc list-inside">
-                                <li id="warning-actualizar" style="display: none;">El contenido del menú seleccionado será <strong>reemplazado completamente</strong></li>
-                                <li id="warning-crear" style="display: none;">El nuevo menú <strong>no se activará automáticamente</strong></li>
-                                <li>Podrás editarlo y activarlo desde la lista de menús</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex space-x-4">
-                    <a href="{{ route('menus.index', $comercio) }}" 
-                       class="flex-1 bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray text-center">
-                        Cancelar
-                    </a>
-                    <button type="submit" 
-                            class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
-                        ✅ Confirmar e Importar
-                    </button>
-                </div>
             </form>
+
+            <!-- Botón flotante a la derecha -->
+            <button onclick="showConfirmModal()" 
+                    class="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-4 px-8 rounded-full transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-110 flex items-center gap-3">
+                <span class="text-2xl">✅</span>
+                <span class="text-lg">Importar</span>
+            </button>
+
+            <!-- Modal de confirmación -->
+            <div id="confirmModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-background rounded-2xl shadow-2xl max-w-md w-full border border-accent-gray">
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold text-text-primary mb-4">⚠️ Confirmar Importación</h3>
+                        
+                        @if($menuEditando)
+                            <div class="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <span class="text-accent-blue text-xl mr-2">ℹ️</span>
+                                    <div class="font-semibold text-text-primary">Actualizando menú: "{{ $menuEditando->nombre }}"</div>
+                                </div>
+                                <p class="text-sm text-text-secondary mt-2">
+                                    <strong class="text-red-400">El contenido de este menú será REEMPLAZADO COMPLETAMENTE</strong> con los datos del Excel.
+                                </p>
+                            </div>
+                        @else
+                            <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <span class="text-yellow-500 text-xl mr-2">⚠️</span>
+                                    <div class="font-semibold text-text-primary">Atención</div>
+                                </div>
+                                <p class="text-sm text-text-secondary mt-2">
+                                    @if($menusExistentes->isNotEmpty())
+                                        <strong class="text-red-400">Se actualizará un menú existente y su contenido será REEMPLAZADO COMPLETAMENTE.</strong>
+                                    @else
+                                        Se creará un nuevo menú con el contenido importado.
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+
+                        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                            <p class="text-sm text-text-primary">
+                                <strong class="text-red-400">⚠️ Todos los datos actuales del menú serán eliminados y reemplazados por los datos del Excel.</strong>
+                            </p>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button onclick="closeConfirmModal()" 
+                                    class="flex-1 bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                                Cancelar
+                            </button>
+                            <button onclick="confirmImport()" 
+                                    class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                                ✅ Confirmar e Importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        function toggleMenuSelect() {
-            const accion = document.querySelector('input[name="accion"]:checked').value;
-            const menuSelectContainer = document.getElementById('menuSelectContainer');
-            const nombreContainer = document.getElementById('nombreContainer');
-            const warningActualizar = document.getElementById('warning-actualizar');
-            const warningCrear = document.getElementById('warning-crear');
-            
-            if (accion === 'actualizar') {
-                menuSelectContainer.style.display = 'block';
-                nombreContainer.style.display = 'none';
-                warningActualizar.style.display = 'list-item';
-                warningCrear.style.display = 'none';
-            } else {
-                menuSelectContainer.style.display = 'none';
-                nombreContainer.style.display = 'block';
-                warningActualizar.style.display = 'none';
-                warningCrear.style.display = 'list-item';
-            }
+        function showConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('hidden');
         }
-        
-        // Validar antes de enviar
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const accion = document.querySelector('input[name="accion"]:checked').value;
-            
-            if (accion === 'actualizar') {
-                const menuId = document.getElementById('menu_id').value;
-                if (!menuId) {
-                    e.preventDefault();
-                    alert('Por favor, selecciona un menú para actualizar.');
-                    return false;
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+        }
+
+        function confirmImport() {
+            @if(!$menuEditando && $menusExistentes->isNotEmpty())
+                // Si hay menús existentes, usar el primero por defecto
+                const accionInput = document.getElementById('accionInput');
+                const menuIdInput = document.getElementById('menuIdInput');
+                
+                if (accionInput.value === 'actualizar') {
+                    // Obtener el primer menú disponible
+                    const firstMenu = @json($menusExistentes->first());
+                    if (firstMenu) {
+                        menuIdInput.value = firstMenu.id;
+                    } else {
+                        accionInput.value = 'crear';
+                    }
                 }
+            @endif
+            
+            // Enviar el formulario
+            document.getElementById('importForm').submit();
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConfirmModal();
+            }
+        });
+
+        // Cerrar modal con ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeConfirmModal();
             }
         });
     </script>

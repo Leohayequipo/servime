@@ -1,5 +1,18 @@
 <x-app-layout>
     <style>
+        /* Botón Actualizar Menú - Verde forzado */
+        #btn-actualizar-menu,
+        .btn-actualizar-menu,
+        button[type="submit"][id="btn-actualizar-menu"] {
+            background-color: #10b981 !important;
+            border: 2px solid rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        #btn-actualizar-menu:hover,
+        .btn-actualizar-menu:hover {
+            background-color: #059669 !important;
+        }
+        
         /* Forzar estilos para inputs - mismo color que el contenedor */
         input, select, textarea {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
@@ -412,8 +425,15 @@
                     <!-- Botón de Guardar -->
                     <div class="flex justify-end">
                         <button type="submit" 
-                                class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl">
-                            {{ $isEdit ? 'Actualizar Menú' : 'Crear Menú' }}
+                                id="btn-actualizar-menu"
+                                style="background-color: #10b981 !important; border: 2px solid rgba(16, 185, 129, 0.3) !important;"
+                                class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center gap-3 hover:opacity-90"
+                                onmouseover="this.style.backgroundColor='#059669'"
+                                onmouseout="this.style.backgroundColor='#10b981'">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>{{ $isEdit ? 'Actualizar Menú' : 'Crear Menú' }}</span>
                         </button>
                     </div>
                 </div>
@@ -1093,15 +1113,6 @@
                 </div>
             @endif
 
-            <!-- Botón Flotante Guardar Cambios -->
-            <div class="fixed bottom-6 right-6 z-50">
-                <button type="button" 
-                        onclick="saveCustomization()"
-                        class="btn-primary text-lg px-6 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2">
-                    <span>💾</span>
-                    <span>Guardar Cambios</span>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -1205,134 +1216,6 @@
                 });
             }
             
-            // También interceptar el botón de guardar cambios
-            const saveButton = document.querySelector('button[onclick="saveCustomization()"]');
-            if (saveButton) {
-                // Remover el onclick original para evitar doble ejecución
-                saveButton.removeAttribute('onclick');
-                
-                saveButton.addEventListener('click', function(event) {
-                    event.preventDefault();
-                    
-                    // Prevenir doble envío
-                    if (saveButton.disabled) {
-                        return;
-                    }
-                    
-                    saveButton.disabled = true;
-                    saveButton.textContent = 'Guardando promociones...';
-                    
-                    // Guardar promociones primero vía AJAX
-                    savePromocionesSilently().then(() => {
-                        saveButton.textContent = 'Procesando...';
-                        
-                        // Sincronizar promociones al formulario (por si acaso)
-                        syncPromocionesToForm();
-                        
-                        // Verificar si hay archivo convertido
-                        if (convertedImageFile) {
-                        
-                        // Crear FormData manualmente
-                        const formData = new FormData();
-                        formData.append('_token', document.querySelector('input[name="_token"]').value);
-                        formData.append('nombre', document.getElementById('nombre').value);
-                        formData.append('archivo', convertedImageFile);
-                        
-                        // Sincronizar campos del chatbot ANTES de crear el FormData
-                        const chatbotName = document.getElementById('chatbot_name');
-                        const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
-                        if (chatbotName && chatbotNameHidden) {
-                            chatbotNameHidden.value = chatbotName.value;
-                            console.log('✅ Chatbot name sincronizado para FormData:', chatbotName.value);
-                        }
-                        
-                        const welcomeMessage = document.getElementById('welcome_message');
-                        const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
-                        if (welcomeMessage && welcomeMessageHidden) {
-                            welcomeMessageHidden.value = welcomeMessage.value;
-                            console.log('✅ Welcome message sincronizado para FormData:', welcomeMessage.value.substring(0, 50) + '...');
-                        }
-                        
-                        // Agregar todos los campos ocultos del formulario
-                        const menuForm = document.getElementById('menu-form');
-                        if (menuForm) {
-                            // NOTA: chatbot_name, welcome_message y colores NO se envían aquí - se guardan automáticamente
-                            
-                            // Agregar promociones
-                            const promoInputs = menuForm.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
-                            console.log('Agregando promociones al FormData:', promoInputs.length);
-                            promoInputs.forEach(input => {
-                                formData.append(input.name, input.value);
-                                console.log(`  - ${input.name} = ${input.value}`);
-                            });
-                            
-                            // Si estamos en modo edición, agregar método PUT
-                            // NOTA: No enviamos el formato porque el controlador lo detectará automáticamente
-                            // basándose en la extensión del archivo subido (imagen convertida = "image")
-                            @if(isset($isEdit) && $isEdit)
-                                formData.append('_method', 'PUT');
-                            @endif
-                        }
-                        
-                        // Determinar la ruta correcta según si es edición o creación
-                        @if(isset($isEdit) && $isEdit)
-                            const url = '{{ route("menus.update", [$comercio, $menu]) }}';
-                            const method = 'POST'; // Laravel usa POST con _method=PUT
-                        @else
-                            const url = '{{ route("menus.store", $comercio) }}';
-                            const method = 'POST';
-                        @endif
-                        
-                        // Enviar con fetch
-                        fetch(url, {
-                            method: method,
-                            body: formData
-                        }).then(response => {
-                            if (response.ok) {
-                                window.location.href = '{{ route("menus.index", $comercio) }}';
-                            } else {
-                                saveButton.disabled = false;
-                                saveButton.textContent = 'Guardar Cambios';
-                                alert('Error al guardar el menú. Por favor, intenta nuevamente.');
-                            }
-                        }).catch(error => {
-                            console.error('Error:', error);
-                            saveButton.disabled = false;
-                            saveButton.textContent = 'Guardar Cambios';
-                            alert('Error al guardar el menú. Por favor, intenta nuevamente.');
-                        });
-                        } else {
-                            // Sincronizar campos del chatbot ANTES de enviar el formulario
-                            const chatbotName = document.getElementById('chatbot_name');
-                            const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
-                            if (chatbotName && chatbotNameHidden) {
-                                chatbotNameHidden.value = chatbotName.value;
-                                console.log('✅ Chatbot name sincronizado antes de submit:', chatbotName.value);
-                            }
-                            
-                            const welcomeMessage = document.getElementById('welcome_message');
-                            const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
-                            if (welcomeMessage && welcomeMessageHidden) {
-                                welcomeMessageHidden.value = welcomeMessage.value;
-                                console.log('✅ Welcome message sincronizado antes de submit:', welcomeMessage.value.substring(0, 50) + '...');
-                            }
-                            
-                            // Enviar el formulario del menú (las promociones ya están guardadas vía AJAX)
-                            const menuForm = document.getElementById('menu-form');
-                            if (menuForm) {
-                                console.log('Enviando formulario normalmente (sin archivo convertido)');
-                                menuForm.submit();
-                            }
-                        }
-                    }).catch((error) => {
-                        console.error('Error al guardar promociones:', error);
-                        saveButton.disabled = false;
-                        saveButton.textContent = 'Guardar Cambios';
-                        showError('Error al guardar las promociones: ' + error.message);
-                        // No continuar con el envío si falla el guardado de promociones
-                    });
-                });
-            }
             // Aplicar tema predefinido
             function applyTheme(theme) {
                 const themes = {
