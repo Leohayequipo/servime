@@ -1370,6 +1370,45 @@
                 }, 2000);
             }
             
+            // Función genérica para mostrar notificaciones (usada en uploadPlatoImagen)
+            function showNotification(message, type = 'success') {
+                // Crear elemento de notificación único
+                const notificationId = 'notification-' + Date.now();
+                const notification = document.createElement('div');
+                notification.id = notificationId;
+                
+                // Estilos según el tipo
+                if (type === 'success') {
+                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-500 text-white flex items-center gap-2 animate-fade-in';
+                } else {
+                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-red-500 text-white flex items-center gap-2 animate-fade-in';
+                }
+                
+                notification.innerHTML = `
+                    <span>${type === 'success' ? '✓' : '✗'}</span>
+                    <span>${message}</span>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Mostrar con animación
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                    notification.style.transform = 'translateX(0)';
+                }, 10);
+                
+                // Ocultar después de 3 segundos
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+            
             // Actualizar vista previa
             function updatePreview() {
                 const primaryColor = document.getElementById('primary_color').value;

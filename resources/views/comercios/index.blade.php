@@ -164,14 +164,6 @@
                                         <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                                     </a>
                                     
-                                    <div class="grid grid-cols-1 gap-2">
-                                        <a href="{{ route('menus.create', $comercio) }}" 
-                                           class="w-full bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                            <span class="mr-1">📋</span>
-                                            Crear Menú
-                                        </a>
-                                    </div>
-                                    
                                     <!-- Botón Editar -->
                                     <div class="grid grid-cols-1 gap-2">
                                         <a href="{{ route('comercios.edit', $comercio) }}" 
