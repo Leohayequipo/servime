@@ -650,10 +650,10 @@ class MenuController extends Controller
 
             // Copiar y eliminar después del guardado (no crítico, no debe bloquear)
             // Solo en producción, y con manejo silencioso de errores
-            $this->copyMenuItemToPublicHtml($imagenPath);
+            $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
             
             if ($oldImageRelativePath) {
-                $this->deleteMenuItemSafely($oldImageRelativePath);
+                $this->deleteMenuItemSafely($oldImageRelativePath, $comercio->id);
             }
 
             return response()->json([
@@ -1386,10 +1386,12 @@ class MenuController extends Controller
                 // La promoción no existe aún - no crear registro vacío
                 // Solo guardar la imagen en storage y devolver la URL
                 // El registro se creará cuando se guarden los datos de texto vía savePromociones()
-                $imagenPath = $request->file('imagen')->store('menu-items', 'public');
+                // Asegurar que existan las carpetas del comercio
+                $this->createComercioDirectories($comercio->id);
+                $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
                 
                 // Copiar a public_html
-                $this->copyMenuItemToPublicHtml($imagenPath);
+                $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
                 
                 return response()->json([
                     'success' => true,
