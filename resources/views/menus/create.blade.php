@@ -251,12 +251,22 @@
             @endif
 
             <!-- Formulario Principal del Menú -->
-            <form method="POST" action="{{ $isEdit ? route('menus.update', [$comercio, $menu]) : route('menus.store', $comercio) }}" enctype="multipart/form-data" class="space-y-6 mb-8" id="menu-form">
+            @php
+                // Determinar la ruta correcta según si estamos en admin o en comercio
+                $updateRoute = $isEdit 
+                    ? (request()->is('admin/*') 
+                        ? route('admin.menus.update', $menu) 
+                        : route('menus.update', [$comercio, $menu]))
+                    : route('menus.store', $comercio);
+            @endphp
+            <form method="POST" action="{{ $updateRoute }}" enctype="multipart/form-data" class="space-y-6 mb-8" id="menu-form">
                             @csrf
                             @if($isEdit)
                                 @method('PUT')
                 <!-- Campo oculto para mantener el formato actual -->
-                <input type="hidden" name="formato" value="{{ $menu->formato }}">
+                @if($menu->formato)
+                    <input type="hidden" name="formato" value="{{ $menu->formato }}">
+                @endif
                             @endif
             
             <!-- Campos ocultos del chatbot (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
@@ -2042,6 +2052,12 @@
         let isSubmitting = false;
         
         function handleFormSubmit(event) {
+            console.log('🔍 DEBUG handleFormSubmit - INICIO', {
+                isSubmitting: isSubmitting,
+                event: event,
+                form: document.getElementById('menu-form')
+            });
+            
             // Prevenir envíos dobles
             if (isSubmitting) {
                 console.log('⚠️ Formulario ya se está enviando, ignorando envío duplicado');
@@ -2058,16 +2074,22 @@
                 return false;
             }
             
-            // Verificar que el archivo esté presente
-            const fileInput = document.getElementById('archivo');
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                if (!convertedImageFile) {
-                    console.error('❌ No hay archivo para enviar');
-                    alert('Por favor, selecciona un archivo de menú antes de guardar.');
-                    isSubmitting = false;
-                    return false;
+            // Verificar que el archivo esté presente SOLO si es un menú nuevo
+            @if(!isset($isEdit) || !$isEdit)
+                // Es un menú nuevo, el archivo es obligatorio
+                const fileInput = document.getElementById('archivo');
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    if (!convertedImageFile) {
+                        console.error('❌ No hay archivo para enviar');
+                        alert('Por favor, selecciona un archivo de menú antes de guardar.');
+                        isSubmitting = false;
+                        return false;
+                    }
                 }
-            }
+            @else
+                // Es una edición, el archivo es opcional
+                console.log('✅ Editando menú existente, archivo es opcional');
+            @endif
             
             // Verificar si hay archivo convertido
             if (convertedImageFile) {
@@ -2083,8 +2105,18 @@
             }
             
             // Enviar el formulario
-            console.log('📤 Enviando formulario...');
-            menuForm.submit();
+            console.log('📤 Enviando formulario...', {
+                formAction: menuForm.action,
+                formMethod: menuForm.method,
+                hasFile: document.getElementById('archivo')?.files?.length > 0,
+                formData: new FormData(menuForm)
+            });
+            
+            // Agregar un pequeño delay para asegurar que los logs se vean
+            setTimeout(() => {
+                menuForm.submit();
+            }, 100);
+            
             return false;
         }
         

@@ -277,10 +277,12 @@ class MenuController extends Controller
             abort(404, 'Menú no encontrado en este comercio.');
         }
         
-        $validated = $request->validate([
+        // Preparar reglas de validación
+        $rules = [
             'nombre' => 'nullable|string|max:255',
             'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
-            'formato' => 'nullable|in:pdf,image',
+            // Formato solo se valida si se envía y no está vacío
+            'formato' => 'nullable|string|in:pdf,image',
             // Campos del chatbot
             'chatbot_name' => 'nullable|string|max:50',
             'welcome_message' => 'nullable|string|max:500',
@@ -290,17 +292,22 @@ class MenuController extends Controller
             'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'pedido_habilitado' => 'nullable|boolean'
-        ]);
-
-
+        ];
         
+        // Si formato está vacío o no es válido, convertirlo a null
+        if ($request->has('formato') && (empty($request->input('formato')) || !in_array($request->input('formato'), ['pdf', 'image']))) {
+            $request->merge(['formato' => null]);
+        }
+        
+        $validated = $request->validate($rules);
 
         $nuevoArchivo = $request->hasFile('archivo');
+        $necesitaReprocesar = false;
         
         // Si se sube un nuevo archivo
         if ($nuevoArchivo) {
             // Eliminar archivo anterior de ambos lugares
-            $this->deleteMenuSafely($menu->archivo_original);
+            $this->deleteMenuSafely($menu->archivo_original, $comercio->id);
             
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
@@ -320,6 +327,10 @@ class MenuController extends Controller
             $extension = $request->file('archivo')->getClientOriginalExtension();
             $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
             $menu->procesado = false; // Marcar como no procesado para reprocesar después
+            $necesitaReprocesar = true; // Se subió archivo nuevo, necesita reprocesar
+        } else {
+            // Si no hay archivo nuevo, verificar si el menú está marcado como no procesado
+            $necesitaReprocesar = !$menu->procesado;
         }
 
         // Actualizar nombre del menú
@@ -332,7 +343,12 @@ class MenuController extends Controller
             $menu->formato = $validated['formato'];
         }
         
+        // IMPORTANTE: Guardar el menú ANTES de verificar si necesita reprocesar
+        // para que el estado de 'procesado' se actualice en la BD
         $menu->save();
+        
+        // Refrescar el menú desde la BD para obtener el estado actualizado
+        $menu->refresh();
 
         // Actualizar campos del chatbot y colores en el comercio
         $needsUpdate = false;
@@ -402,14 +418,20 @@ class MenuController extends Controller
         Log::info('Guardando promociones', ['count' => count($promocionesParaGuardar), 'promociones' => $promocionesParaGuardar]);
         $this->savePromociones($menu, $promocionesParaGuardar);
 
-        // SOLO reprocesar si se subió un nuevo archivo
+        // SOLO reprocesar si se subió un nuevo archivo O si el menú está marcado como no procesado
         // NO reprocesar si solo se actualizaron otros campos (preserva imágenes)
-        if (!$nuevoArchivo) {
-            return redirect()->route('menus.edit', [$comercio, $menu])
+        
+        if (!$necesitaReprocesar) {
+            // Determinar la ruta de retorno según si viene de admin o comercio
+            $editRoute = request()->is('admin/*') 
+                ? route('admin.menus.edit', $menu)
+                : route('menus.edit', [$comercio, $menu]);
+            
+            return redirect($editRoute)
                 ->with('success', 'Cambios guardados exitosamente.');
         }
 
-        // Se subió un nuevo archivo: preservar imágenes antes de reprocesar
+        // Se subió un nuevo archivo o el menú está marcado para reprocesar: preservar imágenes antes de reprocesar
         $imagenesExistentes = [];
         if ($menu->contexto_gpt) {
             try {
@@ -475,16 +497,25 @@ class MenuController extends Controller
                 }
             }
 
+            // Determinar la ruta de retorno según si viene de admin o comercio
+            $indexRoute = request()->is('admin/*') 
+                ? route('admin.menus.index')
+                : route('menus.index', $comercio);
+            
+            $editRoute = request()->is('admin/*') 
+                ? route('admin.menus.edit', $menu)
+                : route('menus.edit', [$comercio, $menu]);
+            
             if ($processed) {
-                return redirect()->route('menus.index', $comercio)
+                return redirect($indexRoute)
                     ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
             } else {
-                return redirect()->route('menus.index', $comercio)
+                return redirect($indexRoute)
                     ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
             }
         } catch (\Exception $e) {
             \Log::error('Error al reprocesar menú: ' . $e->getMessage());
-            return redirect()->route('menus.edit', [$comercio, $menu])
+            return redirect($editRoute)
                 ->with('error', 'Error al reprocesar el menú: ' . $e->getMessage());
         }
     }

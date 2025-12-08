@@ -170,11 +170,19 @@ class AdminController extends Controller
 
     public function updateMenu(Request $request, Menu $menu)
     {
-        // Redirigir al método update del MenuController con los parámetros correctos
-        return redirect()->route('menus.update', [
-            'comercio' => $menu->comercio,
-            'menu' => $menu
-        ]);
+        // Cargar la relación comercio si no está cargada
+        if (!$menu->relationLoaded('comercio')) {
+            $menu->load('comercio');
+        }
+        
+        // Verificar que el comercio existe
+        if (!$menu->comercio) {
+            return redirect()->back()->with('error', 'No se encontró el comercio asociado al menú.');
+        }
+        
+        // Llamar directamente al método update del MenuController
+        $menuController = new \App\Http\Controllers\MenuController();
+        return $menuController->update($request, $menu->comercio, $menu);
     }
 
     /**
