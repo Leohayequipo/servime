@@ -1196,14 +1196,12 @@
                     const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
                     if (chatbotName && chatbotNameHidden) {
                         chatbotNameHidden.value = chatbotName.value;
-                        console.log('Chatbot name sincronizado:', chatbotName.value);
                     }
                     
                     const welcomeMessage = document.getElementById('welcome_message');
                     const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
                     if (welcomeMessage && welcomeMessageHidden) {
                         welcomeMessageHidden.value = welcomeMessage.value;
-                        console.log('Welcome message sincronizado:', welcomeMessage.value);
                     }
                     
                     // Guardar promociones primero vía AJAX antes de enviar el formulario
@@ -1371,7 +1369,8 @@
             }
             
             // Función genérica para mostrar notificaciones (usada en uploadPlatoImagen)
-            function showNotification(message, type = 'success') {
+            // Hacerla global para que esté disponible en todos los bloques script
+            window.showNotification = function(message, type = 'success') {
                 // Crear elemento de notificación único
                 const notificationId = 'notification-' + Date.now();
                 const notification = document.createElement('div');
@@ -1384,10 +1383,7 @@
                     notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-red-500 text-white flex items-center gap-2 animate-fade-in';
                 }
                 
-                notification.innerHTML = `
-                    <span>${type === 'success' ? '✓' : '✗'}</span>
-                    <span>${message}</span>
-                `;
+                notification.innerHTML = `<span>${message}</span>`;
                 
                 document.body.appendChild(notification);
                 
@@ -1407,7 +1403,7 @@
                         }
                     }, 300);
                 }, 3000);
-            }
+            };
             
             // Actualizar vista previa
             function updatePreview() {
@@ -1680,22 +1676,18 @@
                 return;
             }
             
-            console.log('=== SYNC PROMOCIONES ===');
             
             // PASO 1: Obtener SOLO los items de promociones que están VISIBLES en el contenedor
             // IMPORTANTE: Hacer esto ANTES de eliminar inputs para asegurar que tenemos los datos
             const container = document.getElementById('promociones-container');
             if (!container) {
                 // Si no existe el contenedor, es un menú nuevo sin promociones aún
-                console.log('ℹ️ No hay contenedor de promociones (menú nuevo) - saltando sincronización');
                 return;
             }
             
             // Obtener TODOS los items del contenedor y verificar que realmente existen en el DOM
             // IMPORTANTE: Hacer una consulta FRESCA del DOM en este momento para asegurar que tenemos items actualizados
             const allItems = Array.from(container.querySelectorAll('.promocion-item'));
-            console.log(`=== SYNC PROMOCIONES - INICIO ===`);
-            console.log(`Total items encontrados en contenedor: ${allItems.length}`);
             
             // FILTRAR items que realmente están en el DOM ANTES de procesarlos
             // Esto elimina cualquier referencia obsoleta a items que fueron eliminados
@@ -1916,8 +1908,6 @@
                 console.error('❌ ERROR: No se crearon inputs ocultos aunque había datos de promociones');
                 alert(`ERROR: No se crearon inputs ocultos. Promociones encontradas: ${Object.keys(promocionesData).length}, Promociones agregadas: ${promocionesAgregadas}`);
             }
-            
-            console.log('=== SYNC PROMOCIONES - FIN ===');
         }
 
         // Función para guardar personalización
@@ -1931,7 +1921,6 @@
                 setTimeout(() => {
                     const menuForm = document.getElementById('menu-form');
                     if (menuForm) {
-                        console.log('Enviando formulario menu-form con promociones sincronizadas');
                         menuForm.submit();
                     }
                 }, 100);
@@ -1964,7 +1953,6 @@
             // Primero, enviar el formulario del menú directamente
             const menuForm = document.getElementById('menu-form');
             if (menuForm) {
-                console.log('Enviando formulario menu-form con promociones sincronizadas');
                 // Simplemente enviar el formulario original
                 menuForm.submit();
                 return;
@@ -2091,15 +2079,8 @@
         let isSubmitting = false;
         
         function handleFormSubmit(event) {
-            console.log('🔍 DEBUG handleFormSubmit - INICIO', {
-                isSubmitting: isSubmitting,
-                event: event,
-                form: document.getElementById('menu-form')
-            });
-            
             // Prevenir envíos dobles
             if (isSubmitting) {
-                console.log('⚠️ Formulario ya se está enviando, ignorando envío duplicado');
                 return false;
             }
             
@@ -2127,7 +2108,6 @@
                 }
             @else
                 // Es una edición, el archivo es opcional
-                console.log('✅ Editando menú existente, archivo es opcional');
             @endif
             
             // Verificar si hay archivo convertido
@@ -2137,21 +2117,13 @@
                 
                 // El archivo convertido se enviará a través del FormData en el botón de guardar
                 // Aquí solo permitimos que continúe el flujo
-                console.log('✅ Archivo convertido listo, el FormData lo enviará');
             } else {
                 // Mostrar loader
                 LoadingManager.showGlobalLoader('Subiendo menú...');
             }
             
             // Enviar el formulario
-            console.log('📤 Enviando formulario...', {
-                formAction: menuForm.action,
-                formMethod: menuForm.method,
-                hasFile: document.getElementById('archivo')?.files?.length > 0,
-                formData: new FormData(menuForm)
-            });
-            
-            // Agregar un pequeño delay para asegurar que los logs se vean
+            // Agregar un pequeño delay para asegurar que el loader se muestre
             setTimeout(() => {
                 menuForm.submit();
             }, 100);
@@ -3624,7 +3596,6 @@
             const container = document.getElementById('promociones-container');
             if (!container) {
                 // Si no existe el contenedor, es un menú nuevo sin promociones aún
-                console.log('ℹ️ No hay contenedor de promociones (menú nuevo) - retornando array vacío');
                 return [];
             }
             
@@ -3750,7 +3721,6 @@
             try {
                 // Si es un menú nuevo, no intentar guardar promociones (aún no existe el menú)
                 @if(!isset($isEdit) || !$isEdit || !isset($menu) || !$menu)
-                    console.log('ℹ️ Menú nuevo - saltando guardado de promociones (se guardarán después de crear el menú)');
                     return true;
                 @endif
                 

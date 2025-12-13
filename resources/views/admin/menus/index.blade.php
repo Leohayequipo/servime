@@ -5,8 +5,9 @@
                 📋 Gestión de Menús
             </h2>
             <div class="flex space-x-3">
-                <a href="{{ route('admin.menus.create') }}" class="btn-primary">
-                    ➕ Crear Menú
+                <a href="{{ route('admin.menus.deleted') }}" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg flex items-center gap-2">
+                    <span>🗑️</span>
+                    <span>Menús Eliminados</span>
                 </a>
                 <a href="{{ route('dashboard') }}" class="btn-secondary">
                     {{ __('Volver al Dashboard') }}
@@ -88,6 +89,13 @@
                             <span class="text-white text-lg">📋</span>
                         </div>
                         <h3 class="text-xl font-bold text-text-primary">Lista de Menús</h3>
+                    </div>
+                    <div>
+                        <a href="{{ route('admin.menus.deleted') }}" 
+                           class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2">
+                            <span>🗑️</span>
+                            <span>Ver Menús Eliminados</span>
+                        </a>
                     </div>
                 </div>
                 

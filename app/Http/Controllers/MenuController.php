@@ -536,9 +536,8 @@ class MenuController extends Controller
             abort(404, 'Menú no encontrado en este comercio.');
         }
         
-        // Eliminar archivo de ambos lugares
-        $this->deleteMenuSafely($menu->archivo_original);
-        
+        // BAJA LÓGICA: Soft delete (no eliminar archivos ni imágenes)
+        // Las imágenes se mantienen para poder reutilizarlas al exportar/importar
         $menu->delete();
         
         return redirect()->route('menus.index', $comercio)

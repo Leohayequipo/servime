@@ -89,8 +89,7 @@
                                     <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                          alt="Logo de {{ $comercio->nombre }}" 
                                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;"
-                                         onload="console.log('Image loaded successfully:', this.src);">
+                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;">
                                 @else
                                     <!-- Logo por defecto cuando no hay logo -->
                                     <img src="{{ asset('images/logo_empresa_default.png') }}" 

@@ -100,11 +100,6 @@
                         <h3 class="text-xl font-bold text-text-primary">Menús</h3>
                     </div>
                     <div class="flex space-x-3">
-                        <a href="{{ route('admin.menus.create') }}" 
-                           class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2">
-                            <span class="text-sm">➕</span>
-                            <span class="text-sm font-medium">Crear Menú</span>
-                        </a>
                         <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
                             {{ $comercio->menus->count() }} menú(s)
                         </span>

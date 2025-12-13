@@ -229,8 +229,8 @@
                     </p>
                     <p class="flex items-center justify-center text-text-secondary">
                         <span class="mr-2">📧</span>
-                        <a href="mailto:{{ config('mail.from.address', 'leonardo@servime.com') }}" class="hover:text-accent-blue transition-colors">
-                            {{ config('mail.from.address', 'leonardo@servime.com') }}
+                        <a href="mailto:{{ config('mail.from.address') }}" class="hover:text-accent-blue transition-colors">
+                            {{ config('mail.from.address') }}
                         </a>
                     </p>
                 </div>

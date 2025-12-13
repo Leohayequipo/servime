@@ -868,10 +868,17 @@
                                    class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('comercios.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                     Comercios
                                 </a>
-                                <a href="{{ route('menus.all') }}" 
-                                   class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
-                                    Menús
-                                </a>
+                                @if(Auth::user()->isSuperAdmin())
+                                    <a href="{{ route('admin.menus.index') }}" 
+                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                        Menús
+                                    </a>
+                                @else
+                                    <a href="{{ route('menus.all') }}" 
+                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                        Menús
+                                    </a>
+                                @endif
                                 
                                 <!-- Analytics oculto temporalmente -->
                                 {{-- <a href="{{ route('analytics.dashboard') }}" 

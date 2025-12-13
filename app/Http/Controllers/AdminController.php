@@ -134,6 +134,38 @@ class AdminController extends Controller
     }
 
     /**
+     * Lista de menús eliminados (baja lógica)
+     */
+    public function menusDeleted()
+    {
+        $menus = Menu::onlyTrashed()
+            ->with(['comercio.user'])
+            ->latest('deleted_at')
+            ->paginate(20);
+        return view('admin.menus.deleted', compact('menus'));
+    }
+
+    /**
+     * Restaurar un menú eliminado
+     */
+    public function restoreMenu($menuId)
+    {
+        // Buscar el menú incluso si está eliminado
+        $menu = Menu::withTrashed()->findOrFail($menuId);
+
+        // Verificar que el menú esté eliminado
+        if (!$menu->trashed()) {
+            return redirect()->route('admin.menus.index')
+                ->with('error', 'Este menú no está eliminado.');
+        }
+
+        $menu->restore();
+
+        return redirect()->route('admin.menus.deleted')
+            ->with('success', 'Menú restaurado exitosamente.');
+    }
+
+    /**
      * Ver detalles de un menú
      */
     public function showMenu(Menu $menu)
@@ -184,114 +216,6 @@ class AdminController extends Controller
         $menuController = new \App\Http\Controllers\MenuController();
         return $menuController->update($request, $menu->comercio, $menu);
     }
-
-    /**
-     * Mostrar formulario para crear comercio
-     */
-    public function createComercio()
-    {
-        // Solo mostrar usuarios que NO tengan comercio asignado
-        $users = User::where('role', 'user')
-                    ->whereDoesntHave('comercios')
-                    ->get();
-        return view('admin.comercios.create', compact('users'));
-    }
-
-    /**
-     * Crear comercio
-     */
-    public function storeComercio(Request $request)
-    {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'direccion' => 'nullable|string|max:255',
-            'horario' => 'nullable|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
-        ]);
-
-        $targetUser = User::findOrFail($validated['user_id']);
-
-        $comercio = new Comercio();
-        $comercio->user_id = $validated['user_id'];
-        $comercio->nombre = $validated['nombre'];
-        $comercio->slug = \Illuminate\Support\Str::slug($validated['nombre']);
-        $comercio->descripcion = $validated['descripcion'];
-        $comercio->direccion = $validated['direccion'];
-        $comercio->horario = $validated['horario'];
-
-        // Manejar logo si se sube
-        if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('logos', 'public');
-            $comercio->logo_url = $logoPath;
-        }
-
-        $comercio->save();
-
-        return redirect()->route('admin.comercios.show', $comercio)
-            ->with('success', 'Comercio creado exitosamente.');
-    }
-
-    /**
-     * Mostrar formulario para crear menú
-     */
-    public function createMenu()
-    {
-        $comercios = Comercio::with('user')->get();
-        return view('admin.menus.create', compact('comercios'));
-    }
-
-    /**
-     * Crear menú
-     */
-    public function storeMenu(Request $request)
-    {
-        $validated = $request->validate([
-            'comercio_id' => 'required|exists:comercios,id',
-            'nombre' => 'nullable|string|max:255',
-            'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240'
-        ]);
-
-        $comercio = Comercio::findOrFail($validated['comercio_id']);
-
-        $menu = new Menu();
-        $menu->comercio_id = $comercio->id;
-        $menu->nombre = $validated['nombre'];
-
-        // Guardar archivo
-        $archivoPath = $request->file('archivo')->store('menus', 'public');
-        
-        // Copiar archivo a public_html en producción
-        $this->copyMenuToPublicHtml($archivoPath);
-        
-        $menu->archivo_original = $archivoPath;
-
-        // Detectar formato automáticamente
-        $extension = $request->file('archivo')->getClientOriginalExtension();
-        $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
-        $menu->procesado = false;
-
-        // Si es el primer menú del comercio, marcarlo como activo
-        if ($comercio->menus()->count() === 0) {
-            $menu->activo = true;
-        }
-
-        $menu->save();
-
-        // Procesar con OpenAI
-        $processor = new \App\Services\MenuProcessorService();
-        $processed = $processor->processMenu($menu);
-
-        if ($processed) {
-            return redirect()->route('admin.menus.show', $menu)
-                ->with('success', 'Menú creado y procesado exitosamente con IA.');
-        } else {
-            return redirect()->route('admin.menus.show', $menu)
-                ->with('warning', 'Menú creado pero hubo un problema en el procesamiento.');
-        }
-    }
-
 
     /**
      * Eliminar comercio (Super Admin)

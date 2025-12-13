@@ -54,16 +54,14 @@ Route::middleware('auth')->group(function () {
         
         // Gestión de Comercios (usando slug)
         Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
-        Route::get('/comercios/create', [App\Http\Controllers\AdminController::class, 'createComercio'])->name('comercios.create');
-        Route::post('/comercios', [App\Http\Controllers\AdminController::class, 'storeComercio'])->name('comercios.store');
         Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
         Route::delete('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
         
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');
-        Route::get('/menus/create', [App\Http\Controllers\AdminController::class, 'createMenu'])->name('menus.create');
-        Route::post('/menus', [App\Http\Controllers\AdminController::class, 'storeMenu'])->name('menus.store');
+        Route::get('/menus/deleted', [App\Http\Controllers\AdminController::class, 'menusDeleted'])->name('menus.deleted');
+        Route::post('/menus/{menuId}/restore', [App\Http\Controllers\AdminController::class, 'restoreMenu'])->name('menus.restore');
         Route::get('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'showMenu'])->name('menus.show');
         Route::get('/menus/{menu}/edit', [App\Http\Controllers\AdminController::class, 'editMenu'])->name('menus.edit');
         Route::put('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'updateMenu'])->name('menus.update');

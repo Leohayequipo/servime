@@ -18,9 +18,15 @@
                     <x-nav-link :href="route('comercios.index')" :active="request()->routeIs('comercios.*')">
                         {{ __('Comercios') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('menus.all')" :active="request()->routeIs('menus.*')">
-                        {{ __('Menús') }}
-                    </x-nav-link>
+                    @if(Auth::user()->isSuperAdmin())
+                        <x-nav-link :href="route('admin.menus.index')" :active="request()->routeIs('admin.menus.*')">
+                            {{ __('Menús') }}
+                        </x-nav-link>
+                    @else
+                        <x-nav-link :href="route('menus.all')" :active="request()->routeIs('menus.*')">
+                            {{ __('Menús') }}
+                        </x-nav-link>
+                    @endif
                     <!-- Analytics oculto temporalmente -->
                     {{-- <x-nav-link :href="route('analytics.dashboard')" :active="request()->routeIs('analytics.*')">
                         📊 {{ __('Analytics') }}

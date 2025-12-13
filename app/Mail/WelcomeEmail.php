@@ -33,7 +33,10 @@ class WelcomeEmail extends Mailable
     {
         return new Envelope(
             subject: '🤖 ¡Bienvenido a ServiME! Tu asistente IA para menús digitales',
-            from: config('mail.from.address', 'info.motos.acon@gmail.com'),
+            from: new \Illuminate\Mail\Mailables\Address(
+                config('mail.from.address'),
+                config('mail.from.name', 'ServiME')
+            ),
         );
     }
 

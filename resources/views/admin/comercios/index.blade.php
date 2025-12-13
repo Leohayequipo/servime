@@ -5,9 +5,6 @@
                 🏪 Gestión de Comercios
             </h2>
             <div class="flex space-x-3">
-                <a href="{{ route('admin.comercios.create') }}" class="btn-primary">
-                    ➕ Crear Comercio
-                </a>
                 <a href="{{ route('dashboard') }}" class="btn-secondary">
                     {{ __('Volver al Dashboard') }}
                 </a>
@@ -138,10 +135,6 @@
                                             <a href="{{ route('admin.comercios.show', $comercio) }}" 
                                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
                                                 Ver
-                                            </a>
-                                            <a href="{{ route('admin.menus.create') }}" 
-                                               class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
-                                                Crear Menú
                                             </a>
                                         </div>
                                     </td>
