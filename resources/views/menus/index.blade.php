@@ -120,7 +120,14 @@
             @if($menus->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     @foreach($menus as $menu)
-                        <div class="metric-card group">
+                        <div class="metric-card group relative overflow-visible">
+                            <!-- Label MENU arriba -->
+                            <div class="absolute top-3 left-4 z-20">
+                                <span class="bg-gradient-to-r from-accent-blue to-blue-600 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
+                                    MENU
+                                </span>
+                            </div>
+                            
                             <!-- Imagen del menú -->
                             <div class="relative h-48 overflow-hidden rounded-t-xl">
                                 @if($menu->archivo_original && !str_contains($menu->archivo_original, '.pdf'))

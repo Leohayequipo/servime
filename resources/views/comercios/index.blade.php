@@ -82,7 +82,14 @@
             @if($comercios->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     @foreach($comercios as $comercio)
-                        <div class="metric-card group">
+                        <div class="metric-card group relative overflow-visible">
+                            <!-- Label COMERCIO arriba -->
+                            <div class="absolute top-3 left-4 z-20">
+                                <span class="bg-gradient-to-r from-accent-blue to-blue-600 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
+                                    COMERCIO
+                                </span>
+                            </div>
+                            
                             <!-- Logo/Imagen del comercio -->
                             <div class="relative h-48 overflow-hidden rounded-t-xl mb-6 bg-gradient-to-br from-primary-dark to-secondary-dark">
                                 @if($comercio->logo_url)
