@@ -105,16 +105,31 @@
                     <span class="mr-2">👁️</span>
                     Ver Página Pública
                 </a>
-                <button onclick="generateQR()" 
-                        class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
-                    <span class="mr-2">📱</span>
-                    QR Simple
-                </button>
-                <button onclick="generateQRWithLogo()" 
-                        class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
-                    <span class="mr-2">🎨</span>
-                    QR con Logo
-                </button>
+                <!-- QR Dropdown -->
+                <div class="relative group">
+                    <button class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                        <span class="mr-2">📱</span>
+                        Generar QR
+                        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div class="absolute left-0 mt-2 w-48 bg-secondary-dark border border-accent-gray rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div class="py-2">
+                            <button onclick="generateQR()" 
+                                    class="w-full text-left px-4 py-3 text-sm text-text-primary hover:bg-primary-dark transition-colors duration-200 flex items-center">
+                                <span class="mr-3">📱</span>
+                                QR Simple
+                            </button>
+                            <button onclick="generateQRWithLogo()" 
+                                    class="w-full text-left px-4 py-3 text-sm text-text-primary hover:bg-primary-dark transition-colors duration-200 flex items-center">
+                                <span class="mr-3">🎨</span>
+                                QR con Logo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             @if($menus->count() > 0)
