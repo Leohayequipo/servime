@@ -385,9 +385,9 @@
             </p>
             
             <div class="social-links">
-                <a href="#" class="social-link">📧 Email</a>
-                <a href="#" class="social-link">💬 WhatsApp</a>
-                <a href="#" class="social-link">🌐 Web</a>
+                <a href="mailto:{{ env('SUPPORT_EMAIL', 'soporte@servime.net') }}" class="social-link">📧 Email</a>
+                <a href="https://wa.me/{{ env('SUPPORT_WHATSAPP', '5491112345678') }}" class="social-link">💬 WhatsApp</a>
+                <a href="{{ env('SUPPORT_WEB', config('app.url')) }}" class="social-link">🌐 Web</a>
             </div>
             
             <div class="footer-bottom">
