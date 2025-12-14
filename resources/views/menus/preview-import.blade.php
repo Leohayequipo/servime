@@ -218,7 +218,7 @@
                             <button onclick="confirmImport()" 
                                     class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
                                 <span class="text-xl">📥</span>
-                                <span>Importa</span>
+                                <span>Importar</span>
                             </button>
                         </div>
                     </div>
