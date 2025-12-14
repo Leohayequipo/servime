@@ -168,7 +168,7 @@
             <!-- Botón flotante a la derecha -->
             <button onclick="showConfirmModal()" 
                     class="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-4 px-8 rounded-full transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-110 flex items-center gap-3">
-                <span class="text-2xl">✅</span>
+                <span class="text-2xl">📥</span>
                 <span class="text-lg">Importar</span>
             </button>
 
