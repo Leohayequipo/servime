@@ -51,6 +51,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
                         
                         foreach ($platos as $plato) {
                             $data[] = [
+                                'id' => $plato['id'] ?? '', // ID único del plato
                                 'categoria' => $categoriaNombre,
                                 'nombre' => $plato['nombre'] ?? '',
                                 'precio' => $plato['precio'] ?? '',
@@ -79,6 +80,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
     public function headings(): array
     {
         return [
+            'ID',
             'Categoría',
             'Nombre del Plato',
             'Precio',
@@ -100,6 +102,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
     public function map($row): array
     {
         return [
+            $row['id'],
             $row['categoria'],
             $row['nombre'],
             $row['precio'],
@@ -144,12 +147,13 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
     public function columnWidths(): array
     {
         return [
-            'A' => 20,  // Categoría
-            'B' => 30,  // Nombre
-            'C' => 15,  // Precio
-            'D' => 50,  // Descripción
-            'E' => 25,  // Tags
-            'F' => 40,  // URL Imagen
+            'A' => 15,  // ID
+            'B' => 20,  // Categoría
+            'C' => 30,  // Nombre
+            'D' => 15,  // Precio
+            'E' => 50,  // Descripción
+            'F' => 25,  // Tags
+            'G' => 40,  // URL Imagen
         ];
     }
 }

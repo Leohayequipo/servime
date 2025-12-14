@@ -30,6 +30,7 @@ class MenuImport implements ToCollection, WithHeadingRow, WithValidation
         foreach ($rows as $row) {
             // WithHeadingRow normaliza los nombres: espacios y caracteres especiales -> guiones bajos
             // También convierte a minúsculas y elimina acentos en algunos casos
+            $platoId = isset($row['id']) && !empty($row['id']) ? trim($row['id']) : null;
             $categoriaNombre = trim($row['categoria'] ?? $row['categoría'] ?? '');
             $nombrePlato = trim($row['nombre_del_plato'] ?? $row['nombre_del_plato'] ?? '');
             $precio = trim($row['precio'] ?? '');
@@ -58,13 +59,23 @@ class MenuImport implements ToCollection, WithHeadingRow, WithValidation
             }
 
             // Agregar plato a la categoría
-            $categorias[$categoriaNombre]['platos'][] = [
+            $plato = [
                 'nombre' => $nombrePlato,
                 'precio' => $precio,
                 'descripcion' => $descripcion ?: null,
                 'tags' => $tagsArray,
                 'imagen' => $imagen ?: null
             ];
+            
+            // Preservar ID si existe (importante para mantener imágenes)
+            if ($platoId) {
+                // Validar que sea un número válido
+                if (is_numeric($platoId)) {
+                    $plato['id'] = (int)$platoId;
+                }
+            }
+            
+            $categorias[$categoriaNombre]['platos'][] = $plato;
         }
 
         // Convertir a array indexado

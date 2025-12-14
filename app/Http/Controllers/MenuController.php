@@ -432,7 +432,9 @@ class MenuController extends Controller
         }
 
         // Se subió un nuevo archivo o el menú está marcado para reprocesar: preservar imágenes antes de reprocesar
+        // Indexar por ID (método más confiable) y también por nombre para compatibilidad
         $imagenesExistentes = [];
+        $idsExistentes = []; // Para preservar IDs existentes
         if ($menu->contexto_gpt) {
             try {
                 $jsonContent = $menu->contexto_gpt;
@@ -445,9 +447,23 @@ class MenuController extends Controller
                     foreach ($contenidoActual['categorias'] as $categoria) {
                         if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                             foreach ($categoria['platos'] as $plato) {
-                                if (isset($plato['imagen'], $plato['nombre']) && !empty($plato['imagen']) && !empty($plato['nombre'])) {
-                                    $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
-                                    $imagenesExistentes[$nombreNormalizado] = $plato['imagen'];
+                                // Si tiene ID, usarlo; si no, generar uno (migración)
+                                $platoId = isset($plato['id']) ? $plato['id'] : null;
+                                if (!$platoId) {
+                                    // Generar ID único si no existe (migración para items antiguos)
+                                    $platoId = time() * 1000 + count($idsExistentes);
+                                }
+                                $idsExistentes[] = $platoId;
+                                
+                                // Indexar imagen por ID (método principal)
+                                if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+                                    $imagenesExistentes[$platoId] = $plato['imagen'];
+                                    
+                                    // También indexar por nombre para compatibilidad con items antiguos
+                                    if (isset($plato['nombre']) && !empty($plato['nombre'])) {
+                                        $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
+                                        $imagenesExistentes[$nombreNormalizado] = $plato['imagen'];
+                                    }
                                 }
                             }
                         }
@@ -463,8 +479,8 @@ class MenuController extends Controller
             $processor = new MenuProcessorService();
             $processed = $processor->processMenu($menu);
 
-            // Restaurar las imágenes después del reprocesamiento
-            if ($processed && !empty($imagenesExistentes) && $menu->contexto_gpt) {
+            // Restaurar las imágenes y asignar IDs después del reprocesamiento
+            if ($processed && $menu->contexto_gpt) {
                 try {
                     $jsonContent = $menu->contexto_gpt;
                     if (strpos($jsonContent, '```json') !== false) {
@@ -474,14 +490,32 @@ class MenuController extends Controller
                     $contenidoNuevo = json_decode(trim($jsonContent), true);
                     if ($contenidoNuevo && isset($contenidoNuevo['categorias']) && is_array($contenidoNuevo['categorias'])) {
                         $modified = false;
+                        $proximoId = !empty($idsExistentes) ? max($idsExistentes) + 1 : (time() * 1000);
+                        
                         foreach ($contenidoNuevo['categorias'] as &$categoria) {
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                                 foreach ($categoria['platos'] as &$plato) {
-                                    if (isset($plato['nombre'])) {
-                                        $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
-                                        if (isset($imagenesExistentes[$nombreNormalizado])) {
-                                            $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
+                                    // Asignar ID si no existe
+                                    if (!isset($plato['id'])) {
+                                        $plato['id'] = $proximoId++;
+                                        $modified = true;
+                                    }
+                                    
+                                    $platoId = $plato['id'];
+                                    
+                                    // Restaurar imagen: buscar por ID primero, luego por nombre (compatibilidad)
+                                    if (!isset($plato['imagen']) || empty($plato['imagen'])) {
+                                        if (isset($imagenesExistentes[$platoId]) && !empty($imagenesExistentes[$platoId])) {
+                                            // Buscar por ID (método más confiable)
+                                            $plato['imagen'] = $imagenesExistentes[$platoId];
                                             $modified = true;
+                                        } elseif (isset($plato['nombre']) && !empty($plato['nombre'])) {
+                                            // Buscar por nombre (compatibilidad con items antiguos)
+                                            $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
+                                            if (isset($imagenesExistentes[$nombreNormalizado]) && !empty($imagenesExistentes[$nombreNormalizado])) {
+                                                $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
+                                                $modified = true;
+                                            }
                                         }
                                     }
                                 }
@@ -588,8 +622,9 @@ class MenuController extends Controller
 
         $validated = $request->validate([
             'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
-            'categoria_index' => 'required|integer',
-            'plato_index' => 'required|integer',
+            'plato_id' => 'nullable|integer', // ID único (método preferido)
+            'categoria_index' => 'nullable|integer', // Mantener para compatibilidad
+            'plato_index' => 'nullable|integer', // Mantener para compatibilidad
         ]);
 
         try {
@@ -613,12 +648,57 @@ class MenuController extends Controller
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
-            // Validar índices
-            $categoriaIndex = $validated['categoria_index'];
-            $platoIndex = $validated['plato_index'];
+            // Buscar plato por ID (método preferido) o por índices (compatibilidad)
+            $platoId = $validated['plato_id'] ?? null;
+            $categoriaIndex = $validated['categoria_index'] ?? null;
+            $platoIndex = $validated['plato_index'] ?? null;
+            $plato = null;
+            $categoriaArrayIndex = null;
+            $platoArrayIndex = null;
             
-            if (!isset($contenido['categorias'][$categoriaIndex]) || !isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
-                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            // Buscar por ID primero
+            if ($platoId) {
+                foreach ($contenido['categorias'] as $catIdx => $categoria) {
+                    if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                        foreach ($categoria['platos'] as $platIdx => $platoItem) {
+                            if (isset($platoItem['id']) && $platoItem['id'] == $platoId) {
+                                $plato = &$contenido['categorias'][$catIdx]['platos'][$platIdx];
+                                $categoriaArrayIndex = $catIdx;
+                                $platoArrayIndex = $platIdx;
+                                break 2;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Si no se encontró por ID, buscar por índices (compatibilidad)
+            if (!$plato && $categoriaIndex !== null && $platoIndex !== null) {
+                if (isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                    $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+                    $categoriaArrayIndex = $categoriaIndex;
+                    $platoArrayIndex = $platoIndex;
+                }
+            }
+            
+            if (!$plato) {
+                return response()->json(['error' => 'Plato no encontrado.'], 404);
+            }
+            
+            // Asignar ID si no existe
+            if (!isset($plato['id'])) {
+                // Buscar el máximo ID existente
+                $proximoId = 1;
+                foreach ($contenido['categorias'] as $categoria) {
+                    if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                        foreach ($categoria['platos'] as $platoItem) {
+                            if (isset($platoItem['id']) && $platoItem['id'] >= $proximoId) {
+                                $proximoId = $platoItem['id'] + 1;
+                            }
+                        }
+                    }
+                }
+                $plato['id'] = $proximoId;
             }
 
             // Asegurar que existan las carpetas del comercio
@@ -628,7 +708,6 @@ class MenuController extends Controller
             $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
             
             // Preparar referencia a la imagen anterior (si existe)
-            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
             $oldImageRelativePath = null;
             if (isset($plato['imagen']) && !empty($plato['imagen'])) {
                 $oldImageRelativePath = str_replace('/storage/', '', $plato['imagen']);
@@ -686,8 +765,9 @@ class MenuController extends Controller
         }
 
         $validated = $request->validate([
-            'categoria_index' => 'required|integer',
-            'plato_index' => 'required|integer',
+            'plato_id' => 'nullable|integer', // ID único (método preferido)
+            'categoria_index' => 'nullable|integer', // Mantener para compatibilidad
+            'plato_index' => 'nullable|integer', // Mantener para compatibilidad
         ]);
 
         try {
@@ -711,16 +791,36 @@ class MenuController extends Controller
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
-            // Validar índices
-            $categoriaIndex = $validated['categoria_index'];
-            $platoIndex = $validated['plato_index'];
+            // Buscar plato por ID (método preferido) o por índices (compatibilidad)
+            $platoId = $validated['plato_id'] ?? null;
+            $categoriaIndex = $validated['categoria_index'] ?? null;
+            $platoIndex = $validated['plato_index'] ?? null;
+            $plato = null;
             
-            if (!isset($contenido['categorias'][$categoriaIndex]) || !isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
-                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            // Buscar por ID primero
+            if ($platoId) {
+                foreach ($contenido['categorias'] as $catIdx => $categoria) {
+                    if (isset($categoria['platos']) && is_array($categoria['platos'])) {
+                        foreach ($categoria['platos'] as $platIdx => $platoItem) {
+                            if (isset($platoItem['id']) && $platoItem['id'] == $platoId) {
+                                $plato = &$contenido['categorias'][$catIdx]['platos'][$platIdx];
+                                break 2;
+                            }
+                        }
+                    }
+                }
             }
-
-            // Obtener referencia al plato
-            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+            
+            // Si no se encontró por ID, buscar por índices (compatibilidad)
+            if (!$plato && $categoriaIndex !== null && $platoIndex !== null) {
+                if (isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                    $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+                }
+            }
+            
+            if (!$plato) {
+                return response()->json(['error' => 'Plato no encontrado.'], 404);
+            }
             
             // Guardar ruta de imagen anterior para eliminarla
             $oldImageRelativePath = null;
@@ -1329,7 +1429,8 @@ class MenuController extends Controller
 
         $validated = $request->validate([
             'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
-            'promo_index' => 'required|integer',
+            'promo_id' => 'required|integer', // Cambiar a ID en lugar de índice
+            'promo_index' => 'nullable|integer', // Mantener para compatibilidad
         ]);
 
         try {
@@ -1376,12 +1477,32 @@ class MenuController extends Controller
                 $contenido['categorias'][$promocionesCategoriaIndex]['platos'] = [];
             }
 
-            // Validar índice de promoción
-            $promoIndex = $validated['promo_index'];
+            // Buscar promoción por ID (método preferido) o por índice (compatibilidad)
+            $promoId = $validated['promo_id'] ?? null;
+            $promoIndex = $validated['promo_index'] ?? null;
+            $promo = null;
+            $promoArrayIndex = null;
+            
+            // Buscar por ID primero
+            if ($promoId && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
+                foreach ($contenido['categorias'][$promocionesCategoriaIndex]['platos'] as $idx => $plato) {
+                    if (isset($plato['id']) && $plato['id'] == $promoId) {
+                        $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$idx];
+                        $promoArrayIndex = $idx;
+                        break;
+                    }
+                }
+            }
+            
+            // Si no se encontró por ID, buscar por índice (compatibilidad)
+            if (!$promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+                $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
+                $promoArrayIndex = $promoIndex;
+            }
             
             // NO crear placeholder vacío - solo actualizar si ya existe
             // La promoción solo se guardará en el JSON cuando tenga al menos nombre o precio
-            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+            if (!$promo) {
                 // La promoción no existe aún - no crear registro vacío
                 // Solo guardar la imagen en storage y devolver la URL
                 // El registro se creará cuando se guarden los datos de texto vía savePromociones()
@@ -1407,7 +1528,6 @@ class MenuController extends Controller
             $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
             
             // Preparar referencia a la imagen anterior (si existe)
-            $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
             $oldImageRelativePath = null;
             if (isset($promo['imagen']) && !empty($promo['imagen'])) {
                 $oldImageRelativePath = str_replace('/storage/', '', $promo['imagen']);
@@ -1456,10 +1576,11 @@ class MenuController extends Controller
     public function deletePromocion(Request $request, Comercio $comercio, Menu $menu)
     {
         try {
-            $promoIndex = $request->input('promo_index');
+            $promoId = $request->input('promo_id');
+            $promoIndex = $request->input('promo_index'); // Mantener para compatibilidad
             
-            if ($promoIndex === null) {
-                return response()->json(['success' => false, 'error' => 'Índice de promoción no proporcionado'], 400);
+            if ($promoId === null && $promoIndex === null) {
+                return response()->json(['success' => false, 'error' => 'ID o índice de promoción no proporcionado'], 400);
             }
             
             if (!$menu->contexto_gpt) {
@@ -1492,16 +1613,33 @@ class MenuController extends Controller
                 return response()->json(['success' => false, 'error' => 'No se encontró la categoría de promociones'], 400);
             }
             
-            // Eliminar la promoción del índice especificado
-            if (isset($contenido['categorias'][$promocionesIndex]['platos'][$promoIndex])) {
-                unset($contenido['categorias'][$promocionesIndex]['platos'][$promoIndex]);
-                // Reindexar el array
-                $contenido['categorias'][$promocionesIndex]['platos'] = array_values($contenido['categorias'][$promocionesIndex]['platos']);
+            // Buscar y eliminar la promoción por ID o índice
+            $promoEncontrada = false;
+            if (isset($contenido['categorias'][$promocionesIndex]['platos'])) {
+                foreach ($contenido['categorias'][$promocionesIndex]['platos'] as $idx => $plato) {
+                    // Buscar por ID primero
+                    if ($promoId && isset($plato['id']) && $plato['id'] == $promoId) {
+                        unset($contenido['categorias'][$promocionesIndex]['platos'][$idx]);
+                        $promoEncontrada = true;
+                        break;
+                    }
+                    // Buscar por índice como fallback
+                    if ($promoIndex !== null && $idx == $promoIndex) {
+                        unset($contenido['categorias'][$promocionesIndex]['platos'][$idx]);
+                        $promoEncontrada = true;
+                        break;
+                    }
+                }
                 
-                // Si no quedan promociones, eliminar la categoría completa
-                if (empty($contenido['categorias'][$promocionesIndex]['platos'])) {
-                    unset($contenido['categorias'][$promocionesIndex]);
-                    $contenido['categorias'] = array_values($contenido['categorias']);
+                if ($promoEncontrada) {
+                    // Reindexar el array
+                    $contenido['categorias'][$promocionesIndex]['platos'] = array_values($contenido['categorias'][$promocionesIndex]['platos']);
+                    
+                    // Si no quedan promociones, eliminar la categoría completa
+                    if (empty($contenido['categorias'][$promocionesIndex]['platos'])) {
+                        unset($contenido['categorias'][$promocionesIndex]);
+                        $contenido['categorias'] = array_values($contenido['categorias']);
+                    }
                 }
                 
                 // Guardar JSON actualizado
@@ -1540,7 +1678,8 @@ class MenuController extends Controller
         }
 
         $validated = $request->validate([
-            'promo_index' => 'required|integer',
+            'promo_id' => 'required|integer', // Cambiar a ID en lugar de índice
+            'promo_index' => 'nullable|integer', // Mantener para compatibilidad
         ]);
 
         try {
@@ -1577,15 +1716,32 @@ class MenuController extends Controller
                 return response()->json(['error' => 'Categoría de promociones no encontrada.'], 404);
             }
 
-            // Validar índice de promoción
-            $promoIndex = $validated['promo_index'];
+            // Buscar promoción por ID (método preferido) o por índice (compatibilidad)
+            $promoId = $validated['promo_id'];
+            $promoIndex = $validated['promo_index'] ?? null;
+            $promo = null;
+            $promoArrayIndex = null;
             
-            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
-                return response()->json(['error' => 'Índice de promoción inválido.'], 400);
+            // Buscar por ID primero
+            if (isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
+                foreach ($contenido['categorias'][$promocionesCategoriaIndex]['platos'] as $idx => $plato) {
+                    if (isset($plato['id']) && $plato['id'] == $promoId) {
+                        $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$idx];
+                        $promoArrayIndex = $idx;
+                        break;
+                    }
+                }
             }
-
-            // Obtener referencia a la promoción
-            $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
+            
+            // Si no se encontró por ID, buscar por índice (compatibilidad)
+            if (!$promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+                $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
+                $promoArrayIndex = $promoIndex;
+            }
+            
+            if (!$promo) {
+                return response()->json(['error' => 'Promoción no encontrada.'], 404);
+            }
             
             // Guardar ruta de imagen anterior para eliminarla
             $oldImagePath = null;
@@ -1755,38 +1911,50 @@ class MenuController extends Controller
             }
 
             // Preparar array de platos para promociones
-            // Primero, obtener las imágenes existentes indexadas por nombre (más confiable que por índice)
+            // Indexar imágenes existentes por ID (más confiable que por índice/nombre)
             $imagenesExistentes = [];
+            $idsExistentes = []; // Para generar IDs únicos
             if ($promocionesIndex >= 0 && isset($contenido['categorias'][$promocionesIndex]['platos'])) {
                 $platosExistentes = $contenido['categorias'][$promocionesIndex]['platos'];
                 foreach ($platosExistentes as $idx => $platoExistente) {
+                    // Si tiene ID, usarlo; si no, generar uno nuevo (migración)
+                    $idExistente = isset($platoExistente['id']) ? $platoExistente['id'] : null;
+                    if (!$idExistente) {
+                        // Generar ID único si no existe (migración para items antiguos)
+                        // Usar un contador incremental basado en el máximo existente
+                        $idExistente = !empty($idsExistentes) ? max($idsExistentes) + 1 + $idx : ($idx + 1);
+                    }
+                    $idsExistentes[] = $idExistente;
+                    
+                    // Indexar imagen por ID (método más confiable)
                     if (isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])) {
-                        // Indexar por nombre normalizado para buscar más fácilmente
-                        $nombreNormalizado = isset($platoExistente['nombre']) ? mb_strtolower(trim($platoExistente['nombre'])) : '';
-                        if ($nombreNormalizado) {
-                            $imagenesExistentes[$nombreNormalizado] = $platoExistente['imagen'];
-                        }
-                        // También mantener por índice para compatibilidad
-                        $imagenesExistentes[$idx] = $platoExistente['imagen'];
-                        // IMPORTANTE: También indexar por precio si no hay nombre (para promociones sin nombre)
-                        if (empty($nombreNormalizado) && isset($platoExistente['precio']) && !empty($platoExistente['precio'])) {
-                            $precioNormalizado = mb_strtolower(trim($platoExistente['precio']));
-                            if ($precioNormalizado) {
-                                $imagenesExistentes[$precioNormalizado] = $platoExistente['imagen'];
-                            }
+                        $imagenesExistentes[$idExistente] = $platoExistente['imagen'];
+                    }
+                    
+                    // También mantener indexación por nombre/precio para compatibilidad con items antiguos
+                    $nombreNormalizado = isset($platoExistente['nombre']) ? mb_strtolower(trim($platoExistente['nombre'])) : '';
+                    if ($nombreNormalizado) {
+                        $imagenesExistentes[$nombreNormalizado] = $platoExistente['imagen'] ?? null;
+                    }
+                    if (empty($nombreNormalizado) && isset($platoExistente['precio']) && !empty($platoExistente['precio'])) {
+                        $precioNormalizado = mb_strtolower(trim($platoExistente['precio']));
+                        if ($precioNormalizado) {
+                            $imagenesExistentes[$precioNormalizado] = $platoExistente['imagen'] ?? null;
                         }
                     }
                 }
             }
 
-            // Preparar array de platos para promociones, preservando imágenes
+            // Preparar array de platos para promociones, preservando imágenes e IDs
             $platosPromociones = [];
-            $indiceNuevo = 0; // Inicializar índice
             
             Log::info('Procesando promociones recibidas', [
                 'total' => count($promocionesFiltradas),
                 'promociones' => $promocionesFiltradas
             ]);
+            
+            // Generar próximo ID único (basado en el máximo existente + 1)
+            $proximoId = !empty($idsExistentes) ? max($idsExistentes) + 1 : 1;
             
             // Usar promocionesFiltradas (ya filtradas para tener al menos un dato)
             foreach ($promocionesFiltradas as $idx => $promo) {
@@ -1803,46 +1971,60 @@ class MenuController extends Controller
                     $promo['descripcion'] = '';
                 }
                 
+                // Obtener o generar ID único
+                $idPromocion = null;
+                if (isset($promo['id']) && !empty($promo['id'])) {
+                    // Si viene con ID, preservarlo
+                    $idPromocion = $promo['id'];
+                } else {
+                    // Si no tiene ID, generar uno nuevo
+                    $idPromocion = $proximoId++;
+                }
+                
                 $nombreNormalizado = mb_strtolower(trim($promo['nombre']));
                 
                 $plato = [
+                    'id' => $idPromocion, // ID único e inmutable
                     'nombre' => trim($promo['nombre'] ?? ''),
                     'precio' => trim($promo['precio'] ?? ''),
                     'descripcion' => trim($promo['descripcion'] ?? '')
                 ];
                 
-                // Preservar imagen: priorizar request, luego buscar por nombre, luego por precio
+                // Preservar imagen: priorizar request, luego buscar por ID, luego por nombre/precio (compatibilidad)
                 if (isset($promo['imagen']) && !empty($promo['imagen'])) {
                     // Si viene explícitamente en el request, usar esa
                     $plato['imagen'] = $promo['imagen'];
-                    Log::info("Imagen asignada desde request para promoción $idx", ['imagen' => $promo['imagen']]);
-                } elseif (!empty($nombreNormalizado) && isset($imagenesExistentes[$nombreNormalizado])) {
-                    // Buscar por nombre normalizado SOLO si hay nombre (más confiable)
+                    Log::info("Imagen asignada desde request para promoción ID $idPromocion", ['imagen' => $promo['imagen']]);
+                } elseif (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
+                    // Buscar por ID (método más confiable)
+                    $plato['imagen'] = $imagenesExistentes[$idPromocion];
+                    Log::info("Imagen asignada por ID para promoción ID $idPromocion", ['imagen' => $imagenesExistentes[$idPromocion]]);
+                } elseif (!empty($nombreNormalizado) && isset($imagenesExistentes[$nombreNormalizado]) && !empty($imagenesExistentes[$nombreNormalizado])) {
+                    // Buscar por nombre normalizado (compatibilidad con items antiguos)
                     $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
-                    Log::info("Imagen asignada por nombre para promoción $idx", ['nombre' => $nombreNormalizado, 'imagen' => $imagenesExistentes[$nombreNormalizado]]);
+                    Log::info("Imagen asignada por nombre para promoción ID $idPromocion", ['nombre' => $nombreNormalizado, 'imagen' => $imagenesExistentes[$nombreNormalizado]]);
                 } elseif (empty($nombreNormalizado) && isset($promo['precio']) && !empty($promo['precio'])) {
-                    // Si no hay nombre, intentar buscar por precio (útil para promociones sin nombre)
+                    // Si no hay nombre, intentar buscar por precio (compatibilidad con items antiguos)
                     $precioNormalizado = mb_strtolower(trim($promo['precio']));
-                    if (isset($imagenesExistentes[$precioNormalizado])) {
+                    if (isset($imagenesExistentes[$precioNormalizado]) && !empty($imagenesExistentes[$precioNormalizado])) {
                         $plato['imagen'] = $imagenesExistentes[$precioNormalizado];
-                        Log::info("Imagen asignada por precio para promoción $idx", ['precio' => $precioNormalizado, 'imagen' => $imagenesExistentes[$precioNormalizado]]);
+                        Log::info("Imagen asignada por precio para promoción ID $idPromocion", ['precio' => $precioNormalizado, 'imagen' => $imagenesExistentes[$precioNormalizado]]);
                     }
                 }
                 
                 // Si después de todos los intentos no hay imagen, no asignar ninguna
                 // Esto previene que se asigne incorrectamente una imagen de otra promoción
                 if (!isset($plato['imagen'])) {
-                    Log::info("Promoción $idx sin imagen - no se asignará ninguna");
+                    Log::info("Promoción ID $idPromocion sin imagen - no se asignará ninguna");
                 }
                 
                 Log::info('Agregando promoción', [
-                    'indice_nuevo' => $indiceNuevo,
+                    'id' => $idPromocion,
                     'indice_original' => $idx,
                     'plato' => $plato
                 ]);
                 
                 $platosPromociones[] = $plato;
-                $indiceNuevo++;
             }
             
             // Si no hay promociones válidas, eliminar la categoría completa

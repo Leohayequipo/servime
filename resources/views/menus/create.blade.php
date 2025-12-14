@@ -715,7 +715,10 @@
                                 <!-- Las promociones se agregarán aquí -->
                                 @if(isset($promocionesCategoria['platos']) && is_array($promocionesCategoria['platos']))
                                     @foreach($promocionesCategoria['platos'] as $promoIndex => $promo)
-                                        <div class="promocion-item bg-secondary-dark rounded-lg p-4 border border-accent-gray" data-promo-index="{{ $promoIndex }}">
+                                        @php
+                                            $promoId = $promo['id'] ?? ($promoIndex + 1000000); // ID único o fallback
+                                        @endphp
+                                        <div class="promocion-item bg-secondary-dark rounded-lg p-4 border border-accent-gray" data-promo-index="{{ $promoIndex }}" data-promo-id="{{ $promoId }}">
                                             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                                                 <!-- Nombre -->
                                                 <div class="md:col-span-3">
@@ -723,6 +726,7 @@
                                                     <input type="text" 
                                                            data-promo-field="nombre"
                                                            data-promo-index="{{ $promoIndex }}"
+                                                           data-promo-id="{{ $promoId }}"
                                                            value="{{ old("promociones.{$promoIndex}.nombre", $promo['nombre'] ?? '') }}"
                                                            placeholder="Nombre de la promoción"
                                                            class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -736,6 +740,7 @@
                                                         <input type="text" 
                                                                data-promo-field="precio"
                                                                data-promo-index="{{ $promoIndex }}"
+                                                               data-promo-id="{{ $promoId }}"
                                                                value="{{ preg_replace('/[^0-9]/', '', old("promociones.{$promoIndex}.precio", $promo['precio'] ?? '')) }}"
                                                                placeholder="0"
                                                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
@@ -748,6 +753,7 @@
                                                     <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
                                                     <textarea data-promo-field="descripcion"
                                                               data-promo-index="{{ $promoIndex }}"
+                                                              data-promo-id="{{ $promoId }}"
                                                               rows="2"
                                                               placeholder="Descripción de la promoción"
                                                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none">{{ old("promociones.{$promoIndex}.descripcion", $promo['descripcion'] ?? '') }}</textarea>
@@ -756,15 +762,15 @@
                                                 <!-- Imagen -->
                                                 <div class="md:col-span-2">
                                                     <label class="block text-xs text-text-secondary mb-1.5">Imagen</label>
-                                                    <div id="promo-imagen-container-{{ $promoIndex }}">
+                                                    <div id="promo-imagen-container-{{ $promoId }}">
                                                         @if(isset($promo['imagen']) && !empty($promo['imagen']))
                                                             <div class="relative inline-block">
                                                                 <img src="{{ asset($promo['imagen']) }}" 
                                                                      alt="{{ $promo['nombre'] ?? 'Promoción' }}"
                                                                      class="w-20 h-20 object-cover rounded-lg border border-accent-gray"
-                                                                     id="promo-imagen-{{ $promoIndex }}">
+                                                                     id="promo-imagen-{{ $promoId }}">
                                                                 <button type="button"
-                                                                        onclick="removePromocionImagen({{ $promoIndex }}, '{{ $promo['imagen'] }}')"
+                                                                        onclick="removePromocionImagen({{ $promoId }}, '{{ $promo['imagen'] }}')"
                                                                         class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                                                     ×
                                                                 </button>
@@ -774,8 +780,8 @@
                                                                 <input type="file" 
                                                                        accept="image/jpeg,image/png,image/jpg,image/gif"
                                                                        class="hidden"
-                                                                       onchange="uploadPromocionImagen(event, {{ $promoIndex }})"
-                                                                       id="promo-imagen-input-{{ $promoIndex }}">
+                                                                       onchange="uploadPromocionImagen(event, {{ $promoId }})"
+                                                                       id="promo-imagen-input-{{ $promoId }}">
                                                                 <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                                                     📷 Subir
                                                                 </span>
@@ -787,7 +793,7 @@
                                                 <!-- Botón Eliminar -->
                                                 <div class="md:col-span-1 flex items-end">
                                                     <button type="button" 
-                                                            onclick="removePromocion({{ $promoIndex }})"
+                                                            onclick="removePromocion({{ $promoId }})"
                                                             class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
                                                         🗑️
                                                     </button>
@@ -3497,9 +3503,18 @@
         // Función para agregar nueva promoción
         function addPromocion() {
             const container = document.getElementById('promociones-container');
+            // Generar ID único para la nueva promoción (buscar el máximo existente + 1)
+            let maxId = 0;
+            const existingItems = container.querySelectorAll('[data-promo-id]');
+            existingItems.forEach(item => {
+                const id = parseInt(item.getAttribute('data-promo-id')) || 0;
+                if (id > maxId) maxId = id;
+            });
+            const nuevoId = maxId + 1;
             const newPromo = document.createElement('div');
             newPromo.className = 'promocion-item bg-secondary-dark rounded-lg p-4 border border-accent-gray';
             newPromo.setAttribute('data-promo-index', promocionIndex);
+            newPromo.setAttribute('data-promo-id', nuevoId);
             
             newPromo.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
@@ -3509,6 +3524,7 @@
                         <input type="text" 
                                data-promo-field="nombre"
                                data-promo-index="${promocionIndex}"
+                               data-promo-id="${nuevoId}"
                                value=""
                                placeholder="Nombre de la promoción"
                                class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -3522,6 +3538,7 @@
                             <input type="text" 
                                    data-promo-field="precio"
                                    data-promo-index="${promocionIndex}"
+                                   data-promo-id="${nuevoId}"
                                    value=""
                                    placeholder="0"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
@@ -3534,6 +3551,7 @@
                         <label class="block text-xs text-text-secondary mb-1.5">Descripción</label>
                         <textarea data-promo-field="descripcion"
                                   data-promo-index="${promocionIndex}"
+                                  data-promo-id="${nuevoId}"
                                   rows="2"
                                   placeholder="Descripción de la promoción"
                                   class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
@@ -3542,13 +3560,13 @@
                     <!-- Imagen -->
                     <div class="md:col-span-2">
                         <label class="block text-xs text-text-secondary mb-1.5">Imagen</label>
-                        <div id="promo-imagen-container-${promocionIndex}">
+                        <div id="promo-imagen-container-${nuevoId}">
                             <label class="cursor-pointer">
                                 <input type="file" 
                                        accept="image/jpeg,image/png,image/jpg,image/gif"
                                        class="hidden"
-                                       onchange="uploadPromocionImagen(event, ${promocionIndex})"
-                                       id="promo-imagen-input-${promocionIndex}">
+                                       onchange="uploadPromocionImagen(event, ${nuevoId})"
+                                       id="promo-imagen-input-${nuevoId}">
                                 <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                     📷 Subir
                                 </span>
@@ -3559,7 +3577,7 @@
                     <!-- Botón Eliminar -->
                     <div class="md:col-span-1 flex items-end">
                         <button type="button" 
-                                onclick="removePromocion(${promocionIndex})"
+                                onclick="removePromocion(${nuevoId})"
                                 class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
                             🗑️
                         </button>
@@ -3579,11 +3597,19 @@
         
         // Función para guardar promociones vía AJAX
         // Almacenar imágenes originales de promociones para preservarlas si no se cargan en el DOM (GLOBAL)
+        // Indexar por ID (método más confiable) y también por índice/nombre para compatibilidad
         window.promocionesImagenesOriginales = {};
         @if(isset($promocionesCategoria['platos']) && is_array($promocionesCategoria['platos']))
             @foreach($promocionesCategoria['platos'] as $promoIndex => $promo)
+                @php
+                    $promoId = $promo['id'] ?? ($promoIndex + 1000000);
+                @endphp
                 @if(isset($promo['imagen']) && !empty($promo['imagen']))
+                    // Indexar por ID (método principal)
+                    window.promocionesImagenesOriginales[{{ $promoId }}] = '{{ $promo['imagen'] }}';
+                    // También indexar por índice para compatibilidad
                     window.promocionesImagenesOriginales[{{ $promoIndex }}] = '{{ $promo['imagen'] }}';
+                    // También indexar por nombre para compatibilidad con items antiguos
                     @if(isset($promo['nombre']) && !empty($promo['nombre']))
                         window.promocionesImagenesOriginales['{{ mb_strtolower(trim($promo['nombre'])) }}'] = '{{ $promo['imagen'] }}';
                     @endif
@@ -3616,12 +3642,14 @@
                 }
                 
                 const index = item.getAttribute('data-promo-index');
-                if (!index) {
-                    console.warn(`⚠️ Item ${idx} no tiene data-promo-index, saltando`);
+                const promoId = item.getAttribute('data-promo-id');
+                if (!index && !promoId) {
+                    console.warn(`⚠️ Item ${idx} no tiene data-promo-index ni data-promo-id, saltando`);
                     return;
                 }
                 
                 const promo = {
+                    id: promoId ? parseInt(promoId) : null, // ID único
                     nombre: '',
                     precio: '',
                     descripcion: '',
@@ -3665,11 +3693,15 @@
                 // Si no se encontró en el DOM, buscar en las imágenes originales
                 if (!imagenEncontrada) {
                     const originales = window.promocionesImagenesOriginales || {};
-                    // Buscar por índice original PRIMERO (más confiable)
-                    if (originales[index] && originales[index].trim()) {
+                    // Buscar por ID PRIMERO (método más confiable)
+                    if (promo.id && originales[promo.id] && originales[promo.id].trim()) {
+                        imagenEncontrada = originales[promo.id];
+                    }
+                    // Buscar por índice (compatibilidad)
+                    else if (index && originales[index] && originales[index].trim()) {
                         imagenEncontrada = originales[index];
                     }
-                    // También buscar por nombre normalizado
+                    // Buscar por nombre normalizado (compatibilidad con items antiguos)
                     else if (promo.nombre && promo.nombre.trim()) {
                         const nombreNormalizado = promo.nombre.trim().toLowerCase();
                         if (originales[nombreNormalizado] && originales[nombreNormalizado].trim()) {
@@ -3682,8 +3714,12 @@
                 // Incluso si el src del DOM falla (403), usar la ruta de originales si existe
                 if (!imagenEncontrada && window.promocionesImagenesOriginales) {
                     const originales = window.promocionesImagenesOriginales;
-                    // Último intento: buscar por índice
-                    if (originales[index] && originales[index].trim()) {
+                    // Último intento: buscar por ID
+                    if (promo.id && originales[promo.id] && originales[promo.id].trim()) {
+                        imagenEncontrada = originales[promo.id];
+                    }
+                    // O por índice como fallback
+                    else if (index && originales[index] && originales[index].trim()) {
                         imagenEncontrada = originales[index];
                     }
                 }
@@ -3758,17 +3794,24 @@
         }
         
         // Función para eliminar promoción
-        async function removePromocion(index) {
+        async function removePromocion(promoId) {
             showConfirm('¿Estás seguro de que quieres eliminar esta promoción?', async function(result) {
                 if (!result) return;
                 
-                const promoItem = document.querySelector(`#promociones-container [data-promo-index="${index}"]`);
+                // Buscar por ID primero, luego por índice como fallback
+                let promoItem = document.querySelector(`#promociones-container [data-promo-id="${promoId}"]`);
                 if (!promoItem) {
-                    console.warn(`⚠️ No se encontró la promoción con índice ${index}`);
+                    // Fallback: buscar por índice (compatibilidad)
+                    promoItem = document.querySelector(`#promociones-container [data-promo-index="${promoId}"]`);
+                }
+                
+                if (!promoItem) {
+                    console.warn(`⚠️ No se encontró la promoción con ID ${promoId}`);
                     return;
                 }
                 
-                console.log(`🗑️ ELIMINANDO PROMOCIÓN ${index}...`);
+                const promoIndex = promoItem.getAttribute('data-promo-index');
+                console.log(`🗑️ ELIMINANDO PROMOCIÓN ID ${promoId} (índice ${promoIndex})...`);
                 
                 // Verificar si es una promoción nueva (vacía, sin guardar en el backend)
                 const nombreInput = promoItem.querySelector('[data-promo-field="nombre"]');
@@ -3784,13 +3827,13 @@
                 // Si no tiene ningún dato, es una promoción nueva que aún no existe en el backend
                 // Solo eliminarla del DOM sin llamar al backend
                 if (!tieneNombre && !tienePrecio && !tieneDescripcion && !tieneImagen) {
-                    console.log(`⚠️ Promoción ${index} está vacía, eliminando solo del DOM`);
+                    console.log(`⚠️ Promoción ID ${promoId} (índice ${promoIndex}) está vacía, eliminando solo del DOM`);
                     
                     // Eliminar inputs relacionados
                     const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
                     allPromoInputs.forEach(input => {
                         const match = input.name.match(/promociones\[(\d+)\]/);
-                        if (match && match[1] === String(index)) {
+                        if (match && match[1] === String(promoIndex)) {
                             input.remove();
                         }
                     });
@@ -3801,7 +3844,7 @@
                     promoItem.style.transition = 'all 0.3s ease-out';
                     setTimeout(() => {
                         promoItem.remove();
-                        console.log(`✅ PROMOCIÓN ${index} ELIMINADA DEL DOM (era nueva y vacía)`);
+                        console.log(`✅ PROMOCIÓN ID ${promoId} (índice ${promoIndex}) ELIMINADA DEL DOM (era nueva y vacía)`);
                     }, 300);
                     
                     return;
@@ -3817,7 +3860,8 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({
-                            promo_index: index
+                            promo_id: promoId,
+                            promo_index: promoIndex
                         })
                     });
                     
@@ -3828,13 +3872,13 @@
                     if (!response.ok || !data.success) {
                         const errorMsg = data.error || '';
                         if (errorMsg.includes('no encontrada') || errorMsg.includes('not found')) {
-                            console.log(`⚠️ Promoción ${index} no existe en el backend, eliminando solo del DOM`);
+                            console.log(`⚠️ Promoción ID ${promoId} (índice ${promoIndex}) no existe en el backend, eliminando solo del DOM`);
                             
                             // Eliminar inputs relacionados
                             const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
                             allPromoInputs.forEach(input => {
                                 const match = input.name.match(/promociones\[(\d+)\]/);
-                                if (match && match[1] === String(index)) {
+                                if (match && match[1] === String(promoIndex)) {
                                     input.remove();
                                 }
                             });
@@ -3845,7 +3889,7 @@
                             promoItem.style.transition = 'all 0.3s ease-out';
                             setTimeout(() => {
                                 promoItem.remove();
-                                console.log(`✅ PROMOCIÓN ${index} ELIMINADA DEL DOM`);
+                                console.log(`✅ PROMOCIÓN ID ${promoId} (índice ${promoIndex}) ELIMINADA DEL DOM`);
                             }, 300);
                             
                             return;
@@ -3855,13 +3899,13 @@
                         throw new Error(data.error || 'Error al eliminar la promoción del servidor');
                     }
                     
-                    console.log(`✓ Promoción ${index} eliminada del JSON en el servidor`);
+                    console.log(`✓ Promoción ID ${promoId} (índice ${promoIndex}) eliminada del JSON en el servidor`);
                     
                     // Si tiene imagen, eliminarla del servidor también (pero no esperar)
                     if (img && img.src) {
                         const imgPath = img.src.replace(window.location.origin, '');
                         if (imgPath && !imgPath.includes('placeholder')) {
-                            removePromocionImagenSilent(index, imgPath);
+                            removePromocionImagenSilent(promoId, imgPath);
                         }
                     }
                     
@@ -3869,7 +3913,7 @@
                     const allPromoInputs = document.querySelectorAll('input[name^="promociones"], textarea[name^="promociones"]');
                     allPromoInputs.forEach(input => {
                         const match = input.name.match(/promociones\[(\d+)\]/);
-                        if (match && match[1] === String(index)) {
+                        if (match && match[1] === String(promoIndex)) {
                             input.remove();
                         }
                     });
@@ -3880,7 +3924,7 @@
                     promoItem.style.transition = 'all 0.3s ease-out';
                     setTimeout(() => {
                         promoItem.remove();
-                        console.log(`✅ PROMOCIÓN ${index} ELIMINADA COMPLETAMENTE (JSON + DOM)`);
+                        console.log(`✅ PROMOCIÓN ID ${promoId} (índice ${promoIndex}) ELIMINADA COMPLETAMENTE (JSON + DOM)`);
                         // Guardar automáticamente después de eliminar
                         setTimeout(() => {
                             savePromocionesAuto();
@@ -3907,8 +3951,12 @@
         }
         
         // Función para eliminar imagen sin confirmación (cuando se elimina toda la promoción)
-        async function removePromocionImagenSilent(promoIndex, imagenPath) {
+        async function removePromocionImagenSilent(promoId, imagenPath) {
             try {
+                // Obtener el índice del elemento si es necesario para compatibilidad
+                const item = document.querySelector(`[data-promo-id="${promoId}"]`);
+                const promoIndex = item ? item.getAttribute('data-promo-index') : null;
+                
                 const deleteUrl = `{{ route('menus.delete.promo.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
                 const response = await fetch(deleteUrl, {
                     method: 'DELETE',
@@ -3917,6 +3965,7 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
+                        promo_id: promoId,
                         promo_index: promoIndex,
                         imagen_path: imagenPath
                     })
@@ -3935,16 +3984,21 @@
         }
         
         // Función para subir imagen de promoción
-        async function uploadPromocionImagen(event, promoIndex) {
+        async function uploadPromocionImagen(event, promoId) {
             const file = event.target.files[0];
             if (!file) return;
             
+            // Obtener el índice del elemento si es necesario para compatibilidad
+            const item = event.target.closest('.promocion-item');
+            const promoIndex = item ? item.getAttribute('data-promo-index') : null;
+            
             const formData = new FormData();
             formData.append('imagen', file);
-            formData.append('promo_index', promoIndex);
+            formData.append('promo_id', promoId);
+            if (promoIndex) formData.append('promo_index', promoIndex);
             formData.append('_token', '{{ csrf_token() }}');
             
-            const container = document.getElementById(`promo-imagen-container-${promoIndex}`);
+            const container = document.getElementById(`promo-imagen-container-${promoId}`);
             if (!container) {
                 showError('No se encontró el contenedor de imagen');
                 return;
@@ -3972,19 +4026,20 @@
                             <img src="${data.imagen_url}" 
                                  alt="Promoción"
                                  class="w-20 h-20 object-cover rounded-lg border border-accent-gray"
-                                 id="promo-imagen-${promoIndex}">
+                                 id="promo-imagen-${promoId}">
                             <button type="button"
-                                    onclick="removePromocionImagen(${promoIndex}, '${data.imagen_path}')"
+                                    onclick="removePromocionImagen(${promoId}, '${data.imagen_path}')"
                                     class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                 ×
                             </button>
                         </div>
                     `;
-                    // Actualizar imagen en el objeto de imágenes originales
+                    // Actualizar imagen en el objeto de imágenes originales (por ID y por índice)
                     if (window.promocionesImagenesOriginales) {
-                        window.promocionesImagenesOriginales[promoIndex] = data.imagen_path;
+                        window.promocionesImagenesOriginales[promoId] = data.imagen_path;
+                        if (promoIndex) window.promocionesImagenesOriginales[promoIndex] = data.imagen_path;
                         // También actualizar por nombre si existe
-                        const nombreInput = document.querySelector(`[data-promo-index="${promoIndex}"][data-promo-field="nombre"]`);
+                        const nombreInput = item ? item.querySelector('[data-promo-field="nombre"]') : null;
                         if (nombreInput && nombreInput.value) {
                             window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()] = data.imagen_path;
                         }
@@ -4016,10 +4071,14 @@
         }
         
         // Función para eliminar imagen de promoción
-        async function removePromocionImagen(promoIndex, imagenPath) {
+        async function removePromocionImagen(promoId, imagenPath) {
             showConfirm('¿Estás seguro de que quieres eliminar esta imagen?', async function(result) {
                 if (result) {
                     try {
+                        // Obtener el índice del elemento si es necesario para compatibilidad
+                        const item = document.querySelector(`[data-promo-id="${promoId}"]`);
+                        const promoIndex = item ? item.getAttribute('data-promo-index') : null;
+                        
                         const deleteUrl = `{{ route('menus.delete.promo.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
                         const response = await fetch(deleteUrl, {
                             method: 'DELETE',
@@ -4028,6 +4087,7 @@
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
                             body: JSON.stringify({
+                                promo_id: promoId,
                                 promo_index: promoIndex,
                                 imagen_path: imagenPath
                             })
@@ -4040,17 +4100,18 @@
                         const data = await response.json();
                         
                         if (data.success) {
-                            // Eliminar imagen del objeto de imágenes originales
+                            // Eliminar imagen del objeto de imágenes originales (por ID y por índice)
                             if (window.promocionesImagenesOriginales) {
-                                delete window.promocionesImagenesOriginales[promoIndex];
+                                delete window.promocionesImagenesOriginales[promoId];
+                                if (promoIndex) delete window.promocionesImagenesOriginales[promoIndex];
                                 // También eliminar por nombre si existe
-                                const nombreInput = document.querySelector(`[data-promo-index="${promoIndex}"][data-promo-field="nombre"]`);
+                                const nombreInput = item ? item.querySelector('[data-promo-field="nombre"]') : null;
                                 if (nombreInput && nombreInput.value) {
                                     delete window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()];
                                 }
                             }
                             
-                            const container = document.getElementById(`promo-imagen-container-${promoIndex}`);
+                            const container = document.getElementById(`promo-imagen-container-${promoId}`);
                             if (container) {
                                 container.innerHTML = `
                                     <label class="cursor-pointer">
