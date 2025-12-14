@@ -1768,6 +1768,13 @@ class MenuController extends Controller
                         }
                         // También mantener por índice para compatibilidad
                         $imagenesExistentes[$idx] = $platoExistente['imagen'];
+                        // IMPORTANTE: También indexar por precio si no hay nombre (para promociones sin nombre)
+                        if (empty($nombreNormalizado) && isset($platoExistente['precio']) && !empty($platoExistente['precio'])) {
+                            $precioNormalizado = mb_strtolower(trim($platoExistente['precio']));
+                            if ($precioNormalizado) {
+                                $imagenesExistentes[$precioNormalizado] = $platoExistente['imagen'];
+                            }
+                        }
                     }
                 }
             }
@@ -1804,8 +1811,7 @@ class MenuController extends Controller
                     'descripcion' => trim($promo['descripcion'] ?? '')
                 ];
                 
-                // Preservar imagen SOLO si viene explícitamente en el request o coincide por nombre
-                // NO usar índice porque al filtrar promociones los índices cambian y se mezclan imágenes
+                // Preservar imagen: priorizar request, luego buscar por nombre, luego por precio
                 if (isset($promo['imagen']) && !empty($promo['imagen'])) {
                     // Si viene explícitamente en el request, usar esa
                     $plato['imagen'] = $promo['imagen'];
@@ -1814,9 +1820,18 @@ class MenuController extends Controller
                     // Buscar por nombre normalizado SOLO si hay nombre (más confiable)
                     $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
                     Log::info("Imagen asignada por nombre para promoción $idx", ['nombre' => $nombreNormalizado, 'imagen' => $imagenesExistentes[$nombreNormalizado]]);
-                } else {
-                    // Si no viene imagen en el request y no coincide por nombre, NO asignar imagen
-                    // Esto previene que se asigne incorrectamente una imagen de otra promoción
+                } elseif (empty($nombreNormalizado) && isset($promo['precio']) && !empty($promo['precio'])) {
+                    // Si no hay nombre, intentar buscar por precio (útil para promociones sin nombre)
+                    $precioNormalizado = mb_strtolower(trim($promo['precio']));
+                    if (isset($imagenesExistentes[$precioNormalizado])) {
+                        $plato['imagen'] = $imagenesExistentes[$precioNormalizado];
+                        Log::info("Imagen asignada por precio para promoción $idx", ['precio' => $precioNormalizado, 'imagen' => $imagenesExistentes[$precioNormalizado]]);
+                    }
+                }
+                
+                // Si después de todos los intentos no hay imagen, no asignar ninguna
+                // Esto previene que se asigne incorrectamente una imagen de otra promoción
+                if (!isset($plato['imagen'])) {
                     Log::info("Promoción $idx sin imagen - no se asignará ninguna");
                 }
                 

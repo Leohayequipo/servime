@@ -3600,7 +3600,6 @@
             }
             
             const allItems = Array.from(container.querySelectorAll('.promocion-item'));
-            console.log(`📋 Total items encontrados en DOM: ${allItems.length}`);
             const promociones = [];
             
             allItems.forEach((item, idx) => {
@@ -3631,7 +3630,6 @@
                 
                 // Recopilar datos de los inputs
                 const inputsInItem = item.querySelectorAll('[data-promo-field]');
-                console.log(`  Item ${index} (índice DOM ${idx}): encontró ${inputsInItem.length} inputs`);
                 
                 inputsInItem.forEach(input => {
                     const field = input.getAttribute('data-promo-field');
@@ -3647,7 +3645,6 @@
                         }
                         
                         promo[field] = value;
-                        console.log(`    - Campo ${field}: "${value}"`);
                     }
                 });
                 
@@ -3662,39 +3659,41 @@
                         !imgPath.includes('data:') && 
                         imgPath.startsWith('/storage/')) {
                         imagenEncontrada = imgPath;
-                        console.log(`    - Imagen desde DOM: "${imgPath}"`);
                     }
                 }
                 
                 // Si no se encontró en el DOM, buscar en las imágenes originales
                 if (!imagenEncontrada) {
                     const originales = window.promocionesImagenesOriginales || {};
-                    // Buscar por índice original
-                    if (originales[index]) {
+                    // Buscar por índice original PRIMERO (más confiable)
+                    if (originales[index] && originales[index].trim()) {
                         imagenEncontrada = originales[index];
-                        console.log(`    - Imagen preservada desde originales (índice ${index}): "${imagenEncontrada}"`);
                     }
                     // También buscar por nombre normalizado
                     else if (promo.nombre && promo.nombre.trim()) {
                         const nombreNormalizado = promo.nombre.trim().toLowerCase();
-                        if (originales[nombreNormalizado]) {
+                        if (originales[nombreNormalizado] && originales[nombreNormalizado].trim()) {
                             imagenEncontrada = originales[nombreNormalizado];
-                            console.log(`    - Imagen preservada desde originales (nombre "${nombreNormalizado}"): "${imagenEncontrada}"`);
                         }
+                    }
+                }
+                
+                // IMPORTANTE: Si encontramos una imagen (del DOM o de originales), asegurarnos de incluirla
+                // Incluso si el src del DOM falla (403), usar la ruta de originales si existe
+                if (!imagenEncontrada && window.promocionesImagenesOriginales) {
+                    const originales = window.promocionesImagenesOriginales;
+                    // Último intento: buscar por índice
+                    if (originales[index] && originales[index].trim()) {
+                        imagenEncontrada = originales[index];
                     }
                 }
                 
                 // Asignar imagen encontrada o vacía
                 promo.imagen = imagenEncontrada || '';
-                if (!imagenEncontrada) {
-                    console.log(`    - Sin imagen (ni en DOM ni en originales)`);
-                }
                 
                 // Verificar si tiene nombre o precio (requisitos del backend)
                 const tieneNombre = promo.nombre && promo.nombre.trim() !== '';
                 const tienePrecio = promo.precio && promo.precio.trim() !== '';
-                
-                console.log(`  Item ${index}: nombre="${promo.nombre}", precio="${promo.precio}", descripcion="${promo.descripcion}", imagen="${promo.imagen ? 'sí' : 'no'}"`);
                 
                 // Agregar si tiene nombre O precio (el backend requiere esto)
                 if (tieneNombre || tienePrecio) {
@@ -3704,14 +3703,8 @@
                     if (!promo.hasOwnProperty('descripcion')) promo.descripcion = '';
                     
                     promociones.push(promo);
-                    console.log(`  ✓ Promoción ${index} agregada a la lista para guardar`);
-                } else {
-                    console.log(`  ⚠️ Promoción ${index} sin nombre ni precio, NO se agregará`);
                 }
             });
-            
-            console.log(`📊 Total promociones a guardar: ${promociones.length}`);
-            console.log('📊 Promociones recopiladas:', JSON.stringify(promociones, null, 2));
             
             return promociones;
         }
