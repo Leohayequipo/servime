@@ -39,22 +39,13 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     * 
+     * Nota: La eliminación de cuentas debe ser realizada por el administrador.
+     * Los usuarios deben contactar con el administrador para solicitar la eliminación.
      */
     public function destroy(Request $request): RedirectResponse
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
+        return Redirect::route('profile.edit')
+            ->with('error', 'Para eliminar tu cuenta, por favor contacta con el administrador del sistema.');
     }
 }

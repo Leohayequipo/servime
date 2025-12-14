@@ -5,55 +5,61 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            Una vez que tu cuenta sea eliminada, todos sus recursos y datos serán eliminados permanentemente. Antes de eliminar tu cuenta, por favor descarga cualquier dato o información que desees conservar.
+            Si deseas eliminar tu cuenta, por favor ponte en contacto con el administrador del sistema.
         </p>
     </header>
 
     <div class="flex justify-center mt-6">
         <x-danger-button
-            x-data=""
-            x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+            type="button"
+            onclick="showContactAdmin()"
             class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base"
         >Eliminar Cuenta</x-danger-button>
     </div>
 
-    <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
-        <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
-            @csrf
-            @method('delete')
+    <script>
+        function showContactAdmin() {
+            const email = '{{ env("SUPPORT_EMAIL", "info.servime@gmail.com") }}';
+            const whatsapp = '{{ env("SUPPORT_WHATSAPP", "5492257526706") }}';
+            
+            let htmlContent = `
+                <div style="text-align: left; color: #e5e7eb;">
+                    <p style="margin-bottom: 15px;">
+                        Para eliminar tu cuenta, necesitas contactar con el administrador del sistema. 
+                        Por favor, envía un correo electrónico o mensaje con tu solicitud.
+                    </p>
+                    <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                        <p style="margin-bottom: 8px;">
+                            <strong>📧 Email:</strong><br>
+                            <a href="mailto:${email}" style="color: #60a5fa; text-decoration: underline;">${email}</a>
+                        </p>
+                        ${whatsapp ? `
+                        <p>
+                            <strong>💬 WhatsApp:</strong><br>
+                            <a href="https://wa.me/${whatsapp}" target="_blank" style="color: #60a5fa; text-decoration: underline;">${whatsapp}</a>
+                        </p>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
 
-            <h2 class="text-lg font-medium text-gray-900">
-                ¿Estás seguro de que quieres eliminar tu cuenta?
-            </h2>
-
-            <p class="mt-1 text-sm text-gray-600">
-                Una vez que tu cuenta sea eliminada, todos sus recursos y datos serán eliminados permanentemente. Por favor ingresa tu contraseña para confirmar que deseas eliminar permanentemente tu cuenta.
-            </p>
-
-            <div class="mt-6">
-                <x-input-label for="password" value="Contraseña" class="sr-only" />
-
-                <x-text-input
-                    id="password"
-                    name="password"
-                    type="password"
-                    class="mt-1 block w-3/4 px-3 py-2"
-                    placeholder="Contraseña"
-                />
-
-                <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
-            </div>
-
-            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
-                <x-secondary-button x-on:click="$dispatch('close')" 
-                                    class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base">
-                    Cancelar
-                </x-secondary-button>
-
-                <x-danger-button class="w-auto max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3 text-base">
-                    Eliminar Cuenta
-                </x-danger-button>
-            </div>
-        </form>
-    </x-modal>
+            Swal.fire({
+                background: '#1A2A44',
+                color: '#ffffff',
+                customClass: {
+                    popup: 'dark-modal',
+                    title: 'text-white',
+                    htmlContainer: 'text-gray-300',
+                    confirmButton: 'bg-blue-600 hover:bg-blue-700'
+                },
+                title: 'Contacta con el Administrador',
+                html: htmlContent,
+                icon: 'info',
+                iconColor: '#3B82F6',
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#3B82F6',
+                width: '500px'
+            });
+        }
+    </script>
 </section>
