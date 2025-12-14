@@ -1737,16 +1737,63 @@ class MenuController extends Controller
             if (!$promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
                 $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
                 $promoArrayIndex = $promoIndex;
+                
+                // IMPORTANTE: Verificar que el ID coincide si se encontró por índice
+                if (isset($promo['id']) && $promo['id'] != $promoId) {
+                    Log::warning('⚠️ ADVERTENCIA: Promoción encontrada por índice pero el ID no coincide', [
+                        'promo_id_buscado' => $promoId,
+                        'promo_id_encontrado' => $promo['id'] ?? 'NO TIENE',
+                        'promo_index' => $promoIndex,
+                        'imagen_path_enviado' => $request->input('imagen_path')
+                    ]);
+                    // NO eliminar si el ID no coincide - esto previene eliminar la imagen de otra promoción
+                    return response()->json(['error' => 'El ID de la promoción no coincide. No se eliminará la imagen para prevenir errores.'], 400);
+                }
             }
             
             if (!$promo) {
+                Log::warning('⚠️ Promoción no encontrada al intentar eliminar imagen', [
+                    'promo_id' => $promoId,
+                    'promo_index' => $promoIndex,
+                    'imagen_path_enviado' => $request->input('imagen_path')
+                ]);
                 return response()->json(['error' => 'Promoción no encontrada.'], 404);
+            }
+            
+            // Verificar que el ID de la promoción encontrada coincide con el buscado
+            if (isset($promo['id']) && $promo['id'] != $promoId) {
+                Log::error('❌ ERROR CRÍTICO: El ID de la promoción encontrada NO coincide con el buscado', [
+                    'promo_id_buscado' => $promoId,
+                    'promo_id_encontrado' => $promo['id'],
+                    'promo_index' => $promoIndex,
+                    'imagen_path_enviado' => $request->input('imagen_path'),
+                    'imagen_en_promo' => $promo['imagen'] ?? 'NO TIENE'
+                ]);
+                return response()->json(['error' => 'El ID de la promoción no coincide. No se eliminará la imagen para prevenir errores.'], 400);
             }
             
             // Guardar ruta de imagen anterior para eliminarla
             $oldImagePath = null;
             if (isset($promo['imagen']) && !empty($promo['imagen'])) {
                 $oldImagePath = str_replace('/storage/', '', $promo['imagen']);
+                
+                // IMPORTANTE: Verificar que la imagen que se va a eliminar coincide con la de la promoción
+                $imagenPathEnviado = $request->input('imagen_path');
+                if ($imagenPathEnviado) {
+                    $imagenPathEnviadoClean = str_replace('/storage/', '', $imagenPathEnviado);
+                    if ($oldImagePath !== $imagenPathEnviadoClean) {
+                        Log::warning('⚠️ ADVERTENCIA: La imagen que se quiere eliminar NO coincide con la de la promoción', [
+                            'promo_id' => $promoId,
+                            'imagen_en_promo' => $promo['imagen'],
+                            'imagen_enviada' => $imagenPathEnviado,
+                            'imagen_en_promo_clean' => $oldImagePath,
+                            'imagen_enviada_clean' => $imagenPathEnviadoClean
+                        ]);
+                        // NO eliminar si no coincide - esto previene eliminar la imagen de otra promoción
+                        return response()->json(['error' => 'La imagen que se quiere eliminar no coincide con la de la promoción. No se eliminará para prevenir errores.'], 400);
+                    }
+                }
+                
                 // Eliminar la imagen del JSON
                 unset($promo['imagen']);
             } else {
@@ -1818,6 +1865,16 @@ class MenuController extends Controller
         }
         
         try {
+            // Recibir logs del frontend si vienen
+            $frontendLogs = $jsonBody['frontend_logs'] ?? [];
+            if (!empty($frontendLogs)) {
+                Log::info('📱 ========== LOGS DEL FRONTEND (collectPromocionesData) ==========');
+                foreach ($frontendLogs as $log) {
+                    Log::info('📱 ' . $log);
+                }
+                Log::info('📱 ========== FIN LOGS DEL FRONTEND ==========');
+            }
+            
             Log::info('savePromocionesAjax llamado', [
                 'menu_id' => $menu->id,
                 'promociones_count' => count($promocionesData),
@@ -1916,6 +1973,10 @@ class MenuController extends Controller
             $idsExistentes = []; // Para generar IDs únicos
             if ($promocionesIndex >= 0 && isset($contenido['categorias'][$promocionesIndex]['platos'])) {
                 $platosExistentes = $contenido['categorias'][$promocionesIndex]['platos'];
+                Log::info("📋 Indexando imágenes existentes del JSON", [
+                    'total_platos_en_json' => count($platosExistentes),
+                    'promociones_recibidas' => count($promociones)
+                ]);
                 foreach ($platosExistentes as $idx => $platoExistente) {
                     // Si tiene ID, usarlo; si no, generar uno nuevo (migración)
                     $idExistente = isset($platoExistente['id']) ? $platoExistente['id'] : null;
@@ -1926,31 +1987,42 @@ class MenuController extends Controller
                     }
                     $idsExistentes[] = $idExistente;
                     
-                    // Indexar imagen por ID (método más confiable)
+                    // Indexar imagen SOLO por ID (método más confiable y seguro)
+                    // NO indexar por nombre/precio para evitar asignaciones incorrectas
                     if (isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])) {
                         $imagenesExistentes[$idExistente] = $platoExistente['imagen'];
-                    }
-                    
-                    // También mantener indexación por nombre/precio para compatibilidad con items antiguos
-                    $nombreNormalizado = isset($platoExistente['nombre']) ? mb_strtolower(trim($platoExistente['nombre'])) : '';
-                    if ($nombreNormalizado) {
-                        $imagenesExistentes[$nombreNormalizado] = $platoExistente['imagen'] ?? null;
-                    }
-                    if (empty($nombreNormalizado) && isset($platoExistente['precio']) && !empty($platoExistente['precio'])) {
-                        $precioNormalizado = mb_strtolower(trim($platoExistente['precio']));
-                        if ($precioNormalizado) {
-                            $imagenesExistentes[$precioNormalizado] = $platoExistente['imagen'] ?? null;
-                        }
+                        Log::info("Imagen indexada por ID para preservación", [
+                            'id' => $idExistente,
+                            'imagen' => $platoExistente['imagen']
+                        ]);
+                    } else {
+                        Log::info("⚠️ Plato ID {$idExistente} NO tiene imagen en JSON", [
+                            'nombre' => $platoExistente['nombre'] ?? 'SIN NOMBRE',
+                            'tiene_imagen' => isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])
+                        ]);
                     }
                 }
+                Log::info("📊 Resumen de indexación", [
+                    'total_imagenes_indexadas' => count($imagenesExistentes),
+                    'ids_con_imagen' => array_keys($imagenesExistentes),
+                    'ids_sin_imagen' => array_diff($idsExistentes, array_keys($imagenesExistentes))
+                ]);
+            } else {
+                Log::warning("⚠️ No se encontró categoría de promociones en JSON", [
+                    'promocionesIndex' => $promocionesIndex,
+                    'tiene_categorias' => isset($contenido['categorias'])
+                ]);
             }
 
             // Preparar array de platos para promociones, preservando imágenes e IDs
             $platosPromociones = [];
             
-            Log::info('Procesando promociones recibidas', [
-                'total' => count($promocionesFiltradas),
-                'promociones' => $promocionesFiltradas
+            Log::info('🔍 ========== INICIO savePromociones ==========', [
+                'total_recibidas' => count($promocionesFiltradas),
+                'total_filtradas' => count($promocionesFiltradas),
+                'promociones_recibidas' => $promocionesFiltradas,
+                'imagenes_existentes_indexadas' => array_keys($imagenesExistentes),
+                'total_imagenes_existentes' => count($imagenesExistentes)
             ]);
             
             // Generar próximo ID único (basado en el máximo existente + 1)
@@ -1958,7 +2030,13 @@ class MenuController extends Controller
             
             // Usar promocionesFiltradas (ya filtradas para tener al menos un dato)
             foreach ($promocionesFiltradas as $idx => $promo) {
-                Log::info("Procesando promoción índice $idx", ['promo' => $promo]);
+                Log::info("📦 Procesando promoción índice $idx", [
+                    'promo_recibida' => $promo,
+                    'tiene_campo_imagen' => isset($promo['imagen']),
+                    'valor_imagen' => isset($promo['imagen']) ? ($promo['imagen'] ?: 'VACÍA') : 'NO ENVIADA',
+                    'tiene_id' => isset($promo['id']),
+                    'id_valor' => $promo['id'] ?? 'NO TIENE'
+                ]);
                 
                 // Asegurar que siempre tengamos los campos básicos (aunque estén vacíos)
                 if (!isset($promo['nombre'])) {
@@ -1976,9 +2054,11 @@ class MenuController extends Controller
                 if (isset($promo['id']) && !empty($promo['id'])) {
                     // Si viene con ID, preservarlo
                     $idPromocion = $promo['id'];
+                    Log::info("  ✅ ID preservado: $idPromocion");
                 } else {
                     // Si no tiene ID, generar uno nuevo
                     $idPromocion = $proximoId++;
+                    Log::info("  🆕 ID generado: $idPromocion");
                 }
                 
                 $nombreNormalizado = mb_strtolower(trim($promo['nombre']));
@@ -1990,42 +2070,164 @@ class MenuController extends Controller
                     'descripcion' => trim($promo['descripcion'] ?? '')
                 ];
                 
-                // Preservar imagen: priorizar request, luego buscar por ID, luego por nombre/precio (compatibilidad)
-                if (isset($promo['imagen']) && !empty($promo['imagen'])) {
-                    // Si viene explícitamente en el request, usar esa
-                    $plato['imagen'] = $promo['imagen'];
-                    Log::info("Imagen asignada desde request para promoción ID $idPromocion", ['imagen' => $promo['imagen']]);
-                } elseif (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
-                    // Buscar por ID (método más confiable)
-                    $plato['imagen'] = $imagenesExistentes[$idPromocion];
-                    Log::info("Imagen asignada por ID para promoción ID $idPromocion", ['imagen' => $imagenesExistentes[$idPromocion]]);
-                } elseif (!empty($nombreNormalizado) && isset($imagenesExistentes[$nombreNormalizado]) && !empty($imagenesExistentes[$nombreNormalizado])) {
-                    // Buscar por nombre normalizado (compatibilidad con items antiguos)
-                    $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
-                    Log::info("Imagen asignada por nombre para promoción ID $idPromocion", ['nombre' => $nombreNormalizado, 'imagen' => $imagenesExistentes[$nombreNormalizado]]);
-                } elseif (empty($nombreNormalizado) && isset($promo['precio']) && !empty($promo['precio'])) {
-                    // Si no hay nombre, intentar buscar por precio (compatibilidad con items antiguos)
-                    $precioNormalizado = mb_strtolower(trim($promo['precio']));
-                    if (isset($imagenesExistentes[$precioNormalizado]) && !empty($imagenesExistentes[$precioNormalizado])) {
-                        $plato['imagen'] = $imagenesExistentes[$precioNormalizado];
-                        Log::info("Imagen asignada por precio para promoción ID $idPromocion", ['precio' => $precioNormalizado, 'imagen' => $imagenesExistentes[$precioNormalizado]]);
+                // LÓGICA ULTRA SIMPLE DE IMÁGENES (RESPETAR LO QUE ENVÍA EL FRONTEND):
+                // 1. Si viene imagen NO vacía en el request → usar esa (el usuario la agregó/modificó)
+                // 2. Si viene imagen VACÍA ('') en el request → NO asignar ninguna (el usuario la borró)
+                // 3. Si NO viene el campo 'imagen' en el request → preservar SOLO si existe por ID y físicamente
+                
+                $imagenEnRequest = isset($promo['imagen']) ? trim($promo['imagen']) : null;
+                
+                Log::info("  🔍 Analizando imagen para promoción ID $idPromocion:", [
+                    'imagen_en_request' => $imagenEnRequest !== null ? ($imagenEnRequest ?: 'VACÍA') : 'NO ENVIADA',
+                    'id_existe_en_imagenes_existentes' => isset($imagenesExistentes[$idPromocion]),
+                    'imagen_en_existentes' => isset($imagenesExistentes[$idPromocion]) ? $imagenesExistentes[$idPromocion] : 'NO EXISTE'
+                ]);
+                
+                if ($imagenEnRequest !== null) {
+                    // El campo 'imagen' fue enviado explícitamente en el request
+                    if (!empty($imagenEnRequest)) {
+                        // Caso 1: Viene con valor → validar que existe físicamente y usar esa (prioridad máxima)
+                        // IMPORTANTE: Si el frontend envía una imagen, SIEMPRE usarla, incluso si no está en el JSON actual
+                        $imagenStoragePath = str_replace('/storage/', '', $imagenEnRequest);
+                        $fullPath = storage_path('app/public/' . $imagenStoragePath);
+                        
+                        // IMPORTANTE: Si el frontend envía una imagen, confiar en ella aunque no esté en el JSON
+                        // El frontend solo envía imágenes que están en el DOM, así que si la envía, debe existir
+                        // Pero validar que el archivo existe físicamente antes de asignarla
+                        if (file_exists($fullPath)) {
+                            $plato['imagen'] = $imagenEnRequest;
+                            Log::info("✅ Imagen asignada desde request para promoción ID $idPromocion (existe físicamente)", [
+                                'imagen' => $plato['imagen'],
+                                'nombre' => $plato['nombre'],
+                                'full_path' => $fullPath,
+                                'existe' => true,
+                                'estaba_en_json' => isset($imagenesExistentes[$idPromocion]) ? 'SÍ' : 'NO',
+                                'imagen_en_json' => $imagenesExistentes[$idPromocion] ?? 'NO EXISTE'
+                            ]);
+                        } else {
+                            // La imagen no existe físicamente → verificar si hay una alternativa en el JSON
+                            // Pero si el frontend la envía, es porque está en el DOM, así que puede ser un problema de ruta
+                            // Intentar buscar el archivo con diferentes variaciones de la ruta
+                            $alternativas = [
+                                $fullPath,
+                                storage_path('app/public/' . ltrim($imagenEnRequest, '/')),
+                                public_path($imagenEnRequest),
+                                public_path('storage/' . str_replace('/storage/', '', $imagenEnRequest))
+                            ];
+                            
+                            $imagenEncontrada = false;
+                            foreach ($alternativas as $altPath) {
+                                if (file_exists($altPath)) {
+                                    $plato['imagen'] = $imagenEnRequest; // Usar la ruta original del request
+                                    Log::warning("✅ Imagen encontrada en ruta alternativa para promoción ID $idPromocion", [
+                                        'imagen_request' => $imagenEnRequest,
+                                        'ruta_original' => $fullPath,
+                                        'ruta_encontrada' => $altPath,
+                                        'existe' => true
+                                    ]);
+                                    $imagenEncontrada = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!$imagenEncontrada) {
+                                // Si no existe físicamente, intentar preservar desde existentes si existe
+                                if (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
+                                    $imagenExistente = $imagenesExistentes[$idPromocion];
+                                    $imagenExistenteStoragePath = str_replace('/storage/', '', $imagenExistente);
+                                    $imagenExistenteFullPath = storage_path('app/public/' . $imagenExistenteStoragePath);
+                                    
+                                    if (file_exists($imagenExistenteFullPath)) {
+                                        $plato['imagen'] = $imagenExistente;
+                                        Log::warning("⚠️ Imagen del request no existe, pero se preservó desde JSON para promoción ID $idPromocion", [
+                                            'imagen_request' => $imagenEnRequest,
+                                            'imagen_preservada' => $imagenExistente,
+                                            'full_path_request' => $fullPath,
+                                            'full_path_preservada' => $imagenExistenteFullPath
+                                        ]);
+                                    } else {
+                                        Log::warning("⚠️ Imagen del request no existe físicamente para promoción ID $idPromocion - NO se asignará", [
+                                            'imagen_path' => $imagenEnRequest,
+                                            'full_path' => $fullPath,
+                                            'existe' => file_exists($fullPath),
+                                            'razon' => 'Archivo físico no encontrado aunque viene en request',
+                                            'rutas_verificadas' => $alternativas
+                                        ]);
+                                    }
+                                } else {
+                                    // La imagen no existe físicamente y no hay alternativa en el JSON
+                                    Log::warning("⚠️ Imagen del request no existe físicamente para promoción ID $idPromocion - NO se asignará", [
+                                        'imagen_path' => $imagenEnRequest,
+                                        'full_path' => $fullPath,
+                                        'existe' => file_exists($fullPath),
+                                        'razon' => 'Archivo físico no encontrado aunque viene en request',
+                                        'rutas_verificadas' => $alternativas
+                                    ]);
+                                }
+                            }
+                        }
+                    } else {
+                        // Caso 2: Viene vacía ('') → el usuario la borró, NO asignar ninguna
+                        // NO preservar aunque exista en existentes
+                        Log::info("🗑️ Imagen explícitamente vacía en request para promoción ID $idPromocion - usuario la borró, NO preservar", [
+                            'nombre' => $plato['nombre'],
+                            'precio' => $plato['precio']
+                        ]);
                     }
+                } elseif (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
+                    // Caso 3: NO viene el campo 'imagen' en el request → preservar si existe por ID y físicamente
+                    $imagenPath = $imagenesExistentes[$idPromocion];
+                    $imagenStoragePath = str_replace('/storage/', '', $imagenPath);
+                    $fullPath = storage_path('app/public/' . $imagenStoragePath);
+                    
+                    // SOLO preservar si la imagen existe físicamente
+                    if (file_exists($fullPath)) {
+                        $plato['imagen'] = $imagenPath;
+                        Log::info("✅ Imagen preservada por ID para promoción ID $idPromocion (no venía en request, existe físicamente)", [
+                            'imagen' => $imagenPath,
+                            'nombre' => $plato['nombre'],
+                            'full_path' => $fullPath,
+                            'existe' => true
+                        ]);
+                    } else {
+                        // La imagen no existe físicamente → no preservar
+                        Log::warning("⚠️ Imagen no existe físicamente para promoción ID $idPromocion - no se preservará", [
+                            'imagen_path' => $imagenPath,
+                            'full_path' => $fullPath,
+                            'existe' => file_exists($fullPath),
+                            'razon' => 'Archivo físico no encontrado'
+                        ]);
+                    }
+                } else {
+                    // Caso 4: No hay imagen en request ni en existentes
+                    // IMPORTANTE: Si el ID existe pero no está en existentes, podría ser que se eliminó del JSON
+                    // pero el frontend debería haberla enviado si existe en el DOM
+                    Log::info("ℹ️ Promoción ID $idPromocion sin imagen - no se asignará ninguna", [
+                        'nombre' => $plato['nombre'],
+                        'precio' => $plato['precio'],
+                        'imagen_en_request' => $imagenEnRequest !== null ? ($imagenEnRequest ?: 'VACÍA') : 'NO ENVIADA',
+                        'id_existe_en_existentes' => isset($imagenesExistentes[$idPromocion]) ? 'SÍ' : 'NO',
+                        'total_imagenes_existentes' => count($imagenesExistentes),
+                        'ids_existentes' => array_keys($imagenesExistentes)
+                    ]);
                 }
+                // NO buscar por nombre/precio para evitar asignaciones incorrectas de imágenes
                 
-                // Si después de todos los intentos no hay imagen, no asignar ninguna
-                // Esto previene que se asigne incorrectamente una imagen de otra promoción
-                if (!isset($plato['imagen'])) {
-                    Log::info("Promoción ID $idPromocion sin imagen - no se asignará ninguna");
-                }
-                
-                Log::info('Agregando promoción', [
+                Log::info("  ✅ Promoción procesada:", [
                     'id' => $idPromocion,
-                    'indice_original' => $idx,
-                    'plato' => $plato
+                    'nombre' => $plato['nombre'],
+                    'precio' => $plato['precio'],
+                    'tiene_imagen' => isset($plato['imagen']),
+                    'imagen' => $plato['imagen'] ?? 'NO ASIGNADA'
                 ]);
                 
                 $platosPromociones[] = $plato;
             }
+            
+            Log::info('🔍 ========== FIN savePromociones ==========', [
+                'total_procesadas' => count($platosPromociones),
+                'promociones_finales' => $platosPromociones
+            ]);
             
             // Si no hay promociones válidas, eliminar la categoría completa
             if (empty($platosPromociones)) {

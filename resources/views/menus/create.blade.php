@@ -1609,7 +1609,8 @@
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: JSON.stringify({
-                                promociones: promociones
+                                promociones: promociones,
+                                frontend_logs: window.frontendLogs || [] // Enviar logs al backend
                             })
                         });
                         
@@ -3605,46 +3606,62 @@
                     $promoId = $promo['id'] ?? ($promoIndex + 1000000);
                 @endphp
                 @if(isset($promo['imagen']) && !empty($promo['imagen']))
-                    // Indexar por ID (método principal)
+                    // Indexar SOLO por ID (método más confiable y seguro)
+                    // NO indexar por índice/nombre para evitar asignaciones incorrectas
                     window.promocionesImagenesOriginales[{{ $promoId }}] = '{{ $promo['imagen'] }}';
-                    // También indexar por índice para compatibilidad
-                    window.promocionesImagenesOriginales[{{ $promoIndex }}] = '{{ $promo['imagen'] }}';
-                    // También indexar por nombre para compatibilidad con items antiguos
-                    @if(isset($promo['nombre']) && !empty($promo['nombre']))
-                        window.promocionesImagenesOriginales['{{ mb_strtolower(trim($promo['nombre'])) }}'] = '{{ $promo['imagen'] }}';
-                    @endif
                 @endif
             @endforeach
         @endif
         
+        // Array para almacenar logs del frontend que se enviarán al backend
+        window.frontendLogs = [];
+        
+        // Función auxiliar para agregar logs que se enviarán al backend
+        function addFrontendLog(message) {
+            const timestamp = new Date().toISOString();
+            window.frontendLogs.push(`[${timestamp}] ${message}`);
+            console.log(message); // También mostrar en consola
+        }
+        
         // Función auxiliar para recopilar datos de promociones
         function collectPromocionesData() {
+            // Limpiar logs anteriores
+            window.frontendLogs = [];
+            
+            addFrontendLog('🔍 ========== INICIO collectPromocionesData ==========');
             const container = document.getElementById('promociones-container');
             if (!container) {
-                // Si no existe el contenedor, es un menú nuevo sin promociones aún
+                addFrontendLog('⚠️ No existe contenedor de promociones (menú nuevo)');
                 return [];
             }
             
             const allItems = Array.from(container.querySelectorAll('.promocion-item'));
+            addFrontendLog(`📋 Total items encontrados en DOM: ${allItems.length}`);
             const promociones = [];
             
             allItems.forEach((item, idx) => {
+                addFrontendLog(`\n📦 Procesando item ${idx}:`);
+                
                 // Verificar que está en el DOM y es visible
                 if (!item.isConnected || !container.contains(item)) {
-                    console.warn(`⚠️ Item ${idx} no está conectado al DOM, saltando`);
+                    addFrontendLog(`  ⚠️ Item ${idx} no está conectado al DOM, saltando`);
                     return;
                 }
                 
                 const style = window.getComputedStyle(item);
                 if (style.display === 'none' || style.visibility === 'hidden' || !item.offsetParent) {
-                    console.warn(`⚠️ Item ${idx} no es visible, saltando`);
+                    addFrontendLog(`  ⚠️ Item ${idx} no es visible, saltando`);
                     return;
                 }
                 
                 const index = item.getAttribute('data-promo-index');
                 const promoId = item.getAttribute('data-promo-id');
+                const imagenBorrada = item.getAttribute('data-imagen-borrada') === 'true';
+                
+                addFrontendLog(`  ID: ${promoId}, Index: ${index}, Imagen borrada: ${imagenBorrada}`);
+                
                 if (!index && !promoId) {
-                    console.warn(`⚠️ Item ${idx} no tiene data-promo-index ni data-promo-id, saltando`);
+                    console.warn(`  ⚠️ Item ${idx} no tiene data-promo-index ni data-promo-id, saltando`);
                     return;
                 }
                 
@@ -3652,8 +3669,7 @@
                     id: promoId ? parseInt(promoId) : null, // ID único
                     nombre: '',
                     precio: '',
-                    descripcion: '',
-                    imagen: ''
+                    descripcion: ''
                 };
                 
                 // Recopilar datos de los inputs
@@ -3676,56 +3692,82 @@
                     }
                 });
                 
-                // Buscar imagen - primero en el DOM, luego en las imágenes originales
+                // Buscar imagen - primero en el DOM, luego en originales SOLO por ID
                 let imagenEncontrada = '';
                 const img = item.querySelector('img[id^="promo-imagen-"]');
+                
+                addFrontendLog(`  🔍 Buscando imagen para promoción ID ${promo.id}:`);
+                addFrontendLog(`    - Img en DOM: ${img ? 'SÍ' : 'NO'}`);
+                if (img) {
+                    addFrontendLog(`    - Img src: ${img.src}`);
+                }
+                
+                // 1. Buscar en el DOM primero
                 if (img && img.src) {
                     const imgPath = img.src.replace(window.location.origin, '');
+                    addFrontendLog(`    - Img path procesado: ${imgPath}`);
                     // Solo agregar imagen si tiene una ruta válida y no es un placeholder
+                    // VALIDACIÓN ESTRICTA: Debe ser una ruta válida de storage
+                    // IMPORTANTE: Si la imagen está en el DOM, confiar en ella y enviarla al backend
+                    // El backend verificará si existe físicamente antes de asignarla
                     if (imgPath && 
                         !imgPath.includes('placeholder') && 
                         !imgPath.includes('data:') && 
-                        imgPath.startsWith('/storage/')) {
+                        imgPath.startsWith('/storage/') &&
+                        imgPath.length > 10) { // Validar que tenga contenido real
                         imagenEncontrada = imgPath;
+                        addFrontendLog(`    ✅ Imagen encontrada en DOM: ${imagenEncontrada}`);
+                        addFrontendLog(`    ℹ️ NOTA: El backend verificará si existe físicamente antes de asignarla`);
+                    } else {
+                        addFrontendLog(`    ⚠️ Imagen en DOM no es válida (placeholder o formato incorrecto)`);
                     }
                 }
                 
-                // Si no se encontró en el DOM, buscar en las imágenes originales
-                if (!imagenEncontrada) {
+                // 2. Si NO se encontró en el DOM, buscar en originales SOLO por ID
+                // IMPORTANTE: Solo buscar si el ID existe en originales (promoción existente)
+                if (!imagenEncontrada && promo.id) {
                     const originales = window.promocionesImagenesOriginales || {};
-                    // Buscar por ID PRIMERO (método más confiable)
-                    if (promo.id && originales[promo.id] && originales[promo.id].trim()) {
+                    addFrontendLog(`    - Buscando en originales por ID ${promo.id}:`);
+                    addFrontendLog(`    - Total originales disponibles: ${Object.keys(originales).length}`);
+                    addFrontendLog(`    - IDs en originales: ${Object.keys(originales).map(k => `ID ${k}`).join(', ') || 'NINGUNO'}`);
+                    if (originales[promo.id]) {
+                        addFrontendLog(`    - Imagen para ID ${promo.id}: ${originales[promo.id]}`);
+                    }
+                    // Buscar SOLO por ID - si el ID existe en originales, es una promoción existente
+                    if (originales[promo.id] && originales[promo.id].trim()) {
                         imagenEncontrada = originales[promo.id];
-                    }
-                    // Buscar por índice (compatibilidad)
-                    else if (index && originales[index] && originales[index].trim()) {
-                        imagenEncontrada = originales[index];
-                    }
-                    // Buscar por nombre normalizado (compatibilidad con items antiguos)
-                    else if (promo.nombre && promo.nombre.trim()) {
-                        const nombreNormalizado = promo.nombre.trim().toLowerCase();
-                        if (originales[nombreNormalizado] && originales[nombreNormalizado].trim()) {
-                            imagenEncontrada = originales[nombreNormalizado];
-                        }
+                        addFrontendLog(`    ✅ Imagen encontrada en originales: ${imagenEncontrada}`);
+                    } else {
+                        // ID no existe en originales = promoción nueva, no tiene imagen
+                        addFrontendLog(`    ⚠️ ID ${promo.id} NO existe en originales (es nueva o no tiene imagen)`);
+                        addFrontendLog(`    ⚠️ Esto significa que la imagen NO se preservará si no está en el DOM`);
                     }
                 }
                 
-                // IMPORTANTE: Si encontramos una imagen (del DOM o de originales), asegurarnos de incluirla
-                // Incluso si el src del DOM falla (403), usar la ruta de originales si existe
-                if (!imagenEncontrada && window.promocionesImagenesOriginales) {
-                    const originales = window.promocionesImagenesOriginales;
-                    // Último intento: buscar por ID
-                    if (promo.id && originales[promo.id] && originales[promo.id].trim()) {
-                        imagenEncontrada = originales[promo.id];
-                    }
-                    // O por índice como fallback
-                    else if (index && originales[index] && originales[index].trim()) {
-                        imagenEncontrada = originales[index];
-                    }
-                }
+                // LÓGICA DE IMAGEN:
+                // 1. Si se encontró imagen válida → enviar la ruta
+                // 2. Si el item tiene data-imagen-borrada="true" → enviar imagen: '' (usuario la borró)
+                // 3. Si no hay imagen y no está marcada como borrada → NO enviar el campo (preservar si existe)
                 
-                // Asignar imagen encontrada o vacía
-                promo.imagen = imagenEncontrada || '';
+                const existeEnOriginales = promo.id && window.promocionesImagenesOriginales && window.promocionesImagenesOriginales[promo.id];
+                addFrontendLog(`  🔍 Estado final de imagen para promoción ID ${promo.id}:`);
+                addFrontendLog(`    - imagenEncontrada: ${imagenEncontrada || 'NO'}`);
+                addFrontendLog(`    - imagenBorrada (data-imagen-borrada): ${imagenBorrada}`);
+                addFrontendLog(`    - existe en originales: ${existeEnOriginales ? 'SÍ (' + window.promocionesImagenesOriginales[promo.id] + ')' : 'NO'}`);
+                
+                if (imagenEncontrada && imagenEncontrada.trim() && imagenEncontrada.startsWith('/storage/')) {
+                    // Caso 1: Se encontró imagen válida → enviar la ruta
+                    promo.imagen = imagenEncontrada;
+                    addFrontendLog(`  📸 RESULTADO: Promoción tiene imagen → ${promo.imagen}`);
+                } else if (imagenBorrada) {
+                    // Caso 2: Usuario borró la imagen explícitamente → enviar imagen: '' para que NO se preserve
+                    promo.imagen = '';
+                    addFrontendLog(`  🗑️ RESULTADO: Imagen fue borrada → enviando imagen: '' (NO preservar)`);
+                } else {
+                    // Caso 3: No hay imagen y no fue borrada → NO enviar el campo
+                    // El backend preservará si existe en existentes
+                    addFrontendLog(`  ℹ️ RESULTADO: NO tiene imagen → campo 'imagen' NO se enviará (backend preservará si existe)`);
+                }
                 
                 // Verificar si tiene nombre o precio (requisitos del backend)
                 const tieneNombre = promo.nombre && promo.nombre.trim() !== '';
@@ -3738,9 +3780,16 @@
                     if (!promo.hasOwnProperty('precio')) promo.precio = '';
                     if (!promo.hasOwnProperty('descripcion')) promo.descripcion = '';
                     
+                    addFrontendLog(`  ✅ Promoción agregada: ID=${promo.id}, nombre="${promo.nombre}", precio="${promo.precio}", tieneImagen=${promo.hasOwnProperty('imagen')}, imagen=${promo.hasOwnProperty('imagen') ? promo.imagen : 'NO ENVIADA'}`);
                     promociones.push(promo);
+                } else {
+                    addFrontendLog(`  ⚠️ Promoción sin nombre ni precio, NO se agregará`);
                 }
             });
+            
+            addFrontendLog(`\n📊 Total promociones a enviar: ${promociones.length}`);
+            addFrontendLog(`📤 Promociones finales: ${JSON.stringify(promociones, null, 2)}`);
+            addFrontendLog('🔍 ========== FIN collectPromocionesData ==========\n');
             
             return promociones;
         }
@@ -3769,7 +3818,8 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({
-                        promociones: promociones
+                        promociones: promociones,
+                        frontend_logs: window.frontendLogs || [] // Enviar logs al backend
                     })
                 });
                 
@@ -3811,7 +3861,12 @@
                 }
                 
                 const promoIndex = promoItem.getAttribute('data-promo-index');
-                console.log(`🗑️ ELIMINANDO PROMOCIÓN ID ${promoId} (índice ${promoIndex})...`);
+                addFrontendLog(`🗑️ ========== INICIO ELIMINACIÓN PROMOCIÓN ==========`);
+                addFrontendLog(`🗑️ ELIMINANDO PROMOCIÓN ID ${promoId} (índice ${promoIndex})...`);
+                
+                // Log del estado actual de promocionesImagenesOriginales ANTES de eliminar
+                const originalesAntes = window.promocionesImagenesOriginales || {};
+                addFrontendLog(`📋 Estado de originales ANTES de eliminar: ${JSON.stringify(Object.keys(originalesAntes).map(k => `ID ${k}`).join(', '))}`);
                 
                 // Verificar si es una promoción nueva (vacía, sin guardar en el backend)
                 const nombreInput = promoItem.querySelector('[data-promo-field="nombre"]');
@@ -3899,14 +3954,35 @@
                         throw new Error(data.error || 'Error al eliminar la promoción del servidor');
                     }
                     
-                    console.log(`✓ Promoción ID ${promoId} (índice ${promoIndex}) eliminada del JSON en el servidor`);
+                    addFrontendLog(`✓ Promoción ID ${promoId} (índice ${promoIndex}) eliminada del JSON en el servidor`);
                     
-                    // Si tiene imagen, eliminarla del servidor también (pero no esperar)
+                    // IMPORTANTE: Eliminar SOLO la promoción eliminada de promocionesImagenesOriginales
+                    // NO eliminar otras promociones - esto es CRÍTICO
+                    if (window.promocionesImagenesOriginales && promoId) {
+                        const imagenEliminada = window.promocionesImagenesOriginales[promoId];
+                        const originalesAntes = Object.keys(window.promocionesImagenesOriginales).map(k => `ID ${k}`).join(', ');
+                        delete window.promocionesImagenesOriginales[promoId];
+                        addFrontendLog(`✅ Imagen eliminada de originales por ID ${promoId}: ${imagenEliminada || 'NO TENÍA'}`);
+                        
+                        // Log del estado DESPUÉS de eliminar
+                        const originalesDespues = window.promocionesImagenesOriginales || {};
+                        const originalesDespuesList = Object.keys(originalesDespues).map(k => `ID ${k}`).join(', ');
+                        addFrontendLog(`📋 Estado de originales ANTES de eliminar: ${originalesAntes || 'NINGUNO'}`);
+                        addFrontendLog(`📋 Estado de originales DESPUÉS de eliminar: ${originalesDespuesList || 'NINGUNO'}`);
+                        addFrontendLog(`⚠️ VERIFICAR: Las otras promociones deben mantener sus imágenes en originales`);
+                    } else {
+                        addFrontendLog(`⚠️ No se pudo eliminar de originales: promoId=${promoId}, originales existe=${!!window.promocionesImagenesOriginales}`);
+                    }
+                    
+                    // IMPORTANTE: NO eliminar la imagen del servidor cuando se elimina una promoción
+                    // Razones:
+                    // 1. La imagen podría ser reutilizada por otra promoción
+                    // 2. Si se recarga la página, el navegador la muestra desde caché pero el archivo ya no existe
+                    // 3. El usuario puede querer restaurar la promoción más tarde
+                    // La imagen se eliminará automáticamente cuando se elimine explícitamente desde la UI
                     if (img && img.src) {
-                        const imgPath = img.src.replace(window.location.origin, '');
-                        if (imgPath && !imgPath.includes('placeholder')) {
-                            removePromocionImagenSilent(promoId, imgPath);
-                        }
+                        addFrontendLog(`ℹ️ Imagen encontrada para promoción ID ${promoId}, pero NO se eliminará del servidor`);
+                        addFrontendLog(`ℹ️ La imagen permanecerá en el servidor por si se necesita más tarde`);
                     }
                     
                     // Eliminar TODOS los inputs relacionados con esta promoción (visibles Y ocultos)
@@ -3924,9 +4000,11 @@
                     promoItem.style.transition = 'all 0.3s ease-out';
                     setTimeout(() => {
                         promoItem.remove();
-                        console.log(`✅ PROMOCIÓN ID ${promoId} (índice ${promoIndex}) ELIMINADA COMPLETAMENTE (JSON + DOM)`);
-                        // Guardar automáticamente después de eliminar
+                        addFrontendLog(`✅ PROMOCIÓN ID ${promoId} (índice ${promoIndex}) ELIMINADA COMPLETAMENTE (JSON + DOM)`);
+                        addFrontendLog(`🗑️ ========== FIN ELIMINACIÓN PROMOCIÓN ==========`);
+                        // Guardar automáticamente después de eliminar (con logs)
                         setTimeout(() => {
+                            addFrontendLog(`💾 Guardando promociones después de eliminar promoción ID ${promoId}...`);
                             savePromocionesAuto();
                         }, 500);
                     }, 300);
@@ -4034,16 +4112,22 @@
                             </button>
                         </div>
                     `;
-                    // Actualizar imagen en el objeto de imágenes originales (por ID y por índice)
-                    if (window.promocionesImagenesOriginales) {
+                    // Actualizar imagen en el objeto de imágenes originales SOLO por ID
+                    // Esto asegura que si se guarda después, se preserve correctamente
+                    if (window.promocionesImagenesOriginales && promoId) {
                         window.promocionesImagenesOriginales[promoId] = data.imagen_path;
-                        if (promoIndex) window.promocionesImagenesOriginales[promoIndex] = data.imagen_path;
-                        // También actualizar por nombre si existe
-                        const nombreInput = item ? item.querySelector('[data-promo-field="nombre"]') : null;
-                        if (nombreInput && nombreInput.value) {
-                            window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()] = data.imagen_path;
-                        }
+                        console.log(`✅ Imagen actualizada en originales por ID ${promoId}: ${data.imagen_path} - se preservará en el próximo guardado`);
+                    } else {
+                        console.warn(`⚠️ No se pudo actualizar originales: promoId=${promoId}, originales existe=${!!window.promocionesImagenesOriginales}`);
                     }
+                    
+                    // Eliminar el marcador de "imagen borrada" si existe (se subió una nueva imagen)
+                    const item = document.querySelector(`[data-promo-id="${promoId}"]`);
+                    if (item && item.getAttribute('data-imagen-borrada') === 'true') {
+                        item.removeAttribute('data-imagen-borrada');
+                        console.log(`✅ Marcador de imagen borrada eliminado para promoción ID ${promoId}`);
+                    }
+                    
                     // Guardar automáticamente después de subir imagen
                     setTimeout(() => {
                         if (typeof savePromocionesAuto === 'function') {
@@ -4100,15 +4184,18 @@
                         const data = await response.json();
                         
                         if (data.success) {
-                            // Eliminar imagen del objeto de imágenes originales (por ID y por índice)
-                            if (window.promocionesImagenesOriginales) {
+                            // IMPORTANTE: Eliminar imagen de originales ANTES de guardar
+                            // Esto previene que se preserve una imagen que fue borrada
+                            if (window.promocionesImagenesOriginales && promoId) {
                                 delete window.promocionesImagenesOriginales[promoId];
-                                if (promoIndex) delete window.promocionesImagenesOriginales[promoIndex];
-                                // También eliminar por nombre si existe
-                                const nombreInput = item ? item.querySelector('[data-promo-field="nombre"]') : null;
-                                if (nombreInput && nombreInput.value) {
-                                    delete window.promocionesImagenesOriginales[nombreInput.value.trim().toLowerCase()];
-                                }
+                                console.log(`✅ Imagen eliminada de originales por ID ${promoId} - NO se preservará en el próximo guardado`);
+                            }
+                            
+                            // Marcar el item como "imagen borrada" para que collectPromocionesData envíe imagen: ''
+                            const item = document.querySelector(`[data-promo-id="${promoId}"]`);
+                            if (item) {
+                                item.setAttribute('data-imagen-borrada', 'true');
+                                console.log(`✅ Item marcado como imagen borrada para promoción ID ${promoId}`);
                             }
                             
                             const container = document.getElementById(`promo-imagen-container-${promoId}`);
