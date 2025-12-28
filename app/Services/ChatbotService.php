@@ -125,26 +125,32 @@ class ChatbotService
                                     }
                                     // INCLUIR URL DE IMAGEN si existe
                                     if (isset($plato['imagen']) && !empty($plato['imagen'])) {
-                                        // Usar asset() para generar URL pública correcta
-                                        // Normalizar la ruta: asegurar que empiece con /storage/
                                         $rutaImagen = trim($plato['imagen']);
                                         
-                                        // Si no empieza con /, agregarlo
-                                        if (!str_starts_with($rutaImagen, '/')) {
-                                            $rutaImagen = '/' . $rutaImagen;
-                                        }
-                                        
-                                        // Si no empieza con /storage/, agregarlo
-                                        if (!str_starts_with($rutaImagen, '/storage/')) {
-                                            // Si empieza con storage/, agregar /
-                                            if (str_starts_with($rutaImagen, 'storage/')) {
+                                        // Si ya es una URL completa (http:// o https://), usarla directamente
+                                        if (str_starts_with($rutaImagen, 'http://') || str_starts_with($rutaImagen, 'https://')) {
+                                            $imagenUrl = $rutaImagen;
+                                        } else {
+                                            // Es una ruta relativa, normalizarla
+                                            // Si no empieza con /, agregarlo
+                                            if (!str_starts_with($rutaImagen, '/')) {
                                                 $rutaImagen = '/' . $rutaImagen;
-                                            } else {
-                                                $rutaImagen = '/storage/' . ltrim($rutaImagen, '/');
                                             }
+                                            
+                                            // Si no empieza con /storage/, agregarlo
+                                            if (!str_starts_with($rutaImagen, '/storage/')) {
+                                                // Si empieza con storage/, agregar /
+                                                if (str_starts_with($rutaImagen, 'storage/')) {
+                                                    $rutaImagen = '/' . $rutaImagen;
+                                                } else {
+                                                    $rutaImagen = '/storage/' . ltrim($rutaImagen, '/');
+                                                }
+                                            }
+                                            
+                                            // Generar URL completa usando asset()
+                                            $imagenUrl = asset($rutaImagen);
                                         }
                                         
-                                        $imagenUrl = asset($rutaImagen);
                                         $contexto .= "\n  [IMAGEN:{$imagenUrl}]";
                                     }
                                     $contexto .= "\n";
@@ -394,6 +400,13 @@ FORMATO DE RESPUESTAS (CRÍTICO - DEBE SEGUIRSE EXACTAMENTE):
   *Descripción*
   [IMAGEN:url_si_existe]
 
+⚠️ REGLA CRÍTICA SOBRE IMÁGENES - LEE EL CONTEXTO:
+- El contexto del menú incluye líneas como: "  [IMAGEN:url]" después de cada plato que tiene imagen
+- DEBES buscar estas líneas en el contexto y COPIARLAS EXACTAMENTE en tu respuesta
+- Si en el contexto aparece "  [IMAGEN:http://127.0.0.1:8000/storage/...]" para un plato, DEBES incluir esa misma línea en tu respuesta
+- NO omitas las imágenes. Si están en el contexto, DEBEN estar en tu respuesta
+- EJEMPLO: Si el contexto dice "- DULCE O CREMA — \$1111\n  [IMAGEN:http://127.0.0.1:8000/storage/...]", tu respuesta DEBE incluir: "- **DULCE O CREMA** — **\$1111**\n  [IMAGEN:http://127.0.0.1:8000/storage/...]"
+
 REGLAS DE FORMATO ESTRICTO PARA PLATOS (NO NEGOCIABLES):
 1. SIEMPRE empieza cada línea de plato con: guión (-) + espacio + **nombre en negrita** + espacio + guión largo (—) + espacio + **precio en negrita**
 2. EJEMPLO CORRECTO: `- **Alitas de Pollo** — **7,00 €` (con doble asterisco para negrita)
@@ -401,7 +414,7 @@ REGLAS DE FORMATO ESTRICTO PARA PLATOS (NO NEGOCIABLES):
 4. El guión inicial (-) es OBLIGATORIO para que el sistema detecte el plato y muestre el botón \"Lo quiero\"
 5. El separador debe ser guión largo (—) no guión corto (-)
 6. El precio DEBE estar en **negrita** (entre doble asterisco)
-7. IMPORTANTE: Cuando un plato tiene imagen disponible en el formato [IMAGEN:url], SIEMPRE inclúyela en tu respuesta usando exactamente ese formato [IMAGEN:url]
+7. ⚠️ CRÍTICO SOBRE IMÁGENES: Cuando un plato tiene imagen disponible en el contexto (formato [IMAGEN:url]), DEBES INCLUIRLA OBLIGATORIAMENTE en tu respuesta usando exactamente ese formato [IMAGEN:url]. NO OMITAS las imágenes. Si el contexto muestra [IMAGEN:url] para un plato, esa imagen DEBE aparecer en tu respuesta después del precio y descripción del plato.
 8. Usa emojis estratégicamente: 🍽️ 🥘 🍷 🧀 🍰 🍕 🥗 🍝 🍖 🍤
 9. LENGUAJE NEUTRAL - IMPORTANTE: Los clientes pueden estar DENTRO del local o FUERA. NUNCA uses frases que impliquen \"venir\" o \"moverse\" como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\", etc.
    - USA frases neutrales que funcionen en ambos casos: \"¡No te lo pierdas!\", \"¡Imperdible!\", \"¡Pruébalo ya!\", \"¡Disfrútalo!\", \"¡Saborea esto!\", \"¡Delicioso!\", \"¡Recomendado!\", \"¡Especialidad de la casa!\"
@@ -475,7 +488,8 @@ REGLAS FINALES ABSOLUTAS ANTES DE RESPONDER:
 3. NO inventes platos, ingredientes, preparaciones o descripciones que no estén en el menú
 4. Si un plato no tiene descripción en el menú, usa solo el nombre y precio, sin inventar detalles
 5. FORMATO OBLIGATORIO: Cada plato DEBE empezar con \"- **Nombre** — **Precio**\" (guión + espacio + nombre en negrita + espacio + guión largo + espacio + precio en negrita). Sin este formato exacto, el botón \"Lo quiero\" NO aparecerá.
-6. LENGUAJE NEUTRAL: NUNCA uses frases como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\" porque el cliente puede estar DENTRO del local. Usa frases neutrales como \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"No te lo pierdas\", \"Imperdible\".
+6. ⚠️ IMÁGENES OBLIGATORIAS: Si en el contexto aparece [IMAGEN:url] para un plato, DEBES incluirla en tu respuesta. Busca en el contexto las líneas que dicen [IMAGEN:url] y copia exactamente ese formato en tu respuesta después del precio y descripción del plato correspondiente.
+7. LENGUAJE NEUTRAL: NUNCA uses frases como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\" porque el cliente puede estar DENTRO del local. Usa frases neutrales como \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"No te lo pierdas\", \"Imperdible\".
 
 RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del menú):";
     }

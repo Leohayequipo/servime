@@ -1783,10 +1783,25 @@
                 const img = item.querySelector('img[id^="promo-imagen-"]');
                 if (img && img.src) {
                     // Extraer la ruta relativa de la imagen
-                    const imgPath = img.src.replace(window.location.origin, '');
-                    if (imgPath && !promocionesData[index]['imagen']) {
+                    let imgPath = img.src.replace(window.location.origin, '');
+                    
+                    // Normalizar: si no empieza con /storage/, intentar extraer solo la ruta
+                    if (imgPath && !imgPath.startsWith('/storage/')) {
+                        // Intentar extraer la ruta desde /storage/ si existe en la URL
+                        const storageMatch = imgPath.match(/\/storage\/.*/);
+                        if (storageMatch) {
+                            imgPath = storageMatch[0];
+                        } else {
+                            // Si no se puede normalizar, descartar (no es una ruta válida)
+                            console.warn(`    ⚠️ Imagen con ruta inválida, descartada: ${imgPath}`);
+                            imgPath = null;
+                        }
+                    }
+                    
+                    // Solo guardar si es una ruta válida que empieza con /storage/
+                    if (imgPath && imgPath.startsWith('/storage/') && !promocionesData[index]['imagen']) {
                         promocionesData[index]['imagen'] = imgPath;
-                        console.log(`    - Imagen encontrada: ${imgPath}`);
+                        console.log(`    - Imagen encontrada y normalizada: ${imgPath}`);
                     }
                 }
             });
