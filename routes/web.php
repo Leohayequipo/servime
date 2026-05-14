@@ -13,7 +13,7 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect('/dashboard');
     }
-    return redirect('/login');
+    return view('marketing.landing');
 });
 
 // Ruta para servir logos directamente
