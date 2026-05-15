@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'support' => [
+        'email'     => env('SUPPORT_EMAIL', 'info.servime@gmail.com'),
+        'whatsapp'  => env('SUPPORT_WHATSAPP_E164', ''),
+    ],
+
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4o'), // gpt-4o para mejor precisión en OCR

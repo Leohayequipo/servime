@@ -154,8 +154,8 @@
         </style>
     </head>
     @php
-        $supportEmail     = env('SUPPORT_EMAIL', 'info.servime@gmail.com');
-        $supportWhatsapp  = env('SUPPORT_WHATSAPP_E164', '');
+        $supportEmail     = config('services.support.email');
+        $supportWhatsapp  = config('services.support.whatsapp');
     @endphp
     <body class="grain antialiased">
         <header class="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/20 border-b border-white/5">
