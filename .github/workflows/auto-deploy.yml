@@ -13,14 +13,26 @@ jobs:
     steps:
     - name: 📥 Checkout código
       uses: actions/checkout@v4
-      
+
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: 📦 Instalar dependencias NPM
+      run: npm ci
+
+    - name: 🏗️ Build assets (Vite)
+      run: npm run build
+
     - name: 🔍 Verificar cambios
       run: |
         echo "📋 Verificando cambios en el repositorio..."
         echo "Commit: ${{ github.sha }}"
         echo "Branch: ${{ github.ref }}"
         echo "Autor: ${{ github.actor }}"
-        
+
     - name: 🔐 Configurar SSH
       run: |
         mkdir -p ~/.ssh
@@ -29,6 +41,12 @@ jobs:
         ssh-keyscan -H -p 65002 45.152.46.147 >> ~/.ssh/known_hosts
         chmod 600 ~/.ssh/known_hosts
         
+    - name: 📤 Subir assets compilados (Vite build)
+      run: |
+        echo "📦 Subiendo public/build a Hostinger..."
+        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "mkdir -p ~/domains/servime.net/public_html/build"
+        scp -i ~/.ssh/id_rsa -P 65002 -r public/build/. u560898880@45.152.46.147:~/domains/servime.net/public_html/build/
+
     - name: 📤 Subir script de deploy
       run: |
         echo "📦 Subiendo script de deploy actualizado..."
