@@ -43,9 +43,9 @@ jobs:
         
     - name: 📤 Subir assets compilados (Vite build)
       run: |
-        echo "📦 Subiendo public/build a Hostinger..."
-        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "mkdir -p ~/domains/servime.net/public_html/build"
-        scp -i ~/.ssh/id_rsa -P 65002 -r public/build/. u560898880@45.152.46.147:~/domains/servime.net/public_html/build/
+        echo "📦 Subiendo public/build a ~/servime/public/build (donde Laravel lee el manifest)..."
+        ssh -i ~/.ssh/id_rsa -p 65002 u560898880@45.152.46.147 "rm -rf ~/servime/public/build && mkdir -p ~/servime/public/build"
+        scp -i ~/.ssh/id_rsa -P 65002 -r public/build/. u560898880@45.152.46.147:~/servime/public/build/
 
     - name: 📤 Subir script de deploy
       run: |
