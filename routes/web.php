@@ -107,6 +107,11 @@ Route::middleware('auth')->group(function () {
     // Rutas de personalización (ahora integradas en editar, usando slug)
 });
 
+// Chat de ventas de la landing (público, con throttle)
+Route::post('/api/landing-chat', [App\Http\Controllers\LandingChatController::class, 'chat'])
+    ->middleware('throttle:20,1')
+    ->name('landing.chat');
+
 // Rutas públicas (sin autenticación, usando slug)
 Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
 Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content \"C:\\\\GitHub\\\\servime\\\\resources\\\\views\\\\marketing\\\\landing.blade.php\")",
+      "Bash(Measure-Object -Line)",
+      "Bash(Select-Object -ExpandProperty Lines)",
+      "Bash(php artisan *)",
+      "Bash(php *)",
+      "Bash(findstr /C:\"LandingChat\" \"C:\\\\GitHub\\\\servime\\\\storage\\\\logs\\\\laravel.log\")",
+      "PowerShell(Select-String -Path \"C:\\\\GitHub\\\\servime\\\\storage\\\\logs\\\\laravel.log\" -Pattern \"LandingChat\" | Select-Object -Last 3 | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"C:\\\\GitHub\\\\servime\\\\storage\\\\logs\\\\laravel.log\" -Pattern \"LandingChat\" | Select-Object -Last 1 | ForEach-Object { $_.Line })",
+      "PowerShell(Get-Content *)"
+    ]
+  }
+}
