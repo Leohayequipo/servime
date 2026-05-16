@@ -5,16 +5,46 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'ServiME') }} - Menú digital con IA para restaurantes</title>
-        <meta name="description" content="Tu menú en el celular con IA: QR, chatbot del menú, y pre-pedido para el mozo. Panel para cargar menús, activar, y ver métricas." />
+        <title>ServiME — Menú digital con QR e IA para restaurantes y bares</title>
+        <meta name="description" content="Creá tu carta digital con QR en minutos. Tus clientes escanean, ven el menú y consultan al chatbot de IA entrenado con tu menú. Sin apps. Desde $30 USD/mes." />
+        <link rel="canonical" href="{{ url('/') }}" />
 
-        <meta property="og:title" content="{{ config('app.name', 'ServiME') }} - Menú digital con IA" />
-        <meta property="og:description" content="QR + chatbot del menú + pre-pedido. Una experiencia móvil moderna para tus clientes." />
+        <meta property="og:title" content="ServiME — Menú digital con QR e IA para restaurantes" />
+        <meta property="og:description" content="Carta digital QR + chatbot de IA entrenado con tu menú + pre-pedido para el mozo. Sin apps, listo en minutos." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="{{ url('/') }}" />
         <meta property="og:image" content="{{ asset('images/ServiME_IA.ico') }}" />
+        <meta property="og:locale" content="es_AR" />
 
         <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="ServiME — Menú digital con QR e IA" />
+        <meta name="twitter:description" content="Carta digital QR + chatbot IA para restaurantes. Sin apps, listo en minutos." />
+
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "ServiME",
+            "url": "https://servime.net",
+            "description": "Plataforma de menú digital con QR e inteligencia artificial para restaurantes y bares. El chatbot responde preguntas del menú y facilita el pre-pedido.",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "inLanguage": "es",
+            "offers": {
+                "@type": "Offer",
+                "price": "30",
+                "priceCurrency": "USD",
+                "description": "Plan mensual ServiME"
+            },
+            "featureList": [
+                "Menú digital con código QR",
+                "Chatbot de IA entrenado con el menú",
+                "Pre-pedido para el mozo",
+                "Panel de gestión de menús",
+                "Métricas de uso"
+            ]
+        }
+        </script>
 
         <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
         <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">

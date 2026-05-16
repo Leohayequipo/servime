@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /profile
+Disallow: /comercios
+Disallow: /analytics
+
+Sitemap: https://servime.net/sitemap.xml
