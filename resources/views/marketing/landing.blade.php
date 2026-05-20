@@ -158,6 +158,21 @@
             .chat-msg-animate { animation: chat-msg-in .2s ease-out; }
             @media (prefers-reduced-motion: reduce) { .chat-msg-animate { animation: none; } }
 
+            /* ── Hero demo: real-chat animations ── */
+            @keyframes demo-slide-left  { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
+            @keyframes demo-slide-right { from { opacity:0; transform:translateX(16px);  } to { opacity:1; transform:translateX(0); } }
+            @keyframes demo-bounce {
+                0%, 80%, 100% { transform: scale(0); }
+                40%           { transform: scale(1); }
+            }
+            .demo-tdot {
+                width:7px; height:7px; background:#3b82f6; border-radius:50%; display:inline-block;
+                animation: demo-bounce 1.4s ease-in-out infinite both;
+            }
+            .demo-tdot:nth-child(2) { animation-delay:.1s; }
+            .demo-tdot:nth-child(3) { animation-delay:.2s; }
+            @media (prefers-reduced-motion: reduce) { .demo-tdot { animation:none; opacity:.6; } }
+
             .chat-qr-chip {
                 display: inline-flex; align-items: center; padding: 5px 12px;
                 border-radius: 9999px; font-size: .75rem; font-weight: 500;
@@ -201,8 +216,8 @@
                     <nav class="flex items-center gap-2 sm:gap-3">
                         <a href="#como-funciona" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Cómo funciona</a>
                         <a href="#beneficios" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Beneficios</a>
-                        <a href="{{ route('login') }}" class="inline-flex text-sm text-white/80 hover:text-white transition px-3 py-2 rounded-lg">Entrar</a>
-                        <a href="#" data-open-contact class="inline-flex text-sm font-semibold text-black bg-[var(--accent)] hover:bg-[color:var(--accent2)] transition px-4 py-2 rounded-xl shadow-sm shadow-amber-500/20">
+                        <a href="{{ route('login') }}" class="inline-flex text-sm text-white/80 hover:text-white transition px-3 py-2.5 rounded-lg">Entrar</a>
+                        <a href="#" data-open-contact class="inline-flex text-sm font-semibold text-black bg-[var(--accent)] hover:bg-[color:var(--accent2)] transition px-4 py-2.5 rounded-xl shadow-sm shadow-amber-500/20">
                             Quiero sumarme
                         </a>
                     </nav>
@@ -245,20 +260,6 @@
                                 </a>
                             </div>
 
-                            <div class="mt-8 grid grid-cols-3 gap-4 max-w-lg">
-                                <div class="rounded-2xl bg-white/3 ring-1 ring-white/10 p-4">
-                                    <p class="text-xs text-white/60">Acceso</p>
-                                    <p class="mt-1 font-semibold">QR instantáneo</p>
-                                </div>
-                                <div class="rounded-2xl bg-white/3 ring-1 ring-white/10 p-4">
-                                    <p class="text-xs text-white/60">Experiencia</p>
-                                    <p class="mt-1 font-semibold">Móvil primero</p>
-                                </div>
-                                <div class="rounded-2xl bg-white/3 ring-1 ring-white/10 p-4">
-                                    <p class="text-xs text-white/60">Operación</p>
-                                    <p class="mt-1 font-semibold">Menos preguntas</p>
-                                </div>
-                            </div>
                         </div>
 
                         <div class="lg:col-span-6">
@@ -275,33 +276,33 @@
                                         <p class="text-xs text-white/50">Vista del cliente</p>
                                     </div>
 
-                                    <div class="mt-4 rounded-[2rem] bg-[#0f0e0d] ring-1 ring-white/10 overflow-hidden">
-                                        <div class="p-4 border-b border-white/8">
-                                            <p class="text-sm font-semibold">¿Qué puedo pedir hoy?</p>
-                                            <p class="mt-1 text-xs text-white/60">Preguntá por opciones, precios y promos.</p>
-                                        </div>
-
-                                        <div class="p-4 space-y-3">
-                                            <div class="rounded-2xl bg-white/5 ring-1 ring-white/10 p-3">
-                                                <p class="text-xs text-white/60">Cliente</p>
-                                                <p class="mt-1 text-sm">¿Tenés algo vegetariano y sin picante?</p>
-                                            </div>
-
-                                            <div class="rounded-2xl bg-gradient-to-br from-amber-500/15 to-orange-500/10 ring-1 ring-white/10 p-3">
-                                                <p class="text-xs text-white/70">ServiME IA</p>
-                                                <p class="mt-1 text-sm leading-relaxed">
-                                                    Te recomiendo la <span class="font-semibold">Ensalada Mediterránea</span> y la <span class="font-semibold">Tarta de verduras</span>.
-                                                    ¿Querés que te muestre precios y agregamos al pre-pedido?
-                                                </p>
-                                                <div class="mt-3 flex gap-2">
-                                                    <button type="button" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-[var(--accent)] text-black">Lo quiero</button>
-                                                    <button type="button" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white/6 ring-1 ring-white/12 text-white">Ver más</button>
+                                    {{-- Real-chat replica --}}
+                                    <div class="mt-4 rounded-[1.5rem] overflow-hidden" style="background:#000;display:flex;flex-direction:column;height:370px;">
+                                        {{-- App header --}}
+                                        <div style="background:#000;padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+                                            <div style="display:flex;justify-content:center;margin-bottom:6px;">
+                                                <div style="width:42px;height:42px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(59,130,246,0.35);">
+                                                    <span style="font-size:17px;">🍽️</span>
                                                 </div>
                                             </div>
-
-                                            <div class="rounded-2xl bg-white/5 ring-1 ring-white/10 p-3">
-                                                <p class="text-xs text-white/60">Carrito</p>
-                                                <p class="mt-1 text-sm">1 item • Total estimado: $ 12.500</p>
+                                            <div style="text-align:center;">
+                                                <p style="color:#fff;font-weight:600;font-size:13px;margin:0;line-height:1.3;">La Cantina</p>
+                                                <p style="color:#cbd5e1;font-size:11px;margin:2px 0 0;line-height:1.3;">Menú Digital</p>
+                                            </div>
+                                            <div style="margin-top:7px;background:linear-gradient(to right,#3b82f6,#334155);border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:7px;box-shadow:0 0 14px rgba(59,130,246,0.22);">
+                                                <div style="width:18px;height:18px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                    <span style="font-size:10px;">🤖</span>
+                                                </div>
+                                                <span style="color:#fff;font-size:12px;font-weight:500;">Asistente IA</span>
+                                            </div>
+                                        </div>
+                                        {{-- Messages area --}}
+                                        <div id="demo-chat-msgs" style="flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;min-height:0;"></div>
+                                        {{-- Input bar --}}
+                                        <div style="background:#000;border-top:1px solid rgba(255,255,255,0.08);padding:8px 10px;flex-shrink:0;">
+                                            <div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.18);">
+                                                <input type="text" placeholder="Escribe tu mensaje..." disabled style="flex:1;background:#1e293b;border:none;padding:9px 12px;color:#fff;font-size:12px;outline:none;font-family:inherit;">
+                                                <button type="button" disabled style="background:#3b82f6;border:none;padding:9px 14px;color:#fff;font-size:12px;font-weight:500;font-family:inherit;cursor:default;">Enviar</button>
                                             </div>
                                         </div>
                                     </div>
@@ -447,7 +448,7 @@
                         <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
                             <p class="font-semibold">¿Dónde pido soporte?</p>
                             <p class="mt-2 text-sm text-[color:var(--muted)]">
-                                Escribinos a <a class="underline decoration-white/25 hover:decoration-white/60" href="mailto:{{ env('SUPPORT_EMAIL', 'info.servime@gmail.com') }}">{{ env('SUPPORT_EMAIL', 'info.servime@gmail.com') }}</a>.
+                                Escribinos a <a class="underline decoration-white/25 hover:decoration-white/60" href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a>.
                             </p>
                         </div>
                     </div>
@@ -473,7 +474,7 @@
         </footer>
 
         {{-- ── Demo toast ── --}}
-        <div id="demo-toast" class="toast-hidden fixed top-20 right-4 sm:right-6 z-40 w-72 rounded-2xl bg-[#1b1814] ring-1 ring-white/15 shadow-xl shadow-black/50 p-4">
+        <div id="demo-toast" class="toast-hidden fixed top-20 right-4 sm:right-6 z-40 w-[min(18rem,calc(100vw-2rem))] rounded-2xl bg-[#1b1814] ring-1 ring-white/15 shadow-xl shadow-black/50 p-4">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold">¿Querés ver una demo?</p>
@@ -869,6 +870,100 @@
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleFreeText(); }
             });
             chatSendBtn?.addEventListener('click', handleFreeText);
+
+            // ── Hero demo loop (real-chat aesthetics) ──────────────
+            (function () {
+                const area = document.getElementById('demo-chat-msgs');
+                if (!area) return;
+
+                const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                const CONVOS = [
+                    {
+                        user: 'Somos 2 adultos y 2 niños, ¿qué nos recomendas para cenar?',
+                        bot:  '¡Para una noche en familia! 🍽️ A los adultos les recomiendo la **Milanesa napolitana** ($3.800) o el **Salmón grillado** ($4.200). Para los chicos, los **Nuggets con papas** ($2.100) son un clásico. ¿Armamos el pedido?',
+                    },
+                    {
+                        user: 'Queremos compartir el plato de los nenes',
+                        bot:  '¡Sin problema! Los **Nuggets con papas** vienen en porción generosa, alcanza bien para dos. Si tienen buen apetito podés pedir doble 😄 ¿Lo agrego al resumen?',
+                    },
+                    {
+                        user: 'Un vino tinto y una ensalada verde, ¿está bien?',
+                        bot:  '¡Excelente combo! El **Malbec de la casa** ($2.500 la copa) y la **Ensalada verde** con rúcula y tomate cherry ($1.800) van perfecto juntos. ¿Los sumo al pre-pedido?',
+                    },
+                ];
+
+                const BOT_AVATAR = `<div style="width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#60a5fa);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.5);"><span style="font-size:11px;">🤖</span></div>`;
+
+                const BUBBLE_BOT   = 'background:linear-gradient(to right,#334155,rgba(51,65,85,0.8));border-radius:12px;padding:10px 13px;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+                const BUBBLE_USER  = 'background:linear-gradient(to right,#3b82f6,#60a5fa);border-radius:12px;padding:10px 13px;max-width:82%;color:#fff;font-size:12px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+                const ANIM_LEFT    = reduced ? '' : 'animation:demo-slide-left .4s ease-out;';
+                const ANIM_RIGHT   = reduced ? '' : 'animation:demo-slide-right .4s ease-out;';
+
+                function fmt(t) { return t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); }
+                function schedule(fn, ms) { return setTimeout(fn, reduced ? Math.min(ms, 80) : ms); }
+
+                function showTyping() {
+                    const el = document.createElement('div');
+                    el.id = 'demo-typing';
+                    el.style.cssText = BUBBLE_BOT + ANIM_LEFT;
+                    const dots = reduced
+                        ? `<span style="color:#60a5fa;font-size:14px;letter-spacing:2px;">…</span>`
+                        : `<span class="demo-tdot"></span><span class="demo-tdot"></span><span class="demo-tdot"></span>`;
+                    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${BOT_AVATAR}<div style="display:flex;align-items:center;gap:6px;"><div style="display:flex;gap:3px;">${dots}</div><span style="color:#cbd5e1;font-size:11px;font-weight:500;">Escribiendo...</span></div></div>`;
+                    area.appendChild(el);
+                }
+
+                function runConvo(idx) {
+                    const { user, bot } = CONVOS[idx % CONVOS.length];
+                    area.innerHTML = '';
+
+                    // user bubble container (right-aligned)
+                    const uRow = document.createElement('div');
+                    uRow.style.cssText = 'display:flex;justify-content:flex-end;' + ANIM_RIGHT;
+                    const uBubble = document.createElement('div');
+                    uBubble.style.cssText = BUBBLE_USER;
+                    uRow.appendChild(uBubble);
+                    area.appendChild(uRow);
+
+                    // typewriter
+                    let i = 0;
+                    function typeUser() {
+                        if (i <= user.length) {
+                            uBubble.textContent = user.slice(0, i++);
+                            schedule(typeUser, 38);
+                        } else {
+                            schedule(() => {
+                                showTyping();
+                                schedule(showBotMsg, 1100);
+                            }, 280);
+                        }
+                    }
+
+                    function showBotMsg() {
+                        document.getElementById('demo-typing')?.remove();
+                        const el = document.createElement('div');
+                        el.style.cssText = BUBBLE_BOT + ANIM_LEFT;
+                        el.innerHTML = `<div style="display:flex;align-items:flex-start;gap:8px;">${BOT_AVATAR}<div style="flex:1;color:#fff;font-size:12px;line-height:1.5;">${fmt(bot)}</div></div>`;
+                        area.appendChild(el);
+                        schedule(fadeOut, 3600);
+                    }
+
+                    function fadeOut() {
+                        area.style.transition = 'opacity .4s';
+                        area.style.opacity = '0';
+                        schedule(() => {
+                            area.style.transition = '';
+                            area.style.opacity = '1';
+                            runConvo(idx + 1);
+                        }, 420);
+                    }
+
+                    schedule(typeUser, 0);
+                }
+
+                schedule(() => runConvo(0), 600);
+            })();
         </script>
     </body>
 </html>
