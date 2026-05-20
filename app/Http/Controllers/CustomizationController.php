@@ -22,7 +22,11 @@ class CustomizationController extends Controller
     public function update(Request $request, $comercioId)
     {
         $comercio = Comercio::findOrFail($comercioId);
-        
+
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -56,7 +60,11 @@ class CustomizationController extends Controller
     public function reset($comercioId)
     {
         $comercio = Comercio::findOrFail($comercioId);
-        
+
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $comercio->update([
             'primary_color' => '#3B82F6',
             'secondary_color' => '#6B7280',
@@ -84,7 +92,10 @@ class CustomizationController extends Controller
      */
     public function generateQuestions(Request $request, Comercio $comercio)
     {
-        
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         try {
             // Preparar información del comercio para la IA
             $comercioInfo = [
@@ -301,7 +312,10 @@ class CustomizationController extends Controller
      */
     public function improveAnswer(Request $request, Comercio $comercio)
     {
-        
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'question_index' => 'nullable|integer|min:0',
             'question_text' => 'required|string|max:500',

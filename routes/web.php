@@ -18,13 +18,18 @@ Route::get('/', function () {
 
 // Ruta para servir logos directamente
 Route::get('/logos/{filename}', function ($filename) {
-    $path = storage_path('app/public/logos/' . $filename);
-    
-    if (!file_exists($path)) {
+    if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
         abort(404);
     }
-    
-    return response()->file($path);
+
+    $allowedDir = realpath(storage_path('app/public/logos'));
+    $realPath   = realpath($allowedDir . DIRECTORY_SEPARATOR . $filename);
+
+    if (!$realPath || !str_starts_with($realPath, $allowedDir) || !is_file($realPath)) {
+        abort(404);
+    }
+
+    return response()->file($realPath);
 })->name('logos.show');
 
 // Help - Accesible sin autenticación
@@ -119,7 +124,7 @@ Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuCont
 Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
 // API ligera para carrito (por sesión, sin auth)
-Route::prefix('api/cart')->group(function () {
+Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
     Route::post('/show', [App\Http\Controllers\CartController::class, 'show'])->name('api.cart.show');
     Route::post('/incr', [App\Http\Controllers\CartController::class, 'incr'])->name('api.cart.incr');
     Route::post('/remove', [App\Http\Controllers\CartController::class, 'remove'])->name('api.cart.remove');
