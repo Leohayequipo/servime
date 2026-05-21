@@ -540,8 +540,7 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
         // Log del error para debugging
         Log::error('Error OpenAI API', [
             'status' => $response->status(),
-            'body' => $response->body(),
-            'headers' => $response->headers()
+            'body'   => substr($response->body(), 0, 500),
         ]);
 
         throw new \Exception('Error al conectar con OpenAI: ' . $response->body());

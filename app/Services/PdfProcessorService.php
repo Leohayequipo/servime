@@ -270,7 +270,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
 
         Log::error('Error OpenAI API', [
             'status' => $response->status(),
-            'body' => $response->body()
+            'body'   => substr($response->body(), 0, 500),
         ]);
 
         throw new \Exception('Error al procesar con OpenAI: ' . $response->body());

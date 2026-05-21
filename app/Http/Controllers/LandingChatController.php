@@ -114,7 +114,7 @@ PROMPT;
 
             Log::warning('LandingChat OpenAI error', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'body'   => substr($response->body(), 0, 500),
             ]);
             return response()->json(['response' => 'Hubo un problema al procesar tu consulta. Contactanos directamente.']);
 

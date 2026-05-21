@@ -2329,7 +2329,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
 
                 Log::error('Error en respuesta de OpenAI', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body'   => substr($response->body(), 0, 500),
                 ]);
 
                 throw new \Exception('Error al procesar con OpenAI: ' . $response->body());
@@ -2776,7 +2776,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 return $content;
             }
             
-            Log::error('Error en API de OpenAI Vision: ' . $response->body());
+            Log::error('Error en API de OpenAI Vision: ' . substr($response->body(), 0, 500));
             return null;
 
         } catch (\Exception $e) {
@@ -2820,7 +2820,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 return $data['choices'][0]['message']['content'] ?? null;
             }
 
-            Log::error('Error en API de OpenAI: ' . $response->body());
+            Log::error('Error en API de OpenAI: ' . substr($response->body(), 0, 500));
             return null;
 
         } catch (\Exception $e) {

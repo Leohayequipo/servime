@@ -15,15 +15,12 @@ class WelcomeEmail extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
-    public $password;
+    public ?string $resetUrl;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(User $user, $password = null)
+    public function __construct(User $user, ?string $resetUrl = null)
     {
-        $this->user = $user;
-        $this->password = $password;
+        $this->user     = $user;
+        $this->resetUrl = $resetUrl;
     }
 
     /**
@@ -48,8 +45,8 @@ class WelcomeEmail extends Mailable
         return new Content(
             view: 'emails.welcome',
             with: [
-                'user' => $this->user,
-                'password' => $this->password,
+                'user'     => $this->user,
+                'resetUrl' => $this->resetUrl,
             ]
         );
     }

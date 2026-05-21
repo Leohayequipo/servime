@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 
 class AdminController extends Controller
 {
@@ -61,12 +62,13 @@ class AdminController extends Controller
             'email_verified_at' => now()
         ]);
 
-        // Enviar email de bienvenida con contraseña
+        // Enviar email de bienvenida con link para establecer contraseña
         try {
-            Mail::to($user->email)->queue(new WelcomeEmail($user, $validated['password']));
+            $resetToken = Password::createToken($user);
+            $resetUrl   = route('password.reset', ['token' => $resetToken, 'email' => $user->email]);
+            Mail::to($user->email)->queue(new WelcomeEmail($user, $resetUrl));
         } catch (\Exception $e) {
-            // Log del error pero no interrumpir la creación
-            \Log::error('Error enviando email de bienvenida: ' . $e->getMessage());
+            Log::error('Error enviando email de bienvenida: ' . $e->getMessage());
         }
 
         return redirect()->route('admin.users.show', $user)

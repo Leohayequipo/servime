@@ -300,15 +300,21 @@
                         <label style="display: block; color: #0c4a6e; font-weight: 600; margin-bottom: 4px; font-size: 14px;">📧 Email:</label>
                         <span style="color: #0369a1; font-weight: 500; font-size: 16px;">{{ $user->email }}</span>
                     </div>
-                    @if(isset($password))
+                    @if(!empty($resetUrl))
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; color: #0c4a6e; font-weight: 600; margin-bottom: 4px; font-size: 14px;">🔑 Contraseña:</label>
-                        <span style="color: #0369a1; font-weight: 500; font-size: 16px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: 'Courier New', monospace;">{{ $password }}</span>
+                        <label style="display: block; color: #0c4a6e; font-weight: 600; margin-bottom: 8px; font-size: 14px;">🔑 Contraseña:</label>
+                        <a href="{{ $resetUrl }}"
+                           style="display: inline-block; background: #0ea5e9; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                            Establecer mi contraseña
+                        </a>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
+                            Este link expira en 60 minutos. Si vence, usá "Olvidé mi contraseña" en el login.
+                        </p>
                     </div>
                     @endif
                     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin-top: 16px;">
                         <p style="color: #92400e; font-size: 13px; margin: 0; font-weight: 500;">
-                            💡 <strong>Importante:</strong> Guarda esta información en un lugar seguro. Puedes cambiar tu contraseña desde tu perfil una vez que inicies sesión.
+                            💡 <strong>Importante:</strong> Podés cambiar tu contraseña en cualquier momento desde tu perfil.
                         </p>
                     </div>
                 </div>
