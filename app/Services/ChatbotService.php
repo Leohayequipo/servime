@@ -527,17 +527,6 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
             'frequency_penalty' => 0.2, // Fomenta variedad en vocabulario
         ];
 
-        // DEBUG: activar volcando payload con ?debug=1
-        try {
-            if (function_exists('request') && request() && request()->query('debug') == '1') {
-                dd([
-                    'base_url' => $this->openaiBaseUrl,
-                    'payload' => $payload,
-                    'api_key_set' => !empty($this->openaiApiKey),
-                ]);
-            }
-        } catch (\Throwable $e) {}
-
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->openaiApiKey,
             'Content-Type' => 'application/json',
@@ -554,17 +543,6 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
             'body' => $response->body(),
             'headers' => $response->headers()
         ]);
-
-        // DEBUG: si ?debug=1, volcar respuesta fallida
-        try {
-            if (function_exists('request') && request() && request()->query('debug') == '1') {
-                dd([
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                    'headers' => $response->headers(),
-                ]);
-            }
-        } catch (\Throwable $e) {}
 
         throw new \Exception('Error al conectar con OpenAI: ' . $response->body());
     }

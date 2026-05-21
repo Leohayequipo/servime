@@ -71,7 +71,7 @@
                         </div>
                         <div>
                             <p class="text-text-secondary text-sm">Total Menús</p>
-                            <p class="text-2xl font-bold text-text-primary">{{ $comercios->sum(function($c) { return $c->menus->count(); }) }}</p>
+                            <p class="text-2xl font-bold text-text-primary">{{ $comercios->sum('menus_count') }}</p>
                         </div>
                     </div>
                 </div>
@@ -123,7 +123,7 @@
                                     </td>
                                     <td class="py-4 px-4">
                                         <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-sm">
-                                            {{ $comercio->menus->count() }} menú(s)
+                                            {{ $comercio->menus_count }} menú(s)
                                         </span>
                                     </td>
                                     <td class="py-4 px-4">

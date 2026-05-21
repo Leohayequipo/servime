@@ -104,7 +104,7 @@ class AdminController extends Controller
      */
     public function comercios()
     {
-        $comercios = Comercio::with(['user', 'menus'])->latest()->paginate(20);
+        $comercios = Comercio::with('user')->withCount('menus')->latest()->paginate(20);
         return view('admin.comercios.index', compact('comercios'));
     }
 
