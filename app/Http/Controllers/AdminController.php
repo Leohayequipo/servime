@@ -46,20 +46,19 @@ class AdminController extends Controller
     public function storeUser(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'whatsapp' => 'nullable|string|max:20',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:super_admin,user'
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|email|unique:users,email',
+            'whatsapp'  => 'nullable|string|max:20',
+            'role'      => 'required|in:super_admin,user',
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'whatsapp' => $validated['whatsapp'],
-            'password' => bcrypt($validated['password']),
-            'role' => $validated['role'],
-            'email_verified_at' => now()
+            'name'               => $validated['name'],
+            'email'              => $validated['email'],
+            'whatsapp'           => $validated['whatsapp'],
+            'password'           => bcrypt(\Illuminate\Support\Str::random(32)),
+            'role'               => $validated['role'],
+            'email_verified_at'  => now(),
         ]);
 
         // Enviar email de bienvenida con link para establecer contraseña

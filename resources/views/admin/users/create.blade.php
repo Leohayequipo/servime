@@ -78,28 +78,18 @@
 
                 <!-- Contraseña -->
                 <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center mb-6">
+                    <div class="flex items-center mb-4">
                         <div class="w-10 h-10 bg-accent-green rounded-xl flex items-center justify-center mr-4">
                             <span class="text-white text-lg">🔒</span>
                         </div>
                         <h3 class="text-xl font-bold text-text-primary">Contraseña</h3>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Contraseña -->
-                        <div>
-                            <x-input-label for="password" :value="__('Contraseña')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="password" class="input-field w-full" type="password" name="password" required />
-                            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-                            <p class="text-xs text-text-secondary mt-1">Mínimo 8 caracteres</p>
-                        </div>
-
-                        <!-- Confirmar Contraseña -->
-                        <div>
-                            <x-input-label for="password_confirmation" :value="__('Confirmar Contraseña')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="password_confirmation" class="input-field w-full" type="password" name="password_confirmation" required />
-                            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-                        </div>
+                    <div class="flex items-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                        <span class="text-blue-400 text-lg mt-0.5">ℹ️</span>
+                        <p class="text-sm text-text-secondary leading-relaxed">
+                            El sistema genera una contraseña segura automáticamente.<br>
+                            El usuario recibirá un email con un <strong class="text-text-primary">link para establecer su propia contraseña</strong>.
+                        </p>
                     </div>
                 </div>
 
