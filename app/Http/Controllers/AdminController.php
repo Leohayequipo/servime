@@ -63,7 +63,7 @@ class AdminController extends Controller
 
         // Enviar email de bienvenida con contraseña
         try {
-            Mail::to($user->email)->send(new WelcomeEmail($user, $validated['password']));
+            Mail::to($user->email)->queue(new WelcomeEmail($user, $validated['password']));
         } catch (\Exception $e) {
             // Log del error pero no interrumpir la creación
             \Log::error('Error enviando email de bienvenida: ' . $e->getMessage());

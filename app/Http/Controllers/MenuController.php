@@ -183,34 +183,13 @@ class MenuController extends Controller
             'tamaño_archivo' => file_exists(storage_path('app/public/' . $menu->archivo_original)) ? filesize(storage_path('app/public/' . $menu->archivo_original)) : 'N/A'
         ]);
 
-        // Procesar con OpenAI
-        try {
-            $processor = new MenuProcessorService();
-            Log::info('🚀 INICIANDO PROCESAMIENTO CON OpenAI', [
-                'menu_id' => $menu->id,
-                'archivo_original' => $menu->archivo_original,
-                'archivo_path_completo' => storage_path('app/public/' . $menu->archivo_original),
-                'archivo_existe' => file_exists(storage_path('app/public/' . $menu->archivo_original))
-            ]);
-            $processed = $processor->processMenu($menu);
-        } catch (\Exception $e) {
-            Log::error('❌ Error al procesar menú: ' . $e->getMessage(), [
-                'menu_id' => $menu->id ?? 'N/A',
-                'archivo_original' => $menu->archivo_original ?? 'N/A',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->route('menus.index', $comercio)
-                ->with('error', 'Error al procesar el menú: ' . $e->getMessage());
-        }
+        // Despachar procesamiento a la queue para no bloquear el request
+        \App\Jobs\ProcessMenuJob::dispatch($menu);
 
-        if ($processed) {
-            return redirect()->route('menus.index', $comercio)
-                ->with('success', 'Menú subido y procesado exitosamente con IA.');
-        } else {
-            return redirect()->route('menus.index', $comercio)
-                ->with('warning', 'Menú subido pero hubo un problema en el procesamiento.');
-        }
+        Log::info('📋 Procesamiento encolado', ['menu_id' => $menu->id]);
+
+        return redirect()->route('menus.index', $comercio)
+            ->with('success', 'Menú subido correctamente. La IA lo está procesando en segundo plano — en unos minutos estará listo.');
     }
 
     /**

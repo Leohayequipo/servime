@@ -47,7 +47,7 @@ class RegisteredUserController extends Controller
 
         // Enviar email de bienvenida con contraseña
         try {
-            Mail::to($user->email)->send(new WelcomeEmail($user, $request->password));
+            Mail::to($user->email)->queue(new WelcomeEmail($user, $request->password));
         } catch (\Exception $e) {
             // Log del error pero no interrumpir el registro
             \Log::error('Error enviando email de bienvenida: ' . $e->getMessage());

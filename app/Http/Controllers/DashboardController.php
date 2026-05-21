@@ -20,12 +20,16 @@ class DashboardController extends Controller
         $recentUsers = collect();
         $recentComercios = collect();
         
+        $cutoff = now()->subDays(90);
+
         if ($user->isSuperAdmin()) {
             // Super Admin ve todos los comercios y menús
             $comercios = Comercio::with('user')->get();
             $menus = Menu::with('comercio')->get();
-            $allConversaciones = ChatConversation::latest()->get();
-            
+            $allConversaciones = ChatConversation::with('comercio')
+                ->where('created_at', '>=', $cutoff)
+                ->latest()->get();
+
             // Datos adicionales para tarjetas de resumen
             $recentUsers = User::latest()->take(8)->get();
             $recentComercios = Comercio::with('user')->latest()->take(8)->get();
@@ -35,10 +39,13 @@ class DashboardController extends Controller
             $menus = Menu::whereHas('comercio', function($query) {
                 $query->where('user_id', auth()->id());
             })->get();
-            $allConversaciones = ChatConversation::whereHas('comercio', function($query) {
-                $query->where('user_id', auth()->id());
-            })->latest()->get();
-            
+            $allConversaciones = ChatConversation::with('comercio')
+                ->whereHas('comercio', function($query) {
+                    $query->where('user_id', auth()->id());
+                })
+                ->where('created_at', '>=', $cutoff)
+                ->latest()->get();
+
             $recentComercios = $comercios->sortByDesc('created_at')->take(8);
         }
         

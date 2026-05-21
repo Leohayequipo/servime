@@ -110,6 +110,7 @@ echo -e "${YELLOW}⚡ Optimizando...${NC}"
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
 php artisan view:cache 2>/dev/null || true
+php artisan queue:restart 2>/dev/null || true
 
 # 12. Verificar (no falla)
 echo -e "${YELLOW}🔍 Verificando...${NC}"
