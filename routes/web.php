@@ -86,7 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/menus', [App\Http\Controllers\MenuController::class, 'all'])->name('menus.all');
     Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
     Route::get('/comercios/{comercio:slug}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
-    Route::post('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store');
+    Route::post('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store')->middleware('throttle:5,1');
     Route::get('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'show'])->name('menus.show');
     Route::get('/comercios/{comercio:slug}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
     Route::put('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');

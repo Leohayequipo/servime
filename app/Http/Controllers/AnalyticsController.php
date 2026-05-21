@@ -35,6 +35,10 @@ class AnalyticsController extends Controller
     public function comercio($comercioId)
     {
         $comercio = Comercio::findOrFail($comercioId);
+
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
         
         $conversations = ChatConversation::forComercio($comercioId)
             ->recent(30)
@@ -103,6 +107,10 @@ class AnalyticsController extends Controller
     public function exportConversations($comercioId)
     {
         $comercio = Comercio::findOrFail($comercioId);
+
+        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
         $conversations = ChatConversation::forComercio($comercioId)
             ->with('comercio')
             ->orderBy('created_at', 'desc')
