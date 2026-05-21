@@ -14,7 +14,19 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Roboto', 'Inter', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                // Brand palette — ámbar como color primario de marca
+                'accent-blue':    '#f59e0b',   // ámbar (ex cyan #00C4FF)
+                'accent-amber':   '#f59e0b',   // alias semántico
+                'accent-green':   '#10b981',   // emerald
+                'accent-gray':    '#374151',
+                'primary-dark':   '#1A2A44',
+                'secondary-dark': '#2A3A55',
+                'text-primary':   '#FFFFFF',
+                'text-secondary': '#94a3b8',
+                'background':     '#0a0f1e',
             },
         },
     },

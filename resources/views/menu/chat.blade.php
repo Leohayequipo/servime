@@ -224,6 +224,95 @@
             transform: translateY(-4px) scale(1.08) !important;
             box-shadow: 0 16px 32px rgba(0,0,0,0.5) !important;
         }
+
+        /* FAB button base */
+        .fab-btn {
+            width: 56px; height: 56px; border: none; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform .2s, box-shadow .2s;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        }
+        .fab-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,.45); }
+        .fab-btn-wish       { background: #2563eb; }
+        .fab-btn-categories { background: var(--accent-color); }
+        .fab-btn-tags       { background: #ff8c00; }
+        .fab-btn span       { font-size: 22px; display: inline-block; }
+
+        /* FAB container */
+        .fab-container {
+            position: fixed; bottom: 84px; right: 16px; z-index: 50;
+            display: flex; gap: 10px; flex-direction: column;
+        }
+
+        /* Mic button */
+        .mic-button {
+            background: var(--accent-color); border: none;
+            border-radius: 8px 0 0 8px; padding: 12px;
+            cursor: pointer; transition: all .2s;
+        }
+        .mic-button span { font-size: 20px; }
+
+        /* Input bar */
+        .chat-input-bar { border-radius: 8px; }
+
+        /* Wish panel */
+        .wish-panel {
+            display: none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;
+        }
+        .wish-panel-inner {
+            background: #0b0b0b; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 12px; max-width: 520px; margin: 0 auto;
+        }
+        .wish-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;
+        }
+        .wish-header h4 { font-size: 14px; font-weight: 700; color: #fff; margin: 0; }
+        .wish-header-buttons { display: flex; gap: 8px; }
+        .wish-btn {
+            padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
+            font-size: 12px; cursor: pointer;
+        }
+        .wish-btn-copy  { background: #141414; color: #fff; }
+        .wish-btn-clear { background: #221111; color: #ffb4b4; }
+        .wish-btn-close { background: #141414; color: #fff; }
+        .wish-list {
+            display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto;
+        }
+
+        /* Categories / Tags panels */
+        .side-panel {
+            display: none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;
+        }
+        .side-panel-inner {
+            background: #0b0b0b; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 12px;
+        }
+        .side-panel-inner.amber-border { border-color: rgba(255,140,0,.3); }
+        .side-panel-header {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+        }
+        .side-panel-title  { font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0; }
+        .side-panel-close  {
+            background: transparent; border: none; color: var(--text-secondary);
+            cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .side-panel-grid   { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto; }
+
+        .cat-chip-promo {
+            padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,140,0,.5);
+            color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all .2s; position: relative; z-index: 1;
+        }
+        .cat-chip {
+            padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
+            background: #141414; color: #fff; font-size: 13px; cursor: pointer; transition: background .2s;
+        }
+        .tag-chip {
+            padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,140,0,.3);
+            background: rgba(255,140,0,.15); color: #ff8c00; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all .2s;
+        }
     </style>
 </head>
 <body class="bg-background">
@@ -273,17 +362,16 @@
         <!-- Input fijo abajo -->
         <div class="input-fixed">
             <div class="max-w-md mx-auto flex">
-                <button id="micButton" 
-                        title="Hablar con el asistente" 
-                        style="display: none; background: var(--accent-color); border: none; border-radius: 8px 0 0 8px; padding: 12px; cursor: pointer; transition: all 0.2s;"
+                <button id="micButton"
+                        title="Hablar con el asistente"
+                        style="display:none"
                         class="mic-button">
-                    <span style="font-size: 20px;">🎤</span>
+                    <span>🎤</span>
                 </button>
-                <input type="text" 
+                <input type="text"
                        id="messageInput"
-                       placeholder="Escribe tu mensaje..." 
-                       class="flex-1 bg-secondary-dark border border-accent-gray px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                       style="border-radius: 8px;">
+                       placeholder="Escribe tu mensaje..."
+                       class="flex-1 bg-secondary-dark border border-accent-gray px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue chat-input-bar">
                 <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
                     Enviar
                 </button>
@@ -292,87 +380,86 @@
     </div>
 
     <!-- FAB Categorías + Tags + Pre‑pedido -->
-    <div style="position: fixed; bottom: 84px; right: 16px; z-index: 50; display:flex; gap:10px; flex-direction: column;">
+    <div class="fab-container">
         @if($comercio->pedido_habilitado)
-            <button id="fabWish" title="Resumen para el mozo" style="width: 56px; height: 56px; background: #2563eb; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                <span style="font-size: 22px;">🧾</span>
+            <button id="fabWish" title="Resumen para el mozo" class="fab-btn fab-btn-wish">
+                <span>🧾</span>
             </button>
         @endif
         @if(!empty($categorias))
-            <button id="fabCategories" title="Categorías del menú" class="fab-categories-animated" style="width: 56px; height: 56px; background: var(--accent-color); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
-                <span style="font-size: 22px; display: inline-block;">📋</span>
-        </button>
+            <button id="fabCategories" title="Categorías del menú" class="fab-btn fab-btn-categories fab-categories-animated">
+                <span>📋</span>
+            </button>
         @endif
         @if(!empty($tags))
-            <button id="fabTags" title="Filtrar por tags" style="width: 56px; height: 56px; background: #ff8c00; border: none; border-radius: 50%; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                <span style="font-size: 22px;">🏷️</span>
+            <button id="fabTags" title="Filtrar por tags" class="fab-btn fab-btn-tags">
+                <span>🏷️</span>
             </button>
         @endif
     </div>
 
     @if($comercio->pedido_habilitado)
         <!-- Panel Resumen para el mozo -->
-        <div id="wishPanel" style="display:none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;">
-            <div style="background:#0b0b0b; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,0.45); padding:12px; max-width:520px; margin:0 auto;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-                    <h4 style="font-size:14px; font-weight:700; color:#fff; margin:0;">Resumen para el mozo</h4>
-                    <div style="display:flex; gap:8px;">
-                        <button id="wishCopy" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Copiar</button>
-                        <button id="wishClear" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#221111; color:#ffb4b4; font-size:12px; cursor:pointer;">Vaciar</button>
-                        <button id="wishClose" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:#141414; color:#fff; font-size:12px; cursor:pointer;">Cerrar</button>
+        <div id="wishPanel" class="wish-panel">
+            <div class="wish-panel-inner">
+                <div class="wish-header">
+                    <h4>Resumen para el mozo</h4>
+                    <div class="wish-header-buttons">
+                        <button id="wishCopy"  class="wish-btn wish-btn-copy">Copiar</button>
+                        <button id="wishClear" class="wish-btn wish-btn-clear">Vaciar</button>
+                        <button id="wishClose" class="wish-btn wish-btn-close">Cerrar</button>
                     </div>
                 </div>
-                <div id="wishList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
+                <div id="wishList" class="wish-list"></div>
             </div>
         </div>
     @endif
 
     <!-- Panel de Categorías -->
     @if(!empty($categorias))
-        <div id="categoriesPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
-        <div style="background: #0b0b0b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">Categorías</h4>
-                    <button id="closeCategories" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+        <div id="categoriesPanel" class="side-panel">
+            <div class="side-panel-inner">
+                <div class="side-panel-header">
+                    <h4 class="side-panel-title">Categorías</h4>
+                    <button id="closeCategories" class="side-panel-close">×</button>
                 </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
+                <div class="side-panel-grid">
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
-                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
-                                    class="promo-button"
-                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 140, 0, 0.5); color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; position: relative; z-index: 1;"
+                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();"
+                                    class="promo-button cat-chip-promo"
                                     onmouseover="this.style.transform='scale(1.08)';"
                                     onmouseout="this.style.transform='scale(1)';">
                                 <span class="promo-fire-icon">{{ $categoria['icon'] }}</span> {{ $categoria['nombre'] }}
-                    </button>
+                            </button>
                         @else
-                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();" 
-                                    style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #141414; color: #ffffff; font-size: 13px; cursor: pointer; transition: background 0.2s;"
+                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();"
+                                    class="cat-chip"
                                     onmouseover="this.style.background='#1f1f1f';"
                                     onmouseout="this.style.background='#141414';">
                                 {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
                             </button>
                         @endif
-                @endforeach
+                    @endforeach
+                </div>
             </div>
         </div>
-    </div>
     @endif
 
     <!-- Panel de Tags -->
     @if(!empty($tags))
-        <div id="tagsPanel" style="display:none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;">
-            <div style="background: #0b0b0b; border: 1px solid rgba(255, 140, 0, 0.3); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.45); padding: 12px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <h4 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">Filtrar por Tags</h4>
-                    <button id="closeTags" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+        <div id="tagsPanel" class="side-panel">
+            <div class="side-panel-inner amber-border">
+                <div class="side-panel-header">
+                    <h4 class="side-panel-title">Filtrar por Tags</h4>
+                    <button id="closeTags" class="side-panel-close">×</button>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto;">
+                <div class="side-panel-grid">
                     @foreach($tags as $tag)
-                        <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();" 
-                                style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 140, 0, 0.3); background: rgba(255, 140, 0, 0.15); color: #ff8c00; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-                                onmouseover="this.style.background='rgba(255, 140, 0, 0.25)'; this.style.transform='scale(1.05)';"
-                                onmouseout="this.style.background='rgba(255, 140, 0, 0.15)'; this.style.transform='scale(1)';">
+                        <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();"
+                                class="tag-chip"
+                                onmouseover="this.style.background='rgba(255,140,0,0.25)'; this.style.transform='scale(1.05)';"
+                                onmouseout="this.style.background='rgba(255,140,0,0.15)'; this.style.transform='scale(1)';">
                             {{ str_replace('_', ' ', $tag) }}
                         </button>
                     @endforeach

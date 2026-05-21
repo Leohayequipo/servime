@@ -2,135 +2,174 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Animations for Modern Messages */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fade-in-down {
-    0% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0);     }
 }
-
 @keyframes shake {
-    0%, 100% {
-        transform: translateX(0);
-    }
-    10%, 30%, 50%, 70%, 90% {
-        transform: translateX(-2px);
-    }
-    20%, 40%, 60%, 80% {
-        transform: translateX(2px);
-    }
+    0%,100%             { transform: translateX(0);  }
+    10%,30%,50%,70%,90% { transform: translateX(-2px); }
+    20%,40%,60%,80%     { transform: translateX(2px);  }
 }
-
 @keyframes progress-bar {
-    0% {
-        width: 0%;
-    }
-    100% {
-        width: 100%;
-    }
+    from { width: 0%; }
+    to   { width: 100%; }
 }
-
 @keyframes float {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
+    0%,100% { transform: translateY(0);    }
+    50%     { transform: translateY(-8px); }
 }
-
-.animate-fade-in-down {
-    animation: fade-in-down 0.6s ease-out;
-}
-
-.animate-shake {
-    animation: shake 0.5s ease-in-out;
-}
-
-.animate-progress-bar {
-    animation: progress-bar 3s ease-out;
-}
-
-.animate-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-/* Glass morphism effect */
-.backdrop-blur-sm {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-/* Enhanced shadows */
-.shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-/* Loading indicators animations */
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+@keyframes loading-shimmer {
+    0%   { left: -100%; }
+    100% { left:  100%; }
+}
+@keyframes typing-bounce {
+    0%,80%,100% { transform: scale(0.8); opacity: 0.5; }
+    40%         { transform: scale(1);   opacity: 1;   }
 }
 
-.animate-spin {
-    animation: spin 1s linear infinite;
-}
+.animate-fade-in-down  { animation: fade-in-down 0.5s ease-out; }
+.animate-shake         { animation: shake 0.5s ease-in-out; }
+.animate-progress-bar  { animation: progress-bar 3s ease-out; }
+.animate-float         { animation: float 3s ease-in-out infinite; }
+.animate-spin          { animation: spin 1s linear infinite; }
+.typing-indicator      { animation: typing-bounce 1.4s infinite ease-in-out both; }
 
-/* Loading button styles */
-.loading-button {
-    position: relative;
-    overflow: hidden;
-}
-
+.loading-button { position: relative; overflow: hidden; }
 .loading-button::after {
     content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
     animation: loading-shimmer 2s infinite;
 }
 
-@keyframes loading-shimmer {
-    0% {
-        left: -100%;
-    }
-    100% {
-        left: 100%;
-    }
-}
+/* ─── Component layer ────────────────────────────────────────────────────── */
+@layer components {
 
-/* Typing indicator animation */
-.typing-indicator {
-    animation: typing-bounce 1.4s infinite ease-in-out both;
-}
-
-@keyframes typing-bounce {
-    0%, 80%, 100% {
-        transform: scale(0.8);
-        opacity: 0.5;
+    /* Cards */
+    .glass-effect {
+        background: rgba(42, 58, 85, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(245, 158, 11, 0.15);
+        border-radius: 1rem;
     }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
 
-/* Gradient text effects */
-.gradient-text {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    .card-glass {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1rem;
+    }
+
+    .metric-card {
+        @apply bg-secondary-dark border border-accent-gray rounded-2xl p-6 transition-all duration-300;
+    }
+    .metric-card:hover {
+        @apply -translate-y-1 border-accent-blue/40;
+        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
+    }
+
+    /* Buttons */
+    .btn-primary {
+        @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
+               bg-accent-blue text-gray-900 transition-all duration-200 no-underline
+               hover:-translate-y-px;
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+    }
+    .btn-primary:hover {
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
+               text-text-primary border border-white/20 transition-all duration-200 no-underline;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.13);
+        @apply border-white/30 -translate-y-px;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
+               bg-red-600 text-white transition-all duration-200 no-underline hover:bg-red-700;
+    }
+
+    .btn-success {
+        @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
+               bg-accent-green text-white transition-all duration-200 no-underline hover:opacity-90;
+    }
+
+    /* Inputs */
+    .input-field {
+        @apply w-full rounded-xl px-4 py-3 text-sm text-text-primary
+               placeholder:text-text-secondary transition-all duration-200
+               focus:outline-none;
+        background: var(--secondary-dark, #2A3A55);
+        border: 1px solid var(--accent-gray, #374151);
+    }
+    .input-field:focus {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+    }
+
+    /* Navigation */
+    .nav-link {
+        @apply transition-all duration-200 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary;
+    }
+    .nav-link:hover  { @apply text-accent-blue; }
+    .nav-link.active {
+        @apply text-gray-900 font-semibold;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    /* Glow utilities */
+    .neon-glow   { box-shadow: 0 0 18px rgba(245, 158, 11, 0.35); }
+    .hover-lift  { @apply transition-all duration-300; }
+    .hover-lift:hover { @apply -translate-y-1; box-shadow: 0 12px 28px rgba(245, 158, 11, 0.2); }
+
+    /* ── Chat component classes (menu/chat.blade.php) ── */
+    .chat-message {
+        @apply rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] shadow-sm;
+    }
+    .chat-message-bot  { @apply chat-message bg-secondary-dark  text-text-primary self-start; }
+    .chat-message-user { @apply chat-message bg-accent-blue     text-gray-900     self-end; }
+
+    .fab-button {
+        @apply w-14 h-14 rounded-full flex items-center justify-center
+               border-0 cursor-pointer transition-all duration-200
+               hover:-translate-y-1;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    }
+
+    /* SweetAlert2 dark modal */
+    .dark-modal {
+        background: linear-gradient(135deg, rgba(26,42,68,.98), rgba(42,58,85,.98)) !important;
+        border: 1px solid rgba(245,158,11,.25) !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 20px rgba(245,158,11,.15) !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    .dark-modal .swal2-title   { color: #fff !important; font-weight: 600 !important; }
+    .dark-modal .swal2-content { color: #94a3b8 !important; }
+    .dark-modal .swal2-confirm {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        border: none !important; border-radius: .5rem !important;
+        padding: .75rem 2rem !important; font-weight: 600 !important;
+        box-shadow: 0 4px 14px rgba(16,185,129,.3) !important;
+    }
+    .dark-modal .swal2-confirm:hover {
+        background: linear-gradient(135deg, #059669, #047857) !important;
+        box-shadow: 0 6px 20px rgba(16,185,129,.4) !important;
+    }
+    .dark-modal .swal2-success-ring { border-color: rgba(16,185,129,.3) !important; }
+    .dark-modal .swal2-success [class^=swal2-success-line] { background-color: #10b981 !important; }
 }
