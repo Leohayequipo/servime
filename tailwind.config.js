@@ -22,11 +22,11 @@ export default {
                 'accent-amber':   '#f59e0b',   // alias semántico
                 'accent-green':   '#10b981',   // emerald
                 'accent-gray':    '#374151',
-                'primary-dark':   '#1A2A44',
-                'secondary-dark': '#2A3A55',
+                'primary-dark':   '#111318',
+                'secondary-dark': '#1c1f26',
                 'text-primary':   '#FFFFFF',
                 'text-secondary': '#94a3b8',
-                'background':     '#0a0f1e',
+                'background':     '#0b0c10',
             },
         },
     },

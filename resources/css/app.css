@@ -53,7 +53,7 @@
 
     /* Cards */
     .glass-effect {
-        background: rgba(42, 58, 85, 0.8);
+        background: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(245, 158, 11, 0.15);
@@ -69,7 +69,8 @@
     }
 
     .metric-card {
-        @apply bg-secondary-dark border border-accent-gray rounded-2xl p-6 transition-all duration-300;
+        @apply border border-accent-gray rounded-2xl p-6 transition-all duration-300;
+        background: rgba(0, 0, 0, 0.6);
     }
     .metric-card:hover {
         @apply -translate-y-1 border-accent-blue/40;

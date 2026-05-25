@@ -103,17 +103,22 @@
                 display: none;
             }
 
-            @keyframes fab-pulse-ring {
-                0%   { box-shadow: 0 0 0 0 rgba(245,158,11,.5), 0 8px 24px rgba(245,158,11,.25); }
-                65%  { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 8px 24px rgba(245,158,11,.25); }
-                100% { box-shadow: 0 0 0 0 rgba(245,158,11,0), 0 8px 24px rgba(245,158,11,.25); }
+            @keyframes fab-float {
+                0%, 100% { transform: translateY(0);   }
+                50%       { transform: translateY(-4px); }
             }
-            .fab-pulse-anim {
-                animation: fab-pulse-ring 1.3s ease-out 4;
-                animation-delay: .8s;
+            @keyframes fab-ring {
+                0%   { box-shadow: 0 0 0 0   rgba(245,158,11,.65), 0 8px 24px rgba(245,158,11,.28); }
+                22%  { box-shadow: 0 0 0 13px rgba(245,158,11,0),  0 8px 24px rgba(245,158,11,.28); }
+                100% { box-shadow: 0 0 0 0   rgba(245,158,11,0),  0 8px 24px rgba(245,158,11,.28); }
+            }
+            .fab-live-anim {
+                animation: fab-float 3s ease-in-out infinite,
+                           fab-ring  4.5s ease-out infinite;
+                animation-delay: 0s, .9s;
             }
             @media (prefers-reduced-motion: reduce) {
-                .fab-pulse-anim { animation: none; }
+                .fab-live-anim { animation: none; box-shadow: 0 8px 24px rgba(245,158,11,.28); }
             }
 
             /* ── Chat Widget ── */
@@ -205,17 +210,15 @@
     <body class="grain antialiased">
         <header class="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/20 border-b border-white/5">
             <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-                <div class="h-16 flex items-center justify-between">
-                    <a href="{{ url('/') }}" class="flex items-center gap-3 group">
-                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 group-hover:ring-white/20 transition">
-                            <span class="font-display text-lg">S</span>
-                        </span>
-                        <span class="font-display text-lg tracking-tight">{{ config('app.name', 'ServiME') }}</span>
+                <div class="flex items-center justify-between py-3">
+                    <a href="{{ url('/') }}" class="flex items-center group">
+                        <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" style="height:140px;width:auto;" class="opacity-90 group-hover:opacity-100 transition">
                     </a>
 
                     <nav class="flex items-center gap-2 sm:gap-3">
                         <a href="#como-funciona" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Cómo funciona</a>
                         <a href="#beneficios" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Beneficios</a>
+                        <a href="#" data-open-contact class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Ayuda</a>
                         <a href="{{ route('login') }}" class="inline-flex text-sm text-white/80 hover:text-white transition px-3 py-2.5 rounded-lg">Entrar</a>
                         <a href="#" data-open-contact class="inline-flex text-sm font-semibold text-black bg-[var(--accent)] hover:bg-[color:var(--accent2)] transition px-4 py-2.5 rounded-xl shadow-sm shadow-amber-500/20">
                             Quiero sumarme
@@ -238,12 +241,7 @@
                 <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 pt-14 sm:pt-20 pb-14">
                     <div class="grid lg:grid-cols-12 gap-10 items-center">
                         <div class="lg:col-span-6">
-                            <p class="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white/60">
-                                <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_16px_rgba(245,158,11,.6)]"></span>
-                                Menú digital + IA + QR
-                            </p>
-
-                            <h1 class="mt-4 font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight">
+                            <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight">
                                 Tu menú en el celular, con IA que responde por vos.
                             </h1>
 
@@ -387,7 +385,7 @@
                         <a href="#" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition shadow-sm shadow-amber-500/20">
                             Quiero sumarme
                         </a>
-                        <a href="{{ route('help.index') }}" class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
+                        <a href="#" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
                             Ver ayuda
                         </a>
                     </div>
@@ -429,31 +427,6 @@
                 </div>
             </section>
 
-            <section class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
-                <div class="rounded-[2.75rem] bg-black/20 ring-1 ring-white/10 p-8 sm:p-10">
-                    <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Preguntas comunes</h2>
-                    <div class="mt-8 grid md:grid-cols-2 gap-6">
-                        <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                            <p class="font-semibold">¿Funciona sin app?</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">Sí. Es web, pensado para móvil, accesible por QR.</p>
-                        </div>
-                        <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                            <p class="font-semibold">¿El bot responde con mi menú?</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">Se alimenta del contenido procesado del menú (PDF/imágenes) y puede sugerir platos para el pre-pedido.</p>
-                        </div>
-                        <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                            <p class="font-semibold">¿Puedo tener más de un menú?</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">Sí, y podés marcar uno como activo para el comercio.</p>
-                        </div>
-                        <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                            <p class="font-semibold">¿Dónde pido soporte?</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">
-                                Escribinos a <a class="underline decoration-white/25 hover:decoration-white/60" href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a>.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
 
         <footer class="border-t border-white/5">
@@ -466,7 +439,7 @@
                     <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm">
                         <a class="text-white/70 hover:text-white transition" href="#beneficios">Beneficios</a>
                         <a class="text-white/70 hover:text-white transition" href="#como-funciona">Cómo funciona</a>
-                        <a class="text-white/70 hover:text-white transition" href="{{ route('help.index') }}">Ayuda</a>
+                        <a class="text-white/70 hover:text-white transition" href="#" data-open-contact>Ayuda</a>
                         <a class="text-white/70 hover:text-white transition" href="{{ route('login') }}">Entrar</a>
                     </div>
                 </div>
@@ -572,7 +545,7 @@
             </div>
 
             <button id="contact-fab-btn" type="button" aria-label="Abrir chat de ventas"
-                    class="fab-pulse-anim h-14 w-14 rounded-full bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black shadow-lg shadow-amber-500/30 flex items-center justify-center transition-colors">
+                    class="fab-live-anim h-14 w-14 rounded-full bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black shadow-lg shadow-amber-500/30 flex items-center justify-center transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4z"/>
                 </svg>
@@ -613,6 +586,7 @@
                 panelOpen = true;
                 contactPanel.classList.remove('panel-hidden');
                 requestAnimationFrame(() => contactPanel.classList.remove('panel-closing'));
+                fabBtn.classList.remove('fab-live-anim');
                 fabBtn.innerHTML = ICON_CLOSE;
                 fabBtn.setAttribute('aria-label', 'Cerrar chat');
                 initChat();
@@ -622,7 +596,10 @@
                 contactPanel.classList.add('panel-closing');
                 fabBtn.innerHTML = ICON_CHAT;
                 fabBtn.setAttribute('aria-label', 'Abrir chat de ventas');
-                setTimeout(() => contactPanel.classList.add('panel-hidden'), 200);
+                setTimeout(() => {
+                    contactPanel.classList.add('panel-hidden');
+                    fabBtn.classList.add('fab-live-anim');
+                }, 200);
             }
 
             fabBtn?.addEventListener('click', e => {
@@ -871,6 +848,11 @@
             });
             chatSendBtn?.addEventListener('click', handleFreeText);
 
+            // Auto-open when landing is loaded with ?chat=1 (e.g. from login "Ayuda" link)
+            if (new URLSearchParams(window.location.search).get('chat') === '1') {
+                setTimeout(openPanel, 500);
+            }
+
             // ── Hero demo loop (real-chat aesthetics) ──────────────
             (function () {
                 const area = document.getElementById('demo-chat-msgs');
@@ -965,6 +947,7 @@
                 schedule(() => runConvo(0), 600);
             })();
         </script>
+
     </body>
 </html>
 

@@ -14,157 +14,51 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=roboto:300,400,500,700&display=swap" rel="stylesheet" />
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom Tailwind Config -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'primary-dark': '#1A2A44',
-                        'secondary-dark': '#2A3A55',
-                        'accent-blue': '#00C4FF',
-                        'accent-green': '#00FF00',
-                        'accent-gray': '#333333',
-                        'text-primary': '#FFFFFF',
-                        'text-secondary': '#CCCCCC',
-                        'background': '#000000',
-                    },
-                    fontFamily: {
-                        'sans': ['Roboto', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Custom Styles -->
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <style>
         :root {
-            --primary-dark: #1A2A44;
-            --secondary-dark: #2A3A55;
-            --accent-blue: #00C4FF;
-            --accent-green: #00FF00;
-            --accent-gray: #333333;
-            --text-primary: #FFFFFF;
-            --text-secondary: #CCCCCC;
-            --background: #000000;
+            --primary-dark:   #111318;
+            --secondary-dark: #1c1f26;
+            --accent-blue:    #f59e0b;
+            --accent-green:   #10b981;
+            --accent-gray:    #374151;
+            --text-primary:   #FFFFFF;
+            --text-secondary: #94a3b8;
+            --background:     #0a0f1e;
         }
-        
-        body {
-            font-family: 'Roboto', system-ui, sans-serif;
-            color: var(--text-primary);
-            min-height: 100vh;
-            position: relative;
-        }
-        
+        body { font-family: Roboto, Inter, system-ui, sans-serif; color: var(--text-primary); min-height: 100vh; position: relative; }
+
         .video-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: -20;
-            filter: blur(8px);
-            -webkit-filter: blur(8px);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: -20; filter: blur(8px); -webkit-filter: blur(8px);
         }
-        
         .video-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            z-index: -10;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,.75); z-index: -10;
         }
-        
-        .glass-effect {
-            background: rgba(42, 58, 85, 0.5);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 196, 255, 0.3);
-        }
-        
-        .neon-glow {
-            box-shadow: 0 0 20px rgba(0, 196, 255, 0.5);
-        }
-        
-        .neon-glow-green {
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue), #0099CC);
-            color: var(--text-primary);
-            border: none;
-            border-radius: 12px;
-            padding: 12px 24px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 196, 255, 0.3);
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 196, 255, 0.5);
-        }
-        
-        .input-field {
-            background: var(--secondary-dark);
-            border: 1px solid var(--accent-gray);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-        }
-        
-        .input-field:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(0, 196, 255, 0.1);
-        }
-        
-        .input-field::placeholder {
-            color: var(--text-secondary);
-        }
-        
-        .floating-particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
+        .floating-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .particle {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: var(--accent-blue);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
+            position: absolute; width: 2px; height: 2px;
+            background: var(--accent-blue); border-radius: 50%;
+            animation: particle-float 6s ease-in-out infinite;
         }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
-            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+        @keyframes particle-float {
+            0%,100% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            50%      { transform: translateY(-20px) rotate(180deg); opacity: 1; }
         }
-        
-        .logo-container {
-            position: relative;
-            z-index: 10;
+        .logo-container { position: relative; z-index: 10; }
+        .logo-glow { filter: drop-shadow(0 0 16px rgba(245,158,11,.5)); }
+
+        /* Override input background — neutrals instead of navy */
+        .input-field {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
         }
-        
-        .logo-glow {
-            filter: drop-shadow(0 0 20px rgba(0, 196, 255, 0.5));
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #f59e0b !important;
         }
     </style>
 </head>
@@ -196,15 +90,12 @@
         
         <!-- Logo Section -->
         <div class="text-center mb-8 logo-container">
-            <!-- <img src="{{ asset('images/logo.png') }}" 
-                 alt="ServiMe Logo" 
-                 class="w-24 h-24 mx-auto mb-6 logo-glow rounded-2xl">-->
-            <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">{{ config('app.name', 'ServiME') }}</h1>
+            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="h-16 sm:h-20 w-auto mx-auto mb-3 logo-glow">
             <p class="text-text-secondary">Accede a tu panel de administración</p>
         </div>
 
         <!-- Login Form -->
-        <div class="glass-effect rounded-2xl p-8 neon-glow">
+        <div class="rounded-2xl p-8 neon-glow" style="background:rgba(12,9,6,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,0.18);">
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
@@ -247,10 +138,10 @@
                 <!-- Remember Me & Forgot Password -->
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                     <div class="flex items-center">
-                        <input id="remember_me" 
-                               name="remember" 
-                               type="checkbox" 
-                               class="w-4 h-4 text-accent-blue bg-secondary-dark border-accent-gray rounded focus:ring-accent-blue focus:ring-2">
+                        <input id="remember_me"
+                               name="remember"
+                               type="checkbox"
+                               class="w-4 h-4 text-accent-blue bg-white/5 border-white/20 rounded focus:ring-accent-blue focus:ring-2">
                         <label for="remember_me" class="ml-2 text-sm text-text-secondary">
                             Recordarme
                         </label>
@@ -271,14 +162,6 @@
                 </button>
             </form>
 
-            <!-- Help Button -->
-            <div class="mt-6 text-center">
-                <a href="{{ route('help.index') }}" 
-                   class="inline-flex items-center text-sm text-text-secondary hover:text-accent-blue transition-colors duration-300">
-                    <span class="mr-2">❓</span>
-                    Centro de Ayuda
-                </a>
-            </div>
 
             <!-- Register Link -->
             {{-- @if (Route::has('register'))
@@ -295,10 +178,14 @@
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-8">
+        <div class="text-center mt-8 space-y-2">
             <p class="text-text-secondary text-sm">
-            © {{ date('Y') }} ServiMe! Todos los derechos reservados.
+                © {{ date('Y') }} ServiMe! Todos los derechos reservados.
             </p>
+            <a href="{{ url('/?chat=1') }}"
+               class="text-xs text-text-secondary/50 hover:text-text-secondary transition-colors duration-300">
+                Centro de Ayuda
+            </a>
         </div>
     </div>
 

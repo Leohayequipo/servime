@@ -5,7 +5,6 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\HelpController;
 use App\Http\Controllers\QuestionCategoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,8 +31,6 @@ Route::get('/logos/{filename}', function ($filename) {
     return response()->file($realPath);
 })->name('logos.show');
 
-// Help - Accesible sin autenticación
-Route::get('/help', [HelpController::class, 'index'])->name('help.index');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 

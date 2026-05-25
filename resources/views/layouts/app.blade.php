@@ -19,14 +19,14 @@
     
     <style>
         :root {
-            --primary-dark:   #1A2A44;
-            --secondary-dark: #2A3A55;
+            --primary-dark:   #111318;
+            --secondary-dark: #1c1f26;
             --accent-blue:    #f59e0b;
             --accent-green:   #10b981;
             --accent-gray:    #374151;
             --text-primary:   #FFFFFF;
             --text-secondary: #94a3b8;
-            --background:     #0a0f1e;
+            --background:     #0b0c10;
         }
         body {
             font-family: Roboto, Inter, system-ui, sans-serif;
@@ -48,13 +48,11 @@
         <!-- Navigation -->
         <nav class="bg-background border-b border-accent-gray sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
+                <div class="flex justify-between items-center py-3">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <a href="{{ route('dashboard') }}" class="hover:opacity-80 transition-opacity duration-200">
-                                <h1 class="text-2xl font-bold text-text-primary">
-                                    {{ config('app.name', 'ServiME') }}
-                                </h1>
+                                <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" style="height:140px;width:auto;">
                             </a>
                         </div>
                         <div class="hidden md:block ml-10">
@@ -125,7 +123,7 @@
                                         </a>
                                         
                                         <!-- Ayuda -->
-                                        <a href="{{ route('help.index') }}" 
+                                        <a href="{{ url('/?chat=1') }}"
                                            class="flex items-center px-4 py-3 text-sm text-text-secondary hover:text-accent-blue hover:bg-primary-dark transition-all duration-300">
                                             <span class="text-lg mr-3">❓</span>
                                             Ayuda
