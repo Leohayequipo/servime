@@ -44,22 +44,22 @@
             `;
 
             Swal.fire({
-                background: '#1A2A44',
+                background: '#1c1f26',
                 color: '#ffffff',
                 customClass: {
                     popup: 'dark-modal',
                     title: 'text-white',
                     htmlContainer: 'text-gray-300',
-                    confirmButton: 'bg-blue-600 hover:bg-blue-700'
                 },
                 title: 'Contacta con el Administrador',
                 html: htmlContent,
                 icon: 'info',
-                iconColor: '#3B82F6',
+                iconColor: '#f59e0b',
                 confirmButtonText: 'Cerrar',
-                confirmButtonColor: '#3B82F6',
+                confirmButtonColor: '#f59e0b',
                 width: '500px'
             });
         }
     </script>
 </section>
+

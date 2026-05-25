@@ -172,8 +172,8 @@
                                     
                                     <!-- Botón Editar -->
                                     <div class="grid grid-cols-1 gap-2">
-                                        <a href="{{ route('comercios.edit', $comercio) }}" 
-                                           class="bg-accent-blue hover:bg-blue-600 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm">
+                                        <a href="{{ route('comercios.edit', $comercio) }}"
+                                           class="btn-primary w-full">
                                             <span class="mr-1">✏️</span>
                                             Editar Comercio
                                         </a>

@@ -1,4 +1,4 @@
-<div x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" 
+﻿<div x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" 
      x-init="
          if (darkMode) {
              document.documentElement.classList.add('dark');
@@ -30,3 +30,4 @@
         </svg>
     </button>
 </div>
+

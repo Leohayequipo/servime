@@ -13,16 +13,18 @@
             background-color: #059669 !important;
         }
         
-        /* Forzar estilos para inputs - mismo color que el contenedor */
-        input, select, textarea {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
+        /* Forzar estilos para inputs */
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+        select,
+        textarea {
+            background-color: #1c1f26 !important;
             color: white !important;
-            border-color: rgba(59, 130, 246, 0.3) !important;
+            border-color: #374151 !important;
         }
-        
-        /* Forzar gradiente en FAQ */
+
         .faq-container {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 51, 234, 0.4) 100%) !important;
+            background-color: #1c1f26 !important;
+            border: 1px solid #374151 !important;
         }
         
         /* Espaciado personalizado para alineación perfecta */
@@ -47,13 +49,13 @@
         }
         
         .icon-modal-content {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%);
+            background: #1c1f26;
             border-radius: 1rem;
             padding: 2rem;
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
-            border: 1px solid rgba(59, 130, 246, 0.5);
+            border: 1px solid #374151;
         }
         
         .icon-grid {
@@ -79,22 +81,15 @@
             transform: scale(1.1);
         }
         
-        /* Estilos para select y options */
-        select {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
-            color: white !important;
-            border-color: rgba(59, 130, 246, 0.3) !important;
-        }
-        
         select option {
-            background-color: #1e293b !important;
+            background-color: #1c1f26 !important;
             color: white !important;
         }
-        
+
         select:focus {
             outline: none !important;
-            border-color: rgba(59, 130, 246, 0.5) !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15) !important;
         }
         
         /* Modal de archivos */
@@ -112,13 +107,13 @@
         }
         
         .file-modal-content {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(147, 51, 234, 0.95) 100%);
+            background: #1c1f26;
             border-radius: 1rem;
             padding: 2rem;
             max-width: 90vw;
             max-height: 90vh;
             overflow: hidden;
-            border: 1px solid rgba(59, 130, 246, 0.5);
+            border: 1px solid #374151;
             position: relative;
         }
         
@@ -172,11 +167,10 @@
             <!-- Header Section -->
             <div class="flex items-center justify-between mb-12">
                 <div>
-                    <h1 class="text-5xl font-bold text-text-primary mb-2">
-                        📋 {{ $isEdit ? 'Editar Menú' : 'Crear Menú' }}
+                    <h1 class="text-3xl font-bold text-text-primary mb-2">
+                        {{ $isEdit ? 'Editar Menú' : 'Crear Menú' }}
                     </h1>
-                    <p class="text-xl text-text-secondary">{{ $comercio->nombre }}</p>
-                    <p class="text-sm text-text-secondary mt-1">Sube tu menú y personaliza la experiencia</p>
+                    <p class="text-text-secondary mt-0.5">{{ $comercio->nombre }}</p>
                 </div>
                 <div class="flex space-x-3">
                     <!-- Dropdown Gestión Excel -->
@@ -205,7 +199,7 @@
                                     @endif
                                     <label for="importFileDropdown" class="cursor-pointer block">
                                         <div class="px-4 py-3 text-sm text-text-primary hover:bg-accent-gray/50 transition-colors duration-200 flex items-center">
-                                            <svg class="w-5 h-5 mr-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-5 h-5 mr-3 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                                             </svg>
                                             <span>⬆️ Importar desde Excel</span>
@@ -312,8 +306,8 @@
                                                     <span class="text-red-400 text-2xl">📄</span>
                                                 </div>
                                             @else
-                                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-blue-400 text-2xl">🍽️</span>
+                                                <div class="w-14 h-14 bg-accent-blue/10 border border-accent-blue/30 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-accent-blue text-2xl">🍽️</span>
                                                 </div>
                                             @endif
                                             <div class="min-w-0 flex-1">
@@ -329,14 +323,14 @@
                                         </div>
                                         </div>
                                         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-                                            <button type="button" 
+                                            <button type="button"
                                                     onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
-                                                    class="bg-gradient-to-r from-accent-blue to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95">
+                                                    class="px-4 py-2.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap">
                                                 👁️ Ver
                                             </button>
                                             <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
                                                download
-                                               class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-secondary-dark whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                                               class="px-4 py-2.5 bg-accent-gray/30 hover:bg-accent-gray/50 text-text-primary border border-accent-gray rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-2">
                                                 <span>📥</span>
                                                 <span>Descargar</span>
                                             </a>
@@ -355,7 +349,7 @@
                                        name="archivo" 
                                        accept=".pdf,.jpeg,.jpg,.png,.gif" 
                                        {{ $isEdit ? '' : 'required' }} 
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
                                 <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
                                 <p class="mt-2 text-sm text-text-secondary">
                                     @if($isEdit)
@@ -386,7 +380,7 @@
                             </div>
 
                             @if($isEdit)
-                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 border-green-500/40 shadow-lg shadow-green-500/20' : 'bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/40 shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
                                     <div class="relative p-6">
                                         <!-- Texto arriba -->
                                         <div class="mb-5">
@@ -455,8 +449,8 @@
                 <div class="space-y-6">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">🤖</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">🤖</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Chatbot</h3>
                         </div>
@@ -496,8 +490,8 @@
                     <!-- 👁️ Vista Previa del Tema -->
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-accent-blue to-cyan-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">👁️</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">👁️</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Vista Previa</h3>
                         </div>
@@ -572,7 +566,7 @@
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
-                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto min-h-[500px] flex flex-col" style="background-color: #1e293b !important; color: white !important; border-color: #374151 !important;">
+                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto min-h-[500px] flex flex-col bg-primary-dark">
                             <!-- Header del comercio -->
                             <div class="mb-4">
                                 <!-- Logo centrado -->
@@ -580,11 +574,11 @@
                                 @if($comercio->logo_url)
                                     <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                          alt="{{ $comercio->nombre }}" 
-                                             class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                             class="w-16 h-16 rounded-full object-cover shadow-2xl">
                                 @else
                                     <img src="{{ asset('images/logo_empresa_default.png') }}" 
                                          alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                             class="w-16 h-16 rounded-full object-cover shadow-2xl neon-glow">
+                                             class="w-16 h-16 rounded-full object-cover shadow-2xl">
                                 @endif
                                 </div>
                                 <!-- Nombre del comercio centrado -->
@@ -595,7 +589,7 @@
                             </div>
                             
                             <!-- Chatbot header -->
-                            <div class="bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl p-3 mb-4 neon-glow">
+                            <div id="preview-chatbot-header" class="bg-accent-blue/20 border border-accent-blue/30 rounded-xl p-3 mb-4">
                                 <div class="flex items-center">
                                     <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
                                         <span class="text-white text-xs">🤖</span>
@@ -645,7 +639,7 @@
                                 <input type="text" 
                                        placeholder="Escribe tu mensaje..." 
                                        class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-xs placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                <button class="bg-accent-blue hover:bg-blue-600 px-3 py-2 rounded-r-lg text-white text-xs font-medium transition-colors duration-200">
+                                <button class="bg-accent-blue hover:opacity-80 px-3 py-2 rounded-r-lg text-black text-xs font-medium transition-opacity duration-200">
                                     Enviar
                                 </button>
                             </div>
@@ -695,8 +689,8 @@
                     <div class="metric-card">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                    <span class="text-white text-lg">🔥</span>
+                                <div class="w-10 h-10 bg-orange-500/20 border border-orange-500/30 rounded-xl flex items-center justify-center mr-3">
+                                    <span class="text-lg">🔥</span>
                                 </div>
                                 <h3 class="text-xl font-semibold text-text-primary">Promociones del Día</h3>
                             </div>
@@ -709,7 +703,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-6">
+                        <div class="bg-orange-900/10 border border-orange-500/30 rounded-xl p-6">
                             
                             <div id="promociones-container" class="space-y-4">
                                 <!-- Las promociones se agregarán aquí -->
@@ -817,8 +811,8 @@
                 <div class="mt-12">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">📋</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">📋</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
                         </div>
@@ -842,10 +836,10 @@
                             <div class="space-y-6">
                                 <!-- Información del restaurante -->
                                 @if(isset($contenido['restaurante']['nombre']) && $contenido['restaurante']['nombre'] !== 'No especificado')
-                                    <div class="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-lg p-4">
-                                        <h3 class="text-lg font-semibold text-blue-300 mb-2">🏪 {{ $contenido['restaurante']['nombre'] }}</h3>
+                                    <div class="bg-secondary-dark border border-accent-gray rounded-lg p-4">
+                                        <h3 class="text-lg font-semibold text-text-primary mb-2">🏪 {{ $contenido['restaurante']['nombre'] }}</h3>
                                         @if(isset($contenido['restaurante']['descripcion']) && !empty($contenido['restaurante']['descripcion']))
-                                            <p class="text-blue-200">{{ $contenido['restaurante']['descripcion'] }}</p>
+                                            <p class="text-text-secondary">{{ $contenido['restaurante']['descripcion'] }}</p>
                                         @endif
                                     </div>
                                 @endif
@@ -930,7 +924,7 @@
                                                                                                class="hidden"
                                                                                                onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                                id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                                                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:opacity-80 text-black text-xs font-semibold rounded transition-opacity cursor-pointer shadow-xl">
                                                                                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                                                                             </svg>
@@ -1037,11 +1031,11 @@
                                                                             <input type="text" 
                                                                                    placeholder="Escribe un tag y presiona Enter o coma"
                                                                                    title="Escribe el nombre del tag y presiona Enter o la tecla coma (,) para agregarlo"
-                                                                                   class="text-xs bg-secondary-dark/80 border-2 border-slate-500/60 rounded-md px-2.5 py-1.5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-slate-400/80 hover:bg-secondary-dark transition-all w-full"
+                                                                                   class="text-xs bg-secondary-dark border border-accent-gray/70 rounded-md px-2.5 py-1.5 text-text-secondary placeholder:text-accent-gray focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-accent-gray transition-all w-full"
                                                                                    id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
                                                                                    onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                    autocomplete="off">
-                                                                            <p class="text-[10px] text-slate-500 mt-1 ml-0.5">💡 Presiona Enter o coma (,) para agregar</p>
+                                                                            <p class="text-[10px] text-text-secondary mt-1 ml-0.5">💡 Presiona Enter o coma (,) para agregar</p>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -1061,9 +1055,9 @@
                                 
                                 <!-- Información adicional -->
                                 @if(isset($contenido['informacion_adicional']) && !empty($contenido['informacion_adicional']))
-                                    <div class="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg p-4">
-                                        <h4 class="text-lg font-semibold text-green-300 mb-2">ℹ️ Información Adicional</h4>
-                                        <p class="text-green-200">{{ $contenido['informacion_adicional'] }}</p>
+                                    <div class="bg-secondary-dark border border-accent-gray rounded-lg p-4">
+                                        <h4 class="text-lg font-semibold text-text-primary mb-2">ℹ️ Información Adicional</h4>
+                                        <p class="text-text-secondary">{{ $contenido['informacion_adicional'] }}</p>
                                     </div>
                                 @endif
                             </div>
@@ -1079,8 +1073,8 @@
                 <div class="mt-12">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">📋</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">📋</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
                         </div>
@@ -1097,8 +1091,8 @@
                 <div class="mt-12">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">📋</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">📋</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
                         </div>
@@ -1113,8 +1107,8 @@
                 <div class="mt-12">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3 neon-glow">
-                                <span class="text-white text-lg">📋</span>
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">📋</span>
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
                         </div>
@@ -1165,11 +1159,11 @@
             // Actualizar el card con animación
             if (card) {
                 if (isChecked) {
-                    card.className = card.className.replace(/from-gray-.*?\/\d+|border-gray-.*?\/\d+|shadow-lg(?!.*green)/g, '');
-                    card.classList.add('bg-gradient-to-br', 'from-green-500/20', 'via-blue-500/20', 'to-purple-500/20', 'border-green-500/40', 'shadow-lg', 'shadow-green-500/20');
+                    card.classList.remove('bg-secondary-dark', 'border-accent-gray');
+                    card.classList.add('bg-accent-green/10', 'border-accent-green/40', 'shadow-accent-green/10');
                 } else {
-                    card.className = card.className.replace(/from-green-.*?\/\d+|via-blue-.*?\/\d+|to-purple-.*?\/\d+|border-green-.*?\/\d+|shadow-green-.*?\/\d+/g, '');
-                    card.classList.add('bg-gradient-to-br', 'from-gray-700/50', 'to-gray-800/50', 'border-gray-600/40', 'shadow-lg');
+                    card.classList.remove('bg-accent-green/10', 'border-accent-green/40', 'shadow-accent-green/10');
+                    card.classList.add('bg-secondary-dark', 'border-accent-gray');
                 }
             }
         }
@@ -1417,13 +1411,11 @@
                 const chatbotName = document.getElementById('chatbot_name').value;
                 const welcomeMessage = document.getElementById('welcome_message').value;
                 
-                // Actualizar colores
-                const previewElements = document.querySelectorAll('#preview-chatbot-name, .bg-gradient-to-r');
-                previewElements.forEach(el => {
-                    if (el.classList.contains('bg-gradient-to-r')) {
-                        el.style.background = `linear-gradient(to right, ${primaryColor}, #0099CC)`;
-                    }
-                });
+                // Actualizar color del header del chatbot en la vista previa
+                const chatbotHeader = document.getElementById('preview-chatbot-header');
+                if (chatbotHeader) {
+                    chatbotHeader.style.background = `linear-gradient(to right, ${primaryColor}, #0099CC)`;
+                }
                 
                 // Actualizar texto
                 document.getElementById('preview-chatbot-name').textContent = chatbotName;
@@ -1438,7 +1430,7 @@
                         // Agregar anillo para el tema activo con color blanco/azul claro
                         swatch.classList.add('ring-2', 'ring-offset-2');
                         swatch.classList.add('ring-white', 'ring-opacity-80');
-                        swatch.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px rgba(59, 130, 246, 0.4)';
+                        swatch.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px rgba(245, 158, 11, 0.4)';
                         swatch.style.transform = 'scale(1.1)';
                     } else {
                         // Remover anillo de los temas no activos
@@ -2380,7 +2372,7 @@
                                        class="hidden"
                                        onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
                                        id="imagen-input-${categoriaIndex}-${platoIndex}">
-                                <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:opacity-80 text-black text-xs font-semibold rounded transition-opacity cursor-pointer shadow-xl">
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                     </svg>
@@ -2469,7 +2461,7 @@
                                                class="hidden"
                                                onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
                                                id="imagen-input-${categoriaIndex}-${platoIndex}">
-                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:bg-blue-500 text-white text-xs font-semibold rounded transition-colors cursor-pointer shadow-xl">
+                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:opacity-80 text-black text-xs font-semibold rounded transition-opacity cursor-pointer shadow-xl">
                                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                             </svg>
@@ -4307,3 +4299,4 @@
         });
     </script>
 </x-app-layout>
+

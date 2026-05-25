@@ -13,7 +13,7 @@
         <meta property="og:description" content="Carta digital QR + chatbot de IA entrenado con tu menú + pre-pedido para el mozo. Sin apps, listo en minutos." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="{{ url('/') }}" />
-        <meta property="og:image" content="{{ asset('images/ServiME_IA.ico') }}" />
+        <meta property="og:image" content="{{ asset('images/servime_ia.ico') }}" />
         <meta property="og:locale" content="es_AR" />
 
         <meta name="twitter:card" content="summary" />
@@ -46,8 +46,8 @@
         }
         </script>
 
-        <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+        <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=fraunces:300,400,500,600,700&display=swap" rel="stylesheet" />
@@ -950,4 +950,5 @@
 
     </body>
 </html>
+
 

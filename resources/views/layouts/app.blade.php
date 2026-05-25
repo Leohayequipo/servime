@@ -8,8 +8,8 @@
     <title>{{ config('app.name', 'ServiME') }} - Panel de Administración</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -37,6 +37,37 @@
         input:focus, textarea:focus, select:focus {
             --tw-ring-color: var(--accent-blue);
             border-color: var(--accent-blue);
+        }
+
+        /* SweetAlert2 — reemplazar azules por paleta dark amber */
+        .swal2-icon.swal2-question {
+            border-color: rgba(245, 158, 11, 0.3) !important;
+            color: #f59e0b !important;
+        }
+        .swal2-icon.swal2-question .swal2-icon-content {
+            color: #f59e0b !important;
+        }
+        .swal2-icon.swal2-info {
+            border-color: rgba(245, 158, 11, 0.3) !important;
+            color: #f59e0b !important;
+        }
+        .swal2-icon.swal2-info .swal2-icon-content {
+            color: #f59e0b !important;
+        }
+        /* Popup title */
+        .swal2-title {
+            color: #ffffff !important;
+        }
+        /* Popup background */
+        .swal2-popup {
+            background: #1c1f26 !important;
+        }
+        /* Focus ring en botones — quitar el azul por defecto */
+        .swal2-styled:focus {
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4) !important;
+        }
+        .swal2-styled.swal2-cancel:focus {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
         }
     </style>
     
@@ -187,14 +218,10 @@
     <script>
         // Configuración global de SweetAlert2 para tema dark
         const swalConfig = {
-            background: '#1A2A44',
+            background: '#1c1f26',
             color: '#ffffff',
             customClass: {
                 popup: 'dark-modal',
-                title: 'text-white',
-                content: 'text-gray-300',
-                confirmButton: 'bg-green-600 hover:bg-green-700',
-                cancelButton: 'bg-red-600 hover:bg-red-700'
             }
         };
 
@@ -206,8 +233,9 @@
                 title: 'Información',
                 text: message,
                 icon: 'info',
+                iconColor: '#f59e0b',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#3B82F6'
+                confirmButtonColor: '#f59e0b'
             });
         };
 
@@ -218,6 +246,7 @@
                 title: 'Confirmar',
                 text: message,
                 icon: 'question',
+                iconColor: '#f59e0b',
                 showCancelButton: true,
                 confirmButtonColor: '#10B981',
                 cancelButtonColor: '#EF4444',
@@ -235,6 +264,7 @@
                 title: 'Confirmar',
                 text: message,
                 icon: 'question',
+                iconColor: '#f59e0b',
                 showCancelButton: true,
                 confirmButtonColor: '#10B981',
                 cancelButtonColor: '#EF4444',
@@ -294,8 +324,9 @@
                 title: title,
                 text: message,
                 icon: 'info',
+                iconColor: '#f59e0b',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#3B82F6'
+                confirmButtonColor: '#f59e0b'
             });
         }
 
@@ -308,7 +339,7 @@
                     title: message,
                     html: `
                         <div class="flex flex-col items-center space-y-4">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue" style="border-color: #f59e0b;"></div>
                             <p class="text-gray-300">Por favor espera...</p>
                         </div>
                     `,

@@ -8,8 +8,8 @@
     <title>{{ config('app.name', 'ServiME') }} - Login</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

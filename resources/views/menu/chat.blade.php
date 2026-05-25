@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $comercio->page_title ?? config('app.name', 'ServiME') }}</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
-    <link rel="shortcut icon" href="{{ asset('images/ServiME_IA.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
+    <link rel="shortcut icon" href="{{ asset('images/servime_ia.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -372,7 +372,7 @@
                        id="messageInput"
                        placeholder="Escribe tu mensaje..."
                        class="flex-1 bg-secondary-dark border border-accent-gray px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue chat-input-bar">
-                <button id="sendButton" class="bg-accent-blue hover:bg-blue-600 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
+                <button id="sendButton" class="bg-accent-blue hover:bg-amber-500 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
                     Enviar
                 </button>
             </div>

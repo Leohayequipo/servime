@@ -296,7 +296,7 @@
                                     <input type="text" 
                                            placeholder="Escribe tu mensaje..." 
                                            class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-xs placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                    <button class="bg-accent-blue hover:bg-blue-600 px-3 py-2 rounded-r-lg text-white text-xs font-medium transition-colors duration-200">
+                                    <button class="bg-accent-blue hover:bg-amber-500 px-3 py-2 rounded-r-lg text-white text-xs font-medium transition-colors duration-200">
                                         Enviar
                                     </button>
                                 </div>
@@ -317,7 +317,7 @@
                             </div>
                             <button type="button" 
                                     onclick="generateQuestionsWithAI()"
-                                    class="bg-accent-blue hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow">
+                                    class="bg-accent-blue hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 neon-glow">
                                 🤖 Generar con IA
                             </button>
                         </div>

@@ -1,49 +1,32 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                🏪 Gestión de Comercios
-            </h2>
-            <div class="flex space-x-3">
-                <a href="{{ route('dashboard') }}" class="btn-secondary">
-                    {{ __('Volver al Dashboard') }}
-                </a>
-            </div>
-        </div>
-    </x-slot>
+    <div class="min-h-screen bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-            
-            <!-- Success/Error Messages -->
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+                <div>
+                    <h1 class="text-3xl font-bold text-text-primary">Gestión de Comercios</h1>
+                    <p class="text-text-secondary mt-1">Todos los comercios registrados</p>
+                </div>
+                <a href="{{ route('dashboard') }}" class="btn-secondary">← Dashboard</a>
+            </div>
+
+            <!-- Flash -->
             @if(session('success'))
-                <div class="mb-8 animate-fade-in-down">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                                    <span class="text-white text-xl">✨</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-green-100 mb-1">¡Éxito!</h3>
-                                <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-progress-bar"></div>
+                <div class="mb-8">
+                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
+                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
+                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
                     </div>
                 </div>
             @endif
 
-            <!-- Estadísticas Rápidas -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-xl">🏪</span>
+            <!-- Estadísticas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="metric-card">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-accent-green/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">🏪</span>
                         </div>
                         <div>
                             <p class="text-text-secondary text-sm">Total Comercios</p>
@@ -52,10 +35,10 @@
                     </div>
                 </div>
 
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-xl">👥</span>
+                <div class="metric-card">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">👥</span>
                         </div>
                         <div>
                             <p class="text-text-secondary text-sm">Propietarios</p>
@@ -64,10 +47,10 @@
                     </div>
                 </div>
 
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-xl">📋</span>
+                <div class="metric-card">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">📋</span>
                         </div>
                         <div>
                             <p class="text-text-secondary text-sm">Total Menús</p>
@@ -78,34 +61,32 @@
             </div>
 
             <!-- Lista de Comercios -->
-            <div class="glass-effect rounded-2xl p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-lg">🏪</span>
-                        </div>
-                        <h3 class="text-xl font-bold text-text-primary">Lista de Comercios</h3>
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-9 h-9 bg-accent-green/10 rounded-lg flex items-center justify-center">
+                        <span>🏪</span>
                     </div>
+                    <h3 class="font-bold text-text-primary">Lista de Comercios</h3>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-accent-gray">
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Comercio</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Propietario</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Menús</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Creado</th>
-                                <th class="text-left py-3 px-4 text-text-primary font-medium">Acciones</th>
+                                <th class="text-left py-3 px-4 text-text-secondary text-xs font-medium uppercase tracking-wide">Comercio</th>
+                                <th class="text-left py-3 px-4 text-text-secondary text-xs font-medium uppercase tracking-wide">Propietario</th>
+                                <th class="text-left py-3 px-4 text-text-secondary text-xs font-medium uppercase tracking-wide">Menús</th>
+                                <th class="text-left py-3 px-4 text-text-secondary text-xs font-medium uppercase tracking-wide">Creado</th>
+                                <th class="text-left py-3 px-4 text-text-secondary text-xs font-medium uppercase tracking-wide">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($comercios as $comercio)
-                                <tr class="border-b border-accent-gray/50 hover:bg-secondary-dark/50 transition-colors">
+                                <tr class="border-b border-accent-gray/50 hover:bg-primary-dark transition-colors">
                                     <td class="py-4 px-4">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                                                <span class="text-white font-bold">{{ substr($comercio->nombre, 0, 1) }}</span>
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 bg-accent-green/20 rounded-xl flex items-center justify-center text-accent-green font-bold flex-shrink-0">
+                                                {{ strtoupper(substr($comercio->nombre, 0, 1)) }}
                                             </div>
                                             <div>
                                                 <p class="font-medium text-text-primary">{{ $comercio->nombre }}</p>
@@ -116,33 +97,32 @@
                                         </div>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <div class="space-y-1">
-                                            <p class="font-medium text-text-primary">{{ $comercio->user->name }}</p>
-                                            <p class="text-sm text-text-secondary">{{ $comercio->user->email }}</p>
-                                        </div>
+                                        <p class="font-medium text-text-primary">{{ $comercio->user->name }}</p>
+                                        <p class="text-xs text-text-secondary">{{ $comercio->user->email }}</p>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-sm">
+                                        <span class="px-2 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary border border-accent-gray font-medium">
                                             {{ $comercio->menus_count }} menú(s)
                                         </span>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <p class="text-text-secondary">{{ $comercio->created_at->format('d/m/Y') }}</p>
+                                        <p class="text-text-primary text-sm">{{ $comercio->created_at->format('d/m/Y') }}</p>
                                         <p class="text-xs text-text-secondary">{{ $comercio->created_at->diffForHumans() }}</p>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <div class="flex items-center space-x-2">
-                                            <a href="{{ route('admin.comercios.show', $comercio) }}" 
-                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors">
-                                                Ver
-                                            </a>
-                                        </div>
+                                        <a href="{{ route('admin.comercios.show', $comercio) }}"
+                                           class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
+                                            Ver
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-8 text-center text-text-secondary">
-                                        No hay comercios registrados
+                                    <td colspan="5" class="py-12 text-center">
+                                        <div class="w-14 h-14 bg-accent-gray/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <span class="text-2xl">🏪</span>
+                                        </div>
+                                        <p class="text-text-secondary text-sm">No hay comercios registrados.</p>
                                     </td>
                                 </tr>
                             @endforelse
@@ -150,7 +130,6 @@
                     </table>
                 </div>
 
-                <!-- Paginación -->
                 @if($comercios->hasPages())
                     <div class="mt-6">
                         {{ $comercios->links() }}
@@ -161,3 +140,4 @@
         </div>
     </div>
 </x-app-layout>
+

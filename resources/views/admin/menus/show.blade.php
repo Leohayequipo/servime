@@ -1,189 +1,303 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                📋 {{ $menu->nombre ?: 'Menú sin nombre' }}
-            </h2>
-            <div class="flex space-x-3">
-                <a href="{{ route('admin.menus.index') }}" class="btn-secondary">
-                    Volver a Menús
-                </a>
-                <a href="{{ route('admin.menus.edit', $menu) }}" class="btn-primary">
-                    Editar Menú
-                </a>
-            </div>
-        </div>
-    </x-slot>
+    <div class="min-h-screen bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-            
-            <!-- Success/Error Messages -->
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-accent-blue/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
+                        📋
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-text-primary">{{ $menu->nombre ?: 'Menú sin nombre' }}</h1>
+                        <p class="text-text-secondary mt-0.5">{{ $menu->comercio->nombre }} · {{ $menu->comercio->user->name }}</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{{ route('admin.menus.edit', $menu) }}" class="btn-primary">Editar</a>
+                    <a href="{{ route('admin.menus.index') }}" class="btn-secondary">← Menús</a>
+                </div>
+            </div>
+
+            <!-- Flash -->
             @if(session('success'))
-                <div class="mb-8 animate-fade-in-down">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                                    <span class="text-white text-xl">✨</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-green-100 mb-1">¡Éxito!</h3>
-                                <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-progress-bar"></div>
+                <div class="mb-8">
+                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
+                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
+                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
                     </div>
                 </div>
             @endif
 
-            <!-- Información del Menú -->
-            <div class="glass-effect rounded-2xl p-6">
-                <div class="flex items-center mb-6">
-                    <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mr-6">
-                        <span class="text-white text-2xl font-bold">📋</span>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-bold text-text-primary">{{ $menu->nombre ?: 'Menú sin nombre' }}</h3>
-                        <p class="text-text-secondary">Comercio: {{ $menu->comercio->nombre }}</p>
-                        <p class="text-text-secondary">Propietario: {{ $menu->comercio->user->name }}</p>
-                    </div>
-                </div>
-                
+            <!-- Info del menú -->
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                <p class="text-text-secondary text-xs font-medium uppercase tracking-wide mb-5">Información</p>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="space-y-4">
                         <div>
-                            <label class="text-text-secondary text-sm font-medium">Nombre del menú</label>
+                            <p class="text-text-secondary text-xs mb-1">Nombre</p>
                             <p class="text-text-primary font-medium">{{ $menu->nombre ?: 'Sin nombre' }}</p>
                         </div>
                         <div>
-                            <label class="text-text-secondary text-sm font-medium">Comercio</label>
+                            <p class="text-text-secondary text-xs mb-1">Comercio</p>
                             <p class="text-text-primary font-medium">{{ $menu->comercio->nombre }}</p>
                         </div>
                         <div>
-                            <label class="text-text-secondary text-sm font-medium">Propietario</label>
-                            <p class="text-text-primary font-medium">{{ $menu->comercio->user->name }} ({{ $menu->comercio->user->email }})</p>
+                            <p class="text-text-secondary text-xs mb-1">Propietario</p>
+                            <p class="text-text-primary font-medium">{{ $menu->comercio->user->name }}
+                                <span class="text-text-secondary font-normal text-sm">· {{ $menu->comercio->user->email }}</span>
+                            </p>
                         </div>
                     </div>
-                    
+
                     <div class="space-y-4">
                         <div>
-                            <label class="text-text-secondary text-sm font-medium">Formato</label>
-                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->formato === 'pdf' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30' }}">
+                            <p class="text-text-secondary text-xs mb-1">Formato</p>
+                            <span class="px-2.5 py-1 text-xs rounded-full font-medium
+                                {{ $menu->formato === 'pdf' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20' }}">
                                 {{ strtoupper($menu->formato) }}
                             </span>
                         </div>
                         <div>
-                            <label class="text-text-secondary text-sm font-medium">Estado</label>
-                            <span class="px-3 py-1 text-sm rounded-full {{ $menu->procesado ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
-                                {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
+                            <p class="text-text-secondary text-xs mb-1">Procesado</p>
+                            <span class="px-2.5 py-1 text-xs rounded-full font-medium
+                                {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
+                                {{ $menu->procesado ? 'Sí' : 'Pendiente' }}
                             </span>
                         </div>
-                        @if($menu->activo)
+                        <div>
+                            <p class="text-text-secondary text-xs mb-1">Activo</p>
+                            <span class="px-2.5 py-1 text-xs rounded-full font-medium
+                                {{ $menu->activo ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-accent-gray/50 text-text-secondary border border-accent-gray' }}">
+                                {{ $menu->activo ? 'Sí' : 'No' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-text-secondary text-xs mb-1">Creado</p>
+                            <p class="text-text-primary font-medium">{{ $menu->created_at->format('d/m/Y H:i') }}</p>
+                            <p class="text-text-secondary text-xs">{{ $menu->created_at->diffForHumans() }}</p>
+                        </div>
+                        <div>
+                            <p class="text-text-secondary text-xs mb-1">Última actualización</p>
+                            <p class="text-text-primary font-medium">{{ $menu->updated_at->format('d/m/Y H:i') }}</p>
+                            <p class="text-text-secondary text-xs">{{ $menu->updated_at->diffForHumans() }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Archivo -->
+            @if($menu->archivo_original)
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-9 h-9 bg-accent-blue/10 rounded-lg flex items-center justify-center">
+                            <span>📄</span>
+                        </div>
+                        <h3 class="font-bold text-text-primary">Archivo del Menú</h3>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-primary-dark border border-accent-gray/40 rounded-xl px-4 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                                {{ $menu->formato === 'pdf' ? '📄' : '🍽️' }}
+                            </div>
                             <div>
-                                <label class="text-text-secondary text-sm font-medium">Estado del menú</label>
-                                <span class="px-3 py-1 text-sm rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
-                                    Activo
-                                </span>
+                                <p class="font-medium text-text-primary text-sm">{{ basename($menu->archivo_original) }}</p>
+                                <p class="text-text-secondary text-xs">{{ strtoupper($menu->formato) }}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 flex-shrink-0">
+                            <a href="{{ asset('storage/' . $menu->archivo_original) }}"
+                               target="_blank"
+                               class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
+                                {{ $menu->formato === 'pdf' ? 'Ver PDF' : 'Ver menú' }}
+                            </a>
+                            <a href="{{ asset('storage/' . $menu->archivo_original) }}"
+                               download
+                               class="px-3 py-1.5 bg-accent-gray/30 hover:bg-accent-gray/50 text-text-primary border border-accent-gray rounded-lg text-xs font-medium transition-colors">
+                                Descargar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($menu->contexto_gpt)
+                @php
+                    $jsonContent = $menu->contexto_gpt;
+                    $clean = trim($jsonContent);
+                    if (strpos($clean, '```json') !== false) {
+                        $clean = preg_replace('/```json\s*/', '', $clean);
+                        $clean = preg_replace('/```\s*$/', '', $clean);
+                    }
+                    $contenido = json_decode(trim($clean), true);
+
+                    // Separar promociones del resto
+                    $promocionesCategoria = null;
+                    $categorias = [];
+                    if ($contenido && isset($contenido['categorias']) && is_array($contenido['categorias'])) {
+                        foreach ($contenido['categorias'] as $cat) {
+                            if (strtolower(trim($cat['nombre'] ?? '')) === 'promociones del día') {
+                                $promocionesCategoria = $cat;
+                            } else {
+                                $categorias[] = $cat;
+                            }
+                        }
+                    }
+                @endphp
+
+                <!-- Restaurante info -->
+                @if(isset($contenido['restaurante']['nombre']) && $contenido['restaurante']['nombre'] !== 'No especificado')
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-text-primary mb-1">🏪 {{ $contenido['restaurante']['nombre'] }}</h3>
+                        @if(isset($contenido['restaurante']['descripcion']) && !empty($contenido['restaurante']['descripcion']))
+                            <p class="text-text-secondary text-sm">{{ $contenido['restaurante']['descripcion'] }}</p>
+                        @endif
+                    </div>
+                @endif
+
+                <!-- Promociones del Día -->
+                @if($promocionesCategoria && isset($promocionesCategoria['platos']) && count($promocionesCategoria['platos']) > 0)
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-5">
+                            <div class="w-9 h-9 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center">
+                                <span>🔥</span>
+                            </div>
+                            <h3 class="font-bold text-text-primary">Promociones del Día</h3>
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary border border-accent-gray font-medium">
+                                {{ count($promocionesCategoria['platos']) }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            @foreach($promocionesCategoria['platos'] as $promo)
+                                <div class="bg-primary-dark border border-orange-500/20 rounded-xl p-4">
+                                    <div class="flex items-start gap-3">
+                                        @if(isset($promo['imagen']) && !empty($promo['imagen']))
+                                            <img src="{{ asset($promo['imagen']) }}"
+                                                 alt="{{ $promo['nombre'] ?? 'Promoción' }}"
+                                                 class="w-16 h-16 object-cover rounded-lg border border-accent-gray flex-shrink-0">
+                                        @endif
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-start justify-between gap-2 mb-1">
+                                                <h5 class="font-semibold text-text-primary text-sm leading-tight">{{ $promo['nombre'] ?? 'Sin nombre' }}</h5>
+                                                @if(!empty($promo['precio']))
+                                                    <span class="text-orange-300 font-bold text-sm flex-shrink-0">${{ $promo['precio'] }}</span>
+                                                @endif
+                                            </div>
+                                            @if(!empty($promo['descripcion']))
+                                                <p class="text-text-secondary text-xs leading-relaxed">{{ $promo['descripcion'] }}</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Categorías y Platos -->
+                @if(count($categorias) > 0)
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-9 h-9 bg-accent-blue/10 rounded-lg flex items-center justify-center">
+                                <span>📋</span>
+                            </div>
+                            <h3 class="font-bold text-text-primary">Contenido Extraído</h3>
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary border border-accent-gray font-medium">
+                                {{ count($categorias) }} categoría(s)
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @foreach($categorias as $categoria)
+                                <div class="bg-primary-dark border border-accent-gray/50 rounded-xl p-5">
+                                    <h4 class="text-base font-semibold text-text-primary mb-4 pb-3 border-b border-accent-gray/50">
+                                        {{ $categoria['nombre'] ?? 'Sin nombre' }}
+                                    </h4>
+                                    <div class="space-y-4">
+                                        @if(isset($categoria['platos']) && is_array($categoria['platos']))
+                                            @foreach($categoria['platos'] as $plato)
+                                                @php
+                                                    $nombrePlato = $plato['nombre'] ?? 'Sin nombre';
+                                                    $nombrePlato = str_replace(['-', '_'], ' ', $nombrePlato);
+                                                    $nombrePlato = mb_convert_case($nombrePlato, MB_CASE_TITLE, 'UTF-8');
+                                                    $nombrePlato = preg_replace('/\s+/', ' ', trim($nombrePlato));
+                                                @endphp
+                                                <div class="border-l-2 border-accent-blue/40 pl-3">
+                                                    <div class="flex items-start gap-3 mb-1.5">
+                                                        @if(isset($plato['imagen']) && !empty($plato['imagen']))
+                                                            <img src="{{ asset($plato['imagen']) }}"
+                                                                 alt="{{ $nombrePlato }}"
+                                                                 class="w-12 h-12 object-cover rounded-lg border border-accent-gray flex-shrink-0">
+                                                        @endif
+                                                        <div class="flex-1 min-w-0">
+                                                            <div class="flex items-start justify-between gap-2">
+                                                                <h5 class="font-semibold text-text-primary text-sm leading-tight capitalize">{{ $nombrePlato }}</h5>
+                                                                @if(!empty($plato['precio']))
+                                                                    <span class="text-accent-blue font-bold text-sm flex-shrink-0">${{ preg_replace('/[^0-9]/', '', $plato['precio']) }}</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    @if(!empty($plato['descripcion']))
+                                                        <p class="text-text-secondary text-xs leading-relaxed mb-1.5">{{ $plato['descripcion'] }}</p>
+                                                    @endif
+                                                    @if(isset($plato['tags']) && is_array($plato['tags']) && count($plato['tags']) > 0)
+                                                        <div class="flex flex-wrap gap-1">
+                                                            @foreach($plato['tags'] as $tag)
+                                                                @if(!empty($tag))
+                                                                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">{{ $tag }}</span>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        @if(isset($contenido['informacion_adicional']) && !empty($contenido['informacion_adicional']))
+                            <div class="mt-6 bg-background border border-accent-gray/40 rounded-xl p-4">
+                                <p class="text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Información Adicional</p>
+                                <p class="text-text-secondary text-sm">{{ $contenido['informacion_adicional'] }}</p>
                             </div>
                         @endif
                     </div>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-text-secondary text-sm font-medium">Fecha de creación</label>
-                            <p class="text-text-primary font-medium">{{ $menu->created_at->format('d/m/Y H:i') }}</p>
-                            <p class="text-xs text-text-secondary">{{ $menu->created_at->diffForHumans() }}</p>
+                @elseif(!$contenido)
+                    <!-- JSON no parseable — fallback -->
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                                <span>🤖</span>
+                            </div>
+                            <h3 class="font-bold text-text-primary">Contenido Procesado por IA</h3>
                         </div>
-                        <div>
-                            <label class="text-text-secondary text-sm font-medium">Última actualización</label>
-                            <p class="text-text-primary font-medium">{{ $menu->updated_at->format('d/m/Y H:i') }}</p>
-                            <p class="text-xs text-text-secondary">{{ $menu->updated_at->diffForHumans() }}</p>
+                        <div class="bg-primary-dark border border-accent-gray/40 rounded-xl p-5">
+                            <pre class="text-text-secondary text-sm whitespace-pre-wrap leading-relaxed font-sans">{{ $menu->contexto_gpt }}</pre>
                         </div>
                     </div>
-                </div>
-            </div>
+                @endif
 
-            <!-- Archivo del Menú -->
-            @if($menu->archivo_original)
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center mb-6">
-                        <div class="w-10 h-10 bg-accent-blue rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-lg">📄</span>
+            @elseif($menu->procesado)
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-9 h-9 bg-accent-blue/10 rounded-lg flex items-center justify-center">
+                            <span>📋</span>
                         </div>
-                        <h3 class="text-xl font-bold text-text-primary">Archivo del Menú</h3>
+                        <h3 class="font-bold text-text-primary">Contenido Extraído</h3>
                     </div>
-                    
-                    <div class="bg-secondary-dark rounded-xl p-6">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-4">
-                                <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                                    <span class="text-white font-bold text-lg">
-                                        {{ $menu->formato === 'pdf' ? '📄' : '🖼️' }}
-                                    </span>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-text-primary">{{ basename($menu->archivo_original) }}</p>
-                                    <p class="text-sm text-text-secondary">Formato: {{ strtoupper($menu->formato) }}</p>
-                                </div>
-                            </div>
-                            <div class="flex space-x-3">
-                                @if($menu->formato === 'pdf')
-                                    <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                       target="_blank"
-                                       class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
-                                        Ver PDF
-                                    </a>
-                                @else
-                                    <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                       target="_blank"
-                                       class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
-                                        Ver Imagen
-                                    </a>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+                    <p class="text-text-secondary text-sm">El menú fue procesado pero no se extrajo contenido estructurado.</p>
                 </div>
             @endif
-
-            <!-- Contenido Procesado -->
-            @if($menu->contexto_gpt)
-                <div class="glass-effect rounded-2xl p-6">
-                    <div class="flex items-center mb-6">
-                        <div class="w-10 h-10 bg-accent-green rounded-xl flex items-center justify-center mr-4">
-                            <span class="text-white text-lg">🤖</span>
-                        </div>
-                        <h3 class="text-xl font-bold text-text-primary">Contenido Procesado por IA</h3>
-                    </div>
-                    
-                    <div class="bg-secondary-dark rounded-xl p-6">
-                        <pre class="text-text-primary text-sm whitespace-pre-wrap">{{ $menu->contexto_gpt }}</pre>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Acciones -->
-            <div class="glass-effect rounded-2xl p-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold text-text-primary">Acciones</h3>
-                    <div class="flex space-x-3">
-                        <a href="{{ route('admin.menus.edit', $menu) }}" 
-                           class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
-                            Editar Menú
-                        </a>
-                        <a href="{{ route('admin.menus.index') }}" 
-                           class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl">
-                            Volver a Lista
-                        </a>
-                    </div>
-                </div>
-            </div>
 
         </div>
     </div>
 </x-app-layout>
+
