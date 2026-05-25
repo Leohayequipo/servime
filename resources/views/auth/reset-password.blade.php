@@ -1,438 +1,200 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>{{ config('app.name', 'ServiME') }} - Nueva Contraseña</title>
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/ServiME_IA.ico') }}">
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    
-    <!-- Custom Styles -->
+    <link href="https://fonts.bunny.net/css?family=roboto:300,400,500,700&display=swap" rel="stylesheet" />
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <style>
         :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #2a2a2a;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0b0;
-            --accent-blue: #00d4ff;
-            --accent-green: #00ff88;
-            --accent-purple: #8b5cf6;
-            --border: #333333;
-            --shadow: rgba(0, 212, 255, 0.1);
+            --primary-dark:   #111318;
+            --secondary-dark: #1c1f26;
+            --accent-blue:    #f59e0b;
+            --accent-green:   #10b981;
+            --accent-gray:    #374151;
+            --text-primary:   #FFFFFF;
+            --text-secondary: #94a3b8;
+            --background:     #0b0c10;
+        }
+        body { font-family: Roboto, Inter, system-ui, sans-serif; color: var(--text-primary); min-height: 100vh; position: relative; }
+
+        .video-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: -20; filter: blur(8px); -webkit-filter: blur(8px);
+        }
+        .video-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,.75); z-index: -10;
+        }
+        .floating-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particle {
+            position: absolute; width: 2px; height: 2px;
+            background: var(--accent-blue); border-radius: 50%;
+            animation: particle-float 6s ease-in-out infinite;
+        }
+        @keyframes particle-float {
+            0%,100% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            50%      { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+        }
+        .logo-container { position: relative; z-index: 10; }
+        .logo-glow { filter: drop-shadow(0 0 16px rgba(245,158,11,.5)); }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #f59e0b !important;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Figtree', sans-serif;
-            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-            min-height: 100vh;
-            color: var(--text-primary);
-            overflow-x: hidden;
-        }
-
-        .container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-        }
-
-        /* Animated Background */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
-            animation: float 20s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(1deg); }
-            66% { transform: translateY(10px) rotate(-1deg); }
-        }
-
-        .glass-effect {
-            background: rgba(26, 26, 26, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .neon-glow {
-            box-shadow: 
-                0 0 20px rgba(0, 212, 255, 0.3),
-                0 0 40px rgba(0, 212, 255, 0.1),
-                inset 0 0 20px rgba(0, 212, 255, 0.05);
-        }
-
-        .logo-glow {
-            text-shadow: 
-                0 0 10px rgba(0, 212, 255, 0.5),
-                0 0 20px rgba(0, 212, 255, 0.3),
-                0 0 30px rgba(0, 212, 255, 0.1);
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 400px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .form-input {
-            width: 100%;
+        .requirements-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.5rem;
             padding: 0.875rem 1rem;
-            background: rgba(42, 42, 42, 0.8);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
-            background: rgba(42, 42, 42, 0.9);
-        }
-
-        .form-input::placeholder {
-            color: var(--text-secondary);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-green) 100%);
-            color: #000;
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.875rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 0.875rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: var(--accent-blue);
-            color: var(--text-primary);
-        }
-
-        .error-message {
-            color: #ff6b6b;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-
-        .success-message {
-            color: var(--accent-green);
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-
-        .back-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: color 0.3s ease;
-        }
-
-        .back-link:hover {
-            color: var(--accent-blue);
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .password-requirements {
-            background: rgba(42, 42, 42, 0.5);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 1rem;
             margin-bottom: 1.5rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
         }
-
-        .password-requirements h3 {
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .requirement {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.25rem;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .requirement.valid {
-            color: var(--accent-green);
-        }
-
-        .requirement.invalid {
-            color: #ff6b6b;
-        }
-
-        .requirement-icon {
-            margin-right: 0.5rem;
-            font-size: 0.75rem;
-        }
-
-        /* Responsive */
-        @media (max-width: 640px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .form-container {
-                max-width: 100%;
-            }
-        }
-
-        /* Utility Classes */
-        .text-text-primary {
-            color: var(--text-primary);
-        }
-
-        .text-text-secondary {
-            color: var(--text-secondary);
-        }
-
-        .text-4xl {
-            font-size: 2.25rem;
-        }
-
-        .font-bold {
-            font-weight: 700;
-        }
-
-        .mb-2 {
-            margin-bottom: 0.5rem;
-        }
-
-        .mb-8 {
-            margin-bottom: 2rem;
-        }
-
-        .mb-4 {
-            margin-bottom: 1rem;
-        }
-
-        .mt-6 {
-            margin-top: 1.5rem;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .w-full {
-            width: 100%;
-        }
-
-        .py-3 {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-        }
-
-        .px-6 {
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
-        }
-
-        .text-lg {
-            font-size: 1.125rem;
-        }
-
-        .font-semibold {
-            font-weight: 600;
-        }
-
-        .rounded-2xl {
-            border-radius: 1rem;
-        }
-
-        .p-8 {
-            padding: 2rem;
-        }
+        .requirements-box p { margin-bottom: 0.35rem; }
     </style>
 </head>
-<body>
-    <div class="bg-animation"></div>
-    
-    <div class="container">
-        <div class="form-container">
-            <div class="glass-effect rounded-2xl p-8 neon-glow">
-                <!-- Header -->
-                <div class="text-center mb-8">
-                    <h1 class="text-4xl font-bold text-text-primary mb-2 logo-glow">🚀 ServiME</h1>
-                    <p class="text-text-secondary">Crear nueva contraseña</p>
+<body class="text-text-primary min-h-screen flex items-center justify-center relative overflow-x-hidden">
+
+    <!-- Video de Fondo con Blur -->
+    <video class="video-background" autoplay loop muted playsinline>
+        <source src="{{ asset('videos/background_principal.mp4') }}" type="video/mp4">
+    </video>
+
+    <!-- Overlay Oscuro -->
+    <div class="video-overlay"></div>
+
+    <!-- Floating Particles -->
+    <div class="floating-particles">
+        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
+        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
+        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+        <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
+        <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
+        <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
+    </div>
+
+    <div class="w-full max-w-md mx-auto px-6 relative z-20">
+
+        <!-- Logo -->
+        <div class="text-center mb-8 logo-container">
+            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="w-auto mx-auto mb-3 logo-glow" style="height:160px;">
+            <p class="text-text-secondary">Creá tu nueva contraseña</p>
+        </div>
+
+        <!-- Card -->
+        <div class="rounded-2xl p-8" style="background:rgba(12,9,6,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,0.18);">
+
+            <form method="POST" action="{{ route('password.store') }}">
+                @csrf
+
+                <!-- Token -->
+                <input type="hidden" name="token" value="{{ $request->route('token') }}">
+
+                <!-- Email -->
+                <div class="mb-6">
+                    <label for="email" class="block text-sm font-medium text-text-secondary mb-2">Email</label>
+                    <input id="email"
+                           type="email"
+                           name="email"
+                           value="{{ old('email', $request->email) }}"
+                           required
+                           autofocus
+                           autocomplete="username"
+                           class="input-field w-full"
+                           placeholder="tu@email.com">
+                    @error('email')
+                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
-                <!-- Form -->
-                <form method="POST" action="{{ route('password.store') }}">
-                    @csrf
-
-                    <!-- Password Reset Token -->
-                    <input type="hidden" name="token" value="{{ $request->route('token') }}">
-
-                    <!-- Email Address -->
-                    <div class="form-group">
-                        <label for="email" class="form-label">Email</label>
-                        <input id="email" 
-                               type="email" 
-                               name="email" 
-                               value="{{ old('email', $request->email) }}" 
-                               required 
-                               autofocus
-                               autocomplete="username"
-                               class="form-input"
-                               placeholder="Tu email">
-                        @error('email')
-                            <div class="error-message">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <!-- Password -->
-                    <div class="form-group">
-                        <label for="password" class="form-label">Nueva Contraseña</label>
-                        <input id="password" 
-                               type="password" 
-                               name="password" 
-                               required
-                               autocomplete="new-password"
-                               class="form-input"
-                               placeholder="Ingresa tu nueva contraseña">
-                        @error('password')
-                            <div class="error-message">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div class="form-group">
-                        <label for="password_confirmation" class="form-label">Confirmar Contraseña</label>
-                        <input id="password_confirmation" 
-                               type="password" 
-                               name="password_confirmation" 
-                               required
-                               autocomplete="new-password"
-                               class="form-input"
-                               placeholder="Confirma tu nueva contraseña">
-                    </div>
-
-                    <!-- Password Requirements -->
-                    <div class="password-requirements">
-                        <h3>Requisitos de la contraseña:</h3>
-                        <div class="requirement">
-                            <span class="requirement-icon">✔</span>
-                            Mínimo 8 caracteres
-                        </div>
-                        <div class="requirement">
-                            <span class="requirement-icon">✔</span>
-                            Al menos una letra mayúscula
-                        </div>
-                        <div class="requirement">
-                            <span class="requirement-icon">✔</span>
-                            Al menos una letra minúscula
-                        </div>
-                        <div class="requirement">
-                            <span class="requirement-icon">✔</span>
-                            Al menos un número
-                        </div>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <div class="form-group">
-                        <button type="submit" class="btn-primary w-full text-center py-3 px-6 text-lg font-semibold">
-                            RESTABLECER CONTRASEÑA
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Back to Login -->
-                <div class="text-center mt-6">
-                    <a href="{{ route('login') }}" class="back-link">
-                        ← Volver al login
-                    </a>
+                <!-- Nueva contraseña -->
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-text-secondary mb-2">Nueva Contraseña</label>
+                    <input id="password"
+                           type="password"
+                           name="password"
+                           required
+                           autocomplete="new-password"
+                           class="input-field w-full"
+                           placeholder="••••••••">
+                    @error('password')
+                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
-            </div>
 
-            <!-- Footer -->
-            <div class="footer">
-                <p>© {{ date('Y') }} ServiMe! Todos los derechos reservados.</p>
+                <!-- Confirmar contraseña -->
+                <div class="mb-6">
+                    <label for="password_confirmation" class="block text-sm font-medium text-text-secondary mb-2">Confirmar Contraseña</label>
+                    <input id="password_confirmation"
+                           type="password"
+                           name="password_confirmation"
+                           required
+                           autocomplete="new-password"
+                           class="input-field w-full"
+                           placeholder="••••••••">
+                    @error('password_confirmation')
+                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Requisitos -->
+                <div class="requirements-box">
+                    <p>✔ Mínimo 8 caracteres</p>
+                    <p>✔ Al menos una letra mayúscula</p>
+                    <p>✔ Al menos una letra minúscula</p>
+                    <p>✔ Al menos un número</p>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn-primary w-full text-center py-3 px-6 text-lg font-semibold">
+                    RESTABLECER CONTRASEÑA
+                </button>
+            </form>
+
+            <!-- Volver -->
+            <div class="text-center mt-6">
+                <a href="{{ route('login') }}" class="text-sm text-text-secondary hover:text-accent-blue transition-colors duration-300">
+                    ← Volver al login
+                </a>
             </div>
         </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8">
+            <p class="text-text-secondary text-sm">© {{ date('Y') }} ServiMe! Todos los derechos reservados.</p>
+        </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach((p, i) => {
+                p.style.animationDelay = `${i * 0.5}s`;
+                p.style.animationDuration = `${6 + Math.random() * 4}s`;
+            });
+        });
+    </script>
 </body>
 </html>

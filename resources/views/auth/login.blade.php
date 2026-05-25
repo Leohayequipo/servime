@@ -90,7 +90,7 @@
         
         <!-- Logo Section -->
         <div class="text-center mb-8 logo-container">
-            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="h-16 sm:h-20 w-auto mx-auto mb-3 logo-glow">
+            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="w-auto mx-auto mb-3 logo-glow" style="height:160px;">
             <p class="text-text-secondary">Accede a tu panel de administración</p>
         </div>
 
