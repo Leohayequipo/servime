@@ -166,7 +166,7 @@
                         </div>
                         <div class="space-y-2">
                             @forelse($recentUsers as $recentUser)
-                                <a href="{{ route('admin.users.show', $recentUser) }}"
+                                <a href="{{ route('admin.users.index', ['user_id' => $recentUser->id]) }}"
                                    class="flex items-center justify-between bg-primary-dark hover:bg-background rounded-xl px-4 py-3 transition-colors group">
                                     <div class="flex items-center gap-3">
                                         <div class="w-9 h-9 rounded-full bg-accent-blue/20 flex items-center justify-center text-accent-blue font-semibold text-sm flex-shrink-0">
@@ -208,7 +208,7 @@
                         </div>
                         <div class="space-y-2">
                             @forelse($recentComercios as $recentComercio)
-                                <a href="{{ route('admin.comercios.show', $recentComercio) }}"
+                                <a href="{{ route('menus.index', $recentComercio) }}"
                                    class="flex items-center justify-between bg-primary-dark hover:bg-background rounded-xl px-4 py-3 transition-colors group">
                                     <div class="flex items-center gap-3">
                                         <div class="w-9 h-9 rounded-full bg-accent-green/20 flex items-center justify-center text-accent-green font-semibold text-sm flex-shrink-0">

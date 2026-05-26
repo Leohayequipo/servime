@@ -1,226 +1,208 @@
 <x-app-layout>
-    <div class="min-h-screen bg-background">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            
-            <!-- Header Section -->
-            <div class="text-center mb-12">
-                <h1 class="text-5xl font-bold text-text-primary mb-4">
-                    🏪 Mis Comercios
-                </h1>
-                <p class="text-xl text-text-secondary">
-                    Gestiona tus negocios y menús digitales
-                </p>
-            </div>
+<div class="min-h-screen bg-background">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-            <!-- Success Messages -->
-            @if(session('success'))
-                <div class="mb-8 animate-fade-in-down">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <!-- Animated background -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                                    <span class="text-white text-xl">✨</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-green-100 mb-1">¡Éxito!</h3>
-                                <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-progress-bar"></div>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Error Messages -->
-            @if(session('error'))
-                <div class="mb-8 animate-fade-in-down">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-red-900/30 to-rose-900/30 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <!-- Animated background -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-rose-500/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg animate-shake">
-                                    <span class="text-white text-xl">⚠️</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-red-100 mb-1">Error</h3>
-                                <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-red-500 to-rose-500 rounded-full animate-progress-bar"></div>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Create Button (Solo para Super Admin o usuarios sin comercio) -->
-            @if(auth()->user()->isSuperAdmin() || $comercios->count() === 0)
-                <div class="text-center mb-12">
-                    <a href="{{ route('comercios.create') }}" 
-                       class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
-                        <span class="mr-2">➕</span>
-                        Crear Comercio
-                    </a>
-                </div>
-            @endif
-        
-            @if($comercios->count() > 0)
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                    @foreach($comercios as $comercio)
-                        <div class="metric-card group relative overflow-visible">
-                            <!-- Label COMERCIO arriba -->
-                            <div class="absolute top-3 left-4 z-20">
-                                <span class="bg-gradient-to-r from-accent-blue to-blue-600 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
-                                    COMERCIO
-                                </span>
-                            </div>
-                            
-                            <!-- Logo/Imagen del comercio -->
-                            <div class="relative h-48 overflow-hidden rounded-t-xl mb-6 bg-gradient-to-br from-primary-dark to-secondary-dark">
-                                @if($comercio->logo_url)
-                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                         alt="Logo de {{ $comercio->nombre }}" 
-                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;">
-                                @else
-                                    <!-- Logo por defecto cuando no hay logo -->
-                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                         style="display: block !important; visibility: visible !important; opacity: 1 !important; height: 100% !important; width: 100% !important; object-fit: cover !important;">
-                                @endif
-                                <div class="edit-button-container" style="position: absolute; top: 1rem; right: 1rem;">
-                                    <a href="{{ route('comercios.edit', $comercio) }}" 
-                                       class="edit-button w-8 h-8 bg-gray-800/60 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-accent-blue hover:scale-110 transition-all duration-300 group/edit"
-                                       style="background: rgba(31, 41, 55, 0.6) !important; border: none !important; border-radius: 50% !important;">
-                                        <span class="text-accent-blue text-sm group-hover/edit:text-white">✏️</span>
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <!-- Contenido de la tarjeta -->
-                            <div class="p-6">
-                                <!-- Información principal -->
-                                <div class="mb-6 text-center">
-                                    <h3 class="text-2xl font-bold text-text-primary mb-2 group-hover:text-accent-blue transition-colors duration-300">
-                                        {{ $comercio->nombre }}
-                                    </h3>
-                                    
-                                @if($comercio->descripcion)
-                                        <p class="text-text-secondary mb-4 line-clamp-2">{{ $comercio->descripcion }}</p>
-                                @endif
-                                    
-                                    <!-- Información de contacto -->
-                                    <div class="space-y-2 text-sm text-text-secondary text-center">
-                                @if($comercio->direccion)
-                                            <div class="flex items-center justify-center">
-                                                <span class="w-4 h-4 mr-2 text-accent-blue">📍</span>
-                                                <span class="truncate">{{ $comercio->direccion }}</span>
-                                            </div>
-                                        @endif
-                                        @if($comercio->telefono)
-                                            <div class="flex items-center justify-center">
-                                                <span class="w-4 h-4 mr-2 text-accent-blue">📞</span>
-                                                <span>{{ $comercio->telefono }}</span>
-                                            </div>
-                                @endif
-                                @if($comercio->horario)
-                                            <div class="flex items-center justify-center">
-                                                <span class="w-4 h-4 mr-2 text-accent-blue">🕒</span>
-                                                <span>{{ $comercio->horario }}</span>
-                                            </div>
-                                @endif
-                                    </div>
-                                </div>
-                                
-                                <!-- Estadísticas -->
-                                <div class="grid grid-cols-2 gap-4 mb-6">
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-accent-blue">{{ $comercio->menus->count() }}</div>
-                                        <div class="text-xs text-text-secondary">Menús</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-accent-green">{{ $comercio->chatConversations->count() }}</div>
-                                        <div class="text-xs text-text-secondary">Conversaciones</div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Botones de acción -->
-                                <div class="space-y-3">
-                                    @php($hasMenus = optional($comercio->menus)->count() > 0)
-                                    <a href="{{ route('menus.index', $comercio) }}" 
-                                       class="w-full btn-primary text-center block">
-                                        <span class="mr-2">📋</span>
-                                        {{ $hasMenus ? 'Ver Menús' : 'Crear Menú' }}
-                                        <span class="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
-                                    </a>
-                                    
-                                    <!-- Botón Editar -->
-                                    <div class="grid grid-cols-1 gap-2">
-                                        <a href="{{ route('comercios.edit', $comercio) }}"
-                                           class="btn-primary w-full">
-                                            <span class="mr-1">✏️</span>
-                                            Editar Comercio
-                                        </a>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-1 gap-2">
-                                        @if(auth()->user()->isSuperAdmin())
-                                            <form method="POST" action="{{ route('admin.comercios.destroy', $comercio) }}" 
-                                                  onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) { form.submit(); } }, 'Eliminando comercio...');"
-                                                  class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                                    <span class="mr-1">🗑️</span>
-                                                    Eliminar
-                                                </button>
-                                            </form>
-                                        @else
-                                            <form method="POST" action="{{ route('comercios.destroy', $comercio) }}" 
-                                                  onsubmit="event.preventDefault(); const form = this; showConfirmWithLoader('¿Estás seguro de que quieres eliminar este comercio?', function(result) { if(result) { form.submit(); } }, 'Eliminando comercio...');"
-                                                  class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
-                                                    <span class="mr-1">🗑️</span>
-                                                    Eliminar
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <!-- Estado vacío -->
-                <div class="text-center py-16">
-                    <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center neon-glow">
-                        <span class="text-6xl">🏪</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-text-primary mb-4">No tienes comercios aún</h3>
-                    <p class="text-xl text-text-secondary mb-8">Crea tu primer comercio para comenzar a gestionar menús digitales</p>
-                </div>
-            @endif
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-text-primary">Comercios</h1>
+            <p class="text-text-secondary text-sm mt-0.5">
+                {{ $comercios->count() }} {{ $comercios->count() === 1 ? 'comercio' : 'comercios' }}
+            </p>
         </div>
+        @if(auth()->user()->isSuperAdmin() || $comercios->count() === 0)
+            <a href="{{ route('comercios.create') }}" class="btn-primary">
+                + Nuevo comercio
+            </a>
+        @endif
     </div>
+
+    <!-- Filtro por usuario activo -->
+    @if(isset($filterUser) && $filterUser)
+        <div class="mb-6 flex items-center gap-3 bg-accent-blue/8 border border-accent-blue/20 rounded-xl px-4 py-3">
+            <div class="w-8 h-8 rounded-full bg-accent-blue/20 flex items-center justify-center text-accent-blue font-semibold text-sm flex-shrink-0">
+                {{ strtoupper(substr($filterUser->name, 0, 1)) }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-text-primary font-medium">Mostrando comercios de <span class="text-accent-blue">{{ $filterUser->name }}</span></p>
+                <p class="text-xs text-text-secondary">{{ $filterUser->email }}</p>
+            </div>
+            <a href="{{ route('comercios.index') }}"
+               class="text-xs text-text-secondary hover:text-text-primary border border-accent-gray rounded-lg px-3 py-1.5 transition-colors flex-shrink-0">
+                Ver todos
+            </a>
+        </div>
+    @endif
+
+    <!-- Flash messages -->
+    @if(session('success'))
+        <div class="mb-6 bg-accent-green/10 border border-accent-green/30 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span class="text-accent-green text-lg">✓</span>
+            <p class="text-accent-green text-sm font-medium">{{ session('success') }}</p>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span class="text-red-400 text-lg">✗</span>
+            <p class="text-red-400 text-sm font-medium">{{ session('error') }}</p>
+        </div>
+    @endif
+
+    @if($comercios->count() > 0)
+
+        <!-- Buscador -->
+        <div class="mb-6">
+            <div class="relative max-w-sm">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input id="search-comercios"
+                       type="text"
+                       placeholder="Buscar comercio..."
+                       class="w-full bg-secondary-dark border border-accent-gray rounded-xl pl-9 pr-4 py-2.5
+                              text-sm text-text-primary placeholder-text-secondary
+                              focus:outline-none focus:ring-2 focus:ring-accent-blue/40 focus:border-accent-blue/60
+                              transition-colors">
+            </div>
+        </div>
+
+        <!-- Grid de cards -->
+        <div id="comercios-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            @foreach($comercios as $comercio)
+            <div class="comercio-card bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden
+                        hover:border-accent-blue/30 transition-colors duration-200 flex flex-col"
+                 data-name="{{ strtolower($comercio->nombre) }}"
+                 data-owner="{{ strtolower($comercio->user->name ?? '') }}">
+
+                <!-- Imagen -->
+                <div class="relative h-40 bg-primary-dark flex-shrink-0 overflow-hidden">
+                    @if($comercio->logo_url)
+                        <img src="{{ asset('storage/' . $comercio->logo_url) }}"
+                             alt="{{ $comercio->nombre }}"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                    @else
+                        <img src="{{ asset('images/logo_empresa_default.png') }}"
+                             alt="{{ $comercio->nombre }}"
+                             class="w-full h-full object-cover opacity-40">
+                    @endif
+
+                    <!-- Chip dueño (solo super admin) -->
+                    @if(auth()->user()->isSuperAdmin() && $comercio->user)
+                        <div class="absolute bottom-2 left-3">
+                            <span class="inline-flex items-center gap-1.5 bg-black/60 backdrop-blur-sm
+                                         text-text-secondary text-xs px-2.5 py-1 rounded-full">
+                                <span class="w-4 h-4 rounded-full bg-accent-blue/20 text-accent-blue
+                                             flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                                    {{ strtoupper(substr($comercio->user->name, 0, 1)) }}
+                                </span>
+                                {{ $comercio->user->name }}
+                            </span>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Contenido -->
+                <div class="p-5 flex flex-col flex-1">
+                    <!-- Nombre y meta -->
+                    <div class="mb-4">
+                        <h3 class="text-base font-semibold text-text-primary mb-1 truncate">
+                            {{ $comercio->nombre }}
+                        </h3>
+                        <div class="flex items-center gap-3 text-xs text-text-secondary">
+                            <span class="flex items-center gap-1">
+                                <span class="text-accent-blue font-semibold">{{ $comercio->menus->count() }}</span>
+                                menú(s)
+                            </span>
+                            <span class="text-accent-gray">·</span>
+                            <span class="flex items-center gap-1">
+                                <span class="text-accent-green font-semibold">{{ $comercio->chatConversations->count() }}</span>
+                                conv.
+                            </span>
+                            @if($comercio->direccion)
+                                <span class="text-accent-gray">·</span>
+                                <span class="truncate max-w-[100px]">{{ $comercio->direccion }}</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="mt-auto flex gap-2">
+                        @php($hasMenus = $comercio->menus->count() > 0)
+                        <a href="{{ route('menus.index', $comercio) }}"
+                           class="btn-primary flex-1 text-center text-sm py-2">
+                            {{ $hasMenus ? '📋 Ver menús' : '➕ Crear menú' }}
+                        </a>
+                        <a href="{{ route('comercios.edit', $comercio) }}"
+                           class="btn-secondary px-4 py-2 text-sm"
+                           title="Editar comercio">
+                            ✏️
+                        </a>
+                        @if(auth()->user()->isSuperAdmin())
+                            <form method="POST" action="{{ route('admin.comercios.destroy', $comercio) }}"
+                                  onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Eliminar {{ addslashes($comercio->nombre) }}?', r=>{ if(r) f.submit(); }, 'Eliminando...');">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                        class="px-3 py-2 rounded-xl text-sm border border-accent-gray
+                                               text-text-secondary hover:text-red-400 hover:border-red-500/40
+                                               hover:bg-red-500/10 transition-all"
+                                        title="Eliminar">🗑️</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('comercios.destroy', $comercio) }}"
+                                  onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Eliminar {{ addslashes($comercio->nombre) }}?', r=>{ if(r) f.submit(); }, 'Eliminando...');">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                        class="px-3 py-2 rounded-xl text-sm border border-accent-gray
+                                               text-text-secondary hover:text-red-400 hover:border-red-500/40
+                                               hover:bg-red-500/10 transition-all"
+                                        title="Eliminar">🗑️</button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+
+        <!-- Sin resultados de búsqueda -->
+        <div id="no-results" class="hidden text-center py-16">
+            <p class="text-text-secondary text-sm">No se encontraron comercios que coincidan con la búsqueda.</p>
+        </div>
+
+    @else
+        <!-- Estado vacío -->
+        <div class="text-center py-20">
+            <div class="w-16 h-16 mx-auto mb-4 bg-accent-gray/20 rounded-full flex items-center justify-center text-3xl">🏪</div>
+            <h3 class="text-lg font-semibold text-text-primary mb-2">Sin comercios aún</h3>
+            <p class="text-text-secondary text-sm mb-6">Creá tu primer comercio para gestionar menús digitales.</p>
+            <a href="{{ route('comercios.create') }}" class="btn-primary">+ Crear comercio</a>
+        </div>
+    @endif
+
+</div>
+</div>
+
+<script>
+(function () {
+    const input = document.getElementById('search-comercios');
+    if (!input) return;
+
+    input.addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.comercio-card');
+        let visible = 0;
+
+        cards.forEach(card => {
+            const name  = card.dataset.name  || '';
+            const owner = card.dataset.owner || '';
+            const match = !q || name.includes(q) || owner.includes(q);
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+
+        document.getElementById('no-results').classList.toggle('hidden', visible > 0);
+    });
+})();
+</script>
 </x-app-layout>

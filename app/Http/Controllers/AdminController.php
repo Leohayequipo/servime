@@ -17,10 +17,20 @@ class AdminController extends Controller
     /**
      * Lista de todos los usuarios
      */
-    public function users()
+    public function users(Request $request)
     {
-        $users = User::with('comercios')->latest()->paginate(20);
-        return view('admin.users.index', compact('users'));
+        $filterUser = null;
+
+        if ($request->filled('user_id')) {
+            $filterUser = User::with('comercios')->find($request->user_id);
+            $users = User::with('comercios')
+                ->where('id', $request->user_id)
+                ->paginate(20);
+        } else {
+            $users = User::with('comercios')->latest()->paginate(20);
+        }
+
+        return view('admin.users.index', compact('users', 'filterUser'));
     }
 
     /**
@@ -28,8 +38,7 @@ class AdminController extends Controller
      */
     public function showUser(User $user)
     {
-        $user->load('comercios.menus');
-        return view('admin.users.show', compact('user'));
+        return redirect()->route('admin.users.edit', $user);
     }
 
     /**
@@ -114,8 +123,7 @@ class AdminController extends Controller
      */
     public function showComercio(Comercio $comercio)
     {
-        $comercio->load(['user', 'menus']);
-        return view('admin.comercios.show', compact('comercio'));
+        return redirect()->route('menus.index', $comercio);
     }
 
 

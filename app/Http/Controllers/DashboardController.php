@@ -19,7 +19,10 @@ class DashboardController extends Controller
         $user = auth()->user();
         $recentUsers = collect();
         $recentComercios = collect();
-        
+        $totalUsers = 0;
+        $chatsHoy = 0;
+        $chatsIA = 0;
+
         $cutoff = now()->subDays(90);
 
         if ($user->isSuperAdmin()) {
@@ -30,7 +33,10 @@ class DashboardController extends Controller
                 ->where('created_at', '>=', $cutoff)
                 ->latest()->get();
 
-            // Datos adicionales para tarjetas de resumen
+            // Métricas adicionales
+            $totalUsers = User::count();
+            $chatsHoy = ChatConversation::whereDate('created_at', today())->count();
+            $chatsIA = ChatConversation::where('used_openai', true)->where('created_at', '>=', $cutoff)->count();
             $recentUsers = User::latest()->take(8)->get();
             $recentComercios = Comercio::with('user')->latest()->take(8)->get();
         } else {
@@ -87,7 +93,10 @@ class DashboardController extends Controller
             'allConversaciones',
             'comerciosList',
             'recentUsers',
-            'recentComercios'
+            'recentComercios',
+            'totalUsers',
+            'chatsHoy',
+            'chatsIA'
         ));
     }
 }

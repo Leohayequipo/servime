@@ -110,9 +110,9 @@
                                         <p class="text-xs text-text-secondary">{{ $comercio->created_at->diffForHumans() }}</p>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <a href="{{ route('admin.comercios.show', $comercio) }}"
+                                        <a href="{{ route('menus.index', $comercio) }}"
                                            class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
-                                            Ver
+                                            Ver menús
                                         </a>
                                     </td>
                                 </tr>

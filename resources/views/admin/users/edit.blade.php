@@ -9,9 +9,6 @@
                     <p class="text-text-secondary mt-1">{{ $user->name }}</p>
                 </div>
                 <div class="flex gap-3">
-                    <a href="{{ route('admin.users.show', $user) }}" class="btn-secondary">
-                        Ver perfil
-                    </a>
                     <a href="{{ route('admin.users.index') }}" class="btn-secondary">
                         ← Usuarios
                     </a>
@@ -128,7 +125,7 @@
 
                 <!-- Acciones -->
                 <div class="flex justify-end gap-3">
-                    <a href="{{ route('admin.users.show', $user) }}" class="btn-secondary">Cancelar</a>
+                    <a href="{{ route('admin.users.index') }}" class="btn-secondary">Cancelar</a>
                     <button type="submit" class="btn-primary">Guardar cambios</button>
                 </div>
             </form>

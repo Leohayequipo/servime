@@ -12,19 +12,27 @@ class ComercioController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
-        
+
         if ($user->isSuperAdmin()) {
-            // Super Admin ve todos los comercios
-            $comercios = Comercio::with('user')->latest()->get();
+            $query = Comercio::with(['user', 'menus', 'chatConversations'])->latest();
+            $filterUser = null;
+
+            if ($request->filled('user_id')) {
+                $query->where('user_id', $request->user_id);
+                $filterUser = User::find($request->user_id);
+            }
+
+            $comercios = $query->get();
         } else {
-            // Usuario común solo ve sus comercios
-            $comercios = Comercio::where('user_id', $user->id)->get();
+            $comercios = Comercio::with(['menus', 'chatConversations'])
+                ->where('user_id', $user->id)->get();
+            $filterUser = null;
         }
-        
-        return view('comercios.index', compact('comercios'));
+
+        return view('comercios.index', compact('comercios', 'filterUser'));
     }
 
     /**
