@@ -187,42 +187,64 @@
                             </svg>
                         </button>
                         
+                        @php
+                            $puedeExportar = $isEdit && isset($menu) && $menu && $menu->procesado;
+                            $comercioTieneMenus = $comercio->menus()->withTrashed()->exists();
+                            $puedeImportar = $isEdit || $comercioTieneMenus;
+                        @endphp
+
                         <!-- Dropdown Menu -->
-                        <div id="excelDropdownMenu" 
-                             class="absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-secondary-dark border border-accent-gray z-50 hidden">
+                        <div id="excelDropdownMenu"
+                             class="absolute right-0 mt-2 w-64 rounded-xl shadow-lg bg-secondary-dark border border-accent-gray z-50 hidden">
                             <div class="py-2">
-                                <!-- Importar desde Excel -->
-                                <form id="importFormDropdown" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data">
-                                    @csrf
-                                    @if($isEdit && $menu)
-                                        <input type="hidden" name="menu_id" value="{{ $menu->id }}">
-                                    @endif
-                                    <label for="importFileDropdown" class="cursor-pointer block">
-                                        <div class="px-4 py-3 text-sm text-text-primary hover:bg-accent-gray/50 transition-colors duration-200 flex items-center">
-                                            <svg class="w-5 h-5 mr-3 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                            </svg>
-                                            <span>⬆️ Importar desde Excel</span>
-                                        </div>
-                                        <input type="file" 
-                                               id="importFileDropdown" 
-                                               name="archivo" 
-                                               accept=".xlsx,.xls" 
-                                               required 
-                                               class="hidden">
-                                    </label>
-                                </form>
-                                
-                                <!-- Exportar a Excel -->
-                                @if($isEdit && $menu && $menu->procesado)
-                                    <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
-                                       class="block px-4 py-3 text-sm text-text-primary hover:bg-accent-gray/50 transition-colors duration-200 flex items-center">
-                                        <svg class="w-5 h-5 mr-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                                {{-- 1. EXPORTAR --}}
+                                @if($puedeExportar)
+                                    <a href="{{ route('menus.export', [$comercio, $menu]) }}"
+                                       class="flex items-start gap-3 px-4 py-3 hover:bg-accent-gray/50 transition-colors duration-200">
+                                        <svg class="w-5 h-5 mt-0.5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                         </svg>
-                                        <span>⬇️ Exportar a Excel</span>
+                                        <div>
+                                            <div class="text-sm text-text-primary font-medium">Exportar a Excel</div>
+                                            <div class="text-xs text-text-secondary mt-0.5">Descargá el menú para editarlo</div>
+                                        </div>
                                     </a>
+                                @else
+                                    <div class="flex items-start gap-3 px-4 py-3 opacity-40 cursor-not-allowed">
+                                        <svg class="w-5 h-5 mt-0.5 text-text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                        </svg>
+                                        <div>
+                                            <div class="text-sm text-text-secondary font-medium">Exportar a Excel</div>
+                                            <div class="text-xs text-text-secondary/60 mt-0.5">Disponible cuando el menú tenga datos</div>
+                                        </div>
+                                    </div>
                                 @endif
+
+                                {{-- 2. IMPORTAR --}}
+                                @if($puedeImportar)
+                                    <div class="mx-4 my-1 border-t border-accent-gray/50"></div>
+
+                                    <form id="importFormDropdown" method="POST" action="{{ route('menus.preview.import', $comercio) }}" enctype="multipart/form-data">
+                                        @csrf
+                                        @if($isEdit && isset($menu) && $menu)
+                                            <input type="hidden" name="menu_id" value="{{ $menu->id }}">
+                                        @endif
+                                        <label for="importFileDropdown" class="cursor-pointer flex items-start gap-3 px-4 py-3 hover:bg-accent-gray/50 transition-colors duration-200">
+                                            <svg class="w-5 h-5 mt-0.5 text-accent-blue flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                            </svg>
+                                            <div>
+                                                <div class="text-sm text-text-primary font-medium">Importar Excel editado</div>
+                                                <div class="text-xs text-text-secondary mt-0.5">Subí el archivo que exportaste</div>
+                                            </div>
+                                            <input type="file" id="importFileDropdown" name="archivo"
+                                                   accept=".xlsx,.xls" required class="hidden">
+                                        </label>
+                                    </form>
+                                @endif
+
                             </div>
                         </div>
                     </div>
