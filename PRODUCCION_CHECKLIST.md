@@ -61,22 +61,30 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
 
 ## 🟡 4. Verificar que los incendios viejos estén resueltos de raíz
 
-Documentos `SOLUCION_*` borrados por estar resueltos; confirmar en código:
+- [x] **Error 500 — RESUELTO DE RAÍZ.** `smalot/pdfparser` estaba en `composer.json`
+      pero NO en `composer.lock` (curita: se instaló a mano en prod). El deploy usa
+      `composer install` (respeta el lock) → en un deploy limpio el 500 volvía.
+      Arreglado: `composer update smalot/pdfparser` sincronizó el lock. Además se
+      removió `barryvdh/laravel-dompdf`, un paquete huérfano sin uso en el código.
+- [x] **Imágenes 404 — resuelto de raíz.** `uploadPlatoImagen` llama a
+      `copyMenuItemToPublicHtml()` tras guardar; las imágenes nuevas se copian solas.
 
-- [ ] Error 500: `smalot/pdfparser` está en `composer.json` ✅ — confirmar instalado en prod.
-- [ ] Imágenes 404: confirmar que las nuevas imágenes se copian solas a `public_html`
-      (el fix de código ya existe; validar en un alta real).
+> Mejora futura (no bloqueante): la copia a `public_html` usa una ruta hardcodeada
+> del servidor. Lo ideal sería `php artisan storage:link` (symlink) en vez de duplicar
+> archivos. Refactor para más adelante.
 
 ## 🟢 5. Limpieza y cierre
 
 - [x] Limpieza de archivos `.md` redundantes (12 → 4).
 - [x] CLAUDE.md creado.
-- [ ] **Rotar la API key de Gemini** que estaba expuesta en `SOLUCION_ERROR_500_PRODUCCION.md`
-      (sigue en el historial de git aunque el archivo se borró). ⚠️ Importante.
-- [ ] Commitear los cambios pendientes (`menu/classic.blade.php`, limpieza de docs).
-- [ ] Revisar/actualizar `.env.example` para que refleje todas las claves necesarias.
+- [x] **Rotar la API key de Gemini** expuesta — rotada por el usuario (local + servidor).
+- [x] `.env.example` actualizado con todas las claves necesarias.
+- [ ] Push de los commits locales pendientes (esperando que Hostinger vuelva).
 
 ---
 
-**Sugerencia de orden:** 5 (rotar key) → 2 (hardening) → 1 (tests) → 3 (IA) → 4 (verificación).
+## Estado general
+
+Tareas 1, 2, 3 y 4 cerradas en lo que toca al código. Pendiente del usuario:
+límite de gasto en paneles de IA y push + deploy cuando Hostinger esté online.
 </content>
