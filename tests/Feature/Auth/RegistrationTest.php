@@ -9,14 +9,21 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    /**
+     * El registro público está deshabilitado: el acceso es por suscripción.
+     * GET /register redirige al home en lugar de mostrar un formulario.
+     */
+    public function test_registration_screen_is_closed(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertRedirect('/');
     }
 
-    public function test_new_users_can_register(): void
+    /**
+     * POST /register no debe crear usuarios: el alta la hace el administrador.
+     */
+    public function test_users_can_not_self_register(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -25,7 +32,8 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect('/');
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
     }
 }

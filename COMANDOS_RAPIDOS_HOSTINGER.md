@@ -18,7 +18,7 @@ cd ~/servime
 git pull origin main
 
 # 3. Ejecutar deploy automático
-bash deploy-hostinger-auto.sh
+bash deploy-actualiza.sh
 ```
 
 **Eso es todo!** El script hace todo automáticamente 🎉
@@ -59,7 +59,7 @@ php artisan migrate --force
 
 ### 6. Ejecutar el script de deploy
 ```bash
-bash deploy-hostinger-auto.sh
+bash deploy-actualiza.sh
 ```
 
 ---
@@ -149,7 +149,7 @@ php artisan migrate:rollback --force
 ```bash
 cd ~/servime
 git pull origin main
-bash deploy-hostinger-auto.sh
+bash deploy-actualiza.sh
 ```
 
 ### Opción 2: Manual
@@ -341,7 +341,7 @@ cd ~/servime
 git pull origin main
 
 # 4. Deploy automático
-bash deploy-hostinger-auto.sh
+bash deploy-actualiza.sh
 
 # 5. Verificar
 curl -I https://servime.net
