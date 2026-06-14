@@ -90,7 +90,7 @@ PROMPT;
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type'  => 'application/json',
-            ])->timeout(30)->post($baseUrl . '/chat/completions', [
+            ])->timeout(20)->post($baseUrl . '/chat/completions', [
                 'model'             => 'gpt-4o-mini',
                 'messages'          => $messages,
                 'max_tokens'        => 400,

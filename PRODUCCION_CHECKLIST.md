@@ -43,9 +43,20 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
 
 ## 🟡 3. Control de costos / resiliencia de IA
 
-- [ ] Definir límite de gasto / alertas en OpenAI y Gemini.
-- [ ] Fallback claro si la API de IA falla o tarda (no romper la vista del cliente).
-- [ ] Revisar timeouts y reintentos en `ChatbotService` / procesadores de PDF.
+**Hecho en código:**
+- [x] Fallback amable si la IA falla/tarda — verificado en `ChatbotService` y
+      `LandingChatController` (devuelven mensaje al cliente, nunca un 500).
+- [x] Timeouts cara al cliente reducidos a 20s (eran 60s chatbot / 30s landing)
+      para proteger UX y workers de PHP.
+- [x] Costo por llamada acotado: `max_tokens` + modelo `gpt-4o-mini` + rate limiting.
+
+**Pendiente del usuario (paneles, no código):**
+- [ ] Definir límite de gasto mensual / alertas en OpenAI y en Google AI (Gemini).
+
+**Nota / a evaluar aparte:**
+- Los timeouts de procesamiento de menús (OCR) en `MenuProcessorService` y
+  `PdfProcessorService` son largos a propósito (180–600s). Son admin-side; bajarlos
+  podría romper la carga de PDFs grandes. Revisar solo si dan problemas.
 - [ ] (Opcional) Cachear respuestas frecuentes del chatbot para bajar costo.
 
 ## 🟡 4. Verificar que los incendios viejos estén resueltos de raíz

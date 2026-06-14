@@ -530,7 +530,7 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->openaiApiKey,
             'Content-Type' => 'application/json',
-        ])->timeout(60)->post($this->openaiBaseUrl . '/chat/completions', $payload);
+        ])->timeout(20)->post($this->openaiBaseUrl . '/chat/completions', $payload);
 
         if ($response->successful()) {
             $data = $response->json();
