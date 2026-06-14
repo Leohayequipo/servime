@@ -38,15 +38,6 @@
             flex-direction: column;
         }
         
-        .menu-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            padding: 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-        
         .menu-content {
             flex: 1;
             display: flex;
@@ -89,33 +80,27 @@
 </head>
 <body>
     <div class="menu-container">
-        <!-- Header -->
-        <div class="menu-header">
-            <div class="max-w-7xl mx-auto flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    @if($comercio->logo_url)
-                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                             alt="{{ $comercio->nombre }}" 
-                             class="h-10 w-auto object-contain">
-                    @else
-                        <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                             alt="{{ $comercio->nombre }}" 
-                             class="h-10 w-auto object-contain">
-                    @endif
-                    <h1 class="text-xl font-bold text-white">{{ $comercio->nombre }}</h1>
-                </div>
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('menu.public', $comercio) }}" 
-                       class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm font-medium transition-colors">
-                        <i class="fas fa-arrow-left mr-2"></i>Volver
-                    </a>
-                    <a href="{{ route('menu.chat', $comercio) }}" 
-                       class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white text-sm font-medium transition-all shadow-lg">
-                        <i class="fas fa-robot mr-2"></i>Probar con IA
-                    </a>
-                </div>
-            </div>
-        </div>
+        <!-- Botón flotante IA -->
+        <a href="{{ route('menu.chat', $comercio) }}"
+           style="position:fixed;bottom:24px;right:24px;z-index:50;
+                  background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);
+                  color:#f59e0b;padding:10px 18px;border-radius:12px;
+                  font-size:13px;font-weight:600;text-decoration:none;
+                  display:inline-flex;align-items:center;gap:8px;
+                  backdrop-filter:blur(10px);
+                  box-shadow:0 4px 24px rgba(245,158,11,0.15);
+                  transition:background 0.2s,border-color 0.2s,box-shadow 0.2s;"
+           onmouseover="this.style.background='rgba(245,158,11,0.25)';this.style.borderColor='rgba(245,158,11,0.55)';this.style.boxShadow='0 6px 32px rgba(245,158,11,0.28)'"
+           onmouseout="this.style.background='rgba(245,158,11,0.15)';this.style.borderColor='rgba(245,158,11,0.35)';this.style.boxShadow='0 4px 24px rgba(245,158,11,0.15)'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <circle cx="9" cy="10" r="1" fill="currentColor"/>
+                <circle cx="12" cy="10" r="1" fill="currentColor"/>
+                <circle cx="15" cy="10" r="1" fill="currentColor"/>
+            </svg>
+            Explorar con IA
+        </a>
         
         <!-- Contenido del menú -->
         <div class="menu-content">
@@ -141,9 +126,12 @@
                     <p class="text-gray-400 mb-6">
                         No hay un menú disponible en este momento. Por favor, intenta más tarde o explora el menú con IA.
                     </p>
-                    <a href="{{ route('menu.chat', $comercio) }}" 
-                       class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-medium transition-all shadow-lg">
-                        <i class="fas fa-robot mr-2"></i>Explorar con IA
+                    <a href="{{ route('menu.chat', $comercio) }}"
+                       style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;
+                              background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);
+                              color:#f59e0b;border-radius:12px;font-weight:600;text-decoration:none;
+                              backdrop-filter:blur(6px);">
+                        Explorar con IA
                     </a>
                 </div>
             @endif
