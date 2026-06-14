@@ -12,24 +12,34 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
       (registro cerrado, notificación custom, borrado deshabilitado). 24/24 ✅.
 - [x] **Aislamiento por comercio**: `ComercioIsolationTest` — usuario común no puede
       ver/editar/actualizar/eliminar comercios ajenos (403); super admin sí. 6 tests ✅.
-- [ ] Permisos admin: rutas `/admin/*` rechazan a usuarios sin rol `super_admin`.
-- [ ] Menús: crear, activar (solo uno activo por comercio), soft-delete y restore.
-- [ ] Carrito público: incrementar/eliminar/limpiar por sesión sin auth.
-- [ ] Rutas públicas por slug responden y no exponen comercios inactivos/ajenos.
-- [ ] (Opcional) Chatbot e import/export con las APIs de IA mockeadas.
+- [x] **Permisos admin**: `AdminAccessTest` — guest→login, usuario común→403,
+      super admin→200. 3 tests ✅.
+- [x] **Menús**: `MenuManagementTest` — activar deja uno solo activo, baja lógica
+      (soft-delete), no se puede activar menú ajeno (403). 3 tests ✅.
+- [x] **Carrito público**: `CartTest` — alta/total, remove/clear, rechazo si pedidos
+      deshabilitados, aislamiento por sesión. 4 tests ✅.
+- [ ] (Opcional) Rutas públicas por slug y chatbot/import con APIs de IA mockeadas.
 
-> Infra de tests agregada: `ComercioFactory`, estado `UserFactory::superAdmin()`,
-> trait `HasFactory` en el modelo `Comercio`. Total actual: **30 tests verdes**.
+> Infra de tests agregada: `ComercioFactory`, `MenuFactory`, estado
+> `UserFactory::superAdmin()`, trait `HasFactory` en `Comercio`, `Menu`.
+> Total actual: **40 tests verdes**.
 
 ## 🔴 2. Hardening de producción
 
-- [ ] `.env` de prod: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://servime.net`.
+**Hecho en código:**
+- [x] Forzar HTTPS en producción — `URL::forceScheme('https')` en `AppServiceProvider`
+      (solo cuando `APP_ENV=production`).
+- [x] `php artisan config:cache && route:cache && view:cache` en el deploy
+      — ya presente en `deploy-actualiza.sh` (pasos 10-11).
+- [x] Sin secrets versionados — `.env*` ignorado en `.gitignore`; solo `.env.example` trackeado.
+- [x] `.env.example` completado con claves de IA (OpenAI/Gemini) y nota de producción.
+
+**Pendiente en el servidor (lo aplica el usuario en el `.env` de prod):**
+- [ ] `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://servime.net`.
 - [ ] `LOG_LEVEL=error` (hoy en local está en `debug`).
-- [ ] Forzar HTTPS (redirección + `URL::forceScheme('https')` o a nivel servidor).
-- [ ] `php artisan config:cache && route:cache && view:cache` en cada deploy.
 - [ ] Permisos `storage/` y `bootstrap/cache/` correctos; `.env` en `chmod 600`.
 - [ ] **Backups automáticos de BD** programados (hPanel o cron `mysqldump`).
-- [ ] Verificar que NO queden secrets en archivos versionados (ver punto 5).
+- [ ] Tras editar el `.env`: `php artisan config:clear && php artisan config:cache`.
 
 ## 🟡 3. Control de costos / resiliencia de IA
 
