@@ -1,6 +1,6 @@
 ---
 name: planes
-description: Sistema de planes/suscripción de ServiME (Básico/Pro/Premium) — cuota mensual de mensajes IA por comercio, modelo OpenAI por plan, feature gating y panel admin. Usar al tocar precios/planes, cuota de IA, límites por comercio, gating de analytics/customización, o el chatbot.
+description: Sistema de planes/suscripción de ServiME (Básico/Pro/Premium) — cuota mensual de mensajes IA por comercio, modelo OpenAI por plan, feature gating y panel admin. Usar al tocar precios/planes, cuota de IA, límites por comercio, gating de analytics/excel/promociones, o el chatbot.
 ---
 
 # Sistema de Planes — ServiME
@@ -14,18 +14,18 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
   **propia migración** (no en el seeder, porque `DatabaseSeeder` no corre en producción).
   Campos: `key` (estable: basico/pro/premium), `nombre` (marketinero, editable), `descripcion`,
   `precio` (informativo, no hay cobro online), `mensajes_ia_mes` (**null = ilimitado**),
-  `modelo_ia`, `max_tokens_chat`, `features` (JSON: `analytics`, `customizacion`), `orden`, `activo`.
+  `modelo_ia`, `max_tokens_chat`, `features` (JSON: `analytics`, `excel`, `promociones`), `orden`, `activo`.
 - **`comercios`** (migración `..._120100_add_plan_to_comercios_table`): `plan_id` (FK nullOnDelete),
   `ia_mensajes_periodo` (`YYYY-MM`), `ia_mensajes_usados` (int). Los comercios existentes se migran a Básico.
 - **Modelos:** `App\Models\Plan`, helpers en `App\Models\Comercio`.
 
 ## Planes por defecto (valores borrador, editables en `/admin/plans`)
 
-| Plan    | key     | mensajes_ia_mes | modelo_ia    | features                   |
-|---------|---------|-----------------|--------------|----------------------------|
-| Básico  | basico  | 500             | gpt-4o-mini  | —                          |
-| Pro     | pro     | 5000            | gpt-4o-mini  | analytics                  |
-| Premium | premium | null (ilimitado)| gpt-4o       | analytics, customizacion   |
+| Plan    | key     | mensajes_ia_mes | modelo_ia    | features                       |
+|---------|---------|-----------------|--------------|--------------------------------|
+| Básico  | basico  | 500             | gpt-4o-mini  | —                              |
+| Pro     | pro     | 5000            | gpt-4o-mini  | analytics, excel, promociones  |
+| Premium | premium | null (ilimitado)| gpt-4o       | analytics, excel, promociones  |
 
 ## Helpers en `Comercio` (fuente de verdad de la lógica)
 
@@ -43,9 +43,11 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
   Si se agotó → responde un mensaje amable (`success: true`, `used_openai: false`), **no** llama a OpenAI.
   Tras una respuesta OK → `registrarUsoIA()`. El modelo y `max_tokens` los toma `ChatbotService`
   desde `$comercio->modeloIA()` / `maxTokensChat()` (ya **no** están hardcodeados).
-- **Feature gating** (server-side, super admin siempre pasa):
-  - `analytics` → `AnalyticsController` (vista, export) aborta 403 sin la feature.
-  - `customizacion` → `CustomizationController@generateQuestions` y `@improveAnswer` devuelven 403 JSON.
+- **Feature gating** (super admin siempre pasa):
+  - `analytics` → inline en `AnalyticsController` (vista, export): aborta 403 sin la feature.
+  - `excel` y `promociones` → vía **middleware `plan.feature:<feature>`** (`App\Http\Middleware\EnsurePlanFeature`,
+    alias en `bootstrap/app.php`) aplicado a las rutas de export/import y de promos en `routes/web.php`.
+    Además se ocultan los botones en `resources/views/menus/create.blade.php`.
 - **Dashboard**: `DashboardController` pasa `$comerciosSinCuotaIA`; la vista muestra un aviso amarillo
   cuando un comercio llegó al límite.
 
@@ -82,5 +84,5 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
 ## Tests
 
 `tests/Feature/PlanTest.php` cubre: seed de planes, cuota/reset/reset-mensual, chatbot sin cuota
-(mensaje amable + `used_openai=false`), gating de customización, acceso al panel (403/200),
+(mensaje amable + `used_openai=false`), gating de excel/promociones (403 + bypass super admin), acceso al panel (403/200),
 asignar plan, resetear uso, editar plan.

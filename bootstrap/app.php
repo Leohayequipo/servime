@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Registrar middleware personalizado
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
+            'plan.feature' => \App\Http\Middleware\EnsurePlanFeature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

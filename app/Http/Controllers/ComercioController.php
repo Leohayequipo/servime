@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Comercio;
-use App\Models\User;
 use App\Models\QuestionCategory;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+
 class ComercioController extends Controller
 {
     /**
@@ -41,12 +42,13 @@ class ComercioController extends Controller
     public function create()
     {
         $user = auth()->user();
-        
+
         if ($user->isSuperAdmin()) {
             // Super Admin puede crear comercios para cualquier usuario (solo los que no tengan comercio)
             $users = User::where('role', 'user')
-                        ->whereDoesntHave('comercios')
-                        ->get();
+                ->whereDoesntHave('comercios')
+                ->get();
+
             return view('comercios.create', compact('users'));
         } else {
             // Usuario común: verificar si ya tiene un comercio
@@ -54,7 +56,7 @@ class ComercioController extends Controller
                 return redirect()->route('comercios.index')
                     ->with('warning', 'Ya tienes un comercio. Solo puedes tener uno.');
             }
-            
+
             return view('comercios.create');
         }
     }
@@ -65,28 +67,28 @@ class ComercioController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        
+
         // Validar los datos
         $validationRules = [
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ];
-        
+
         if ($user->isSuperAdmin()) {
             // Super Admin puede asignar el comercio a cualquier usuario
             $validationRules['user_id'] = 'required|exists:users,id';
         }
-        
+
         $validated = $request->validate($validationRules);
-        
+
         if ($user->isSuperAdmin()) {
             // Super Admin puede crear comercios para cualquier usuario
             $targetUser = User::findOrFail($validated['user_id']);
-            
-            $comercio = new Comercio();
+
+            $comercio = new Comercio;
             $comercio->user_id = $validated['user_id'];
         } else {
             // Usuario común: verificar si ya tiene un comercio
@@ -94,8 +96,8 @@ class ComercioController extends Controller
                 return redirect()->route('comercios.index')
                     ->with('warning', 'Ya tienes un comercio. Solo puedes tener uno.');
             }
-            
-            $comercio = new Comercio();
+
+            $comercio = new Comercio;
             $comercio->user_id = auth()->id();
         }
         $comercio->nombre = $validated['nombre'];
@@ -105,10 +107,10 @@ class ComercioController extends Controller
         $comercio->horario = $validated['horario'];
 
         $comercio->save();
-        
+
         // Crear estructura de carpetas para el comercio
         $this->createComercioDirectories($comercio->id);
-        
+
         // Procesar logo si se subió (después de crear carpetas)
         if ($request->hasFile('logo')) {
             $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512, $comercio->id);
@@ -133,43 +135,38 @@ class ComercioController extends Controller
     public function edit(Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para acceder a este comercio.');
         }
-        
+
         // Cargar relación de usuario
         $comercio->load('user');
-        
-        // Asegurar que quick_questions siempre sea un array
-        if ($comercio->quick_questions === null) {
-            $comercio->quick_questions = [];
-        }
-        
+
         // Obtener categorías de preguntas
         $categories = QuestionCategory::active()->ordered()->get();
-        
+
         // Si no hay categorías, crear una colección vacía para evitar errores
         if ($categories->isEmpty()) {
             $categories = collect();
         }
-        
+
         return view('comercios.edit', compact('comercio', 'categories'));
     }
+
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede editar cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para editar este comercio.');
         }
 
-        
         $validated = $request->validate([
             // Información básica del comercio
             'nombre' => 'required|string|max:255',
@@ -177,7 +174,7 @@ class ComercioController extends Controller
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            
+
             // Configuración de personalización
             'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -192,7 +189,7 @@ class ComercioController extends Controller
             'page_title' => 'nullable|string|max:100',
             'page_description' => 'nullable|string|max:500',
             'favicon_url' => 'nullable|string|max:255',
-            'pedido_habilitado' => 'nullable|boolean'
+            'pedido_habilitado' => 'nullable|boolean',
         ]);
 
         // Actualizar información básica
@@ -236,7 +233,7 @@ class ComercioController extends Controller
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Comercio actualizado exitosamente'
+                'message' => 'Comercio actualizado exitosamente',
             ]);
         }
 
@@ -249,7 +246,6 @@ class ComercioController extends Controller
             return redirect()->route('comercios.index')->with('success', 'Comercio actualizado exitosamente');
         }
     }
-
 
     /**
      * Vista previa del comercio
@@ -266,28 +262,28 @@ class ComercioController extends Controller
             $directories = [
                 "{$basePath}/menu-items",
                 "{$basePath}/menus",
-                "{$basePath}/logos"
+                "{$basePath}/logos",
             ];
-            
+
             foreach ($directories as $dir) {
                 $fullPath = storage_path("app/public/{$dir}");
-                if (!is_dir($fullPath)) {
+                if (! is_dir($fullPath)) {
                     @mkdir($fullPath, 0775, true);
                     @chmod($fullPath, 0775);
                 }
             }
-            
+
             // Crear en public_html si estamos en producción
             if (file_exists('/home/u560898880/domains')) {
                 $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
                 $publicHtmlDirs = [
                     "{$publicHtmlBase}/menu-items",
                     "{$publicHtmlBase}/menus",
-                    "{$publicHtmlBase}/logos"
+                    "{$publicHtmlBase}/logos",
                 ];
-                
+
                 foreach ($publicHtmlDirs as $dir) {
-                    if (!is_dir($dir)) {
+                    if (! is_dir($dir)) {
                         @mkdir($dir, 0775, true);
                         @chmod($dir, 0775);
                     }
@@ -297,23 +293,23 @@ class ComercioController extends Controller
             // No fallar si hay error, solo loguear
             \Log::warning('Error al crear directorios del comercio', [
                 'comercio_id' => $comercioId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
-    
+
     /**
      * Guardar el logo en un tamaño cuadrado fijo (recorte centrado + resize)
      */
     private function saveSquareLogo(\Illuminate\Http\UploadedFile $file, int $size = 512, ?int $comercioId = null): string
     {
         // Si no se pasa comercio_id, intentar obtenerlo del request
-        if (!$comercioId && request()->route('comercio')) {
+        if (! $comercioId && request()->route('comercio')) {
             $comercioId = request()->route('comercio')->id;
         }
-        
+
         // Si aún no tenemos comercio_id, usar estructura antigua (compatibilidad)
-        if (!$comercioId) {
+        if (! $comercioId) {
             $path = storage_path('app/public/logos');
             $logoPath = 'logos';
         } else {
@@ -322,8 +318,8 @@ class ComercioController extends Controller
             $path = storage_path("app/public/comercios/{$comercioId}/logos");
             $logoPath = "comercios/{$comercioId}/logos";
         }
-        
-        if (!is_dir($path)) {
+
+        if (! is_dir($path)) {
             mkdir($path, 0775, true);
             chmod($path, 0775);
         } else {
@@ -332,11 +328,13 @@ class ComercioController extends Controller
         }
 
         // Si no está disponible la librería GD, hacer fallback al almacenamiento directo
-        if (!function_exists('imagecreatetruecolor')) {
+        if (! function_exists('imagecreatetruecolor')) {
             if ($comercioId) {
                 $this->createComercioDirectories($comercioId);
+
                 return $file->store("comercios/{$comercioId}/logos", 'public');
             }
+
             return $file->store('logos', 'public');
         }
 
@@ -357,15 +355,17 @@ class ComercioController extends Controller
                 // fallback: usar el almacenamiento directo
                 if ($comercioId) {
                     $this->createComercioDirectories($comercioId);
+
                     return $file->store("comercios/{$comercioId}/logos", 'public');
                 }
+
                 return $file->store('logos', 'public');
         }
 
         // Recorte cuadrado centrado
         $side = min($w, $h);
-        $srcX = (int)(($w - $side) / 2);
-        $srcY = (int)(($h - $side) / 2);
+        $srcX = (int) (($w - $side) / 2);
+        $srcY = (int) (($h - $side) / 2);
 
         // Lienzo destino
         $dst = \imagecreatetruecolor($size, $size);
@@ -383,15 +383,15 @@ class ComercioController extends Controller
         \imagecopyresampled($dst, $src, 0, 0, $srcX, $srcY, $size, $size, $side, $side);
 
         // Guardar siempre como PNG para consistencia
-        $filename = 'logo_' . Str::random(16) . '.png';
-        $full = $path . DIRECTORY_SEPARATOR . $filename;
+        $filename = 'logo_'.Str::random(16).'.png';
+        $full = $path.DIRECTORY_SEPARATOR.$filename;
         \imagepng($dst, $full, 6);
-        
+
         // Asegurar permisos de lectura/escritura del archivo
         if (file_exists($full)) {
             chmod($full, 0664);
         }
-        
+
         // SIEMPRE intentar copiar a public_html/storage (incluso si file_exists falló)
         // Esto asegura que se ejecute siempre
         $this->copyLogoToPublicHtml($full, $filename, $comercioId);
@@ -399,7 +399,7 @@ class ComercioController extends Controller
         \imagedestroy($src);
         \imagedestroy($dst);
 
-        return $logoPath . '/' . $filename;
+        return $logoPath.'/'.$filename;
     }
 
     /**
@@ -413,52 +413,54 @@ class ComercioController extends Controller
         } else {
             $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/logos';
         }
-        
+
         // Verificar si estamos en producción (Hostinger)
-        if (!file_exists('/home/u560898880/domains')) {
+        if (! file_exists('/home/u560898880/domains')) {
             // No estamos en producción, salir silenciosamente
             return;
         }
-        
+
         try {
             // Crear directorio si no existe
-            if (!is_dir($publicHtmlPath)) {
-                if (!mkdir($publicHtmlPath, 0775, true)) {
+            if (! is_dir($publicHtmlPath)) {
+                if (! mkdir($publicHtmlPath, 0775, true)) {
                     \Log::error('No se pudo crear directorio en public_html', ['path' => $publicHtmlPath]);
+
                     return;
                 }
                 chmod($publicHtmlPath, 0775);
             }
-            
+
             // Copiar el archivo
-            $targetFile = $publicHtmlPath . '/' . $filename;
-            
+            $targetFile = $publicHtmlPath.'/'.$filename;
+
             // Intentar copiar
-            if (!copy($sourceFile, $targetFile)) {
+            if (! copy($sourceFile, $targetFile)) {
                 $error = error_get_last();
                 \Log::error('Error al copiar logo', [
                     'source' => $sourceFile,
                     'target' => $targetFile,
                     'error' => $error,
                     'source_exists' => file_exists($sourceFile),
-                    'target_dir_writable' => is_writable($publicHtmlPath)
+                    'target_dir_writable' => is_writable($publicHtmlPath),
                 ]);
+
                 return;
             }
-            
+
             // Asegurar permisos
             chmod($targetFile, 0664);
-            
+
             \Log::info('Logo copiado exitosamente a public_html', [
                 'file' => $filename,
                 'target' => $targetFile,
-                'size' => filesize($targetFile)
+                'size' => filesize($targetFile),
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Excepción al copiar logo', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
@@ -471,22 +473,24 @@ class ComercioController extends Controller
         if (empty($logoUrl)) {
             return;
         }
-        
+
         // Eliminar de storage/app/public
         if (\Storage::disk('public')->exists($logoUrl)) {
             \Storage::disk('public')->delete($logoUrl);
         }
-        
+
         // Eliminar también de public_html/storage si existe (producción)
         $homeDir = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/tmp');
-        $domainsDir = $homeDir . '/domains';
-        
+        $domainsDir = $homeDir.'/domains';
+
         // Buscar el dominio correcto
         if (is_dir($domainsDir)) {
             $domains = scandir($domainsDir);
             foreach ($domains as $domain) {
-                if ($domain === '.' || $domain === '..') continue;
-                $publicHtmlFile = $domainsDir . '/' . $domain . '/public_html/storage/' . $logoUrl;
+                if ($domain === '.' || $domain === '..') {
+                    continue;
+                }
+                $publicHtmlFile = $domainsDir.'/'.$domain.'/public_html/storage/'.$logoUrl;
                 if (file_exists($publicHtmlFile)) {
                     @unlink($publicHtmlFile);
                     break; // Ya lo eliminamos, no necesitamos seguir buscando
@@ -501,18 +505,18 @@ class ComercioController extends Controller
     public function destroy(Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede eliminar cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para eliminar este comercio.');
         }
-        
+
         // Eliminar logo del storage si existe
         $this->deleteLogoSafely($comercio->logo_url);
-        
+
         // Eliminar el comercio (esto también eliminará los menús asociados por la relación)
         $comercio->delete();
-        
+
         return redirect()->route('comercios.index')->with('success', 'Comercio eliminado exitosamente');
     }
 }

@@ -85,8 +85,12 @@
                             Analytics (panel de conversaciones)
                         </label>
                         <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="customizacion" @checked(in_array('customizacion', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Personalización con IA (generar/mejorar respuestas)
+                            <input type="checkbox" name="features[]" value="excel" @checked(in_array('excel', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                            Exportar / importar menú a Excel
+                        </label>
+                        <label class="flex items-center gap-3 text-text-primary text-sm">
+                            <input type="checkbox" name="features[]" value="promociones" @checked(in_array('promociones', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                            Promociones del día
                         </label>
                     </div>
                 </div>

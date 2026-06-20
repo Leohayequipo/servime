@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Comercio;
+use App\Models\Menu;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,16 +102,43 @@ class PlanTest extends TestCase
 
     // ---- Gating de features ----
 
-    public function test_personalizacion_ia_bloqueada_sin_la_feature(): void
+    public function test_exportar_excel_bloqueado_sin_la_feature(): void
     {
         $user = User::factory()->create();
         $comercio = Comercio::factory()->for($user)->create([
-            'plan_id' => Plan::where('key', 'basico')->value('id'), // sin 'customizacion'
+            'plan_id' => Plan::where('key', 'basico')->value('id'), // sin 'excel'
         ]);
+        $menu = Menu::factory()->for($comercio)->create();
 
-        $response = $this->actingAs($user)->postJson(route('comercios.generate.questions', $comercio));
+        $this->actingAs($user)
+            ->get(route('menus.export', [$comercio, $menu]))
+            ->assertForbidden();
+    }
 
-        $response->assertStatus(403);
+    public function test_promociones_bloqueadas_sin_la_feature(): void
+    {
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'plan_id' => Plan::where('key', 'basico')->value('id'), // sin 'promociones'
+        ]);
+        $menu = Menu::factory()->for($comercio)->create();
+
+        $this->actingAs($user)
+            ->post(route('menus.save.promociones', [$comercio, $menu]))
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_no_es_bloqueado_por_el_gating_de_features(): void
+    {
+        // El super admin pasa el middleware aunque el comercio esté en Básico (sin features).
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'basico')->value('id'),
+        ]);
+        $menu = Menu::factory()->for($comercio)->create();
+
+        $this->assertNotEquals(403, $this->actingAs($admin)
+            ->post(route('menus.save.promociones', [$comercio, $menu]))->status());
     }
 
     // ---- Panel admin de planes ----

@@ -86,9 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio:slug}/edit', [ComercioController::class, 'edit'])->name('comercios.edit');
     Route::put('/comercios/{comercio:slug}', [ComercioController::class, 'update'])->name('comercios.update');
     Route::delete('/comercios/{comercio:slug}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
-    Route::post('/comercios/{comercio:slug}/generate-questions', [App\Http\Controllers\CustomizationController::class, 'generateQuestions'])->name('comercios.generate.questions');
-    Route::post('/comercios/{comercio:slug}/improve-answer', [App\Http\Controllers\CustomizationController::class, 'improveAnswer'])->name('comercios.improve.answer');
-    
+
     // Rutas de Menús (usando slug para comercio)
     Route::get('/menus', [App\Http\Controllers\MenuController::class, 'all'])->name('menus.all');
     Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
@@ -106,15 +104,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-descripcion', [App\Http\Controllers\MenuController::class, 'updatePlatoDescripcion'])->name('menus.update.plato.descripcion');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-tags', [App\Http\Controllers\MenuController::class, 'updatePlatoTags'])->name('menus.update.plato.tags');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/reordenar-platos', [App\Http\Controllers\MenuController::class, 'reordenarPlatos'])->name('menus.reordenar.platos');
-    Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-promo-imagen', [App\Http\Controllers\MenuController::class, 'uploadPromocionImagen'])->name('menus.upload.promo.imagen');
-    Route::get('/comercios/{comercio:slug}/menus/{menu}/export', [App\Http\Controllers\MenuController::class, 'export'])->name('menus.export');
-    Route::post('/comercios/{comercio:slug}/menus/preview-import', [App\Http\Controllers\MenuController::class, 'previewImport'])->name('menus.preview.import');
-    Route::post('/comercios/{comercio:slug}/menus/import', [App\Http\Controllers\MenuController::class, 'import'])->name('menus.import');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-promo-imagen', [App\Http\Controllers\MenuController::class, 'uploadPromocionImagen'])->name('menus.upload.promo.imagen')->middleware('plan.feature:promociones');
+    Route::get('/comercios/{comercio:slug}/menus/{menu}/export', [App\Http\Controllers\MenuController::class, 'export'])->name('menus.export')->middleware('plan.feature:excel');
+    Route::post('/comercios/{comercio:slug}/menus/preview-import', [App\Http\Controllers\MenuController::class, 'previewImport'])->name('menus.preview.import')->middleware('plan.feature:excel');
+    Route::post('/comercios/{comercio:slug}/menus/import', [App\Http\Controllers\MenuController::class, 'import'])->name('menus.import')->middleware('plan.feature:excel');
     Route::post('/comercios/{comercio:slug}/menus/update-theme-colors', [App\Http\Controllers\MenuController::class, 'updateThemeColors'])->name('menus.update.theme.colors');
     Route::post('/comercios/{comercio:slug}/menus/update-chatbot-config', [App\Http\Controllers\MenuController::class, 'updateChatbotConfig'])->name('menus.update.chatbot.config');
-    Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen');
-    Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion');
-    Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones');
+    Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen')->middleware('plan.feature:promociones');
+    Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion')->middleware('plan.feature:promociones');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones')->middleware('plan.feature:promociones');
     
     // Rutas de personalización (ahora integradas en editar, usando slug)
 });

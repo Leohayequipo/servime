@@ -173,6 +173,7 @@
                     <p class="text-text-secondary mt-0.5">{{ $comercio->nombre }}</p>
                 </div>
                 <div class="flex space-x-3">
+                    @if(auth()->user()->isSuperAdmin() || $comercio->tieneFeature('excel'))
                     <!-- Dropdown Gestión Excel -->
                     <div class="relative" id="excelDropdown">
                         <button id="excelDropdownButton" 
@@ -248,8 +249,9 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <a href="{{ route('menus.index', $comercio) }}" 
+                    @endif
+
+                    <a href="{{ route('menus.index', $comercio) }}"
                        class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
                         ← Volver
                     </a>
@@ -671,7 +673,7 @@
             </div>
 
             <!-- Sección de Promociones del Día - ARRIBA DE CONTENIDO EXTRAÍDO, ANCHO COMPLETO -->
-            @if($isEdit && $menu)
+            @if($isEdit && $menu && (auth()->user()->isSuperAdmin() || $comercio->tieneFeature('promociones')))
                 @php
                     $promocionesCategoria = null;
                     $promocionesIndex = -1;

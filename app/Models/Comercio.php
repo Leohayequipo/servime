@@ -44,7 +44,6 @@ class Comercio extends Model
         'show_contact_info' => 'boolean',
         'enable_ai_responses' => 'boolean',
         'pedido_habilitado' => 'boolean',
-        'quick_questions' => 'array', // Decodificar JSON automáticamente
     ];
 
     public function user()
