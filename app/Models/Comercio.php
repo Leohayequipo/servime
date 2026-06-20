@@ -15,6 +15,7 @@ class Comercio extends Model
         'descripcion',
         'logo_url',
         'user_id',
+        'plan_id',
         'primary_color',
         'secondary_color',
         'accent_color',
@@ -28,7 +29,7 @@ class Comercio extends Model
         'page_title',
         'page_description',
         'favicon_url',
-        'pedido_habilitado'
+        'pedido_habilitado',
     ];
 
     /**
@@ -50,10 +51,96 @@ class Comercio extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
     public function menus()
     {
         return $this->hasMany(Menu::class);
+    }
+
+    /**
+     * Plan efectivo del comercio (cae al plan por defecto si no tiene uno asignado).
+     */
+    public function planEfectivo(): ?Plan
+    {
+        return $this->plan ?: Plan::default();
+    }
+
+    public function tieneFeature(string $feature): bool
+    {
+        $plan = $this->planEfectivo();
+
+        return $plan ? $plan->tieneFeature($feature) : false;
+    }
+
+    /**
+     * Modelo de IA a usar según el plan (con fallback seguro).
+     */
+    public function modeloIA(): string
+    {
+        return $this->planEfectivo()?->modelo_ia ?: 'gpt-4o-mini';
+    }
+
+    public function maxTokensChat(): int
+    {
+        return $this->planEfectivo()?->max_tokens_chat ?: 900;
+    }
+
+    /**
+     * Mensajes IA usados en el período actual (resetea solo al cambiar de mes).
+     */
+    public function mensajesIaUsados(): int
+    {
+        if ($this->ia_mensajes_periodo !== now()->format('Y-m')) {
+            return 0;
+        }
+
+        return (int) $this->ia_mensajes_usados;
+    }
+
+    /**
+     * ¿Le queda cuota de IA al comercio este mes? (null en el plan = ilimitado).
+     */
+    public function puedeUsarIA(): bool
+    {
+        $plan = $this->planEfectivo();
+        if (! $plan || $plan->esIlimitado()) {
+            return true;
+        }
+
+        return $this->mensajesIaUsados() < $plan->mensajes_ia_mes;
+    }
+
+    /**
+     * Registrar un consumo de IA (incrementa el contador del mes en curso).
+     */
+    public function registrarUsoIA(): void
+    {
+        $periodoActual = now()->format('Y-m');
+
+        if ($this->ia_mensajes_periodo !== $periodoActual) {
+            // Nuevo mes: reiniciar contador.
+            $this->ia_mensajes_periodo = $periodoActual;
+            $this->ia_mensajes_usados = 1;
+        } else {
+            $this->ia_mensajes_usados = (int) $this->ia_mensajes_usados + 1;
+        }
+
+        $this->save();
+    }
+
+    /**
+     * Reset manual del consumo de IA (usado por el super admin; se cobra aparte).
+     */
+    public function resetUsoIA(): void
+    {
+        $this->ia_mensajes_periodo = now()->format('Y-m');
+        $this->ia_mensajes_usados = 0;
+        $this->save();
     }
 
     public function chatConversations()
@@ -66,7 +153,7 @@ class Comercio extends Model
      */
     public function getWelcomeMessageAttribute($value)
     {
-        return $value ?: "¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?";
+        return $value ?: '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?';
     }
 
     /**
@@ -82,7 +169,7 @@ class Comercio extends Model
      */
     public function getPageTitleAttribute($value)
     {
-        return $value ?: $this->nombre . ' - Menú Digital';
+        return $value ?: $this->nombre.' - Menú Digital';
     }
 
     /**
@@ -94,41 +181,41 @@ class Comercio extends Model
             ->where('activo', true)
             ->where('procesado', true)
             ->first();
-        
-        if (!$menuActivo || !$menuActivo->contexto_gpt) {
+
+        if (! $menuActivo || ! $menuActivo->contexto_gpt) {
             return [];
         }
 
         try {
             $jsonContent = $menuActivo->contexto_gpt;
             $clean = trim($jsonContent);
-            
+
             // Remover markdown si existe
             if (strpos($clean, '```json') !== false) {
                 $clean = preg_replace('/```json\s*/', '', $clean);
                 $clean = preg_replace('/```\s*$/', '', $clean);
             }
-            
+
             $data = json_decode($clean, true);
-            
-            if (!is_array($data) || !isset($data['categorias'])) {
+
+            if (! is_array($data) || ! isset($data['categorias'])) {
                 return [];
             }
 
             $categorias = [];
             $promociones = [];
-            
+
             foreach ($data['categorias'] as $categoria) {
-                if (isset($categoria['nombre']) && !empty($categoria['nombre'])) {
+                if (isset($categoria['nombre']) && ! empty($categoria['nombre'])) {
                     $nombreLower = strtolower(trim($categoria['nombre']));
                     $esPromocion = $nombreLower === 'promociones del día' || $nombreLower === 'promociones del dia';
-                    
+
                     $item = [
                         'nombre' => $categoria['nombre'],
                         'icon' => $esPromocion ? '🔥' : $this->getIconForCategory($categoria['nombre']),
-                        'es_promocion' => $esPromocion
+                        'es_promocion' => $esPromocion,
                     ];
-                    
+
                     // Separar promociones de categorías normales
                     if ($esPromocion) {
                         $promociones[] = $item;
@@ -155,42 +242,42 @@ class Comercio extends Model
                 ->where('activo', true)
                 ->where('procesado', true)
                 ->first();
-            
-            if (!$menuActivo || !$menuActivo->contexto_gpt) {
+
+            if (! $menuActivo || ! $menuActivo->contexto_gpt) {
                 return [];
             }
 
             $jsonContent = $menuActivo->contexto_gpt;
             $clean = trim($jsonContent);
-            
+
             // Remover markdown si existe
             if (strpos($clean, '```json') !== false) {
                 $clean = preg_replace('/```json\s*/', '', $clean);
                 $clean = preg_replace('/```\s*$/', '', $clean);
             }
-            
+
             $data = json_decode($clean, true);
-            
-            if (!is_array($data) || !isset($data['categorias']) || !is_array($data['categorias'])) {
+
+            if (! is_array($data) || ! isset($data['categorias']) || ! is_array($data['categorias'])) {
                 return [];
             }
 
             $tagsUnicos = [];
-            
+
             foreach ($data['categorias'] as $categoria) {
-                if (!is_array($categoria)) {
+                if (! is_array($categoria)) {
                     continue;
                 }
-                
+
                 if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                     foreach ($categoria['platos'] as $plato) {
-                        if (!is_array($plato)) {
+                        if (! is_array($plato)) {
                             continue;
                         }
-                        
+
                         if (isset($plato['tags']) && is_array($plato['tags'])) {
                             foreach ($plato['tags'] as $tag) {
-                                if (!empty($tag) && is_string($tag) && !in_array($tag, $tagsUnicos)) {
+                                if (! empty($tag) && is_string($tag) && ! in_array($tag, $tagsUnicos)) {
                                     $tagsUnicos[] = $tag;
                                 }
                             }
@@ -201,13 +288,14 @@ class Comercio extends Model
 
             // Ordenar alfabéticamente
             sort($tagsUnicos);
-            
+
             return $tagsUnicos;
         } catch (\Exception $e) {
-            \Log::error('Error en getTagsDelMenu: ' . $e->getMessage(), [
+            \Log::error('Error en getTagsDelMenu: '.$e->getMessage(), [
                 'comercio_id' => $this->id,
-                'exception' => $e
+                'exception' => $e,
             ]);
+
             return [];
         }
     }
@@ -218,7 +306,7 @@ class Comercio extends Model
     private function getIconForCategory(string $nombre): string
     {
         $nombreLower = strtolower($nombre);
-        
+
         $iconMap = [
             'entrada' => '🍽️', 'entradas' => '🍽️',
             'principal' => '🥘', 'principales' => '🥘', 'plato principal' => '🥘', 'platos principales' => '🥘',

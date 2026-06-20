@@ -50,8 +50,40 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
       para proteger UX y workers de PHP.
 - [x] Costo por llamada acotado: `max_tokens` + modelo `gpt-4o-mini` + rate limiting.
 
+**Cómo está el "corte" HOY (importante):**
+El sistema NO tiene un tope monetario (USD). Lo que acota el costo hoy es un corte
+por *volumen y tamaño*, todo en código:
+
+| Mecanismo | Valor | Dónde |
+|---|---|---|
+| Rate limit chat IA | 20 req/min/IP | `routes/web.php:114` (`throttle:20,1`) |
+| Rate limit landing chat | 20 req/min | `routes/web.php` |
+| Rate limit crear menú (OCR) | 5 req/min | `routes/web.php:86` |
+| Modelo chatbot (mayor volumen) | `gpt-4o-mini` | `ChatbotService.php:522` (hardcode) |
+| Máx. tokens respuesta chatbot | 900 | `ChatbotService.php:524` |
+| Modelo OCR/carga menú | `gpt-4o` | `.env` → `OPENAI_MODEL` |
+| Modelo PDFs | `gemini-2.5-flash` | `.env` → `GEMINI_MODEL` |
+
+→ Esto hace el gasto *predecible*, pero ante un pico de tráfico nada lo frena en
+dólares. El tope monetario es lo que falta configurar en los paneles (abajo).
+
+**Tope por comercio (planes):** además existe una **cuota mensual de mensajes IA por
+plan** (Básico/Pro/Premium, editable en `/admin/plans`). Al agotarse, el chatbot deja de
+llamar a OpenAI y responde un mensaje amable. Es el control de costo más directo y mapea
+a la facturación. El super admin puede resetear el uso de un comercio (se cobra aparte).
+
 **Pendiente del usuario (paneles, no código):**
-- [ ] Definir límite de gasto mensual / alertas en OpenAI y en Google AI (Gemini).
+- [ ] **OpenAI** — tope real de gasto. platform.openai.com → Settings → Billing → Limits:
+      definir *Hard limit* mensual (corta la API al alcanzarlo) + *Soft limit* (email de
+      aviso al ~75%). Recomendado además: Billing → Payment → **desactivar auto-recharge**
+      y cargar créditos fijos (cuando se agotan, la API deja de responder = tope más duro).
+- [ ] **Google AI / Gemini** — OJO: los Budgets de Google Cloud solo **avisan, no cortan**.
+      - Mínimo: console.cloud.google.com → Billing → **Budgets & alerts** → Create budget
+        (monto mensual + alertas 50/90/100% por email).
+      - Recomendado (cap indirecto real): APIs & Services → Generative Language API →
+        **Quotas** → limitar requests por minuto/día.
+      - Tope duro de verdad (overkill para esta escala): budget → Pub/Sub → Cloud Function
+        que deshabilita el billing del proyecto.
 
 **Nota / a evaluar aparte:**
 - Los timeouts de procesamiento de menús (OCR) en `MenuProcessorService` y
@@ -68,6 +100,11 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
       removió `barryvdh/laravel-dompdf`, un paquete huérfano sin uso en el código.
 - [x] **Imágenes 404 — resuelto de raíz.** `uploadPlatoImagen` llama a
       `copyMenuItemToPublicHtml()` tras guardar; las imágenes nuevas se copian solas.
+- [x] **Parse error en `ChatbotService` — RESUELTO.** El prompt de `createPrompt()` tenía
+      comillas dobles sin escapar (`"  [IMAGEN:url]"`) dentro del string del prompt: cerraban
+      el string antes de tiempo y PHP no podía compilar el archivo (fatal no-capturable).
+      El chatbot devolvía 500 en cualquier consulta (salvo que OPcache sirviera una copia
+      vieja). Escapadas las comillas en las 3 líneas afectadas. Cubierto con test.
 
 > Mejora futura (no bloqueante): la copia a `public_html` usa una ruta hardcodeada
 > del servidor. Lo ideal sería `php artisan storage:link` (symlink) en vez de duplicar

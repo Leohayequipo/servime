@@ -39,7 +39,11 @@ class AnalyticsController extends Controller
         if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
         }
-        
+
+        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('analytics')) {
+            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+        }
+
         $conversations = ChatConversation::forComercio($comercioId)
             ->recent(30)
             ->orderBy('created_at', 'desc')
@@ -111,6 +115,11 @@ class AnalyticsController extends Controller
         if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
         }
+
+        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('analytics')) {
+            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+        }
+
         $conversations = ChatConversation::forComercio($comercioId)
             ->with('comercio')
             ->orderBy('created_at', 'desc')

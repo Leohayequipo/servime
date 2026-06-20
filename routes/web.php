@@ -54,6 +54,16 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
         
+        // Gestión de Planes y asignación a comercios
+        Route::get('/plans', [App\Http\Controllers\PlanController::class, 'index'])->name('plans.index');
+        Route::get('/plans/create', [App\Http\Controllers\PlanController::class, 'create'])->name('plans.create');
+        Route::post('/plans', [App\Http\Controllers\PlanController::class, 'store'])->name('plans.store');
+        Route::get('/plans/{plan}/edit', [App\Http\Controllers\PlanController::class, 'edit'])->name('plans.edit');
+        Route::put('/plans/{plan}', [App\Http\Controllers\PlanController::class, 'update'])->name('plans.update');
+        Route::delete('/plans/{plan}', [App\Http\Controllers\PlanController::class, 'destroy'])->name('plans.destroy');
+        Route::put('/comercios/{comercio:slug}/plan', [App\Http\Controllers\PlanController::class, 'assignToComercio'])->name('comercios.assign-plan');
+        Route::post('/comercios/{comercio:slug}/reset-ia', [App\Http\Controllers\PlanController::class, 'resetIaUsage'])->name('comercios.reset-ia');
+
         // Gestión de Comercios (usando slug)
         Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
         Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');

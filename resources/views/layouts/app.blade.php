@@ -99,9 +99,13 @@
                                     Comercios
                                 </a>
                                 @if(Auth::user()->isSuperAdmin())
-                                    <a href="{{ route('admin.menus.index') }}" 
+                                    <a href="{{ route('admin.menus.index') }}"
                                        class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                         Menús
+                                    </a>
+                                    <a href="{{ route('admin.plans.index') }}"
+                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                        Planes
                                     </a>
                                 @else
                                     <a href="{{ route('menus.all') }}" 

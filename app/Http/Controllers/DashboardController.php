@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Models\User;
-use App\Models\ChatConversation;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -15,7 +14,7 @@ class DashboardController extends Controller
     {
         // Configurar Carbon en español
         Carbon::setLocale('es');
-        
+
         $user = auth()->user();
         $recentUsers = collect();
         $recentComercios = collect();
@@ -42,11 +41,11 @@ class DashboardController extends Controller
         } else {
             // Usuario común ve solo sus comercios y menús
             $comercios = Comercio::where('user_id', auth()->id())->get();
-            $menus = Menu::whereHas('comercio', function($query) {
+            $menus = Menu::whereHas('comercio', function ($query) {
                 $query->where('user_id', auth()->id());
             })->get();
             $allConversaciones = ChatConversation::with('comercio')
-                ->whereHas('comercio', function($query) {
+                ->whereHas('comercio', function ($query) {
                     $query->where('user_id', auth()->id());
                 })
                 ->where('created_at', '>=', $cutoff)
@@ -54,12 +53,12 @@ class DashboardController extends Controller
 
             $recentComercios = $comercios->sortByDesc('created_at')->take(8);
         }
-        
+
         // Agrupar conversaciones por session_id
-        $sesiones = $allConversaciones->groupBy('session_id')->map(function($conversacionesGrupo) {
+        $sesiones = $allConversaciones->groupBy('session_id')->map(function ($conversacionesGrupo) {
             $primeraConv = $conversacionesGrupo->sortBy('created_at')->first();
             $ultimaConv = $conversacionesGrupo->sortByDesc('created_at')->first();
-            
+
             return [
                 'session_id' => $conversacionesGrupo->first()->session_id,
                 'comercio' => $conversacionesGrupo->first()->comercio,
@@ -73,12 +72,15 @@ class DashboardController extends Controller
                 'fecha_primera_timestamp' => $primeraConv->created_at->timestamp,
                 'fecha_ultima_timestamp' => $ultimaConv->created_at->timestamp,
             ];
-        })->sortByDesc(function($sesion) {
+        })->sortByDesc(function ($sesion) {
             return $sesion['ultima_conversacion']->created_at;
         })->take(10);
 
+        // Comercios que agotaron su cuota mensual de IA (para avisar en el dashboard)
+        $comerciosSinCuotaIA = $comercios->filter(fn ($comercio) => ! $comercio->puedeUsarIA())->values();
+
         // Preparar datos para filtros
-        $comerciosList = $comercios->map(function($comercio) {
+        $comerciosList = $comercios->map(function ($comercio) {
             return [
                 'id' => $comercio->id,
                 'nombre' => $comercio->nombre,
@@ -92,6 +94,7 @@ class DashboardController extends Controller
             'sesiones',
             'allConversaciones',
             'comerciosList',
+            'comerciosSinCuotaIA',
             'recentUsers',
             'recentComercios',
             'totalUsers',

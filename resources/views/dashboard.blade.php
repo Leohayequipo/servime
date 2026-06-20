@@ -23,6 +23,21 @@
                 </p>
             </div>
 
+            <!-- Aviso de cuota de IA agotada -->
+            @if(!empty($comerciosSinCuotaIA) && count($comerciosSinCuotaIA) > 0)
+                <div class="mb-8 bg-yellow-900/20 border border-yellow-500/30 rounded-2xl p-5 flex items-start gap-4">
+                    <div class="w-9 h-9 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">⚠️</div>
+                    <div>
+                        <p class="text-yellow-200 font-medium">Cuota de IA mensual alcanzada</p>
+                        <p class="text-yellow-200/80 text-sm mt-1">
+                            El asistente con IA dejó de responder en:
+                            <strong>{{ $comerciosSinCuotaIA->pluck('nombre')->implode(', ') }}</strong>.
+                            Se reactiva el mes que viene, o contactanos para ampliar tu plan.
+                        </p>
+                    </div>
+                </div>
+            @endif
+
             <!-- Flash Messages -->
             @if(session('success'))
                 <div class="mb-8">

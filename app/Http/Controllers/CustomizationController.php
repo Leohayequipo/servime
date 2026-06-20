@@ -96,6 +96,13 @@ class CustomizationController extends Controller
             abort(403);
         }
 
+        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('customizacion')) {
+            return response()->json([
+                'success' => false,
+                'error' => 'La personalización con IA está disponible en el plan Premium.',
+            ], 403);
+        }
+
         try {
             // Preparar información del comercio para la IA
             $comercioInfo = [
@@ -314,6 +321,13 @@ class CustomizationController extends Controller
     {
         if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
+        }
+
+        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('customizacion')) {
+            return response()->json([
+                'success' => false,
+                'error' => 'La personalización con IA está disponible en el plan Premium.',
+            ], 403);
         }
 
         $request->validate([

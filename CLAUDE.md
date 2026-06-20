@@ -40,9 +40,14 @@ npm run dev   /   npm run build
 ## Arquitectura
 
 - **Controllers** (`app/Http/Controllers/`): Admin, Comercio, Menu, PublicMenu,
-  Chatbot, LandingChat, Cart, Customization, Analytics, Dashboard, QuestionCategory.
+  Chatbot, LandingChat, Cart, Customization, Analytics, Dashboard, QuestionCategory, Plan.
+- **Planes (multi-tenant):** cada `Comercio` tiene un `Plan` (Básico/Pro/Premium, editables
+  en DB desde `/admin/plans`). El plan define cuota mensual de mensajes IA, modelo OpenAI,
+  `max_tokens` del chat y features (`analytics`, `customizacion`). El super admin asigna
+  plan y puede resetear el uso de IA de un comercio (se cobra aparte). La cuota se chequea
+  en `ChatbotController` y los helpers viven en `Comercio` (`puedeUsarIA`, `registrarUsoIA`...).
 - **Models** (`app/Models/`): User, Comercio, Menu, Cart, CartItem,
-  ChatConversation, ChatLanding, QuestionCategory.
+  ChatConversation, ChatLanding, QuestionCategory, Plan.
 - **Services** (`app/Services/`): ChatbotService, MenuProcessorService,
   PdfProcessorService, PdfToImageService, GeminiPdfProcessorService.
 - **Rutas** (`routes/web.php`):

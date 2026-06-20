@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\Comercio;
-use App\Models\Menu;
 use App\Models\ChatConversation;
+use App\Models\Comercio;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotService
 {
     private $openaiApiKey;
+
     private $openaiBaseUrl;
 
     public function __construct()
@@ -39,15 +39,21 @@ class ChatbotService
 
             // Crear prompt para OpenAI
             $prompt = $this->createPrompt($comercio, $contexto, $message);
-            
-            // Llamar a OpenAI con historial
-            $response = $this->callOpenAI($prompt, $conversationHistory);
-            
+
+            // Llamar a OpenAI con historial (modelo y límite de tokens según el plan)
+            $response = $this->callOpenAI(
+                $prompt,
+                $conversationHistory,
+                $comercio->modeloIA(),
+                $comercio->maxTokensChat()
+            );
+
             return $response;
-            
+
         } catch (\Exception $e) {
-            Log::error('Error en ChatbotService: ' . $e->getMessage());
-            return "Lo siento, hubo un error al procesar tu mensaje. Inténtalo de nuevo.";
+            Log::error('Error en ChatbotService: '.$e->getMessage());
+
+            return 'Lo siento, hubo un error al procesar tu mensaje. Inténtalo de nuevo.';
         }
     }
 
@@ -65,7 +71,7 @@ class ChatbotService
         if ($comercio->descripcion) {
             $contexto .= "Descripción: {$comercio->descripcion}\n";
         }
-        
+
         // Agregar información de contacto si está disponible
         if ($comercio->telefono) {
             $contexto .= "Teléfono: {$comercio->telefono}\n";
@@ -76,18 +82,18 @@ class ChatbotService
         if ($comercio->direccion) {
             $contexto .= "Dirección: {$comercio->direccion}\n";
         }
-        
+
         // Agregar menús si están disponibles
-        if (!$menus->isEmpty()) {
+        if (! $menus->isEmpty()) {
             $contexto .= "\nMenús disponibles:\n";
             foreach ($menus as $menu) {
                 // Procesar JSON para extraer información estructurada con imágenes
                 $jsonContent = $menu->contexto_gpt ?? $menu->texto_extraido;
                 $menuData = $this->parseMenuJson($jsonContent);
-                
+
                 if ($menuData) {
                     $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
-                    
+
                     // Información del restaurante
                     if (isset($menuData['restaurante'])) {
                         $nombreRest = $menuData['restaurante']['nombre'] ?? 'N/A';
@@ -96,7 +102,7 @@ class ChatbotService
                             $contexto .= "Descripción: {$menuData['restaurante']['descripcion']}\n";
                         }
                     }
-                    
+
                     // Categorías y platos con imágenes
                     if (isset($menuData['categorias']) && is_array($menuData['categorias'])) {
                         foreach ($menuData['categorias'] as $categoria) {
@@ -104,53 +110,53 @@ class ChatbotService
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                                 foreach ($categoria['platos'] as $plato) {
                                     $contexto .= "- {$plato['nombre']} — {$plato['precio']}";
-                                    if (isset($plato['descripcion']) && !empty($plato['descripcion'])) {
+                                    if (isset($plato['descripcion']) && ! empty($plato['descripcion'])) {
                                         $contexto .= "\n  Descripción: {$plato['descripcion']}";
                                     }
                                     // INCLUIR TAGS si existen
-                                    if (isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags'])) {
+                                    if (isset($plato['tags']) && is_array($plato['tags']) && ! empty($plato['tags'])) {
                                         try {
                                             // Filtrar solo tags válidos (strings no vacíos)
-                                            $tagsValidos = array_filter($plato['tags'], function($tag) {
-                                                return is_string($tag) && !empty(trim($tag));
+                                            $tagsValidos = array_filter($plato['tags'], function ($tag) {
+                                                return is_string($tag) && ! empty(trim($tag));
                                             });
-                                            if (!empty($tagsValidos)) {
+                                            if (! empty($tagsValidos)) {
                                                 $tagsStr = implode(', ', $tagsValidos);
                                                 $contexto .= "\n  Tags: {$tagsStr}";
                                             }
                                         } catch (\Exception $e) {
                                             // Si hay error procesando tags, simplemente continuar sin tags
-                                            Log::warning('Error procesando tags en ChatbotService: ' . $e->getMessage());
+                                            Log::warning('Error procesando tags en ChatbotService: '.$e->getMessage());
                                         }
                                     }
                                     // INCLUIR URL DE IMAGEN si existe
-                                    if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+                                    if (isset($plato['imagen']) && ! empty($plato['imagen'])) {
                                         $rutaImagen = trim($plato['imagen']);
-                                        
+
                                         // Si ya es una URL completa (http:// o https://), usarla directamente
                                         if (str_starts_with($rutaImagen, 'http://') || str_starts_with($rutaImagen, 'https://')) {
                                             $imagenUrl = $rutaImagen;
                                         } else {
                                             // Es una ruta relativa, normalizarla
                                             // Si no empieza con /, agregarlo
-                                            if (!str_starts_with($rutaImagen, '/')) {
-                                                $rutaImagen = '/' . $rutaImagen;
+                                            if (! str_starts_with($rutaImagen, '/')) {
+                                                $rutaImagen = '/'.$rutaImagen;
                                             }
-                                            
+
                                             // Si no empieza con /storage/, agregarlo
-                                            if (!str_starts_with($rutaImagen, '/storage/')) {
+                                            if (! str_starts_with($rutaImagen, '/storage/')) {
                                                 // Si empieza con storage/, agregar /
                                                 if (str_starts_with($rutaImagen, 'storage/')) {
-                                                    $rutaImagen = '/' . $rutaImagen;
+                                                    $rutaImagen = '/'.$rutaImagen;
                                                 } else {
-                                                    $rutaImagen = '/storage/' . ltrim($rutaImagen, '/');
+                                                    $rutaImagen = '/storage/'.ltrim($rutaImagen, '/');
                                                 }
                                             }
-                                            
+
                                             // Generar URL completa usando asset()
                                             $imagenUrl = asset($rutaImagen);
                                         }
-                                        
+
                                         $contexto .= "\n  [IMAGEN:{$imagenUrl}]";
                                     }
                                     $contexto .= "\n";
@@ -163,7 +169,7 @@ class ChatbotService
                     // Fallback: usar sanitizeContext si no se puede parsear
                     $contextoMenu = $this->sanitizeContext($menu->contexto_gpt);
                     $contexto .= "--- Menú {$menu->formato} (ID {$menu->id}) ---\n";
-                    $contexto .= $contextoMenu . "\n\n";
+                    $contexto .= $contextoMenu."\n\n";
                 }
 
             }
@@ -179,17 +185,20 @@ class ChatbotService
      */
     private function parseMenuJson(?string $jsonContent): ?array
     {
-        if ($jsonContent === null) return null;
-        
+        if ($jsonContent === null) {
+            return null;
+        }
+
         // Limpiar el contenido JSON
         $clean = trim($jsonContent);
         if (strpos($clean, '```json') !== false) {
             $clean = preg_replace('/```json\s*/', '', $clean);
             $clean = preg_replace('/```\s*$/', '', $clean);
         }
-        
+
         try {
             $data = json_decode(trim($clean), true);
+
             return is_array($data) ? $data : null;
         } catch (\Exception $e) {
             return null;
@@ -201,13 +210,16 @@ class ChatbotService
      */
     private function sanitizeContext(?string $text): string
     {
-        if ($text === null) return '';
+        if ($text === null) {
+            return '';
+        }
         $clean = trim($text);
         // Remover fences triple backticks con o sin lenguaje
         $clean = preg_replace('/```[a-zA-Z]*\n?/u', '', $clean ?? '');
         $clean = str_replace('```', '', $clean);
         // Normalizar saltos de línea
         $clean = preg_replace("/\r\n|\r/", "\n", $clean);
+
         return trim($clean);
     }
 
@@ -221,8 +233,9 @@ class ChatbotService
             return $text;
         }
         // Mantener el comienzo (metadatos + FAQs) y una parte final
-        $head = mb_substr($text, 0, (int)($maxChars * 0.6), 'UTF-8');
-        $tail = mb_substr($text, - (int)($maxChars * 0.4), null, 'UTF-8');
+        $head = mb_substr($text, 0, (int) ($maxChars * 0.6), 'UTF-8');
+        $tail = mb_substr($text, -(int) ($maxChars * 0.4), null, 'UTF-8');
+
         return $head."\n\n...\n\n".$tail;
     }
 
@@ -280,9 +293,10 @@ class ChatbotService
                 'menu_id' => $menu->id,
                 'formato' => $menu->formato,
                 'length' => mb_strlen($clean, 'UTF-8'),
-                'preview' => mb_substr($clean, 0, $perMenuLimit, 'UTF-8')
+                'preview' => mb_substr($clean, 0, $perMenuLimit, 'UTF-8'),
             ];
         }
+
         return $result;
     }
 
@@ -305,19 +319,20 @@ class ChatbotService
                 // Agregar mensaje del usuario
                 $history[] = [
                     'role' => 'user',
-                    'content' => $conv->user_message
+                    'content' => $conv->user_message,
                 ];
-                
+
                 // Agregar respuesta del bot
                 $history[] = [
                     'role' => 'assistant',
-                    'content' => $conv->bot_response
+                    'content' => $conv->bot_response,
                 ];
             }
 
             return $history;
         } catch (\Exception $e) {
-            Log::error('Error getting conversation history: ' . $e->getMessage());
+            Log::error('Error getting conversation history: '.$e->getMessage());
+
             return [];
         }
     }
@@ -401,11 +416,11 @@ FORMATO DE RESPUESTAS (CRÍTICO - DEBE SEGUIRSE EXACTAMENTE):
   [IMAGEN:url_si_existe]
 
 ⚠️ REGLA CRÍTICA SOBRE IMÁGENES - LEE EL CONTEXTO:
-- El contexto del menú incluye líneas como: "  [IMAGEN:url]" después de cada plato que tiene imagen
+- El contexto del menú incluye líneas como: \"  [IMAGEN:url]\" después de cada plato que tiene imagen
 - DEBES buscar estas líneas en el contexto y COPIARLAS EXACTAMENTE en tu respuesta
-- Si en el contexto aparece "  [IMAGEN:http://127.0.0.1:8000/storage/...]" para un plato, DEBES incluir esa misma línea en tu respuesta
+- Si en el contexto aparece \"  [IMAGEN:http://127.0.0.1:8000/storage/...]\" para un plato, DEBES incluir esa misma línea en tu respuesta
 - NO omitas las imágenes. Si están en el contexto, DEBEN estar en tu respuesta
-- EJEMPLO: Si el contexto dice "- DULCE O CREMA — \$1111\n  [IMAGEN:http://127.0.0.1:8000/storage/...]", tu respuesta DEBE incluir: "- **DULCE O CREMA** — **\$1111**\n  [IMAGEN:http://127.0.0.1:8000/storage/...]"
+- EJEMPLO: Si el contexto dice \"- DULCE O CREMA — \$1111\n  [IMAGEN:http://127.0.0.1:8000/storage/...]\", tu respuesta DEBE incluir: \"- **DULCE O CREMA** — **\$1111**\n  [IMAGEN:http://127.0.0.1:8000/storage/...]\"
 
 REGLAS DE FORMATO ESTRICTO PARA PLATOS (NO NEGOCIABLES):
 1. SIEMPRE empieza cada línea de plato con: guión (-) + espacio + **nombre en negrita** + espacio + guión largo (—) + espacio + **precio en negrita**
@@ -497,7 +512,7 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
     /**
      * Llamar a la API de OpenAI con historial de conversación
      */
-    private function callOpenAI(string $prompt, array $conversationHistory = []): string
+    private function callOpenAI(string $prompt, array $conversationHistory = [], string $model = 'gpt-4o-mini', int $maxTokens = 900): string
     {
         // Verificar si la API key está configurada
         if (empty($this->openaiApiKey)) {
@@ -506,43 +521,44 @@ RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del
 
         // Construir array de mensajes con historial + mensaje actual
         $messages = [];
-        
+
         // Agregar historial de conversación si existe
-        if (!empty($conversationHistory)) {
+        if (! empty($conversationHistory)) {
             $messages = array_merge($messages, $conversationHistory);
         }
-        
+
         // Agregar el mensaje actual al final
         $messages[] = [
             'role' => 'user',
-            'content' => $prompt
+            'content' => $prompt,
         ];
 
         $payload = [
-            'model' => 'gpt-4o-mini',
+            'model' => $model,
             'messages' => $messages,
-            'max_tokens' => 900,        // Más tokens para respuestas más detalladas
+            'max_tokens' => $maxTokens, // Según el plan del comercio
             'temperature' => 0.7,       // Más creatividad para descripciones gourmet
             'presence_penalty' => 0.3,  // Evita repeticiones
             'frequency_penalty' => 0.2, // Fomenta variedad en vocabulario
         ];
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->openaiApiKey,
+            'Authorization' => 'Bearer '.$this->openaiApiKey,
             'Content-Type' => 'application/json',
-        ])->timeout(20)->post($this->openaiBaseUrl . '/chat/completions', $payload);
+        ])->timeout(20)->post($this->openaiBaseUrl.'/chat/completions', $payload);
 
         if ($response->successful()) {
             $data = $response->json();
+
             return $data['choices'][0]['message']['content'] ?? 'No pude procesar tu mensaje.';
         }
 
         // Log del error para debugging
         Log::error('Error OpenAI API', [
             'status' => $response->status(),
-            'body'   => substr($response->body(), 0, 500),
+            'body' => substr($response->body(), 0, 500),
         ]);
 
-        throw new \Exception('Error al conectar con OpenAI: ' . $response->body());
+        throw new \Exception('Error al conectar con OpenAI: '.$response->body());
     }
 }
