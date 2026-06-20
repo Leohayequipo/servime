@@ -114,11 +114,13 @@
                                     </a>
                                 @endif
                                 
-                                <!-- Analytics oculto temporalmente -->
-                                {{-- <a href="{{ route('analytics.dashboard') }}" 
-                                   class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('analytics.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
-                                    Analytics
-                                </a> --}}
+                                {{-- Analytics: super admin siempre; comercio con la feature 'analytics' --}}
+                                @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                                    <a href="{{ route('analytics.dashboard') }}"
+                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('analytics.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                        Analytics
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Comercio;
 use App\Models\ChatConversation;
+use App\Models\Comercio;
 use App\Models\Menu;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -15,15 +14,30 @@ class AnalyticsController extends Controller
      */
     public function dashboard()
     {
-        $comercios = Comercio::withCount(['menus', 'chatConversations'])->get();
-        
+        $user = auth()->user();
+        $esAdmin = $user->isSuperAdmin();
+
+        // Scope: super admin ve todo; el comercio común solo lo suyo (evita fuga de datos)
+        $comercios = Comercio::withCount(['menus', 'chatConversations'])
+            ->when(! $esAdmin, fn ($q) => $q->where('user_id', $user->id))
+            ->get();
+
+        // Usuario común necesita la feature 'analytics' en alguno de sus comercios
+        if (! $esAdmin && ! $comercios->contains(fn ($c) => $c->tieneFeature('analytics'))) {
+            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+        }
+
+        $comercioIds = $comercios->pluck('id');
+        $conv = ChatConversation::query()
+            ->when(! $esAdmin, fn ($q) => $q->whereIn('comercio_id', $comercioIds));
+
         $stats = [
-            'total_comercios' => Comercio::count(),
-            'total_menus' => Menu::count(),
-            'total_conversations' => ChatConversation::count(),
-            'conversations_today' => ChatConversation::whereDate('created_at', today())->count(),
-            'openai_usage' => ChatConversation::usedOpenAI()->count(),
-            'fallback_usage' => ChatConversation::where('used_openai', false)->count(),
+            'total_comercios' => $comercios->count(),
+            'total_menus' => $esAdmin ? Menu::count() : Menu::whereIn('comercio_id', $comercioIds)->count(),
+            'total_conversations' => (clone $conv)->count(),
+            'conversations_today' => (clone $conv)->whereDate('created_at', today())->count(),
+            'openai_usage' => (clone $conv)->usedOpenAI()->count(),
+            'fallback_usage' => (clone $conv)->where('used_openai', false)->count(),
         ];
 
         return view('analytics.dashboard', compact('comercios', 'stats'));
@@ -32,17 +46,17 @@ class AnalyticsController extends Controller
     /**
      * Analytics específicos de un comercio
      */
-    public function comercio($comercioId)
+    public function comercio(Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($comercioId);
-
-        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+        if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
         }
 
-        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('analytics')) {
+        if (! auth()->user()->isSuperAdmin() && ! $comercio->tieneFeature('analytics')) {
             abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
         }
+
+        $comercioId = $comercio->id;
 
         $conversations = ChatConversation::forComercio($comercioId)
             ->recent(30)
@@ -61,14 +75,14 @@ class AnalyticsController extends Controller
 
         // Preguntas más frecuentes
         $frequentQuestions = $this->getFrequentQuestions($comercioId);
-        
+
         // Estadísticas por día
         $dailyStats = $this->getDailyStats($comercioId);
 
         return view('analytics.comercio', compact(
-            'comercio', 
-            'conversations', 
-            'stats', 
+            'comercio',
+            'conversations',
+            'stats',
             'frequentQuestions',
             'dailyStats'
         ));
@@ -108,33 +122,31 @@ class AnalyticsController extends Controller
     /**
      * Exportar conversaciones
      */
-    public function exportConversations($comercioId)
+    public function exportConversations(Comercio $comercio)
     {
-        $comercio = Comercio::findOrFail($comercioId);
-
-        if (!auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+        if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
         }
 
-        if (!auth()->user()->isSuperAdmin() && !$comercio->tieneFeature('analytics')) {
+        if (! auth()->user()->isSuperAdmin() && ! $comercio->tieneFeature('analytics')) {
             abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
         }
 
-        $conversations = ChatConversation::forComercio($comercioId)
+        $conversations = ChatConversation::forComercio($comercio->id)
             ->with('comercio')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $filename = "conversaciones_{$comercio->nombre}_" . now()->format('Y-m-d') . ".csv";
-        
+        $filename = "conversaciones_{$comercio->nombre}_".now()->format('Y-m-d').'.csv';
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function() use ($conversations) {
+        $callback = function () use ($conversations) {
             $file = fopen('php://output', 'w');
-            
+
             // Headers del CSV
             fputcsv($file, [
                 'Fecha',
@@ -144,7 +156,7 @@ class AnalyticsController extends Controller
                 'Usó OpenAI',
                 'Tiempo Respuesta (ms)',
                 'IP',
-                'User Agent'
+                'User Agent',
             ]);
 
             foreach ($conversations as $conversation) {
@@ -156,7 +168,7 @@ class AnalyticsController extends Controller
                     $conversation->used_openai ? 'Sí' : 'No',
                     $conversation->response_time_ms,
                     $conversation->user_ip,
-                    $conversation->user_agent
+                    $conversation->user_agent,
                 ]);
             }
 

@@ -215,11 +215,11 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex space-x-2">
-                                                <a href="{{ route('analytics.comercio', $comercio->id) }}" 
+                                                <a href="{{ route('analytics.comercio', $comercio) }}"
                                                    class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                                                     📊 Ver Analytics
                                                 </a>
-                                                <a href="{{ route('analytics.export', $comercio->id) }}" 
+                                                <a href="{{ route('analytics.export', $comercio) }}"
                                                    class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
                                                     📥 Exportar
                                                 </a>

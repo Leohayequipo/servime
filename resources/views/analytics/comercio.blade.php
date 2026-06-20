@@ -19,7 +19,7 @@
                    class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
                     ← Dashboard General
                 </a>
-                <a href="{{ route('analytics.export', $comercio->id) }}" 
+                <a href="{{ route('analytics.export', $comercio) }}"
                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                     📥 Exportar Datos
                 </a>
@@ -124,7 +124,7 @@
                                             "{{ $question->user_message }}"
                                         </p>
                                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ $question->frequency }} vez{{ $question->frequency > 1 ? 'es' : '' }}
+                                            {{ $question->frequency }} {{ $question->frequency > 1 ? 'veces' : 'vez' }}
                                         </p>
                                     </div>
                                 @endforeach
