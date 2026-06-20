@@ -137,6 +137,8 @@
             @endif
         </div>
     </div>
+
+    @include('menu.partials.tracking', ['trackView' => 'classic'])
 </body>
 </html>
 

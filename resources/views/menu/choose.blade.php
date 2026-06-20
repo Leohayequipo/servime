@@ -465,7 +465,7 @@
                 <!-- Card IA -->
                 <div class="card-ia-float">
                     <div class="card-ia-glow"></div>
-                    <a href="{{ route('menu.chat', $comercio) }}" class="card-ia" style="position:relative;z-index:1;">
+                    <a href="{{ route('menu.chat', $comercio) }}" class="card-ia" style="position:relative;z-index:1;" data-track-choice="ia">
                         <!-- Sparkles -->
                         <span class="spark spark-1"></span>
                         <span class="spark spark-2"></span>
@@ -498,7 +498,7 @@
                 </div>
 
                 <!-- Card clásica -->
-                <a href="{{ route('menu.classic', $comercio) }}" class="card-classic">
+                <a href="{{ route('menu.classic', $comercio) }}" class="card-classic" data-track-choice="classic">
                     <div class="classic-left">
                         <div class="classic-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
@@ -527,5 +527,6 @@
         </div>
     </div>
 
+    @include('menu.partials.tracking', ['trackView' => 'choose'])
 </body>
 </html>

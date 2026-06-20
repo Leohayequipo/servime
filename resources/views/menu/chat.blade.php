@@ -1150,5 +1150,7 @@
         // Auto-focus
         document.getElementById('messageInput').focus();
     </script>
+
+    @include('menu.partials.tracking', ['trackView' => 'chat'])
 </body>
 </html>

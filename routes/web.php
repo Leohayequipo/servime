@@ -128,6 +128,10 @@ Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuControl
 Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
 Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
 
+// Tracking de eventos del menú público (sin auth, por sesión)
+Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
+    ->middleware('throttle:120,1')->name('track');
+
 // API ligera para carrito (por sesión, sin auth)
 Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
     Route::post('/show', [App\Http\Controllers\CartController::class, 'show'])->name('api.cart.show');
