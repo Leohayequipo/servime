@@ -141,31 +141,89 @@ class AnalyticsController extends Controller
         return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax');
     }
 
-    /**
-     * Palabras más usadas en los mensajes del chat (últimos 30 días).
-     */
-    private function getTopWords($comercioId, int $limit = 15)
-    {
-        $stop = ['de', 'la', 'el', 'que', 'los', 'las', 'una', 'uno', 'con', 'para', 'por', 'del',
-            'tienen', 'tiene', 'hay', 'cual', 'cuanto', 'cuanta', 'como', 'mas', 'pero', 'eso',
-            'esta', 'este', 'son', 'qué', 'cuál', 'cuánto', 'cómo', 'algo', 'tenes', 'tenés'];
+    // Stopwords en español (normalizadas, sin acentos)
+    private const STOPWORDS = [
+        'de', 'la', 'el', 'que', 'los', 'las', 'una', 'uno', 'con', 'para', 'por', 'del',
+        'tienen', 'tiene', 'tenes', 'hay', 'cual', 'cuanto', 'cuanta', 'como', 'mas', 'pero',
+        'eso', 'esta', 'este', 'son', 'algo', 'mi', 'tu', 'su', 'me', 'te', 'se', 'lo', 'al',
+        'un', 'es', 'en', 'yo', 'ya', 'si', 'no', 'o', 'y', 'a', 'quiero', 'puedo', 'dame',
+        'hola', 'gracias', 'buenas', 'recomendame', 'queria', 'quisiera',
+    ];
 
+    /**
+     * Términos más usados en los mensajes del chat (últimos 30 días).
+     * Combina palabras sueltas y bigramas (frases de 2 palabras), con
+     * normalización de acentos y plurales para agrupar variantes.
+     */
+    private function getTopWords($comercioId, int $limit = 18)
+    {
         $mensajes = ChatConversation::forComercio($comercioId)->recent(30)->pluck('user_message');
 
-        $conteo = [];
+        $unigramas = [];
+        $bigramas = [];
+
         foreach ($mensajes as $msg) {
-            $palabras = preg_split('/[^\p{L}]+/u', mb_strtolower((string) $msg, 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY);
-            foreach ($palabras as $p) {
-                if (mb_strlen($p) < 4 || in_array($p, $stop, true)) {
+            $tokens = $this->tokenizar((string) $msg);
+
+            // Palabras sueltas: contenido (>=4 letras, no stopword)
+            foreach ($tokens as $t) {
+                if (mb_strlen($t) >= 4 && ! in_array($t, self::STOPWORDS, true)) {
+                    $s = $this->singularizar($t);
+                    $unigramas[$s] = ($unigramas[$s] ?? 0) + 1;
+                }
+            }
+
+            // Bigramas: pares consecutivos (no ambos stopword, ambos >=3 letras)
+            for ($i = 0, $n = count($tokens) - 1; $i < $n; $i++) {
+                $a = $tokens[$i];
+                $b = $tokens[$i + 1];
+                if (mb_strlen($a) < 3 || mb_strlen($b) < 3) {
                     continue;
                 }
-                $conteo[$p] = ($conteo[$p] ?? 0) + 1;
+                if (in_array($a, self::STOPWORDS, true) && in_array($b, self::STOPWORDS, true)) {
+                    continue;
+                }
+                $frase = $this->singularizar($a).' '.$this->singularizar($b);
+                $bigramas[$frase] = ($bigramas[$frase] ?? 0) + 1;
+            }
+        }
+
+        // Solo bigramas que se repiten (evita ruido de frases únicas)
+        $conteo = $unigramas;
+        foreach ($bigramas as $frase => $c) {
+            if ($c >= 2) {
+                $conteo[$frase] = $c;
             }
         }
 
         arsort($conteo);
 
         return collect($conteo)->take($limit);
+    }
+
+    /**
+     * Pasa a minúsculas, saca acentos/ñ y parte en palabras.
+     */
+    private function tokenizar(string $texto): array
+    {
+        $texto = mb_strtolower($texto, 'UTF-8');
+        $texto = strtr($texto, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+        ]);
+
+        return preg_split('/[^a-z]+/', $texto, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+
+    /**
+     * Stemming muy simple de plurales (postres -> postre, pizzas -> pizza).
+     */
+    private function singularizar(string $palabra): string
+    {
+        if (mb_strlen($palabra) > 4 && str_ends_with($palabra, 's')) {
+            return mb_substr($palabra, 0, -1);
+        }
+
+        return $palabra;
     }
 
     /**
