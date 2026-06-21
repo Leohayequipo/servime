@@ -83,6 +83,15 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
 - **Nueva feature gateable:** agregarla a `features.*` en `PlanController::validatePlan()` (regla `Rule::in`),
   al checkbox en `admin/plans/edit.blade.php`, y chequear `$comercio->tieneFeature('x')` donde corresponda.
 - **Cambiar límites/precios/nombres:** desde `/admin/plans` (no requiere deploy).
+
+> **Deuda técnica conocida (features hardcodeadas):** la lista de features posibles está
+> **duplicada** en 2 lugares que hay que mantener en sync — los checkboxes de
+> `admin/plans/edit.blade.php` y el `Rule::in([...])` de `PlanController::validatePlan()`.
+> Para esta etapa (pocas features) está OK y es decisión deliberada. Si se agregan features
+> seguido, conviene centralizar el catálogo en un `config/plan_features.php`
+> (`'key' => 'Etiqueta'`) y que tanto el form (loop de checkboxes) como la validación
+> (`Rule::in(array_keys(...))`) lean de ahí → agregar feature = 1 línea + su enforcement.
+> No requiere tabla ni migración. (La lógica que *hace* la feature siempre hay que escribirla.)
 - **Cobro online (futuro):** hoy la asignación es manual por super admin; integrar pasarela
   (MercadoPago/Stripe) sería un paso aparte con webhooks y estados de suscripción.
 
