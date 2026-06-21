@@ -309,69 +309,46 @@
                 <div class="p-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">💬 Historial de Conversaciones</h3>
                     
-                    @if($conversations->count() > 0)
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead class="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Fecha
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Usuario
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Mensaje
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Respuesta
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            IA
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Tiempo
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    @foreach($conversations as $conversation)
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $conversation->created_at->format('d/m H:i') }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $conversation->user_ip ?? 'Desconocido' }}
-                                            </td>
-                                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate">
-                                                {{ $conversation->user_message }}
-                                            </td>
-                                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate">
-                                                {{ $conversation->bot_response }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                @if($conversation->used_openai)
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                        🤖 OpenAI
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                                                        🔧 Básico
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {{ $conversation->response_time_ms ? $conversation->response_time_ms . 'ms' : 'N/A' }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Paginación -->
-                        <div class="mt-6">
-                            {{ $conversations->links() }}
+                    @if($threads->count() > 0)
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Últimos {{ $threads->count() }} hilos (agrupados por sesión)</p>
+                        <div class="space-y-3">
+                            @foreach($threads as $thread)
+                                <details class="border border-gray-200 dark:border-gray-700 rounded-lg group">
+                                    <summary class="flex items-center justify-between cursor-pointer px-4 py-3 select-none">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <span class="text-gray-400 group-open:rotate-90 transition-transform flex-shrink-0">▶</span>
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {{ $thread['inicio']->format('d/m H:i') }}
+                                                    <span class="text-gray-400 font-normal">· {{ $thread['ip'] ?? 'anónimo' }}</span>
+                                                </p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                    {{ $thread['mensajes']->first()->user_message }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex-shrink-0 ml-3">
+                                            {{ $thread['total'] }} msj
+                                        </span>
+                                    </summary>
+                                    <div class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                                        @foreach($thread['mensajes'] as $m)
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-xs text-gray-400 w-10 flex-shrink-0 pt-1">{{ $m->created_at->format('H:i') }}</span>
+                                                <div class="flex-1 space-y-1">
+                                                    <p class="text-sm text-gray-900 dark:text-white">🧑 {{ $m->user_message }}</p>
+                                                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                        {{ $m->used_openai ? '🤖' : '🔧' }} {{ $m->bot_response }}
+                                                        @if($m->response_time_ms)
+                                                            <span class="text-xs text-gray-400">· {{ $m->response_time_ms }}ms</span>
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </details>
+                            @endforeach
                         </div>
                     @else
                         <div class="text-center py-8">

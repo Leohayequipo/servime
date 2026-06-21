@@ -59,10 +59,23 @@ class AnalyticsController extends Controller
 
         $comercioId = $comercio->id;
 
-        $conversations = ChatConversation::forComercio($comercioId)
+        // Historial agrupado por hilo (session_id), últimos 25 hilos
+        $threads = ChatConversation::forComercio($comercioId)
             ->recent(30)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('session_id')
+            ->map(fn ($msgs) => [
+                'session_id' => $msgs->first()->session_id,
+                'ip' => $msgs->first()->user_ip,
+                'total' => $msgs->count(),
+                'inicio' => $msgs->min('created_at'),
+                'fin' => $msgs->max('created_at'),
+                'mensajes' => $msgs->values(),
+            ])
+            ->sortByDesc('fin')
+            ->take(25)
+            ->values();
 
         $stats = [
             'total_conversations' => ChatConversation::forComercio($comercioId)->count(),
@@ -86,7 +99,7 @@ class AnalyticsController extends Controller
 
         return view('analytics.comercio', compact(
             'comercio',
-            'conversations',
+            'threads',
             'stats',
             'frequentQuestions',
             'dailyStats',
@@ -159,8 +172,16 @@ class AnalyticsController extends Controller
     {
         $mensajes = ChatConversation::forComercio($comercioId)->recent(30)->pluck('user_message');
 
-        $unigramas = [];
-        $bigramas = [];
+        // Cada término se agrupa por su raíz (clave) pero se muestra la forma real
+        // más frecuente, para no mostrar palabras cortadas (gratis, país, etc.).
+        $unigramas = [];   // raiz => count
+        $bigramas = [];    // raiz => count
+        $formas = [];      // raiz => [forma_original => count]
+
+        $registrar = function (string $key, string $forma, array &$bucket) use (&$formas) {
+            $bucket[$key] = ($bucket[$key] ?? 0) + 1;
+            $formas[$key][$forma] = ($formas[$key][$forma] ?? 0) + 1;
+        };
 
         foreach ($mensajes as $msg) {
             $tokens = $this->tokenizar((string) $msg);
@@ -168,8 +189,7 @@ class AnalyticsController extends Controller
             // Palabras sueltas: contenido (>=4 letras, no stopword)
             foreach ($tokens as $t) {
                 if (mb_strlen($t) >= 4 && ! in_array($t, self::STOPWORDS, true)) {
-                    $s = $this->singularizar($t);
-                    $unigramas[$s] = ($unigramas[$s] ?? 0) + 1;
+                    $registrar($this->singularizar($t), $t, $unigramas);
                 }
             }
 
@@ -183,22 +203,36 @@ class AnalyticsController extends Controller
                 if (in_array($a, self::STOPWORDS, true) && in_array($b, self::STOPWORDS, true)) {
                     continue;
                 }
-                $frase = $this->singularizar($a).' '.$this->singularizar($b);
-                $bigramas[$frase] = ($bigramas[$frase] ?? 0) + 1;
+                $raiz = $this->singularizar($a).' '.$this->singularizar($b);
+                $registrar($raiz, $a.' '.$b, $bigramas);
             }
         }
 
+        // Etiqueta = forma original más frecuente de cada raíz
+        $conteo = [];
+        foreach ($unigramas as $raiz => $c) {
+            $conteo[$this->formaMasComun($formas[$raiz])] = $c;
+        }
         // Solo bigramas que se repiten (evita ruido de frases únicas)
-        $conteo = $unigramas;
-        foreach ($bigramas as $frase => $c) {
+        foreach ($bigramas as $raiz => $c) {
             if ($c >= 2) {
-                $conteo[$frase] = $c;
+                $conteo[$this->formaMasComun($formas[$raiz])] = $c;
             }
         }
 
         arsort($conteo);
 
         return collect($conteo)->take($limit);
+    }
+
+    /**
+     * Devuelve la forma (texto original) más frecuente de un grupo.
+     */
+    private function formaMasComun(array $formas): string
+    {
+        arsort($formas);
+
+        return (string) array_key_first($formas);
     }
 
     /**
