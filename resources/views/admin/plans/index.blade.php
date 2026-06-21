@@ -48,7 +48,7 @@
                         </ul>
                         <div class="mt-auto flex items-center gap-2">
                             <a href="{{ route('admin.plans.edit', $plan) }}" class="flex-1 text-center px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">Editar</a>
-                            <form method="POST" action="{{ route('admin.plans.destroy', $plan) }}" onsubmit="return confirm('¿Eliminar el plan {{ $plan->nombre }}?');">
+                            <form method="POST" action="{{ route('admin.plans.destroy', $plan) }}" onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Eliminar el plan {{ addslashes($plan->nombre) }}? Esta acción no se puede deshacer.', r => { if(r) f.submit(); }, 'Eliminando...');">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/20 rounded-lg text-xs font-medium transition-colors">Eliminar</button>
                             </form>
@@ -109,7 +109,7 @@
                                         @endif
                                     </td>
                                     <td class="py-4 px-4">
-                                        <form method="POST" action="{{ route('admin.comercios.reset-ia', $comercio) }}" onsubmit="return confirm('¿Resetear el uso de IA de {{ $comercio->nombre }}? Esto se cobra aparte.');">
+                                        <form method="POST" action="{{ route('admin.comercios.reset-ia', $comercio) }}" onsubmit="event.preventDefault(); const f=this; showConfirm('¿Resetear el uso de IA de {{ addslashes($comercio->nombre) }}? Esto se cobra aparte.', r => { if(r) f.submit(); });">
                                             @csrf
                                             <button type="submit" class="px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/20 rounded-lg text-xs font-medium transition-colors">Resetear uso IA</button>
                                         </form>

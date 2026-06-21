@@ -64,6 +64,11 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
 
 ## ⚠️ Gotchas (aprendidos a los golpes)
 
+- **Confirmaciones/alertas:** usar SIEMPRE los helpers SweetAlert2 de `layouts/app.blade.php`
+  (`showConfirm`, `showConfirmWithLoader`, `showSuccess`, `showError`), NO `confirm()`/`alert()`
+  nativos (no matchean la estética). Form con confirmación:
+  `onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿...?', r=>{ if(r) f.submit(); }, 'Procesando...');"`
+
 - **La barra de navegación del panel está inline en `resources/views/layouts/app.blade.php`**
   (NO en `layouts/navigation.blade.php`, que es un partial de Breeze muerto). El link "Planes"
   va ahí, dentro del `@if(Auth::user()->isSuperAdmin())`. Editar el otro archivo no tiene efecto.

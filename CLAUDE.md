@@ -67,6 +67,11 @@ npm run dev   /   npm run build
 - Rutas públicas resuelven comercio por `slug` (binding `{comercio:slug}`), no por id.
 - Servir logos valida path-traversal con `realpath` + prefijo permitido (ver `web.php`).
 - Menús con SoftDeletes; índices en `menus`; FK en `carts`.
+- **Confirmaciones/alertas (UI):** usar SIEMPRE los helpers SweetAlert2 definidos en
+  `resources/views/layouts/app.blade.php` (`showConfirm`, `showConfirmWithLoader`,
+  `showSuccess`, `showError`), NUNCA el `confirm()`/`alert()` nativo del navegador (no matchea
+  la estética). Patrón para forms con confirmación:
+  `onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿...?', r=>{ if(r) f.submit(); }, 'Procesando...');"`
 
 ## Deploy
 
