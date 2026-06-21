@@ -149,7 +149,7 @@ class AnalyticsController extends Controller
     {
         $events = TrackingEvent::forComercio($comercioId)
             ->recent(30)
-            ->get(['event', 'data', 'session_id', 'created_at']);
+            ->get(['event', 'data', 'session_id', 'user_agent', 'created_at']);
 
         // Elección IA vs Clásico
         $choices = $events->where('event', 'menu_choice');
@@ -185,7 +185,42 @@ class AnalyticsController extends Controller
             $heatmapMax = max($heatmapMax, $heatmap[$dow][$hour]);
         }
 
-        return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax');
+        // Por sesión: dispositivo, visitantes que vuelven y duración (sin IA)
+        $devices = ['movil' => 0, 'desktop' => 0, 'tablet' => 0];
+        $visitors = ['nuevos' => 0, 'recurrentes' => 0];
+        $duraciones = [];
+        foreach ($events->groupBy('session_id') as $sid => $evs) {
+            if (empty($sid)) {
+                continue;
+            }
+            $devices[$this->clasificarDispositivo($evs->sortBy('created_at')->first()->user_agent)]++;
+
+            $diasDistintos = $evs->map(fn ($e) => $e->created_at->toDateString())->unique()->count();
+            $visitors[$diasDistintos >= 2 ? 'recurrentes' : 'nuevos']++;
+
+            $duraciones[] = $evs->max('created_at')->getTimestamp() - $evs->min('created_at')->getTimestamp();
+        }
+        $sessionAvgSeconds = count($duraciones) ? (int) round(array_sum($duraciones) / count($duraciones)) : 0;
+        $totalSesiones = array_sum($visitors);
+
+        return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax',
+            'devices', 'visitors', 'sessionAvgSeconds', 'totalSesiones');
+    }
+
+    /**
+     * Clasifica el dispositivo a partir del user-agent (móvil/tablet/desktop).
+     */
+    private function clasificarDispositivo(?string $ua): string
+    {
+        $ua = strtolower((string) $ua);
+        if (str_contains($ua, 'ipad') || str_contains($ua, 'tablet')) {
+            return 'tablet';
+        }
+        if (str_contains($ua, 'mobi') || str_contains($ua, 'android') || str_contains($ua, 'iphone')) {
+            return 'movil';
+        }
+
+        return 'desktop';
     }
 
     // Stopwords en español (normalizadas, sin acentos)

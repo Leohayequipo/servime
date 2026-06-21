@@ -69,8 +69,9 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   Cada corrida se registra en `intent_classification_runs` y el **super admin** ve el uso
   en el dashboard de analytics (tabla + total de mensajes clasificados).
   ⚠️ `intent`/`intent_source` deben estar en `$fillable` de `ChatConversation` (modo estricto).
-- **Siguiente (pendiente):** métricas extra sin IA (dispositivo desde user_agent,
-  visitantes que vuelven, tiempo de sesión real).
+- **Métricas extra (hechas, sin IA):** dispositivo (móvil/desktop/tablet desde `user_agent`),
+  visitantes que vuelven (session_id en ≥2 días distintos) y tiempo promedio de sesión
+  (max-min `created_at` por session_id). Calculadas en `getEventMetrics()` desde `tracking_events`.
 
 ## Tests
 

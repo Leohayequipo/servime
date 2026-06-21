@@ -228,6 +228,41 @@
                 </div>
             </div>
 
+            <!-- Dispositivo · Visitantes · Tiempo de sesión -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">📱 Dispositivos</h3>
+                    @php $dv = $metrics['devices']; $dvTotal = array_sum($dv) ?: 1; @endphp
+                    @foreach(['movil' => 'Móvil', 'desktop' => 'Escritorio', 'tablet' => 'Tablet'] as $k => $label)
+                        <div class="mb-2">
+                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300">
+                                <span>{{ $label }}</span><b>{{ round($dv[$k] / $dvTotal * 100) }}%</b>
+                            </div>
+                            <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded mt-1">
+                                <div class="h-1.5 bg-teal-500 rounded" style="width: {{ round($dv[$k] / $dvTotal * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">🔁 Visitantes que vuelven</h3>
+                    @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
+                    <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {{ $vs['recurrentes'] }} de {{ $metrics['totalSesiones'] }} visitantes volvieron
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ $vs['nuevos'] }} nuevos</p>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">⏱️ Tiempo promedio en el menú</h3>
+                    @php $sec = $metrics['sessionAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
+                    <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ $dur }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">por sesión</p>
+                </div>
+            </div>
+
             <!-- Promos y platos top -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
