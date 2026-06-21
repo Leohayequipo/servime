@@ -1,35 +1,34 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                @if($comercio->logo_url)
-                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                         alt="{{ $comercio->nombre }}" 
-                         class="w-8 h-8 rounded-full object-cover">
-                @endif
-                <div>
-                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                        📊 Analytics - {{ $comercio->nombre }}
-                    </h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Análisis detallado del chatbot</p>
+    <div class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <div class="flex items-center space-x-3">
+                    @if($comercio->logo_url)
+                        <img src="{{ asset('storage/' . $comercio->logo_url) }}"
+                             alt="{{ $comercio->nombre }}"
+                             class="w-10 h-10 rounded-full object-cover">
+                    @endif
+                    <div>
+                        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                            📊 Analytics · {{ $comercio->nombre }}
+                        </h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Comportamiento de los últimos 30 días</p>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="{{ route('analytics.dashboard') }}"
+                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                        ← Dashboard
+                    </a>
+                    <a href="{{ route('analytics.export', $comercio) }}"
+                       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        📥 Exportar
+                    </a>
                 </div>
             </div>
-            <div class="flex space-x-2">
-                <a href="{{ route('analytics.dashboard') }}" 
-                   class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                    ← Dashboard General
-                </a>
-                <a href="{{ route('analytics.export', $comercio) }}"
-                   class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                    📥 Exportar Datos
-                </a>
-            </div>
-        </div>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
             <!-- Estadísticas del Comercio -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Total Conversaciones -->
@@ -108,6 +107,136 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Comportamiento: IA vs Clásico + Embudo -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                @php
+                    $ia = $metrics['menuChoice']['ia']; $cl = $metrics['menuChoice']['classic'];
+                    $totalChoice = $ia + $cl;
+                    $iaPct = $totalChoice ? round($ia / $totalChoice * 100) : 0;
+                    $clPct = $totalChoice ? 100 - $iaPct : 0;
+                @endphp
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🤖 ¿IA o menú clásico?</h3>
+                    @if($totalChoice > 0)
+                        <div class="flex h-5 rounded-full overflow-hidden mb-4">
+                            <div class="bg-amber-500" style="width: {{ $iaPct }}%"></div>
+                            <div class="bg-gray-400 dark:bg-gray-600" style="width: {{ $clPct }}%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-700 dark:text-gray-300"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
+                            <span class="text-gray-700 dark:text-gray-300"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
+                        </div>
+                    @else
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin datos de elección todavía.</p>
+                    @endif
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🛒 Embudo de interés</h3>
+                    @php
+                        $fv = $metrics['funnel']['visitas']; $fe = $metrics['funnel']['eligieron']; $fi = $metrics['funnel']['interesados'];
+                        $pasos = [['Visitaron el menú', $fv, 'bg-blue-500'], ['Eligieron una opción', $fe, 'bg-amber-500'], ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500']];
+                    @endphp
+                    @if($fv > 0)
+                        <div class="space-y-3">
+                            @foreach($pasos as [$label, $val, $color])
+                                <div>
+                                    <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                        <span>{{ $label }}</span><b>{{ $val }}</b>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                        <div class="h-2 {{ $color }} rounded" style="width: {{ $fv ? round($val / $fv * 100) : 0 }}%"></div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin visitas registradas todavía.</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Promos y platos top -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔥 Promos más clickeadas</h3>
+                    @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
+                    @forelse($metrics['topPromos'] as $promo => $count)
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                <span class="truncate">{{ $promo }}</span><b>{{ $count }}</b>
+                            </div>
+                            <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                <div class="h-2 bg-red-500 rounded" style="width: {{ round($count / $promoMax * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Nadie clickeó promos aún.</p>
+                    @endforelse
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🍽️ Platos más deseados</h3>
+                    @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
+                    @forelse($metrics['topDishes'] as $dish => $count)
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                <span class="truncate">{{ $dish }}</span><b>{{ $count }}</b>
+                            </div>
+                            <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                <div class="h-2 bg-green-500 rounded" style="width: {{ round($count / $dishMax * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Nadie tocó "Lo quiero" aún.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Top palabras + Heatmap -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔤 Palabras más buscadas</h3>
+                    @php $wordMax = $topWords->max() ?: 1; @endphp
+                    @if($topWords->count() > 0)
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($topWords as $word => $count)
+                                <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 px-3 py-1"
+                                      style="font-size: {{ 0.75 + ($count / $wordMax) * 0.7 }}rem">
+                                    {{ $word }} <span class="ml-1 text-xs opacity-70">{{ $count }}</span>
+                                </span>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin mensajes para analizar todavía.</p>
+                    @endif
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🕒 Actividad por hora y día</h3>
+                    @php $dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; $hmMax = $metrics['heatmapMax']; @endphp
+                    @if($hmMax > 0)
+                        <div class="space-y-1">
+                            @for($d = 0; $d < 7; $d++)
+                                <div class="flex items-center gap-1">
+                                    <span class="w-8 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ $dias[$d] }}</span>
+                                    @for($h = 0; $h < 24; $h++)
+                                        @php $c = $metrics['heatmap'][$d][$h]; $r = $c > 0 ? max(0.15, $c / $hmMax) : 0; @endphp
+                                        <div class="flex-1 h-4 rounded-sm" title="{{ $dias[$d] }} {{ $h }}:00 · {{ $c }}"
+                                             style="background: {{ $c > 0 ? 'rgba(245,158,11,'.$r.')' : 'rgba(120,120,120,0.12)' }}"></div>
+                                    @endfor
+                                </div>
+                            @endfor
+                            <div class="flex justify-between text-[10px] text-gray-400 pl-9 pt-1">
+                                <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+                            </div>
+                        </div>
+                    @else
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin actividad para el heatmap todavía.</p>
+                    @endif
                 </div>
             </div>
 

@@ -40,8 +40,11 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
 ## ⚠️ Gotchas
 
 - Las rutas de analytics bindean por **slug**: pasá el modelo `$comercio` a `route()`, no `$comercio->id`.
-- El panel HOY visualiza solo métricas de `chat_conversations`. Los `tracking_events` ya se
-  **capturan** pero todavía **no se grafican** (eso es Fase 2).
+- El panel por comercio (`analytics.comercio`) ya grafica los `tracking_events` (Fase 2):
+  IA vs clásico, embudo, promos top, platos top ("Lo quiero"), top palabras y heatmap hora×día.
+  Las métricas se calculan en `AnalyticsController::getEventMetrics()` y `getTopWords()`
+  (se traen los eventos `recent(30)` una vez y se agrupan en PHP). Gráficos con CSS (sin libs).
+- `layouts/app.blade.php` NO renderiza el slot `header`: el encabezado va dentro del body (`{{ $slot }}`).
 - Tracking nunca debe romper la página: `smTrack` está envuelto en try/catch y usa sendBeacon.
 
 ## Datos de demo (local)
@@ -51,9 +54,10 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
 
 ## Roadmap
 
-- **Fase 2 (pendiente):** visualizaciones en el panel — IA vs clásico, promos clickeadas,
-  platos top (dish_want), heatmap por hora/día, embudo de carrito, top palabras.
+- **Fase 2 (hecha):** visualizaciones en `analytics.comercio` — IA vs clásico, embudo,
+  promos clickeadas, platos top (dish_want), top palabras y heatmap por hora/día.
 - **Fase 3 (pendiente):** clasificación de intención (rule-based → IA) y "sugerencias" para el comercio.
+  Posibles métricas extra: dispositivo (de user_agent), visitantes que vuelven, tiempo de sesión real.
 
 ## Tests
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Menu;
+use App\Models\TrackingEvent;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -79,13 +80,92 @@ class AnalyticsController extends Controller
         // Estadísticas por día
         $dailyStats = $this->getDailyStats($comercioId);
 
+        // Métricas de comportamiento (eventos del menú público) + palabras
+        $metrics = $this->getEventMetrics($comercioId);
+        $topWords = $this->getTopWords($comercioId);
+
         return view('analytics.comercio', compact(
             'comercio',
             'conversations',
             'stats',
             'frequentQuestions',
-            'dailyStats'
+            'dailyStats',
+            'metrics',
+            'topWords'
         ));
+    }
+
+    /**
+     * Métricas derivadas de tracking_events (últimos 30 días).
+     */
+    private function getEventMetrics($comercioId): array
+    {
+        $events = TrackingEvent::forComercio($comercioId)
+            ->recent(30)
+            ->get(['event', 'data', 'session_id', 'created_at']);
+
+        // Elección IA vs Clásico
+        $choices = $events->where('event', 'menu_choice');
+        $menuChoice = [
+            'ia' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'ia')->count(),
+            'classic' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'classic')->count(),
+        ];
+
+        // Promos más clickeadas
+        $topPromos = $events->where('event', 'promo_click')
+            ->groupBy(fn ($e) => $e->data['promo'] ?? '—')
+            ->map->count()->sortDesc()->take(6);
+
+        // Platos más deseados ("Lo quiero")
+        $topDishes = $events->where('event', 'dish_want')
+            ->groupBy(fn ($e) => $e->data['nombre'] ?? '—')
+            ->map->count()->sortDesc()->take(8);
+
+        // Embudo por sesiones únicas: visita -> elige -> muestra interés
+        $funnel = [
+            'visitas' => $events->where('event', 'page_view')->pluck('session_id')->unique()->count(),
+            'eligieron' => $choices->pluck('session_id')->unique()->count(),
+            'interesados' => $events->where('event', 'dish_want')->pluck('session_id')->unique()->count(),
+        ];
+
+        // Heatmap por día de semana (0=Dom..6=Sáb) x hora
+        $heatmap = array_fill(0, 7, array_fill(0, 24, 0));
+        $heatmapMax = 0;
+        foreach ($events->where('event', 'page_view') as $e) {
+            $dow = (int) $e->created_at->dayOfWeek;
+            $hour = (int) $e->created_at->format('G');
+            $heatmap[$dow][$hour]++;
+            $heatmapMax = max($heatmapMax, $heatmap[$dow][$hour]);
+        }
+
+        return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax');
+    }
+
+    /**
+     * Palabras más usadas en los mensajes del chat (últimos 30 días).
+     */
+    private function getTopWords($comercioId, int $limit = 15)
+    {
+        $stop = ['de', 'la', 'el', 'que', 'los', 'las', 'una', 'uno', 'con', 'para', 'por', 'del',
+            'tienen', 'tiene', 'hay', 'cual', 'cuanto', 'cuanta', 'como', 'mas', 'pero', 'eso',
+            'esta', 'este', 'son', 'qué', 'cuál', 'cuánto', 'cómo', 'algo', 'tenes', 'tenés'];
+
+        $mensajes = ChatConversation::forComercio($comercioId)->recent(30)->pluck('user_message');
+
+        $conteo = [];
+        foreach ($mensajes as $msg) {
+            $palabras = preg_split('/[^\p{L}]+/u', mb_strtolower((string) $msg, 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($palabras as $p) {
+                if (mb_strlen($p) < 4 || in_array($p, $stop, true)) {
+                    continue;
+                }
+                $conteo[$p] = ($conteo[$p] ?? 0) + 1;
+            }
+        }
+
+        arsort($conteo);
+
+        return collect($conteo)->take($limit);
     }
 
     /**

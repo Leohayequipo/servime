@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Plan;
+use App\Models\TrackingEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -89,5 +91,30 @@ class AnalyticsTrackingTest extends TestCase
         ]);
 
         $this->actingAs($user)->get(route('analytics.comercio', $ajeno))->assertForbidden();
+    }
+
+    public function test_el_panel_renderiza_con_datos_de_eventos_y_conversaciones(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        // Eventos variados (ejercita IA/clásico, promos, platos, heatmap, embudo)
+        TrackingEvent::factory()->count(25)->create(['comercio_id' => $comercio->id]);
+
+        // Conversaciones (ejercita top palabras y stats)
+        foreach (['Quiero algo vegetariano', '¿Tienen postres veganos?', 'Recomendame postres'] as $msg) {
+            ChatConversation::create([
+                'comercio_id' => $comercio->id,
+                'session_id' => 'sess_'.uniqid(),
+                'user_message' => $msg,
+                'bot_response' => 'ok',
+                'used_openai' => true,
+                'response_time_ms' => 1200,
+            ]);
+        }
+
+        $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk();
     }
 }
