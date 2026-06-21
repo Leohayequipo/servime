@@ -6,6 +6,7 @@ use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Models\TrackingEvent;
+use App\Services\AnalyticsInsightsService;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -97,6 +98,11 @@ class AnalyticsController extends Controller
         $metrics = $this->getEventMetrics($comercioId);
         $topWords = $this->getTopWords($comercioId);
 
+        // Intención de las consultas + sugerencias accionables
+        $insights = new AnalyticsInsightsService;
+        $intents = $insights->intents($comercioId);
+        $suggestions = $insights->suggestions($comercioId, $metrics, $intents);
+
         return view('analytics.comercio', compact(
             'comercio',
             'threads',
@@ -104,7 +110,9 @@ class AnalyticsController extends Controller
             'frequentQuestions',
             'dailyStats',
             'metrics',
-            'topWords'
+            'topWords',
+            'intents',
+            'suggestions'
         ));
     }
 

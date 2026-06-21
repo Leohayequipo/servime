@@ -56,8 +56,12 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
 
 - **Fase 2 (hecha):** visualizaciones en `analytics.comercio` — IA vs clásico, embudo,
   promos clickeadas, platos top (dish_want), top palabras y heatmap por hora/día.
-- **Fase 3 (pendiente):** clasificación de intención (rule-based → IA) y "sugerencias" para el comercio.
-  Posibles métricas extra: dispositivo (de user_agent), visitantes que vuelven, tiempo de sesión real.
+- **Fase 3 (hecha):** intención de las consultas + sugerencias accionables, en
+  `App\Services\AnalyticsInsightsService` (`intents()` clasifica rule-based por keywords
+  con word-boundary; `suggestions()` arma tips según intención + métricas: aclarar envíos/
+  horario/pago, fallback alto, embudo flojo, promos sin conversión). Es rule-based (sin IA).
+- **Siguiente (pendiente):** intención con IA si el rule-based se queda corto; métricas extra
+  (dispositivo desde user_agent, visitantes que vuelven, tiempo de sesión real).
 
 ## Tests
 

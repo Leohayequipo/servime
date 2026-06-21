@@ -110,6 +110,46 @@
                 </div>
             </div>
 
+            <!-- Sugerencias accionables -->
+            @if(count($suggestions) > 0)
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 shadow-sm sm:rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-medium text-amber-900 dark:text-amber-200 mb-4">✨ Sugerencias para tu negocio</h3>
+                    <ul class="space-y-2.5">
+                        @foreach($suggestions as $s)
+                            <li class="flex items-start gap-3 text-sm text-amber-900 dark:text-amber-100">
+                                <span class="flex-shrink-0">{{ $s['icon'] }}</span>
+                                <span>{{ $s['text'] }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Intención de las consultas -->
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 mb-8">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">🎯 ¿Para qué consultan?</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Intención detectada en {{ $intents['total'] }} mensajes (últimos 30 días)</p>
+                @php $intMax = collect($intents['counts'])->max() ?: 1; @endphp
+                @if($intents['total'] > 0)
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                        @foreach($intents['counts'] as $name => $count)
+                            @if($count > 0)
+                                <div>
+                                    <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                        <span>{{ $name }}</span><b>{{ $count }}</b>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                        <div class="h-2 {{ $name === 'Otras' ? 'bg-gray-400' : 'bg-indigo-500' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin mensajes para analizar todavía.</p>
+                @endif
+            </div>
+
             <!-- Comportamiento: IA vs Clásico + Embudo -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 @php

@@ -93,6 +93,31 @@ class AnalyticsTrackingTest extends TestCase
         $this->actingAs($user)->get(route('analytics.comercio', $ajeno))->assertForbidden();
     }
 
+    public function test_clasifica_la_intencion_de_los_mensajes(): void
+    {
+        $comercio = Comercio::factory()->create();
+
+        $mensajes = ['¿Cuál es el horario?', '¿Hacen envíos a domicilio?', 'Quiero algo vegano', '¿Cuánto cuesta la pizza?'];
+        foreach ($mensajes as $m) {
+            ChatConversation::create([
+                'comercio_id' => $comercio->id,
+                'session_id' => 'sess_'.uniqid(),
+                'user_message' => $m,
+                'bot_response' => 'ok',
+                'used_openai' => true,
+                'response_time_ms' => 1000,
+            ]);
+        }
+
+        $intents = (new \App\Services\AnalyticsInsightsService)->intents($comercio->id);
+
+        $this->assertSame(4, $intents['total']);
+        $this->assertSame(1, $intents['counts']['Horario']);
+        $this->assertSame(1, $intents['counts']['Envío / Delivery']);
+        $this->assertSame(1, $intents['counts']['Dieta / Restricciones']);
+        $this->assertSame(1, $intents['counts']['Precio']);
+    }
+
     public function test_el_panel_renderiza_con_datos_de_eventos_y_conversaciones(): void
     {
         $admin = User::factory()->superAdmin()->create();
