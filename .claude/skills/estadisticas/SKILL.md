@@ -57,11 +57,20 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
 - **Fase 2 (hecha):** visualizaciones en `analytics.comercio` — IA vs clásico, embudo,
   promos clickeadas, platos top (dish_want), top palabras y heatmap por hora/día.
 - **Fase 3 (hecha):** intención de las consultas + sugerencias accionables, en
-  `App\Services\AnalyticsInsightsService` (`intents()` clasifica rule-based por keywords
-  con word-boundary; `suggestions()` arma tips según intención + métricas: aclarar envíos/
-  horario/pago, fallback alto, embudo flojo, promos sin conversión). Es rule-based (sin IA).
-- **Siguiente (pendiente):** intención con IA si el rule-based se queda corto; métricas extra
-  (dispositivo desde user_agent, visitantes que vuelven, tiempo de sesión real).
+  `App\Services\AnalyticsInsightsService` (`intents()` usa el `intent` guardado si existe,
+  si no rule-based por keywords con word-boundary, **una categoría por mensaje**;
+  `suggestions()` arma tips según intención + métricas).
+- **Intención con IA (hecha, solo Premium):** feature `intencion_ia`. Botón "Reclasificar con IA"
+  en `analytics.comercio` (ruta `analytics.reclassify`, middleware `plan.feature:intencion_ia`)
+  → encola `ClassifyIntentsJob` → `App\Services\IntentClassifierService::classifyPending()`:
+  toma mensajes recientes **sin `intent`** (incremental), los manda **en lotes de 40** a
+  `gpt-4o-mini` (JSON), guarda `intent`/`intent_source='ia'` en `chat_conversations`.
+  Límite **blando** (corre cuando quieras; como es incremental el costo está acotado).
+  Cada corrida se registra en `intent_classification_runs` y el **super admin** ve el uso
+  en el dashboard de analytics (tabla + total de mensajes clasificados).
+  ⚠️ `intent`/`intent_source` deben estar en `$fillable` de `ChatConversation` (modo estricto).
+- **Siguiente (pendiente):** métricas extra sin IA (dispositivo desde user_agent,
+  visitantes que vuelven, tiempo de sesión real).
 
 ## Tests
 

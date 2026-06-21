@@ -238,6 +238,43 @@
                     </div>
                 </div>
             </div>
+
+            @if($iaRuns->isNotEmpty() || $iaRunsMensajes > 0)
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mt-8">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">✨ Uso de clasificación con IA</h3>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ number_format($iaRunsMensajes) }} mensajes clasificados en total</span>
+                        </div>
+                        @if($iaRuns->isNotEmpty())
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Fecha</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Comercio</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mensajes</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Modelo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        @foreach($iaRuns as $run)
+                                            <tr>
+                                                <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $run->created_at->format('d/m/Y H:i') }}</td>
+                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-white">{{ $run->comercio->nombre ?? '—' }}</td>
+                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-white">{{ $run->mensajes_procesados }}</td>
+                                                <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $run->modelo }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Todavía nadie usó la reclasificación con IA.</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

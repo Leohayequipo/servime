@@ -149,6 +149,8 @@ Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
             Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
             Route::get('/comercio/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
             Route::get('/export/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+            Route::post('/comercio/{comercio:slug}/reclassify', [App\Http\Controllers\AnalyticsController::class, 'reclassifyIntents'])
+                ->name('reclassify')->middleware('plan.feature:intencion_ia');
         });
     });
 

@@ -25,42 +25,60 @@ class AnalyticsInsightsService
     ];
 
     /**
+     * Categorías válidas de intención (para el clasificador con IA).
+     *
+     * @return array<int, string>
+     */
+    public static function categorias(): array
+    {
+        return [...array_keys(self::INTENTS), 'Otras'];
+    }
+
+    /**
      * Distribución de intención de los mensajes (últimos 30 días).
      */
     public function intents($comercioId): array
     {
-        $mensajes = ChatConversation::forComercio($comercioId)
+        $convs = ChatConversation::forComercio($comercioId)
             ->recent(30)
-            ->pluck('user_message')
-            ->filter();
+            ->get(['user_message', 'intent']);
 
-        $counts = array_fill_keys(array_keys(self::INTENTS), 0);
-        $counts['Otras'] = 0;
+        $counts = array_fill_keys(self::categorias(), 0);
         $total = 0;
+        $ia = 0; // cuántos fueron clasificados con IA (intent guardado)
 
-        $regex = [];
-        foreach (self::INTENTS as $name => $kws) {
-            $regex[$name] = '/\b('.implode('|', $kws).')\b/';
-        }
-
-        foreach ($mensajes as $msg) {
-            $total++;
-            $norm = $this->normalizar((string) $msg);
-            $matched = false;
-            foreach ($regex as $name => $rx) {
-                if (preg_match($rx, $norm)) {
-                    $counts[$name]++;
-                    $matched = true;
-                }
+        foreach ($convs as $c) {
+            if (empty($c->user_message)) {
+                continue;
             }
-            if (! $matched) {
-                $counts['Otras']++;
+            $total++;
+
+            // Si ya tiene intención guardada (IA) la usamos; si no, rule-based en vivo.
+            if (! empty($c->intent) && isset($counts[$c->intent])) {
+                $counts[$c->intent]++;
+                $ia++;
+            } else {
+                $counts[$this->ruleIntent($this->normalizar((string) $c->user_message))]++;
             }
         }
 
         arsort($counts);
 
-        return ['total' => $total, 'counts' => $counts];
+        return ['total' => $total, 'counts' => $counts, 'ia' => $ia];
+    }
+
+    /**
+     * Intención rule-based: primera categoría cuyas keywords matchean (una por mensaje).
+     */
+    private function ruleIntent(string $norm): string
+    {
+        foreach (self::INTENTS as $name => $kws) {
+            if (preg_match('/\b('.implode('|', $kws).')\b/', $norm)) {
+                return $name;
+            }
+        }
+
+        return 'Otras';
     }
 
     /**

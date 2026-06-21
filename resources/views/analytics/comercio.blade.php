@@ -29,6 +29,12 @@
                 </div>
             </div>
 
+            @if(session('success'))
+                <div class="bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 rounded-lg p-4 mb-6 text-sm">
+                    {{ session('success') }}
+                </div>
+            @endif
+
             <!-- Estadísticas del Comercio -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Total Conversaciones -->
@@ -127,8 +133,31 @@
 
             <!-- Intención de las consultas -->
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 mb-8">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">🎯 ¿Para qué consultan?</h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Intención detectada en {{ $intents['total'] }} mensajes (últimos 30 días)</p>
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">🎯 ¿Para qué consultan?</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Intención en {{ $intents['total'] }} mensajes (últimos 30 días)
+                            @if($intents['ia'] > 0)
+                                · <span class="text-indigo-600 dark:text-indigo-400">{{ $intents['ia'] }} clasificados con IA</span>
+                            @endif
+                        </p>
+                    </div>
+                    @if(auth()->user()->isSuperAdmin() || $comercio->tieneFeature('intencion_ia'))
+                        <div class="text-right">
+                            <form method="POST" action="{{ route('analytics.reclassify', $comercio) }}">
+                                @csrf
+                                <button type="submit"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded inline-flex items-center gap-2">
+                                    ✨ Reclasificar con IA
+                                </button>
+                            </form>
+                            @if($ultimaClasificacion)
+                                <p class="text-[11px] text-gray-400 mt-1">Última: {{ $ultimaClasificacion->created_at->diffForHumans() }}</p>
+                            @endif
+                        </div>
+                    @endif
+                </div>
                 @php $intMax = collect($intents['counts'])->max() ?: 1; @endphp
                 @if($intents['total'] > 0)
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">

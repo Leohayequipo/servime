@@ -13,17 +13,19 @@ class ChatConversation extends Model
         'user_message',
         'bot_response',
         'used_openai',
+        'intent',
+        'intent_source',
         'response_time_ms',
         'user_ip',
         'user_agent',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'used_openai' => 'boolean',
         'metadata' => 'array',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
     /**

@@ -63,7 +63,7 @@ return new class extends Migration
                 'mensajes_ia_mes' => null, // ilimitado
                 'modelo_ia' => 'gpt-4o',
                 'max_tokens_chat' => 1200,
-                'features' => json_encode(['analytics', 'excel', 'promociones']),
+                'features' => json_encode(['analytics', 'excel', 'promociones', 'intencion_ia']),
                 'orden' => 3,
                 'activo' => true,
                 'created_at' => $now,

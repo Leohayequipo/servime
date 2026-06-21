@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ClassifyIntentsJob;
 use App\Models\ChatConversation;
 use App\Models\Comercio;
+use App\Models\IntentClassificationRun;
 use App\Models\Menu;
 use App\Models\TrackingEvent;
 use App\Services\AnalyticsInsightsService;
@@ -42,7 +44,13 @@ class AnalyticsController extends Controller
             'fallback_usage' => (clone $conv)->where('used_openai', false)->count(),
         ];
 
-        return view('analytics.dashboard', compact('comercios', 'stats'));
+        // Seguimiento de uso de la clasificación con IA (solo super admin)
+        $iaRuns = $esAdmin
+            ? IntentClassificationRun::with('comercio')->latest()->take(20)->get()
+            : collect();
+        $iaRunsMensajes = $esAdmin ? (int) IntentClassificationRun::sum('mensajes_procesados') : 0;
+
+        return view('analytics.dashboard', compact('comercios', 'stats', 'iaRuns', 'iaRunsMensajes'));
     }
 
     /**
@@ -103,6 +111,9 @@ class AnalyticsController extends Controller
         $intents = $insights->intents($comercioId);
         $suggestions = $insights->suggestions($comercioId, $metrics, $intents);
 
+        // Última clasificación con IA (para el botón Premium)
+        $ultimaClasificacion = IntentClassificationRun::where('comercio_id', $comercioId)->latest()->first();
+
         return view('analytics.comercio', compact(
             'comercio',
             'threads',
@@ -112,8 +123,23 @@ class AnalyticsController extends Controller
             'metrics',
             'topWords',
             'intents',
-            'suggestions'
+            'suggestions',
+            'ultimaClasificacion'
         ));
+    }
+
+    /**
+     * Dispara la reclasificación de intención con IA (Premium, gateado en la ruta).
+     */
+    public function reclassifyIntents(Comercio $comercio)
+    {
+        if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        ClassifyIntentsJob::dispatch($comercio);
+
+        return back()->with('success', 'Reclasificación con IA encolada. En unos minutos vas a ver las intenciones actualizadas.');
     }
 
     /**
