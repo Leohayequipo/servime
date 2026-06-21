@@ -1,25 +1,23 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                📊 Dashboard de Analytics
-            </h2>
-            <div class="flex space-x-2">
-                <a href="{{ route('comercios.index') }}" 
-                   class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+    <div class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <div>
+                    <h2 class="font-semibold text-2xl text-text-primary leading-tight">📊 Dashboard de Analytics</h2>
+                    <p class="text-sm text-text-secondary mt-0.5">Resumen del sistema</p>
+                </div>
+                <a href="{{ route('comercios.index') }}"
+                   class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg border border-accent-gray">
                     ← Volver a Comercios
                 </a>
             </div>
-        </div>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
             <!-- Estadísticas Generales -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Total Comercios -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -30,15 +28,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Comercios</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total_comercios'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Total Comercios</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['total_comercios'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Total Menús -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -49,15 +47,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Menús</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total_menus'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Total Menús</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['total_menus'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Conversaciones Hoy -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -68,15 +66,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Chats Hoy</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['conversations_today'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Chats Hoy</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['conversations_today'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Total Conversaciones -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -87,8 +85,8 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Chats</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total_conversations'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Total Chats</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['total_conversations'] }}</p>
                             </div>
                         </div>
                     </div>
@@ -97,48 +95,48 @@
 
             <!-- Uso de OpenAI -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🤖 Uso de OpenAI</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4">🤖 Uso de OpenAI</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Respuestas con IA</span>
+                                <span class="text-sm text-text-secondary">Respuestas con IA</span>
                                 <span class="text-sm font-medium text-green-600">{{ $stats['openai_usage'] }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Respuestas básicas</span>
+                                <span class="text-sm text-text-secondary">Respuestas básicas</span>
                                 <span class="text-sm font-medium text-orange-600">{{ $stats['fallback_usage'] }}</span>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="w-full bg-accent-gray/40 rounded-full h-2">
                                 @php
                                     $total = $stats['openai_usage'] + $stats['fallback_usage'];
                                     $openaiPercentage = $total > 0 ? round(($stats['openai_usage'] / $total) * 100) : 0;
                                 @endphp
                                 <div class="bg-green-600 h-2 rounded-full" style="width: {{ $openaiPercentage }}%"></div>
                             </div>
-                            <p class="text-xs text-gray-500">{{ $openaiPercentage }}% usa OpenAI</p>
+                            <p class="text-xs text-text-secondary">{{ $openaiPercentage }}% usa OpenAI</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📈 Resumen del Sistema</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4">📈 Resumen del Sistema</h3>
                         <div class="space-y-3">
                             <div class="flex justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Comercios activos</span>
+                                <span class="text-sm text-text-secondary">Comercios activos</span>
                                 <span class="text-sm font-medium">{{ $stats['total_comercios'] }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Menús procesados</span>
+                                <span class="text-sm text-text-secondary">Menús procesados</span>
                                 <span class="text-sm font-medium">{{ $stats['total_menus'] }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Conversaciones totales</span>
+                                <span class="text-sm text-text-secondary">Conversaciones totales</span>
                                 <span class="text-sm font-medium">{{ $stats['total_conversations'] }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Chats hoy</span>
+                                <span class="text-sm text-text-secondary">Chats hoy</span>
                                 <span class="text-sm font-medium text-green-600">{{ $stats['conversations_today'] }}</span>
                             </div>
                         </div>
@@ -147,32 +145,32 @@
             </div>
 
             <!-- Lista de Comercios con Métricas -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                 <div class="p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">🏪 Comercios y sus Métricas</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-6">🏪 Comercios y sus Métricas</h3>
                     
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead class="bg-gray-50 dark:bg-gray-700">
+                        <table class="min-w-full divide-y divide-accent-gray/50">
+                            <thead class="bg-primary-dark">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                                         Comercio
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                                         Menús
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                                         Conversaciones
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                                         Última Actividad
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody class="divide-y divide-accent-gray/50">
                                 @forelse($comercios as $comercio)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -182,15 +180,15 @@
                                                          src="{{ asset('storage/' . $comercio->logo_url) }}" 
                                                          alt="{{ $comercio->nombre }}">
                                                 @else
-                                                    <div class="h-4 w-4 rounded-full bg-gray-300 flex items-center justify-center">
-                                                        <span class="text-gray-600 text-xs font-medium">{{ substr($comercio->nombre, 0, 1) }}</span>
+                                                    <div class="h-4 w-4 rounded-full bg-accent-gray flex items-center justify-center">
+                                                        <span class="text-text-primary text-xs font-medium">{{ substr($comercio->nombre, 0, 1) }}</span>
                                                     </div>
                                                 @endif
                                                 <div class="ml-3">
-                                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                                    <div class="text-sm font-medium text-text-primary">
                                                         {{ $comercio->nombre }}
                                                     </div>
-                                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                    <div class="text-xs text-text-secondary">
                                                         {{ $comercio->descripcion ?? 'Sin descripción' }}
                                                     </div>
                                                 </div>
@@ -206,7 +204,7 @@
                                                 {{ $comercio->chat_conversations_count }} chats
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                                             @if($comercio->chat_conversations_count > 0)
                                                 {{ $comercio->chatConversations()->latest()->first()?->created_at?->diffForHumans() ?? 'Nunca' }}
                                             @else
@@ -228,7 +226,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="5" class="px-6 py-4 text-center text-text-secondary">
                                             No hay comercios registrados
                                         </td>
                                     </tr>
@@ -240,37 +238,37 @@
             </div>
 
             @if($iaRuns->isNotEmpty() || $iaRunsMensajes > 0)
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mt-8">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden mt-8">
                     <div class="p-6">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">✨ Uso de clasificación con IA</h3>
-                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ number_format($iaRunsMensajes) }} mensajes clasificados en total</span>
+                            <h3 class="text-lg font-medium text-text-primary">✨ Uso de clasificación con IA</h3>
+                            <span class="text-sm text-text-secondary">{{ number_format($iaRunsMensajes) }} mensajes clasificados en total</span>
                         </div>
                         @if($iaRuns->isNotEmpty())
                             <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                <table class="min-w-full divide-y divide-accent-gray/50">
+                                    <thead class="bg-primary-dark">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Fecha</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Comercio</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mensajes</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Modelo</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Fecha</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Comercio</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Mensajes</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Modelo</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tbody class="divide-y divide-accent-gray/50">
                                         @foreach($iaRuns as $run)
                                             <tr>
-                                                <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $run->created_at->format('d/m/Y H:i') }}</td>
-                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-white">{{ $run->comercio->nombre ?? '—' }}</td>
-                                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-white">{{ $run->mensajes_procesados }}</td>
-                                                <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $run->modelo }}</td>
+                                                <td class="px-6 py-3 text-sm text-text-secondary">{{ $run->created_at->format('d/m/Y H:i') }}</td>
+                                                <td class="px-6 py-3 text-sm text-text-primary">{{ $run->comercio->nombre ?? '—' }}</td>
+                                                <td class="px-6 py-3 text-sm text-text-primary">{{ $run->mensajes_procesados }}</td>
+                                                <td class="px-6 py-3 text-sm text-text-secondary">{{ $run->modelo }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
                         @else
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Todavía nadie usó la reclasificación con IA.</p>
+                            <p class="text-sm text-text-secondary">Todavía nadie usó la reclasificación con IA.</p>
                         @endif
                     </div>
                 </div>

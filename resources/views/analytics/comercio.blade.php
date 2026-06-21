@@ -11,19 +11,19 @@
                              class="w-10 h-10 rounded-full object-cover">
                     @endif
                     <div>
-                        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                        <h2 class="font-semibold text-xl text-text-primary leading-tight">
                             📊 Analytics · {{ $comercio->nombre }}
                         </h2>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Comportamiento de los últimos 30 días</p>
+                        <p class="text-sm text-text-secondary">Comportamiento de los últimos 30 días</p>
                     </div>
                 </div>
                 <div class="flex space-x-2">
                     <a href="{{ route('analytics.dashboard') }}"
-                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg border border-accent-gray">
                         ← Dashboard
                     </a>
                     <a href="{{ route('analytics.export', $comercio) }}"
-                       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                       class="bg-accent-green hover:opacity-90 text-gray-900 font-semibold py-2 px-4 rounded-lg">
                         📥 Exportar
                     </a>
                 </div>
@@ -38,7 +38,7 @@
             <!-- Estadísticas del Comercio -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Total Conversaciones -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -49,15 +49,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Conversaciones</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total_conversations'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Total Conversaciones</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['total_conversations'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Conversaciones Hoy -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -68,15 +68,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Conversaciones Hoy</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['conversations_today'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Conversaciones Hoy</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['conversations_today'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Uso de OpenAI -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -87,15 +87,15 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Con OpenAI</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['openai_usage'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Con OpenAI</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $stats['openai_usage'] }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tiempo Promedio -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
@@ -106,8 +106,8 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tiempo Promedio</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                                <p class="text-sm font-medium text-text-secondary">Tiempo Promedio</p>
+                                <p class="text-2xl font-bold text-text-primary">
                                     {{ $stats['avg_response_time'] ? round($stats['avg_response_time']) . 'ms' : 'N/A' }}
                                 </p>
                             </div>
@@ -132,11 +132,11 @@
             @endif
 
             <!-- Intención de las consultas -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 mb-8">
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-8">
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">🎯 ¿Para qué consultan?</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                        <h3 class="text-lg font-medium text-text-primary mb-1">🎯 ¿Para qué consultan?</h3>
+                        <p class="text-xs text-text-secondary">
                             Intención en {{ $intents['total'] }} mensajes (últimos 30 días)
                             @if($intents['ia'] > 0)
                                 · <span class="text-indigo-600 dark:text-indigo-400">{{ $intents['ia'] }} clasificados con IA</span>
@@ -153,7 +153,7 @@
                                 </button>
                             </form>
                             @if($ultimaClasificacion)
-                                <p class="text-[11px] text-gray-400 mt-1">Última: {{ $ultimaClasificacion->created_at->diffForHumans() }}</p>
+                                <p class="text-[11px] text-text-secondary mt-1">Última: {{ $ultimaClasificacion->created_at->diffForHumans() }}</p>
                             @endif
                         </div>
                     @endif
@@ -164,10 +164,10 @@
                         @foreach($intents['counts'] as $name => $count)
                             @if($count > 0)
                                 <div>
-                                    <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                    <div class="flex justify-between text-sm text-text-secondary mb-1">
                                         <span>{{ $name }}</span><b>{{ $count }}</b>
                                     </div>
-                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                    <div class="h-2 bg-accent-gray/40 rounded">
                                         <div class="h-2 {{ $name === 'Otras' ? 'bg-gray-400' : 'bg-indigo-500' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
                                     </div>
                                 </div>
@@ -175,7 +175,7 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin mensajes para analizar todavía.</p>
+                    <p class="text-text-secondary text-center py-4">Sin mensajes para analizar todavía.</p>
                 @endif
             </div>
 
@@ -187,24 +187,24 @@
                     $iaPct = $totalChoice ? round($ia / $totalChoice * 100) : 0;
                     $clPct = $totalChoice ? 100 - $iaPct : 0;
                 @endphp
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🤖 ¿IA o menú clásico?</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🤖 ¿IA o menú clásico?</h3>
                     @if($totalChoice > 0)
                         <div class="flex h-5 rounded-full overflow-hidden mb-4">
                             <div class="bg-amber-500" style="width: {{ $iaPct }}%"></div>
                             <div class="bg-gray-400 dark:bg-gray-600" style="width: {{ $clPct }}%"></div>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-700 dark:text-gray-300"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
-                            <span class="text-gray-700 dark:text-gray-300"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
+                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
+                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
                         </div>
                     @else
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin datos de elección todavía.</p>
+                        <p class="text-text-secondary text-center py-4">Sin datos de elección todavía.</p>
                     @endif
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🛒 Embudo de interés</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🛒 Embudo de interés</h3>
                     @php
                         $fv = $metrics['funnel']['visitas']; $fe = $metrics['funnel']['eligieron']; $fi = $metrics['funnel']['interesados'];
                         $pasos = [['Visitaron el menú', $fv, 'bg-blue-500'], ['Eligieron una opción', $fe, 'bg-amber-500'], ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500']];
@@ -213,97 +213,97 @@
                         <div class="space-y-3">
                             @foreach($pasos as [$label, $val, $color])
                                 <div>
-                                    <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                    <div class="flex justify-between text-sm text-text-secondary mb-1">
                                         <span>{{ $label }}</span><b>{{ $val }}</b>
                                     </div>
-                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                                    <div class="h-2 bg-accent-gray/40 rounded">
                                         <div class="h-2 {{ $color }} rounded" style="width: {{ $fv ? round($val / $fv * 100) : 0 }}%"></div>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
                     @else
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin visitas registradas todavía.</p>
+                        <p class="text-text-secondary text-center py-4">Sin visitas registradas todavía.</p>
                     @endif
                 </div>
             </div>
 
             <!-- Dispositivo · Visitantes · Tiempo de sesión -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">📱 Dispositivos</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-sm font-medium text-text-secondary mb-3">📱 Dispositivos</h3>
                     @php $dv = $metrics['devices']; $dvTotal = array_sum($dv) ?: 1; @endphp
                     @foreach(['movil' => 'Móvil', 'desktop' => 'Escritorio', 'tablet' => 'Tablet'] as $k => $label)
                         <div class="mb-2">
-                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300">
+                            <div class="flex justify-between text-sm text-text-secondary">
                                 <span>{{ $label }}</span><b>{{ round($dv[$k] / $dvTotal * 100) }}%</b>
                             </div>
-                            <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded mt-1">
+                            <div class="h-1.5 bg-accent-gray/40 rounded mt-1">
                                 <div class="h-1.5 bg-teal-500 rounded" style="width: {{ round($dv[$k] / $dvTotal * 100) }}%"></div>
                             </div>
                         </div>
                     @endforeach
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">🔁 Visitantes que vuelven</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-sm font-medium text-text-secondary mb-3">🔁 Visitantes que vuelven</h3>
                     @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
-                    <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p class="text-4xl font-bold text-text-primary">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
+                    <p class="text-sm text-text-secondary mt-1">
                         {{ $vs['recurrentes'] }} de {{ $metrics['totalSesiones'] }} visitantes volvieron
                     </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ $vs['nuevos'] }} nuevos</p>
+                    <p class="text-xs text-text-secondary mt-1">{{ $vs['nuevos'] }} nuevos</p>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">⏱️ Tiempo promedio en el menú</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-sm font-medium text-text-secondary mb-3">⏱️ Tiempo promedio en el menú</h3>
                     @php $sec = $metrics['sessionAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
-                    <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ $dur }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">por sesión</p>
+                    <p class="text-4xl font-bold text-text-primary">{{ $dur }}</p>
+                    <p class="text-sm text-text-secondary mt-1">por sesión</p>
                 </div>
             </div>
 
             <!-- Promos y platos top -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔥 Promos más clickeadas</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🔥 Promos más clickeadas</h3>
                     @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
                     @forelse($metrics['topPromos'] as $promo => $count)
                         <div class="mb-3">
-                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                            <div class="flex justify-between text-sm text-text-secondary mb-1">
                                 <span class="truncate">{{ $promo }}</span><b>{{ $count }}</b>
                             </div>
-                            <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                            <div class="h-2 bg-accent-gray/40 rounded">
                                 <div class="h-2 bg-red-500 rounded" style="width: {{ round($count / $promoMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Nadie clickeó promos aún.</p>
+                        <p class="text-text-secondary text-center py-4">Nadie clickeó promos aún.</p>
                     @endforelse
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🍽️ Platos más deseados</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🍽️ Platos más deseados</h3>
                     @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
                     @forelse($metrics['topDishes'] as $dish => $count)
                         <div class="mb-3">
-                            <div class="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-1">
+                            <div class="flex justify-between text-sm text-text-secondary mb-1">
                                 <span class="truncate">{{ $dish }}</span><b>{{ $count }}</b>
                             </div>
-                            <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded">
+                            <div class="h-2 bg-accent-gray/40 rounded">
                                 <div class="h-2 bg-green-500 rounded" style="width: {{ round($count / $dishMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Nadie tocó "Lo quiero" aún.</p>
+                        <p class="text-text-secondary text-center py-4">Nadie tocó "Lo quiero" aún.</p>
                     @endforelse
                 </div>
             </div>
 
             <!-- Top palabras + Heatmap -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔤 Palabras más buscadas</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🔤 Palabras más buscadas</h3>
                     @php $wordMax = $topWords->max() ?: 1; @endphp
                     @if($topWords->count() > 0)
                         <div class="flex flex-wrap gap-2">
@@ -315,18 +315,18 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin mensajes para analizar todavía.</p>
+                        <p class="text-text-secondary text-center py-4">Sin mensajes para analizar todavía.</p>
                     @endif
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🕒 Actividad por hora y día</h3>
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-4">🕒 Actividad por hora y día</h3>
                     @php $dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; $hmMax = $metrics['heatmapMax']; @endphp
                     @if($hmMax > 0)
                         <div class="space-y-1">
                             @for($d = 0; $d < 7; $d++)
                                 <div class="flex items-center gap-1">
-                                    <span class="w-8 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ $dias[$d] }}</span>
+                                    <span class="w-8 text-xs text-text-secondary flex-shrink-0">{{ $dias[$d] }}</span>
                                     @for($h = 0; $h < 24; $h++)
                                         @php $c = $metrics['heatmap'][$d][$h]; $r = $c > 0 ? max(0.15, $c / $hmMax) : 0; @endphp
                                         <div class="flex-1 h-4 rounded-sm" title="{{ $dias[$d] }} {{ $h }}:00 · {{ $c }}"
@@ -334,36 +334,36 @@
                                     @endfor
                                 </div>
                             @endfor
-                            <div class="flex justify-between text-[10px] text-gray-400 pl-9 pt-1">
+                            <div class="flex justify-between text-[10px] text-text-secondary pl-9 pt-1">
                                 <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
                             </div>
                         </div>
                     @else
-                        <p class="text-gray-500 dark:text-gray-400 text-center py-4">Sin actividad para el heatmap todavía.</p>
+                        <p class="text-text-secondary text-center py-4">Sin actividad para el heatmap todavía.</p>
                     @endif
                 </div>
             </div>
 
             <!-- Preguntas Más Frecuentes -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">❓ Preguntas Más Frecuentes</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4">❓ Preguntas Más Frecuentes</h3>
                         @if($frequentQuestions->count() > 0)
                             <div class="space-y-3">
                                 @foreach($frequentQuestions as $question)
                                     <div class="border-l-4 border-blue-500 pl-4 py-2">
-                                        <p class="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                                        <p class="text-sm text-text-primary font-medium">
                                             "{{ $question->user_message }}"
                                         </p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        <p class="text-xs text-text-secondary">
                                             {{ $question->frequency }} {{ $question->frequency > 1 ? 'veces' : 'vez' }}
                                         </p>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-4">
+                            <p class="text-text-secondary text-center py-4">
                                 No hay preguntas frecuentes registradas
                             </p>
                         @endif
@@ -371,27 +371,27 @@
                 </div>
 
                 <!-- Estadísticas Diarias -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📈 Actividad de los Últimos 7 Días</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4">📈 Actividad de los Últimos 7 Días</h3>
                         @if($dailyStats->count() > 0)
                             <div class="space-y-3">
                                 @foreach($dailyStats as $day)
-                                    <div class="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                                    <div class="flex items-center justify-between py-2 border-b border-accent-gray/50 last:border-b-0">
                                         <div>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                            <p class="text-sm font-medium text-text-primary">
                                                 {{ \Carbon\Carbon::parse($day->date)->format('d/m/Y') }}
                                             </p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            <p class="text-xs text-text-secondary">
                                                 {{ $day->openai_count }}/{{ $day->total }} con IA
                                             </p>
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-sm font-bold text-gray-900 dark:text-white">
+                                            <p class="text-sm font-bold text-text-primary">
                                                 {{ $day->total }} chats
                                             </p>
                                             @if($day->avg_response_time)
-                                                <p class="text-xs text-gray-500">
+                                                <p class="text-xs text-text-secondary">
                                                     {{ round($day->avg_response_time) }}ms promedio
                                                 </p>
                                             @endif
@@ -400,7 +400,7 @@
                                 @endforeach
                             </div>
                         @else
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-4">
+                            <p class="text-text-secondary text-center py-4">
                                 No hay actividad registrada en los últimos 7 días
                             </p>
                         @endif
@@ -409,24 +409,24 @@
             </div>
 
             <!-- Historial de Conversaciones -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                 <div class="p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">💬 Historial de Conversaciones</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-6">💬 Historial de Conversaciones</h3>
                     
                     @if($threads->count() > 0)
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Últimos {{ $threads->count() }} hilos (agrupados por sesión)</p>
+                        <p class="text-xs text-text-secondary mb-4">Últimos {{ $threads->count() }} hilos (agrupados por sesión)</p>
                         <div class="space-y-3">
                             @foreach($threads as $thread)
-                                <details class="border border-gray-200 dark:border-gray-700 rounded-lg group">
+                                <details class="border border-accent-gray/50 rounded-lg group">
                                     <summary class="flex items-center justify-between cursor-pointer px-4 py-3 select-none">
                                         <div class="flex items-center gap-3 min-w-0">
-                                            <span class="text-gray-400 group-open:rotate-90 transition-transform flex-shrink-0">▶</span>
+                                            <span class="text-text-secondary group-open:rotate-90 transition-transform flex-shrink-0">▶</span>
                                             <div class="min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                <p class="text-sm font-medium text-text-primary">
                                                     {{ $thread['inicio']->format('d/m H:i') }}
-                                                    <span class="text-gray-400 font-normal">· {{ $thread['ip'] ?? 'anónimo' }}</span>
+                                                    <span class="text-text-secondary font-normal">· {{ $thread['ip'] ?? 'anónimo' }}</span>
                                                 </p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                <p class="text-xs text-text-secondary truncate">
                                                     {{ $thread['mensajes']->first()->user_message }}
                                                 </p>
                                             </div>
@@ -435,16 +435,16 @@
                                             {{ $thread['total'] }} msj
                                         </span>
                                     </summary>
-                                    <div class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                                    <div class="px-4 pb-4 space-y-3 border-t border-accent-gray/40 pt-3">
                                         @foreach($thread['mensajes'] as $m)
                                             <div class="flex items-start gap-2">
-                                                <span class="text-xs text-gray-400 w-10 flex-shrink-0 pt-1">{{ $m->created_at->format('H:i') }}</span>
+                                                <span class="text-xs text-text-secondary w-10 flex-shrink-0 pt-1">{{ $m->created_at->format('H:i') }}</span>
                                                 <div class="flex-1 space-y-1">
-                                                    <p class="text-sm text-gray-900 dark:text-white">🧑 {{ $m->user_message }}</p>
-                                                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                    <p class="text-sm text-text-primary">🧑 {{ $m->user_message }}</p>
+                                                    <p class="text-sm text-text-secondary">
                                                         {{ $m->used_openai ? '🤖' : '🔧' }} {{ $m->bot_response }}
                                                         @if($m->response_time_ms)
-                                                            <span class="text-xs text-gray-400">· {{ $m->response_time_ms }}ms</span>
+                                                            <span class="text-xs text-text-secondary">· {{ $m->response_time_ms }}ms</span>
                                                         @endif
                                                     </p>
                                                 </div>
@@ -456,11 +456,11 @@
                         </div>
                     @else
                         <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="mx-auto h-12 w-12 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                             </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay conversaciones</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <h3 class="mt-2 text-sm font-medium text-text-primary">No hay conversaciones</h3>
+                            <p class="mt-1 text-sm text-text-secondary">
                                 Aún no se han registrado conversaciones para este comercio.
                             </p>
                         </div>
