@@ -265,12 +265,46 @@ class AnalyticsController extends Controller
      */
     private function getFrequentQuestions($comercioId, $limit = 10)
     {
-        return ChatConversation::forComercio($comercioId)
-            ->select('user_message', DB::raw('COUNT(*) as frequency'))
-            ->groupBy('user_message')
-            ->orderBy('frequency', 'desc')
-            ->limit($limit)
-            ->get();
+        $mensajes = ChatConversation::forComercio($comercioId)
+            ->recent(30)
+            ->pluck('user_message')
+            ->filter();
+
+        // Agrupa por texto normalizado (así "¿Tienen postres?" y "tienen postres"
+        // cuentan juntos), pero guarda la forma original para mostrarla.
+        $conteo = [];
+        $formas = [];
+        foreach ($mensajes as $msg) {
+            $key = $this->normalizarFrase((string) $msg);
+            if ($key === '') {
+                continue;
+            }
+            $original = trim((string) $msg);
+            $conteo[$key] = ($conteo[$key] ?? 0) + 1;
+            $formas[$key][$original] = ($formas[$key][$original] ?? 0) + 1;
+        }
+
+        arsort($conteo);
+
+        return collect($conteo)->take($limit)->map(fn ($freq, $key) => (object) [
+            'user_message' => $this->formaMasComun($formas[$key]),
+            'frequency' => $freq,
+        ])->values();
+    }
+
+    /**
+     * Normaliza una frase para agrupar variantes (minúsculas, sin acentos ni signos).
+     */
+    private function normalizarFrase(string $texto): string
+    {
+        $texto = mb_strtolower(trim($texto), 'UTF-8');
+        $texto = strtr($texto, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+        ]);
+        $texto = preg_replace('/[^a-z0-9 ]+/', '', $texto);
+        $texto = preg_replace('/\s+/', ' ', $texto);
+
+        return trim($texto);
     }
 
     /**
