@@ -76,8 +76,10 @@ class DashboardController extends Controller
             return $sesion['ultima_conversacion']->created_at;
         })->take(10);
 
-        // Comercios que agotaron su cuota mensual de IA (para avisar en el dashboard)
-        $comerciosSinCuotaIA = $comercios->filter(fn ($comercio) => ! $comercio->puedeUsarIA())->values();
+        // Comercios que agotaron su cuota mensual de IA (aviso para el dueño, no para el super admin)
+        $comerciosSinCuotaIA = $user->isSuperAdmin()
+            ? collect()
+            : $comercios->filter(fn ($comercio) => ! $comercio->puedeUsarIA())->values();
 
         // Preparar datos para filtros
         $comerciosList = $comercios->map(function ($comercio) {
