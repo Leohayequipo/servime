@@ -438,7 +438,7 @@
                                                            value="1"
                                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
                                                            class="sr-only peer pedido-toggle"
-                                                           onchange="updatePedidoStatus(this.checked); savePedidoStatus(this.checked);">
+                                                           onchange="updatePedidoStatus(this.checked);">
                                                     <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
                                                 </label>
                                                 <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
@@ -1199,6 +1199,7 @@
                 updatePedidoStatus(pedidoToggle.checked);
                 pedidoToggle.addEventListener('change', function() {
                     updatePedidoStatus(this.checked);
+                    savePedidoStatus(this.checked); // guarda en el server (acá sí está en scope)
                 });
             }
             
