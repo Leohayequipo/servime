@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comercio;
-use App\Models\QuestionCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -144,15 +143,7 @@ class ComercioController extends Controller
         // Cargar relación de usuario
         $comercio->load('user');
 
-        // Obtener categorías de preguntas
-        $categories = QuestionCategory::active()->ordered()->get();
-
-        // Si no hay categorías, crear una colección vacía para evitar errores
-        if ($categories->isEmpty()) {
-            $categories = collect();
-        }
-
-        return view('comercios.edit', compact('comercio', 'categories'));
+        return view('comercios.edit', compact('comercio'));
     }
 
     /**

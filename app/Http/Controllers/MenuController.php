@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Menu;
 use App\Models\Comercio;
-use App\Models\QuestionCategory;
 use App\Services\MenuProcessorService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -53,10 +52,9 @@ class MenuController extends Controller
         // Cargar relación de usuario
         $comercio->load('user');
         
-        $categories = QuestionCategory::active()->ordered()->get();
         $menu = null; // No hay menú para crear
         $isEdit = false;
-        return view('menus.create', compact('comercio', 'categories', 'menu', 'isEdit'));
+        return view('menus.create', compact('comercio', 'menu', 'isEdit'));
     }
 
     /**
@@ -223,10 +221,9 @@ class MenuController extends Controller
             $this->ensureMenuFileInPublicHtml($menu->archivo_original, $comercio->id);
         }
         
-        $categories = QuestionCategory::active()->ordered()->get();
         $isEdit = true;
-        
-        return view('menus.create', compact('comercio', 'menu', 'categories', 'isEdit'));
+
+        return view('menus.create', compact('comercio', 'menu', 'isEdit'));
     }
 
     /**

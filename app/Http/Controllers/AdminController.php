@@ -193,19 +193,10 @@ class AdminController extends Controller
             $this->ensureMenuFileInPublicHtml($menu->archivo_original);
         }
         
-        // Obtener categorías de preguntas como en el MenuController
-        $categories = \App\Models\QuestionCategory::active()->ordered()->get();
-        
-        // Si no hay categorías, crear una colección vacía para evitar errores
-        if ($categories->isEmpty()) {
-            $categories = collect();
-        }
-        
         return view('menus.create', [
-            'comercio' => $menu->comercio, 
+            'comercio' => $menu->comercio,
             'menu' => $menu,
             'isEdit' => true,
-            'categories' => $categories
         ]);
     }
 

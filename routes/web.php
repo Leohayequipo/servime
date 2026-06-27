@@ -5,7 +5,6 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\QuestionCategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -139,9 +138,6 @@ Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
     Route::post('/clear', [App\Http\Controllers\CartController::class, 'clear'])->name('api.cart.clear');
 });
 
-    // Rutas de Categorías de Preguntas
-    Route::resource('question-categories', QuestionCategoryController::class);
-    
     // Rutas de Analytics (requieren autenticación, usando slug)
     Route::middleware(['auth'])->group(function () {
         Route::prefix('analytics')->name('analytics.')->group(function () {
