@@ -134,7 +134,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
                         </button>
-                        <div class="relative group">
+                        <div class="relative group hidden md:block">
                             <button class="flex items-center space-x-3 hover:bg-secondary-dark px-3 py-2 rounded-lg transition-all duration-300">
                                 <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center neon-glow">
                                     <span class="text-sm font-semibold text-text-primary">
@@ -206,6 +206,24 @@
                     @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
                         <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Analytics</a>
                     @endif
+
+                    <!-- Usuario (mobile) -->
+                    <div class="border-t border-accent-gray my-2"></div>
+                    <div class="px-3 py-2 flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm font-semibold text-text-primary">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-text-primary truncate">{{ auth()->user()->name }}</p>
+                            <p class="text-xs text-text-secondary truncate">{{ auth()->user()->email }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">👤 Perfil</a>
+                    <a href="{{ url('/?chat=1') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">❓ Ayuda</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">🚪 Cerrar sesión</button>
+                    </form>
                 </div>
             </div>
         </nav>
