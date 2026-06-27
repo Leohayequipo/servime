@@ -17,17 +17,6 @@ use Illuminate\Support\Facades\Validator;
 
 class MenuController extends Controller
 {
-    /**
-     * Display all menus for the authenticated user.
-     */
-    public function all()
-    {
-        $menus = Menu::whereHas('comercio', function($query) {
-            $query->where('user_id', auth()->id());
-        })->with('comercio')->orderBy('created_at', 'desc')->get();
-        
-        return view('menus.all', compact('menus'));
-    }
 
     /**
      * Display a listing of the resource.

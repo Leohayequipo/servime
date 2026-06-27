@@ -76,6 +76,7 @@
     </head>
 <body class="text-text-primary min-h-screen">
     <div class="min-h-screen flex flex-col">
+        @php $miComercio = auth()->user()->getComercio(); @endphp
         <!-- Navigation -->
         <nav class="bg-background border-b border-accent-gray sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,8 +108,8 @@
                                        class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                         Planes
                                     </a>
-                                @else
-                                    <a href="{{ route('menus.all') }}" 
+                                @elseif($miComercio)
+                                    <a href="{{ route('menus.index', $miComercio) }}"
                                        class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                         Menús
                                     </a>
@@ -193,8 +194,8 @@
                     @if(Auth::user()->isSuperAdmin())
                         <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
                         <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Planes</a>
-                    @else
-                        <a href="{{ route('menus.all') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
+                    @elseif($miComercio)
+                        <a href="{{ route('menus.index', $miComercio) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
                     @endif
                     @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
                         <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Analytics</a>

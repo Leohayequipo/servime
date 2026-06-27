@@ -88,7 +88,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/comercios/{comercio:slug}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
 
     // Rutas de Menús (usando slug para comercio)
-    Route::get('/menus', [App\Http\Controllers\MenuController::class, 'all'])->name('menus.all');
     Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
     Route::get('/comercios/{comercio:slug}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
     Route::post('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store')->middleware('throttle:5,1');
