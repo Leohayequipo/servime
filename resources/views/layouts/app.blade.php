@@ -167,16 +167,9 @@
                                             Perfil
                                         </a>
                                         
-                                        <!-- Ayuda -->
-                                        <a href="{{ url('/?chat=1') }}"
-                                           class="flex items-center px-4 py-3 text-sm text-text-secondary hover:text-accent-blue hover:bg-primary-dark transition-all duration-300">
-                                            <span class="text-lg mr-3">❓</span>
-                                            Ayuda
-                                        </a>
-                                        
                                         <!-- Divider -->
                                         <div class="border-t border-accent-gray my-2"></div>
-                                        
+
                                         <!-- Cerrar Sesión -->
                                         <form method="POST" action="{{ route('logout') }}" class="block">
                                             @csrf
@@ -207,23 +200,28 @@
                         <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Analytics</a>
                     @endif
 
-                    <!-- Usuario (mobile) -->
+                    <!-- Usuario (mobile, colapsable) -->
                     <div class="border-t border-accent-gray my-2"></div>
-                    <div class="px-3 py-2 flex items-center gap-3">
+                    <button type="button" onclick="document.getElementById('mobileUser').classList.toggle('hidden')"
+                            class="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary-dark">
                         <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center flex-shrink-0">
                             <span class="text-sm font-semibold text-text-primary">{{ substr(auth()->user()->name, 0, 1) }}</span>
                         </div>
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1 text-left">
                             <p class="text-sm font-medium text-text-primary truncate">{{ auth()->user()->name }}</p>
                             <p class="text-xs text-text-secondary truncate">{{ auth()->user()->email }}</p>
                         </div>
+                        <svg class="w-4 h-4 text-text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div id="mobileUser" class="hidden pl-2">
+                        <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">👤 Perfil</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">🚪 Cerrar sesión</button>
+                        </form>
                     </div>
-                    <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">👤 Perfil</a>
-                    <a href="{{ url('/?chat=1') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">❓ Ayuda</a>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">🚪 Cerrar sesión</button>
-                    </form>
                 </div>
             </div>
         </nav>
