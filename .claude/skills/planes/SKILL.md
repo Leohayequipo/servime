@@ -72,7 +72,8 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
 - **La barra de navegación del panel está inline en `resources/views/layouts/app.blade.php`**
   (NO en `layouts/navigation.blade.php`, que es un partial de Breeze muerto). El link "Planes"
   va ahí, dentro del `@if(Auth::user()->isSuperAdmin())`. Editar el otro archivo no tiene efecto.
-- Esa barra solo se ve en pantalla `md:` para arriba; no hay menú hamburguesa de reemplazo.
+- La barra de links se ve en `md:` para arriba; en mobile hay un **menú hamburguesa** (`#mobileMenu`,
+  toggle por JS) en el mismo `app.blade.php` — si agregás un link al nav, agregalo en **ambos** (desktop + mobile).
 - **Sembrar planes en la migración**, no en `DatabaseSeeder` (que retorna temprano en producción).
 - `mensajes_ia_mes = null` significa **ilimitado** en todos lados (no 0).
 - El `throttle:20,1` por IP del chat es anti-abuso, **independiente** del plan; no tocarlo por planes.

@@ -126,6 +126,14 @@
                     </div>
                     
                     <div class="flex items-center">
+                        <!-- Hamburguesa (solo mobile) -->
+                        <button type="button" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')"
+                                class="md:hidden mr-1 p-2 rounded-lg text-text-secondary hover:text-accent-blue hover:bg-secondary-dark transition-colors"
+                                aria-label="Menú">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
                         <div class="relative group">
                             <button class="flex items-center space-x-3 hover:bg-secondary-dark px-3 py-2 rounded-lg transition-all duration-300">
                                 <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center neon-glow">
@@ -183,6 +191,21 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Menú mobile (hamburguesa) -->
+                <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-1">
+                    <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('dashboard') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Dashboard</a>
+                    <a href="{{ route('comercios.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('comercios.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Comercios</a>
+                    @if(Auth::user()->isSuperAdmin())
+                        <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
+                        <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Planes</a>
+                    @else
+                        <a href="{{ route('menus.all') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
+                    @endif
+                    @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                        <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Analytics</a>
+                    @endif
                 </div>
             </div>
         </nav>
