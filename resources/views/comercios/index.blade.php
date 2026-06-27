@@ -50,7 +50,8 @@
 
     @if($comercios->count() > 0)
 
-        <!-- Buscador -->
+        <!-- Buscador (solo si hay más de un comercio que filtrar) -->
+        @if($comercios->count() > 1)
         <div class="mb-6">
             <div class="relative max-w-sm">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
@@ -66,6 +67,7 @@
                               transition-colors">
             </div>
         </div>
+        @endif
 
         <!-- Grid de cards -->
         <div id="comercios-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
