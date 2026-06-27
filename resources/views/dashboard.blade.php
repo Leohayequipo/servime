@@ -38,6 +38,43 @@
                 </div>
             @endif
 
+            <!-- Consumo de IA del comercio (usuario final) -->
+            @unless(auth()->user()->isSuperAdmin())
+                @foreach($comercios as $c)
+                    @php
+                        $planC = $c->planEfectivo();
+                        $limiteC = $planC?->mensajes_ia_mes;
+                        $usadosC = $c->mensajesIaUsados();
+                        $pctC = $limiteC ? min(100, (int) round($usadosC / max(1, $limiteC) * 100)) : 0;
+                    @endphp
+                    <div class="mb-6 bg-secondary-dark border border-accent-gray rounded-2xl p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🤖</span>
+                                <p class="font-medium text-text-primary">Asistente IA · {{ $c->nombre }}</p>
+                            </div>
+                            <span class="px-2.5 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary border border-accent-gray">
+                                Plan {{ $planC?->nombre ?? '—' }}
+                            </span>
+                        </div>
+                        @if(is_null($limiteC))
+                            <p class="text-sm text-text-secondary">{{ number_format($usadosC) }} mensajes este mes · <span class="text-accent-green font-medium">Ilimitado</span></p>
+                        @else
+                            <p class="text-sm text-text-secondary mb-2">
+                                {{ number_format($usadosC) }} / {{ number_format($limiteC) }} mensajes este mes
+                                <span class="text-text-secondary/70">({{ $pctC }}%)</span>
+                            </p>
+                            <div class="w-full h-2 bg-accent-gray/40 rounded-full overflow-hidden">
+                                <div class="h-2 rounded-full {{ $pctC >= 100 ? 'bg-red-500' : ($pctC >= 80 ? 'bg-yellow-500' : 'bg-accent-green') }}" style="width: {{ $pctC }}%"></div>
+                            </div>
+                            @if($pctC >= 100)
+                                <p class="text-xs text-red-300 mt-2">Llegaste al límite del mes. El asistente se reactiva el mes que viene o ampliando tu plan.</p>
+                            @endif
+                        @endif
+                    </div>
+                @endforeach
+            @endunless
+
             <!-- Flash Messages -->
             @if(session('success'))
                 <div class="mb-8">
