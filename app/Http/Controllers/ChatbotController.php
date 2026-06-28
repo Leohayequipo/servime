@@ -68,8 +68,12 @@ class ChatbotController extends Controller
             // Log de la conversación (usar session_id obtenido anteriormente)
             $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId);
 
+            // Platos del menú mencionados en la respuesta (datos exactos del JSON: foto/precio/botón)
+            $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $response);
+
             return response()->json([
                 'response' => $response,
+                'platos' => $platos,
                 'timestamp' => now(),
                 'success' => true,
             ]);

@@ -60,17 +60,108 @@ class ChatbotService
     /**
      * Construir contexto de los menús y preguntas frecuentes
      */
-    private function buildMenuContext(Comercio $comercio): string
+    /**
+     * Menú(s) para el contexto: el activo, o el último procesado si no hay activo.
+     */
+    private function menusParaContexto(Comercio $comercio)
     {
-        // Solo el menú ACTIVO (no los viejos). Fallback al último procesado si no hay activo.
-        $base = $comercio->menus()
-            ->where('procesado', true)
-            ->whereNotNull('contexto_gpt');
-
+        $base = $comercio->menus()->where('procesado', true)->whereNotNull('contexto_gpt');
         $menus = (clone $base)->where('activo', true)->get();
         if ($menus->isEmpty()) {
             $menus = (clone $base)->orderBy('created_at', 'desc')->limit(1)->get();
         }
+
+        return $menus;
+    }
+
+    /**
+     * Lista plana de platos del menú activo: nombre, precio, descripción e imagen (URL resuelta).
+     *
+     * @return array<int, array{nombre:string, precio:string, descripcion:string, imagen:?string}>
+     */
+    public function platosDelMenu(Comercio $comercio): array
+    {
+        $platos = [];
+        foreach ($this->menusParaContexto($comercio) as $menu) {
+            $data = $this->parseMenuJson($menu->contexto_gpt ?? $menu->texto_extraido);
+            if (! $data || ! isset($data['categorias']) || ! is_array($data['categorias'])) {
+                continue;
+            }
+            foreach ($data['categorias'] as $cat) {
+                foreach (($cat['platos'] ?? []) as $p) {
+                    if (empty($p['nombre'])) {
+                        continue;
+                    }
+                    $platos[] = [
+                        'nombre' => trim($p['nombre']),
+                        'precio' => trim((string) ($p['precio'] ?? '')),
+                        'descripcion' => trim((string) ($p['descripcion'] ?? '')),
+                        'imagen' => ! empty($p['imagen']) ? $this->resolverImagenUrl(trim($p['imagen'])) : null,
+                    ];
+                }
+            }
+        }
+
+        return $platos;
+    }
+
+    /**
+     * Detecta qué platos del menú aparecen en la respuesta del bot (match por nombre normalizado),
+     * en orden de aparición. Devuelve el dato EXACTO del JSON (no parseado del texto).
+     */
+    public function detectarPlatosMencionados(Comercio $comercio, string $respuesta): array
+    {
+        $platos = $this->platosDelMenu($comercio);
+        if (empty($platos)) {
+            return [];
+        }
+        $hay = $this->normalizarTexto($respuesta);
+        $encontrados = [];
+        foreach ($platos as $p) {
+            $needle = $this->normalizarTexto($p['nombre']);
+            if (mb_strlen($needle) < 3 || isset($encontrados[$needle])) {
+                continue;
+            }
+            $pos = mb_strpos($hay, $needle);
+            if ($pos !== false) {
+                $encontrados[$needle] = ['pos' => $pos, 'plato' => $p];
+            }
+        }
+        uasort($encontrados, fn ($a, $b) => $a['pos'] <=> $b['pos']);
+
+        return array_values(array_map(fn ($e) => $e['plato'], $encontrados));
+    }
+
+    private function normalizarTexto(string $t): string
+    {
+        $t = mb_strtolower($t, 'UTF-8');
+        $t = strtr($t, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+        $t = preg_replace('/[^a-z0-9 ]+/', ' ', $t);
+
+        return trim(preg_replace('/\s+/', ' ', $t));
+    }
+
+    /**
+     * Resuelve la URL de una imagen de plato (mismo criterio que el contexto).
+     */
+    private function resolverImagenUrl(string $ruta): string
+    {
+        if (str_starts_with($ruta, 'http://') || str_starts_with($ruta, 'https://')) {
+            return $ruta;
+        }
+        if (! str_starts_with($ruta, '/')) {
+            $ruta = '/'.$ruta;
+        }
+        if (! str_starts_with($ruta, '/storage/')) {
+            $ruta = str_starts_with($ruta, 'storage/') ? '/'.$ruta : '/storage/'.ltrim($ruta, '/');
+        }
+
+        return asset($ruta);
+    }
+
+    private function buildMenuContext(Comercio $comercio): string
+    {
+        $menus = $this->menusParaContexto($comercio);
 
         $contexto = "Información del restaurante: {$comercio->nombre}\n";
         if ($comercio->descripcion) {
@@ -399,49 +490,13 @@ EJEMPLOS DE DESCRIPCIONES (SOLO SI EL PLATO ESTÁ EN EL MENÚ):
 - Si el menú dice \"Milanesa\" sin descripción → puedes decir \"Milanesa empanada\" pero NO inventes \"con papas fritas artesanales\" si no está en el menú
 - IMPORTANTE: Estos son solo ejemplos. SOLO usa información que REALMENTE está en el menú proporcionado arriba
 
-FORMATO DE RESPUESTAS (CRÍTICO - DEBE SEGUIRSE EXACTAMENTE):
-- ORGANIZA por CATEGORÍAS con emojis temáticos
-- USA SALTOS DE LÍNEA dobles entre secciones para claridad visual
-- FORMATO OBLIGATORIO para cada plato (DEBE empezar con guión y espacio):
-  
-🍽️ **CATEGORÍA NOMBRE**
-  
-- **Nombre del Plato** — **\$precio**
-  *Descripción gourmet tentadora*
-  [TAGS:VEGANO,SIN_GLUTEN] (solo si el plato tiene tags en el menú, mostrar como: [TAGS:tag1,tag2])
-  [IMAGEN:url_de_la_imagen_si_existe]
-  
-- **Otro Plato** — **\$precio**
-  *Descripción gourmet tentadora*
+CÓMO RESPONDER (MUY IMPORTANTE):
+- Sos un asistente de VENTAS: RECOMENDÁS, no listás todo. Salvo que el cliente pida ver el menú completo, sugerí 2 o 3 platos bien elegidos según lo que pregunta.
+- Escribí natural, cálido y breve (en prosa, no como catálogo). Mencioná cada plato por su NOMBRE EXACTO tal como figura en el menú de arriba.
+- La app muestra sola la FOTO, el PRECIO y el botón \"Lo quiero\" de cada plato que nombres con su nombre exacto. Por eso NO escribas el precio, NO pegues imágenes ni links, y NO uses listas con guiones: alcanza con nombrar el plato dentro de la frase.
+- Hacé venta sugerida con naturalidad cuando tenga sentido: una guarnición, una bebida o un postre para acompañar (solo si están en el menú).
+- LENGUAJE NEUTRAL: el cliente puede estar DENTRO o FUERA del local. NUNCA uses \"ven\", \"te esperamos\", \"cuando vengas\". Usá \"Disfrutá...\", \"Probá...\", \"Pedí...\", \"Te recomiendo...\", \"No te lo pierdas\".
 
-🍷 **OTRA CATEGORÍA**
-
-- **Plato** — **\$precio**
-  *Descripción*
-  [IMAGEN:url_si_existe]
-
-⚠️ REGLA CRÍTICA SOBRE IMÁGENES - LEE EL CONTEXTO:
-- El contexto del menú incluye líneas como: \"  [IMAGEN:url]\" después de cada plato que tiene imagen
-- DEBES buscar estas líneas en el contexto y COPIARLAS EXACTAMENTE en tu respuesta
-- Si en el contexto aparece \"  [IMAGEN:http://127.0.0.1:8000/storage/...]\" para un plato, DEBES incluir esa misma línea en tu respuesta
-- NO omitas las imágenes. Si están en el contexto, DEBEN estar en tu respuesta
-- EJEMPLO: Si el contexto dice \"- DULCE O CREMA — \$1111\n  [IMAGEN:http://127.0.0.1:8000/storage/...]\", tu respuesta DEBE incluir: \"- **DULCE O CREMA** — **\$1111**\n  [IMAGEN:http://127.0.0.1:8000/storage/...]\"
-
-REGLAS DE FORMATO ESTRICTO PARA PLATOS (NO NEGOCIABLES):
-1. SIEMPRE empieza cada línea de plato con: guión (-) + espacio + **nombre en negrita** + espacio + guión largo (—) + espacio + **precio en negrita**
-2. EJEMPLO CORRECTO: `- **Alitas de Pollo** — **7,00 €` (con doble asterisco para negrita)
-3. NUNCA uses otro formato como: `Alitas de Pollo - 7€` o `• Alitas de Pollo: 7€` o `Alitas de Pollo (7€)`
-4. El guión inicial (-) es OBLIGATORIO para que el sistema detecte el plato y muestre el botón \"Lo quiero\"
-5. El separador debe ser guión largo (—) no guión corto (-)
-6. El precio DEBE estar en **negrita** (entre doble asterisco)
-7. ⚠️ CRÍTICO SOBRE IMÁGENES: Cuando un plato tiene imagen disponible en el contexto (formato [IMAGEN:url]), DEBES INCLUIRLA OBLIGATORIAMENTE en tu respuesta usando exactamente ese formato [IMAGEN:url]. NO OMITAS las imágenes. Si el contexto muestra [IMAGEN:url] para un plato, esa imagen DEBE aparecer en tu respuesta después del precio y descripción del plato.
-8. Usa emojis estratégicamente: 🍽️ 🥘 🍷 🧀 🍰 🍕 🥗 🍝 🍖 🍤
-9. LENGUAJE NEUTRAL - IMPORTANTE: Los clientes pueden estar DENTRO del local o FUERA. NUNCA uses frases que impliquen \"venir\" o \"moverse\" como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\", etc.
-   - USA frases neutrales que funcionen en ambos casos: \"¡No te lo pierdas!\", \"¡Imperdible!\", \"¡Pruébalo ya!\", \"¡Disfrútalo!\", \"¡Saborea esto!\", \"¡Delicioso!\", \"¡Recomendado!\", \"¡Especialidad de la casa!\"
-   - EVITA: \"ven\", \"atrévete ahora y ven\", \"ven a disfrutar\", \"ven a probar\", \"te esperamos\", \"cuando vengas\"
-   - USA: \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"Te recomendamos...\", \"No te pierdas...\"
-10. Mantén un tono cálido y acogedor
-11. SIEMPRE separa cada plato con una línea en blanco para mejor legibilidad
 
 EMOJIS POR CATEGORÍA:
 - 🍽️ Entradas/Appetizers
@@ -506,12 +561,12 @@ REGLAS FINALES ABSOLUTAS ANTES DE RESPONDER:
 1. REVISA el menú proporcionado arriba - SOLO menciona platos que REALMENTE aparecen ahí
 2. Si el cliente pregunta por un plato que NO está en el menú, di que no está disponible y ofrece alternativas REALES
 3. NO inventes platos, ingredientes, preparaciones o descripciones que no estén en el menú
-4. Si un plato no tiene descripción en el menú, usa solo el nombre y precio, sin inventar detalles
-5. FORMATO OBLIGATORIO: Cada plato DEBE empezar con \"- **Nombre** — **Precio**\" (guión + espacio + nombre en negrita + espacio + guión largo + espacio + precio en negrita). Sin este formato exacto, el botón \"Lo quiero\" NO aparecerá.
-6. ⚠️ IMÁGENES OBLIGATORIAS: Si en el contexto aparece [IMAGEN:url] para un plato, DEBES incluirla en tu respuesta. Busca en el contexto las líneas que dicen [IMAGEN:url] y copia exactamente ese formato en tu respuesta después del precio y descripción del plato correspondiente.
+4. Si un plato no tiene descripción en el menú, usá solo el nombre, sin inventar detalles
+5. Nombrá cada plato que recomiendes con su NOMBRE EXACTO del menú: la app le pone sola la foto, el precio y el botón \"Lo quiero\". NO escribas precios, NO pegues imágenes/links, NO uses listas con guiones.
+6. RECOMENDÁ pocos platos (2 o 3) en prosa, no listes todo (salvo que pidan el menú completo). Sumá una sugerencia para acompañar cuando tenga sentido.
 7. LENGUAJE NEUTRAL: NUNCA uses frases como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\" porque el cliente puede estar DENTRO del local. Usa frases neutrales como \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"No te lo pierdas\", \"Imperdible\".
 
-RESPUESTA (con formato perfecto, entusiasmo, pero SOLO con información REAL del menú):";
+RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú):";
     }
 
     /**

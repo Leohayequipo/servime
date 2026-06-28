@@ -32,4 +32,25 @@ class ChatbotContextTest extends TestCase
         $this->assertStringContainsString('PlatoNuevo', $preview['context_preview']);
         $this->assertStringNotContainsString('PlatoViejo', $preview['context_preview']);
     }
+
+    public function test_detecta_platos_mencionados_con_datos_exactos_del_json(): void
+    {
+        $comercio = Comercio::factory()->create();
+        Menu::factory()->for($comercio)->create([
+            'activo' => true,
+            'procesado' => true,
+            'contexto_gpt' => json_encode(['categorias' => [['nombre' => 'Hamburguesas', 'platos' => [
+                ['nombre' => 'Barrica Burger', 'precio' => '$18.500', 'descripcion' => 'Cheddar y panceta'],
+                ['nombre' => 'Veggie', 'precio' => '$16.900', 'descripcion' => 'De lentejas'],
+            ]]]]),
+        ]);
+
+        $respuesta = 'Te recomiendo la Barrica Burger, es la más pedida. ¡Imperdible!';
+        $platos = (new ChatbotService)->detectarPlatosMencionados($comercio, $respuesta);
+
+        // Detecta solo la mencionada, con precio exacto del JSON
+        $this->assertCount(1, $platos);
+        $this->assertSame('Barrica Burger', $platos[0]['nombre']);
+        $this->assertSame('$18.500', $platos[0]['precio']);
+    }
 }

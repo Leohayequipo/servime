@@ -691,7 +691,7 @@
             .then(data => {
                 hideTypingIndicator();
                 if (data.response) {
-                    addMessage(data.response, 'bot');
+                    addMessage(data.response, 'bot', data.platos || []);
                 } else {
                     addMessage('Lo siento, no pude procesar tu mensaje. Inténtalo de nuevo.', 'bot');
                 }
@@ -728,6 +728,10 @@
                 return `<div style="margin-top:4px;margin-bottom:4px;">${tagsHtml}</div>`;
             });
             
+            // Forzar que cada línea de plato ("- ...") arranque su propio párrafo,
+            // así cada plato recibe su botón aunque el bot no deje una línea en blanco entre ellos.
+            text = text.replace(/\n(?=\s*-\s)/g, '\n\n');
+
             // Dividir en párrafos (doble salto de línea)
             const paragraphs = text.split(/\n\n+/);
             
@@ -866,62 +870,47 @@
                 filteredBlocks.push(b);
             });
 
-            const html = filteredBlocks.map(b => {
-                const join = b.parrafos.join('\n');
-                // Caso normal: ya detectamos plato
-                if (pedidosHabilitados && b.tieneBoton && b.nombre) {
-                    return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${b.nombre.replace(/\"/g,'\\\"')}\" data-price=\"${(b.precio||'').replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
-                }
-                // Fallback: detectar línea de plato en el bloque con múltiples patrones
-                let m = null;
-                
-                // Patrón 1: - <strong>nombre</strong> — precio
-                m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
-                
-                // Patrón 2: - <strong>nombre</strong> - precio
-                if (!m) {
-                    m = join.match(/^\-\s*<strong>([^<]+)<\/strong>\s*-\s*(?:<strong>)?([^<\n]+)(?:<\/strong>)?/m);
-                }
-                
-                // Patrón 3: - nombre — precio (sin negrita)
-                if (!m) {
-                    m = join.match(/^\-\s*([^:\n<—–]+?)\s*[—–-]\s*([0-9,\.\s€$]+)/m);
-                }
-                
-                // Patrón 4: - nombre - precio (sin negrita, guión corto)
-                if (!m) {
-                    m = join.match(/^\-\s*([^:\n<-]+?)\s*-\s*([0-9,\.\s€$]+)/m);
-                }
-                
-                // Patrón 5: <strong>nombre</strong> — precio (sin guión inicial)
-                if (!m) {
-                    m = join.match(/<strong>([^<]+)<\/strong>\s*[—–-]\s*(?:<strong>)?([0-9,\.\s€$]+)(?:<\/strong>)?/m);
-                }
-                
-                if (m) {
-                    const nombre = (m[1]||'').trim();
-                    const precio = (m[2]||'').trim();
-                    // Validar que tenemos nombre y precio válidos
-                    if (nombre && precio && (precio.match(/[0-9]/) || precio.includes('€') || precio.includes('$'))) {
-                        if (pedidosHabilitados) {
-                            return `${join}\n<button class=\"btn-lo-quiero\" data-nombre=\"${nombre.replace(/\"/g,'\\\"')}\" data-price=\"${precio.replace(/\"/g,'\\\"')}\" style=\"display:inline-block;margin-top:8px;font-size:15px\">Lo quiero</button>`;
-                        }
-                    }
-                }
-                return join;
-            }).join('');
+            // Solo texto: los botones "Lo quiero" e imágenes ahora salen de las tarjetas (data.platos).
+            const html = filteredBlocks.map(b => b.parrafos.join('\n')).join('');
             const safeHtml = html.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g,'');
             return safeHtml;
         }
 
         // Agregar mensaje al chat
-        function addMessage(text, sender) {
+        // Escape básico para HTML
+        function escHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+        // Tarjetas de plato (foto + precio + "Lo quiero"), con datos exactos del menú
+        function renderPlatoCards(platos){
+            if (!platos || !platos.length) return '';
+            const cards = platos.map(p => {
+                const nombre = escHtml(p.nombre||'');
+                const precio = escHtml(p.precio||'');
+                const desc = escHtml(p.descripcion||'');
+                const img = p.imagen ? `<img src="${escHtml(p.imagen)}" alt="${nombre}" class="w-full h-36 object-cover" onerror="this.style.display='none'">` : '';
+                const btn = pedidosHabilitados ? `<button class="btn-lo-quiero" data-nombre="${nombre}" data-price="${precio}" style="margin-top:10px;font-size:15px">Lo quiero</button>` : '';
+                return `<div class="rounded-xl overflow-hidden border border-white/10 bg-black/20">
+                    ${img}
+                    <div class="p-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="font-semibold text-text-primary">${nombre}</span>
+                            ${precio ? `<span class="text-accent-blue font-bold whitespace-nowrap">${precio}</span>` : ''}
+                        </div>
+                        ${desc ? `<p class="text-text-secondary text-sm mt-1">${desc}</p>` : ''}
+                        ${btn}
+                    </div>
+                </div>`;
+            }).join('');
+            return `<div class="mt-3 space-y-3">${cards}</div>`;
+        }
+
+        function addMessage(text, sender, platos = []) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
-            
+
             // Parsear Markdown para el bot
             const parsedText = sender === 'bot' ? parseMarkdown(text) : text;
-            
+
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end animate-slide-in-right">
@@ -935,8 +924,9 @@
                             <div class="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                                 <span class="text-white text-sm">🤖</span>
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
+                                ${renderPlatoCards(platos)}
                             </div>
                         </div>
                     </div>
