@@ -110,9 +110,11 @@
             background: #3b82f6;
             border: 1px solid rgba(255,255,255,0.15);
             cursor: pointer;
-            transition: opacity .15s ease;
+            transition: opacity .15s ease, transform .15s ease, background .2s ease;
         }
         .btn-lo-quiero:hover { opacity: .9; }
+        .btn-lo-quiero.added { background: #16a34a; border-color: rgba(255,255,255,0.35); }
+        #fabWish { transition: transform .2s ease; }
         
         /* Animaciones para promociones */
         @keyframes fire-pulse {
@@ -1134,6 +1136,25 @@
                 const nombre = t.getAttribute('data-nombre');
                 const priceText = t.getAttribute('data-price');
                 addWish(nombre, priceText);
+
+                // Feedback visual: pop + "✓ Agregado" y vuelve a su estado
+                if (!t.dataset.busy) {
+                    t.dataset.busy = '1';
+                    const original = t.textContent;
+                    t.textContent = '✓ Agregado';
+                    t.classList.add('added');
+                    t.style.transform = 'scale(1.12)';
+                    setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);
+                    setTimeout(() => {
+                        t.textContent = original;
+                        t.classList.remove('added');
+                        delete t.dataset.busy;
+                    }, 1200);
+                }
+
+                // Rebote del carrito flotante para que se note dónde se sumó
+                const fab = document.getElementById('fabWish');
+                if (fab) { fab.style.transform = 'scale(1.15)'; setTimeout(() => { fab.style.transform = 'scale(1)'; }, 200); }
             }
         });
 
