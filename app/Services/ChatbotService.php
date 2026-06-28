@@ -62,10 +62,15 @@ class ChatbotService
      */
     private function buildMenuContext(Comercio $comercio): string
     {
-        $menus = $comercio->menus()
+        // Solo el menú ACTIVO (no los viejos). Fallback al último procesado si no hay activo.
+        $base = $comercio->menus()
             ->where('procesado', true)
-            ->whereNotNull('contexto_gpt')
-            ->get();
+            ->whereNotNull('contexto_gpt');
+
+        $menus = (clone $base)->where('activo', true)->get();
+        if ($menus->isEmpty()) {
+            $menus = (clone $base)->orderBy('created_at', 'desc')->limit(1)->get();
+        }
 
         $contexto = "Información del restaurante: {$comercio->nombre}\n";
         if ($comercio->descripcion) {
