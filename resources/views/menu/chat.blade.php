@@ -945,6 +945,11 @@
             
             chatMessages.appendChild(messageDiv);
             scrollToBottom();
+            // Re-scroll cuando carguen las imágenes de la respuesta (cambian la altura)
+            messageDiv.querySelectorAll('img').forEach(img => {
+                img.addEventListener('load', scrollToBottom);
+                img.addEventListener('error', scrollToBottom);
+            });
         }
 
         // ===== Wishlist (pre‑pedido simple con "Lo quiero") =====

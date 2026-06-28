@@ -14,7 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\VerifyCsrfToken::class,
         ]);
-        
+
+        // Endpoints públicos sin CSRF (se llaman por API/sendBeacon, sin token)
+        $middleware->validateCsrfTokens(except: [
+            'api/chat/*',
+            'api/track/*',
+        ]);
+
         // Registrar middleware personalizado
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
