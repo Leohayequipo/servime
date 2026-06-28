@@ -556,9 +556,13 @@
 
                                 <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Platos estrella (los recomienda primero)</p>
                                 @if(count($platosMenu) > 0)
-                                    <div class="flex flex-wrap gap-2 mb-4 max-h-40 overflow-y-auto p-1">
+                                    @if(count($platosMenu) > 8)
+                                        <input type="text" id="cfg_estrellas_search" placeholder="🔍 Buscar plato..."
+                                               class="w-full mb-2 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                    @endif
+                                    <div id="cfg_estrellas_list" class="flex flex-wrap gap-2 mb-4 max-h-40 overflow-y-auto p-1">
                                         @foreach($platosMenu as $p)
-                                            <label class="cursor-pointer">
+                                            <label class="cursor-pointer cfg-estrella-item" data-nombre="{{ strtolower($p['nombre']) }}">
                                                 <input type="checkbox" name="cfg_estrellas" value="{{ $p['nombre'] }}" class="peer sr-only" @checked(in_array($p['nombre'], $cfg['estrellas'] ?? []))>
                                                 <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-amber-500/20 peer-checked:border-amber-500 peer-checked:text-amber-400 transition-colors">⭐ {{ $p['nombre'] }}</span>
                                             </label>
@@ -1692,6 +1696,17 @@
                 cfgDetalles.addEventListener('input', function() {
                     clearTimeout(cfgDetallesTimeout);
                     cfgDetallesTimeout = setTimeout(saveChatbotConfig, 1000);
+                });
+            }
+
+            // Buscador de platos estrella (filtra los chips en vivo)
+            const estrellasSearch = document.getElementById('cfg_estrellas_search');
+            if (estrellasSearch) {
+                estrellasSearch.addEventListener('input', function() {
+                    const q = this.value.trim().toLowerCase();
+                    document.querySelectorAll('.cfg-estrella-item').forEach(el => {
+                        el.style.display = (!q || el.dataset.nombre.includes(q)) ? '' : 'none';
+                    });
                 });
             }
 
