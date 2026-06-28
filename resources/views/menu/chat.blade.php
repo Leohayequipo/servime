@@ -75,7 +75,7 @@
         .focus\:ring-accent-blue:focus { box-shadow: 0 0 0 2px var(--accent-blue) !important; outline: none; }
         
         /* Fullscreen mobile app layout */
-        .app { min-height: 100dvh; display: flex; flex-direction: column; }
+        .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         .app-header { position: sticky; top: 0; z-index: 10; padding: 12px 16px; background: #000000; }
         .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; padding-bottom: 96px; }
         .input-fixed { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #000000; border-top: 1px solid rgba(255,255,255,0.1); }
