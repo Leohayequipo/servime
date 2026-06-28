@@ -318,12 +318,6 @@
     </style>
 </head>
 <body class="bg-background">
-    @php
-        // Avatar del asistente: logo del comercio o, si no hay, la inicial de su nombre.
-        $botAvatar = !empty($comercio->logo_url)
-            ? '<img src="'.asset('storage/'.$comercio->logo_url).'" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-md">'
-            : '<div class="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md"><span class="text-white text-sm font-semibold">'.strtoupper(mb_substr($comercio->chatbot_name ?? 'A', 0, 1)).'</span></div>';
-    @endphp
     <div class="app">
         <!-- Header fijo -->
         <div class="app-header">
@@ -358,8 +352,7 @@
         <div id="chatScroll" class="chat-scroll">
             <div id="chatMessages" class="max-w-md mx-auto space-y-4 px-4">
                 <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-fade-in">
-                    <div class="flex items-start space-x-3">
-                        {!! $botAvatar !!}
+                    <div class="flex items-start">
                         <div class="flex-1">
                             <p class="text-text-primary text-base leading-relaxed" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
                         </div>
@@ -481,7 +474,6 @@
     <script>
         let isLoading = false;
         const pedidosHabilitados = @json($comercio->pedido_habilitado);
-        const BOT_AVATAR = @json($botAvatar);
         
         // ===== Reconocimiento de Voz =====
         let recognition = null;
@@ -931,8 +923,7 @@
             } else {
                 messageDiv.innerHTML = `
                     <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
-                        <div class="flex items-start space-x-3">
-                            ${BOT_AVATAR}
+                        <div class="flex items-start">
                             <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
@@ -1025,8 +1016,7 @@
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
                 <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
-                    <div class="flex items-start space-x-3">
-                        ${BOT_AVATAR}
+                    <div class="flex items-start">
                         <div class="flex-1">
                             <div class="flex items-center space-x-3">
                                 <div class="flex space-x-1">
