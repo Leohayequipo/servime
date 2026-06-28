@@ -143,10 +143,7 @@ class ComercioController extends Controller
         // Cargar relación de usuario
         $comercio->load('user');
 
-        // Platos del menú activo (para elegir los "estrella" del asistente)
-        $platosMenu = (new \App\Services\ChatbotService)->platosDelMenu($comercio);
-
-        return view('comercios.edit', compact('comercio', 'platosMenu'));
+        return view('comercios.edit', compact('comercio'));
     }
 
     /**
@@ -184,17 +181,6 @@ class ComercioController extends Controller
             'page_description' => 'nullable|string|max:500',
             'favicon_url' => 'nullable|string|max:255',
             'pedido_habilitado' => 'nullable|boolean',
-
-            // Personalidad del asistente
-            'chatbot_config' => 'nullable|array',
-            'chatbot_config.tono' => 'nullable|string|in:cercano_divertido,calido_atento,formal_elegante,canchero',
-            'chatbot_config.trato' => 'nullable|string|in:voseo,tuteo,neutro',
-            'chatbot_config.emojis' => 'nullable|string|in:moderado,minimo,ninguno',
-            'chatbot_config.focos' => 'nullable|array',
-            'chatbot_config.focos.*' => 'string|in:promos,compartir,veganas,bebidas,postres,combos',
-            'chatbot_config.estrellas' => 'nullable|array',
-            'chatbot_config.estrellas.*' => 'string|max:120',
-            'chatbot_config.detalles' => 'nullable|string|max:600',
         ]);
 
         // Actualizar información básica
@@ -213,7 +199,6 @@ class ComercioController extends Controller
         $comercio->menu_description = $validated['menu_description'];
         $comercio->contact_info = $validated['contact_info'];
         $comercio->chatbot_name = $validated['chatbot_name'];
-        $comercio->chatbot_config = $validated['chatbot_config'] ?? null;
         $comercio->show_contact_info = $validated['show_contact_info'] ?? false;
         $comercio->enable_ai_responses = $validated['enable_ai_responses'] ?? false;
         $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Comercio;
+use App\Models\Menu;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,17 +16,21 @@ class ChatbotConfigTest extends TestCase
     {
         $user = User::factory()->create();
         $comercio = Comercio::factory()->for($user)->create();
+        $menu = Menu::factory()->for($comercio)->create();
 
-        $this->actingAs($user)->put(route('comercios.update', $comercio), $this->payloadBase($comercio) + [
-            'chatbot_config' => [
-                'tono' => 'canchero',
-                'trato' => 'voseo',
-                'emojis' => 'moderado',
-                'focos' => ['promos', 'bebidas'],
-                'estrellas' => ['Barrica Burger'],
-                'detalles' => 'Cervecería artesanal',
-            ],
-        ])->assertRedirect();
+        $this->actingAs($user)
+            ->postJson(route('menus.update.chatbot.config', [$comercio, $menu]), [
+                'chatbot_config' => [
+                    'tono' => 'canchero',
+                    'trato' => 'voseo',
+                    'emojis' => 'moderado',
+                    'focos' => ['promos', 'bebidas'],
+                    'estrellas' => ['Barrica Burger'],
+                    'detalles' => 'Cervecería artesanal',
+                ],
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
 
         $cfg = $comercio->fresh()->chatbot_config;
         $this->assertSame('canchero', $cfg['tono']);
@@ -38,36 +43,12 @@ class ChatbotConfigTest extends TestCase
     {
         $user = User::factory()->create();
         $comercio = Comercio::factory()->for($user)->create();
+        $menu = Menu::factory()->for($comercio)->create();
 
-        $this->actingAs($user)->put(route('comercios.update', $comercio), $this->payloadBase($comercio) + [
-            'chatbot_config' => ['tono' => 'hacker', 'focos' => ['cualquiera']],
-        ])->assertSessionHasErrors(['chatbot_config.tono', 'chatbot_config.focos.0']);
-    }
-
-    /**
-     * Campos que el form de editar comercio envía siempre (visibles + ocultos).
-     */
-    private function payloadBase(Comercio $comercio): array
-    {
-        return [
-            'nombre' => $comercio->nombre,
-            'descripcion' => '',
-            'direccion' => '',
-            'horario' => '',
-            'primary_color' => '#000000',
-            'secondary_color' => '#000000',
-            'accent_color' => '#000000',
-            'background_color' => '#000000',
-            'welcome_message' => '',
-            'menu_description' => '',
-            'contact_info' => '',
-            'chatbot_name' => 'Bot',
-            'show_contact_info' => '1',
-            'enable_ai_responses' => '1',
-            'page_title' => '',
-            'page_description' => '',
-            'favicon_url' => '',
-            'pedido_habilitado' => '0',
-        ];
+        $this->actingAs($user)
+            ->postJson(route('menus.update.chatbot.config', [$comercio, $menu]), [
+                'chatbot_config' => ['tono' => 'hacker', 'focos' => ['cualquiera']],
+            ])
+            ->assertStatus(422);
     }
 }

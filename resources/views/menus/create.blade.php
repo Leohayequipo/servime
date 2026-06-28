@@ -502,7 +502,78 @@
                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</textarea>
                                 <p class="text-xs text-text-secondary mt-2">Máximo 500 caracteres</p>
                             </div>
-                            
+
+                            <!-- 🤖 Personalidad del asistente -->
+                            @php $cfg = $comercio->chatbot_config ?? []; $platosMenu = (new \App\Services\ChatbotService)->platosDelMenu($comercio); @endphp
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-1">Personalidad del asistente</label>
+                                <p class="text-xs text-text-secondary mb-4">Cómo habla y qué querés que venda. Se guarda solo.</p>
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Tono</p>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach(['cercano_divertido'=>'Cercano y divertido','calido_atento'=>'Cálido y atento','formal_elegante'=>'Formal y elegante','canchero'=>'Canchero'] as $val=>$label)
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="cfg_tono" value="{{ $val }}" class="peer sr-only" @checked(($cfg['tono'] ?? '')===$val)>
+                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Cómo trata</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach(['voseo'=>'Vos','tuteo'=>'Tú','neutro'=>'Neutro'] as $val=>$label)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="cfg_trato" value="{{ $val }}" class="peer sr-only" @checked(($cfg['trato'] ?? '')===$val)>
+                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Emojis</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach(['moderado'=>'Moderados','minimo'=>'Pocos','ninguno'=>'Ninguno'] as $val=>$label)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="cfg_emojis" value="{{ $val }}" class="peer sr-only" @checked(($cfg['emojis'] ?? '')===$val)>
+                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Qué querés que destaque</p>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach(['promos'=>'Promos del día','compartir'=>'Para compartir','veganas'=>'Veganas/sin TACC','bebidas'=>'Bebidas/tragos','postres'=>'Postres','combos'=>'Combos'] as $val=>$label)
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" name="cfg_focos" value="{{ $val }}" class="peer sr-only" @checked(in_array($val, $cfg['focos'] ?? []))>
+                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-green/20 peer-checked:border-accent-green peer-checked:text-accent-green transition-colors">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Platos estrella (los recomienda primero)</p>
+                                @if(count($platosMenu) > 0)
+                                    <div class="flex flex-wrap gap-2 mb-4 max-h-40 overflow-y-auto p-1">
+                                        @foreach($platosMenu as $p)
+                                            <label class="cursor-pointer">
+                                                <input type="checkbox" name="cfg_estrellas" value="{{ $p['nombre'] }}" class="peer sr-only" @checked(in_array($p['nombre'], $cfg['estrellas'] ?? []))>
+                                                <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-amber-500/20 peer-checked:border-amber-500 peer-checked:text-amber-400 transition-colors">⭐ {{ $p['nombre'] }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="text-sm text-text-secondary mb-4">Activá un menú procesado para elegir tus platos estrella.</p>
+                                @endif
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Detalles de tu local (opcional)</p>
+                                <textarea id="cfg_detalles" rows="3" maxlength="600"
+                                          class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none"
+                                          placeholder="Ej: Cervecería artesanal; recomendá siempre una cerveza para acompañar. La estrella es la Barrica Burger.">{{ $cfg['detalles'] ?? '' }}</textarea>
+                            </div>
+
                             <!-- Configuraciones -->
                         </div>
                     </div>
@@ -1507,6 +1578,18 @@
                     formData.append('chatbot_name', document.getElementById('chatbot_name').value);
                     formData.append('welcome_message', document.getElementById('welcome_message').value);
                     formData.append('_token', token);
+
+                    // Personalidad del asistente (chips + estrellas + detalles)
+                    const tono = document.querySelector('input[name="cfg_tono"]:checked');
+                    if (tono) formData.append('chatbot_config[tono]', tono.value);
+                    const trato = document.querySelector('input[name="cfg_trato"]:checked');
+                    if (trato) formData.append('chatbot_config[trato]', trato.value);
+                    const emojis = document.querySelector('input[name="cfg_emojis"]:checked');
+                    if (emojis) formData.append('chatbot_config[emojis]', emojis.value);
+                    document.querySelectorAll('input[name="cfg_focos"]:checked').forEach(el => formData.append('chatbot_config[focos][]', el.value));
+                    document.querySelectorAll('input[name="cfg_estrellas"]:checked').forEach(el => formData.append('chatbot_config[estrellas][]', el.value));
+                    const det = document.getElementById('cfg_detalles');
+                    if (det && det.value.trim()) formData.append('chatbot_config[detalles]', det.value.trim());
                     
                     const response = await fetch(url, {
                         method: 'POST',
@@ -1599,6 +1682,19 @@
                 }, 1000);
             });
             
+            // Auto-guardar la personalidad del asistente al cambiar
+            document.querySelectorAll('input[name="cfg_tono"], input[name="cfg_trato"], input[name="cfg_emojis"], input[name="cfg_focos"], input[name="cfg_estrellas"]').forEach(el => {
+                el.addEventListener('change', saveChatbotConfig);
+            });
+            const cfgDetalles = document.getElementById('cfg_detalles');
+            if (cfgDetalles) {
+                let cfgDetallesTimeout;
+                cfgDetalles.addEventListener('input', function() {
+                    clearTimeout(cfgDetallesTimeout);
+                    cfgDetallesTimeout = setTimeout(saveChatbotConfig, 1000);
+                });
+            }
+
             // Inicializar vista previa
             setTimeout(updatePreview, 100);
             

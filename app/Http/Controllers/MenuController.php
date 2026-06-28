@@ -2,38 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Menu;
-use App\Models\Comercio;
-use App\Services\MenuProcessorService;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use App\Exports\MenuExport;
 use App\Imports\MenuImport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Comercio;
+use App\Models\Menu;
+use App\Services\MenuProcessorService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Excel as ExcelType;
-use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MenuController extends Controller
 {
-
     /**
      * Display a listing of the resource.
      */
     public function index(Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para ver los menús de este comercio.');
         }
-        
+
         // Cargar relación de usuario
         $comercio->load('user');
-        
+
         $menus = $comercio->menus()->orderBy('created_at', 'desc')->get();
-        
+
         return view('menus.index', compact('comercio', 'menus'));
     }
 
@@ -43,17 +41,18 @@ class MenuController extends Controller
     public function create(Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede ver cualquiera, usuario común solo sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
-        
+
         // Cargar relación de usuario
         $comercio->load('user');
-        
+
         $menu = null; // No hay menú para crear
         $isEdit = false;
+
         return view('menus.create', compact('comercio', 'menu', 'isEdit'));
     }
 
@@ -62,22 +61,23 @@ class MenuController extends Controller
      */
     public function store(Request $request, Comercio $comercio)
     {
-        
+
         $user = auth()->user();
-        
+
         // Validar permisos: Super Admin puede crear en cualquiera, usuario común solo en sus comercios
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
-        
+
         // DEBUG: Ver información del archivo recibido
-        if (!$request->hasFile('archivo')) {
+        if (! $request->hasFile('archivo')) {
             Log::error('❌ ERROR: No se recibió archivo en la petición');
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'No se recibió ningún archivo. Por favor, intenta nuevamente.');
         }
-        
+
         $file = $request->file('archivo');
         Log::info('DEBUG - Archivo recibido en store:', [
             'original_name' => $file->getClientOriginalName(),
@@ -85,9 +85,9 @@ class MenuController extends Controller
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
             'is_valid' => $file->isValid(),
-            'has_file' => $request->hasFile('archivo')
+            'has_file' => $request->hasFile('archivo'),
         ]);
-        
+
         $validated = $request->validate([
             'nombre' => 'nullable|string|max:255',
             'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB max
@@ -97,11 +97,11 @@ class MenuController extends Controller
         $archivo = $request->file('archivo');
         // Asegurar que existan las carpetas del comercio
         $this->createComercioDirectories($comercio->id);
-        
+
         $extension = $archivo->getClientOriginalExtension();
-        $nombreArchivo = uniqid() . '.' . $extension;
+        $nombreArchivo = uniqid().'.'.$extension;
         $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
-        
+
         Log::info('📤 ARCHIVO SUBIDO', [
             'archivo_path' => $archivoPath,
             'nombre_original' => $request->file('archivo')->getClientOriginalName(),
@@ -110,9 +110,9 @@ class MenuController extends Controller
             'tamaño' => $request->file('archivo')->getSize(),
             'mime_type' => $request->file('archivo')->getMimeType(),
             'comercio_id' => $comercio->id,
-            'comercio_nombre' => $comercio->nombre
+            'comercio_nombre' => $comercio->nombre,
         ]);
-        
+
         // Copiar archivo a public_html en producción (con manejo de errores)
         try {
             $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
@@ -120,54 +120,54 @@ class MenuController extends Controller
             // No fallar si hay error al copiar a public_html (solo es para producción)
             Log::warning('Error al copiar archivo a public_html (no crítico)', [
                 'error' => $e->getMessage(),
-                'archivo_path' => $archivoPath
+                'archivo_path' => $archivoPath,
             ]);
         }
-        
+
         // Crear menú
-        $menu = new Menu();
+        $menu = new Menu;
         $menu->comercio_id = $comercio->id;
         $menu->nombre = $request->nombre;
         $menu->archivo_original = $archivoPath;
-        
+
         Log::info('💾 MENÚ CREADO EN BD', [
             'menu_id' => 'NUEVO (aún no guardado)',
             'archivo_original' => $archivoPath,
-            'comercio_id' => $comercio->id
+            'comercio_id' => $comercio->id,
         ]);
-        
+
         // Detectar formato automáticamente basándose en MIME type y extensión
         $mimeType = $request->file('archivo')->getMimeType();
         $extension = strtolower($request->file('archivo')->getClientOriginalExtension());
-        
+
         Log::info('DEBUG - Detectando formato:', [
             'mime_type' => $mimeType,
-            'extension' => $extension
+            'extension' => $extension,
         ]);
-        
+
         // Usar MIME type O extensión para detectar PDF (algunos PDFs escaneados pueden tener MIME type incorrecto)
         $menu->formato = ($mimeType === 'application/pdf' || $extension === 'pdf') ? 'pdf' : 'image';
-        
+
         $menu->procesado = false;
-        
+
         // Si es el primer menú del comercio, marcarlo como activo
         if ($comercio->menus()->count() === 0) {
             $menu->activo = true;
         }
-        
+
         $menu->save();
-        
+
         // REFRESCAR el modelo desde la BD para asegurar que tenemos los datos más recientes
         $menu->refresh();
-        
+
         Log::info('💾 MENÚ GUARDADO EN BD', [
             'menu_id' => $menu->id,
             'archivo_original' => $menu->archivo_original,
             'formato' => $menu->formato,
             'comercio_id' => $comercio->id,
-            'archivo_path_completo' => storage_path('app/public/' . $menu->archivo_original),
-            'archivo_existe' => file_exists(storage_path('app/public/' . $menu->archivo_original)),
-            'tamaño_archivo' => file_exists(storage_path('app/public/' . $menu->archivo_original)) ? filesize(storage_path('app/public/' . $menu->archivo_original)) : 'N/A'
+            'archivo_path_completo' => storage_path('app/public/'.$menu->archivo_original),
+            'archivo_existe' => file_exists(storage_path('app/public/'.$menu->archivo_original)),
+            'tamaño_archivo' => file_exists(storage_path('app/public/'.$menu->archivo_original)) ? filesize(storage_path('app/public/'.$menu->archivo_original)) : 'N/A',
         ]);
 
         // Despachar procesamiento a la queue para no bloquear el request
@@ -186,16 +186,16 @@ class MenuController extends Controller
     public function show(Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos y que el menú pertenezca al comercio
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para ver este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
+
         // Redirigir a la página de edición donde está integrada toda la funcionalidad
         return redirect()->route('menus.edit', [$comercio, $menu]);
     }
@@ -206,21 +206,21 @@ class MenuController extends Controller
     public function edit(Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos y que el menú pertenezca al comercio
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para editar este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
+
         // Asegurar que el archivo del menú esté disponible en public_html (si existe)
         if ($menu->archivo_original) {
             $this->ensureMenuFileInPublicHtml($menu->archivo_original, $comercio->id);
         }
-        
+
         $isEdit = true;
 
         return view('menus.create', compact('comercio', 'menu', 'isEdit'));
@@ -232,16 +232,16 @@ class MenuController extends Controller
     public function update(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos y que el menú pertenezca al comercio
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para actualizar este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
+
         // Preparar reglas de validación
         $rules = [
             'nombre' => 'nullable|string|max:255',
@@ -256,38 +256,38 @@ class MenuController extends Controller
             'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'pedido_habilitado' => 'nullable|boolean'
+            'pedido_habilitado' => 'nullable|boolean',
         ];
-        
+
         // Si formato está vacío o no es válido, convertirlo a null
-        if ($request->has('formato') && (empty($request->input('formato')) || !in_array($request->input('formato'), ['pdf', 'image']))) {
+        if ($request->has('formato') && (empty($request->input('formato')) || ! in_array($request->input('formato'), ['pdf', 'image']))) {
             $request->merge(['formato' => null]);
         }
-        
+
         $validated = $request->validate($rules);
 
         $nuevoArchivo = $request->hasFile('archivo');
         $necesitaReprocesar = false;
-        
+
         // Si se sube un nuevo archivo
         if ($nuevoArchivo) {
             // Eliminar archivo anterior de ambos lugares
             $this->deleteMenuSafely($menu->archivo_original, $comercio->id);
-            
+
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
-            
+
             // Preservar extensión original al actualizar
             $archivo = $request->file('archivo');
             $extension = $archivo->getClientOriginalExtension();
-            $nombreArchivo = uniqid() . '.' . $extension;
+            $nombreArchivo = uniqid().'.'.$extension;
             $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
-            
+
             // Copiar archivo a public_html en producción
             $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
-            
+
             $menu->archivo_original = $archivoPath;
-            
+
             // Detectar formato automáticamente
             $extension = $request->file('archivo')->getClientOriginalExtension();
             $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
@@ -295,45 +295,45 @@ class MenuController extends Controller
             $necesitaReprocesar = true; // Se subió archivo nuevo, necesita reprocesar
         } else {
             // Si no hay archivo nuevo, verificar si el menú está marcado como no procesado
-            $necesitaReprocesar = !$menu->procesado;
+            $necesitaReprocesar = ! $menu->procesado;
         }
 
         // Actualizar nombre del menú
         if ($request->has('nombre')) {
             $menu->nombre = $request->nombre;
         }
-        
+
         // Solo actualizar formato si se envía explícitamente y NO hay archivo nuevo
-        if (!$nuevoArchivo && $request->has('formato') && $request->formato) {
+        if (! $nuevoArchivo && $request->has('formato') && $request->formato) {
             $menu->formato = $validated['formato'];
         }
-        
+
         // IMPORTANTE: Guardar el menú ANTES de verificar si necesita reprocesar
         // para que el estado de 'procesado' se actualice en la BD
         $menu->save();
-        
+
         // Refrescar el menú desde la BD para obtener el estado actualizado
         $menu->refresh();
 
         // Actualizar campos del chatbot y colores en el comercio
         $needsUpdate = false;
-        
+
         // Log para depurar
         Log::info('MenuController@update - Datos recibidos del chatbot', [
             'chatbot_name' => $request->input('chatbot_name'),
             'welcome_message' => $request->input('welcome_message'),
             'has_chatbot_name' => $request->has('chatbot_name'),
             'has_welcome_message' => $request->has('welcome_message'),
-            'all_request_keys' => array_keys($request->all())
+            'all_request_keys' => array_keys($request->all()),
         ]);
-        
+
         // Campos del chatbot - actualizar siempre que estén presentes en el request
         if ($request->has('chatbot_name')) {
             $comercio->chatbot_name = $request->chatbot_name ?? null;
             $needsUpdate = true;
             Log::info('Chatbot name actualizado', [
                 'valor_anterior' => $comercio->getOriginal('chatbot_name'),
-                'valor_nuevo' => $request->chatbot_name
+                'valor_nuevo' => $request->chatbot_name,
             ]);
         }
         if ($request->has('welcome_message')) {
@@ -341,10 +341,10 @@ class MenuController extends Controller
             $needsUpdate = true;
             Log::info('Welcome message actualizado', [
                 'valor_anterior' => $comercio->getOriginal('welcome_message'),
-                'valor_nuevo' => substr($request->welcome_message ?? '', 0, 50) . '...'
+                'valor_nuevo' => substr($request->welcome_message ?? '', 0, 50).'...',
             ]);
         }
-        
+
         // Campos de colores
         if ($request->has('primary_color')) {
             $comercio->primary_color = $request->primary_color;
@@ -362,7 +362,7 @@ class MenuController extends Controller
             $comercio->background_color = $request->background_color;
             $needsUpdate = true;
         }
-        
+
         if ($needsUpdate) {
             $comercio->save();
         }
@@ -376,7 +376,7 @@ class MenuController extends Controller
 
         // SIEMPRE guardar promociones (incluso si el array está vacío, para eliminar las que fueron borradas)
         $promocionesData = $request->input('promociones', []);
-        
+
         // Siempre llamar a savePromociones para que pueda eliminar las que fueron borradas del DOM
         // Si promocionesData está vacío o no es array, se pasará un array vacío
         $promocionesParaGuardar = is_array($promocionesData) ? $promocionesData : [];
@@ -385,13 +385,13 @@ class MenuController extends Controller
 
         // SOLO reprocesar si se subió un nuevo archivo O si el menú está marcado como no procesado
         // NO reprocesar si solo se actualizaron otros campos (preserva imágenes)
-        
-        if (!$necesitaReprocesar) {
+
+        if (! $necesitaReprocesar) {
             // Determinar la ruta de retorno según si viene de admin o comercio
-            $editRoute = request()->is('admin/*') 
+            $editRoute = request()->is('admin/*')
                 ? route('admin.menus.edit', $menu)
                 : route('menus.edit', [$comercio, $menu]);
-            
+
             return redirect($editRoute)
                 ->with('success', 'Cambios guardados exitosamente.');
         }
@@ -414,18 +414,18 @@ class MenuController extends Controller
                             foreach ($categoria['platos'] as $plato) {
                                 // Si tiene ID, usarlo; si no, generar uno (migración)
                                 $platoId = isset($plato['id']) ? $plato['id'] : null;
-                                if (!$platoId) {
+                                if (! $platoId) {
                                     // Generar ID único si no existe (migración para items antiguos)
                                     $platoId = time() * 1000 + count($idsExistentes);
                                 }
                                 $idsExistentes[] = $platoId;
-                                
+
                                 // Indexar imagen por ID (método principal)
-                                if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+                                if (isset($plato['imagen']) && ! empty($plato['imagen'])) {
                                     $imagenesExistentes[$platoId] = $plato['imagen'];
-                                    
+
                                     // También indexar por nombre para compatibilidad con items antiguos
-                                    if (isset($plato['nombre']) && !empty($plato['nombre'])) {
+                                    if (isset($plato['nombre']) && ! empty($plato['nombre'])) {
                                         $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
                                         $imagenesExistentes[$nombreNormalizado] = $plato['imagen'];
                                     }
@@ -435,13 +435,13 @@ class MenuController extends Controller
                     }
                 }
             } catch (\Exception $e) {
-                \Log::warning('Error al extraer imágenes existentes antes de reprocesar: ' . $e->getMessage());
+                \Log::warning('Error al extraer imágenes existentes antes de reprocesar: '.$e->getMessage());
             }
         }
 
         // Reprocesar con OpenAI
         try {
-            $processor = new MenuProcessorService();
+            $processor = new MenuProcessorService;
             $processed = $processor->processMenu($menu);
 
             // Restaurar las imágenes y asignar IDs después del reprocesamiento
@@ -455,29 +455,29 @@ class MenuController extends Controller
                     $contenidoNuevo = json_decode(trim($jsonContent), true);
                     if ($contenidoNuevo && isset($contenidoNuevo['categorias']) && is_array($contenidoNuevo['categorias'])) {
                         $modified = false;
-                        $proximoId = !empty($idsExistentes) ? max($idsExistentes) + 1 : (time() * 1000);
-                        
+                        $proximoId = ! empty($idsExistentes) ? max($idsExistentes) + 1 : (time() * 1000);
+
                         foreach ($contenidoNuevo['categorias'] as &$categoria) {
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                                 foreach ($categoria['platos'] as &$plato) {
                                     // Asignar ID si no existe
-                                    if (!isset($plato['id'])) {
+                                    if (! isset($plato['id'])) {
                                         $plato['id'] = $proximoId++;
                                         $modified = true;
                                     }
-                                    
+
                                     $platoId = $plato['id'];
-                                    
+
                                     // Restaurar imagen: buscar por ID primero, luego por nombre (compatibilidad)
-                                    if (!isset($plato['imagen']) || empty($plato['imagen'])) {
-                                        if (isset($imagenesExistentes[$platoId]) && !empty($imagenesExistentes[$platoId])) {
+                                    if (! isset($plato['imagen']) || empty($plato['imagen'])) {
+                                        if (isset($imagenesExistentes[$platoId]) && ! empty($imagenesExistentes[$platoId])) {
                                             // Buscar por ID (método más confiable)
                                             $plato['imagen'] = $imagenesExistentes[$platoId];
                                             $modified = true;
-                                        } elseif (isset($plato['nombre']) && !empty($plato['nombre'])) {
+                                        } elseif (isset($plato['nombre']) && ! empty($plato['nombre'])) {
                                             // Buscar por nombre (compatibilidad con items antiguos)
                                             $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
-                                            if (isset($imagenesExistentes[$nombreNormalizado]) && !empty($imagenesExistentes[$nombreNormalizado])) {
+                                            if (isset($imagenesExistentes[$nombreNormalizado]) && ! empty($imagenesExistentes[$nombreNormalizado])) {
                                                 $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
                                                 $modified = true;
                                             }
@@ -492,19 +492,19 @@ class MenuController extends Controller
                         }
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Error al restaurar imágenes después del reprocesamiento: ' . $e->getMessage());
+                    \Log::warning('Error al restaurar imágenes después del reprocesamiento: '.$e->getMessage());
                 }
             }
 
             // Determinar la ruta de retorno según si viene de admin o comercio
-            $indexRoute = request()->is('admin/*') 
+            $indexRoute = request()->is('admin/*')
                 ? route('admin.menus.index')
                 : route('menus.index', $comercio);
-            
-            $editRoute = request()->is('admin/*') 
+
+            $editRoute = request()->is('admin/*')
                 ? route('admin.menus.edit', $menu)
                 : route('menus.edit', [$comercio, $menu]);
-            
+
             if ($processed) {
                 return redirect($indexRoute)
                     ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
@@ -513,9 +513,10 @@ class MenuController extends Controller
                     ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
             }
         } catch (\Exception $e) {
-            \Log::error('Error al reprocesar menú: ' . $e->getMessage());
+            \Log::error('Error al reprocesar menú: '.$e->getMessage());
+
             return redirect($editRoute)
-                ->with('error', 'Error al reprocesar el menú: ' . $e->getMessage());
+                ->with('error', 'Error al reprocesar el menú: '.$e->getMessage());
         }
     }
 
@@ -525,20 +526,20 @@ class MenuController extends Controller
     public function destroy(Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos y que el menú pertenezca al comercio
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para eliminar este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
+
         // BAJA LÓGICA: Soft delete (no eliminar archivos ni imágenes)
         // Las imágenes se mantienen para poder reutilizarlas al exportar/importar
         $menu->delete();
-        
+
         return redirect()->route('menus.index', $comercio)
             ->with('success', 'Menú eliminado exitosamente.');
     }
@@ -549,22 +550,22 @@ class MenuController extends Controller
     public function activar(Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos y que el menú pertenezca al comercio
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para activar este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
+
         // Desactivar todos los menús del comercio
         $comercio->menus()->update(['activo' => false]);
-        
+
         // Activar el menú seleccionado
         $menu->update(['activo' => true]);
-        
+
         return redirect()->route('menus.index', $comercio)
             ->with('success', 'Menú activado exitosamente.');
     }
@@ -575,12 +576,12 @@ class MenuController extends Controller
     public function uploadPlatoImagen(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -595,7 +596,7 @@ class MenuController extends Controller
         try {
             // Obtener y decodificar JSON actual
             $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-            
+
             if (empty($rawContent)) {
                 return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
             }
@@ -606,10 +607,10 @@ class MenuController extends Controller
                 $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                 $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
             }
-            
+
             $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
+
+            if (! $contenido || ! isset($contenido['categorias'])) {
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
@@ -620,7 +621,7 @@ class MenuController extends Controller
             $plato = null;
             $categoriaArrayIndex = null;
             $platoArrayIndex = null;
-            
+
             // Buscar por ID primero
             if ($platoId) {
                 foreach ($contenido['categorias'] as $catIdx => $categoria) {
@@ -636,22 +637,22 @@ class MenuController extends Controller
                     }
                 }
             }
-            
+
             // Si no se encontró por ID, buscar por índices (compatibilidad)
-            if (!$plato && $categoriaIndex !== null && $platoIndex !== null) {
+            if (! $plato && $categoriaIndex !== null && $platoIndex !== null) {
                 if (isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                     $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
                     $categoriaArrayIndex = $categoriaIndex;
                     $platoArrayIndex = $platoIndex;
                 }
             }
-            
-            if (!$plato) {
+
+            if (! $plato) {
                 return response()->json(['error' => 'Plato no encontrado.'], 404);
             }
-            
+
             // Asignar ID si no existe
-            if (!isset($plato['id'])) {
+            if (! isset($plato['id'])) {
                 // Buscar el máximo ID existente
                 $proximoId = 1;
                 foreach ($contenido['categorias'] as $categoria) {
@@ -668,47 +669,48 @@ class MenuController extends Controller
 
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
-            
+
             // Guardar imagen en la nueva estructura
             $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
-            
+
             // Preparar referencia a la imagen anterior (si existe)
             $oldImageRelativePath = null;
-            if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+            if (isset($plato['imagen']) && ! empty($plato['imagen'])) {
                 $oldImageRelativePath = str_replace('/storage/', '', $plato['imagen']);
             }
 
             // Actualizar JSON con la nueva ruta de imagen
-            $plato['imagen'] = '/storage/' . $imagenPath;
+            $plato['imagen'] = '/storage/'.$imagenPath;
 
             // Guardar JSON actualizado PRIMERO (esto es lo crítico)
             $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
+
             if ($jsonResult === false) {
-                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+                return response()->json(['error' => 'Error al actualizar el menú: '.json_last_error_msg()], 500);
             }
-            
+
             $menu->contexto_gpt = $jsonResult;
             $menu->save();
 
             // Copiar y eliminar después del guardado (no crítico, no debe bloquear)
             // Solo en producción, y con manejo silencioso de errores
             $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
-            
+
             if ($oldImageRelativePath) {
                 $this->deleteMenuItemSafely($oldImageRelativePath, $comercio->id);
             }
 
             return response()->json([
                 'success' => true,
-                'imagen_url' => asset('storage/' . $imagenPath),
-                'imagen_path' => $plato['imagen']
+                'imagen_url' => asset('storage/'.$imagenPath),
+                'imagen_path' => $plato['imagen'],
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al subir imagen de plato: ' . $e->getMessage());
+            \Log::error('Error al subir imagen de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al procesar la imagen: ' . $e->getMessage()
+                'error' => 'Error al procesar la imagen: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -719,12 +721,12 @@ class MenuController extends Controller
     public function deletePlatoImagen(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -738,7 +740,7 @@ class MenuController extends Controller
         try {
             // Obtener y decodificar JSON actual
             $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-            
+
             if (empty($rawContent)) {
                 return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
             }
@@ -749,10 +751,10 @@ class MenuController extends Controller
                 $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                 $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
             }
-            
+
             $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
+
+            if (! $contenido || ! isset($contenido['categorias'])) {
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
@@ -761,7 +763,7 @@ class MenuController extends Controller
             $categoriaIndex = $validated['categoria_index'] ?? null;
             $platoIndex = $validated['plato_index'] ?? null;
             $plato = null;
-            
+
             // Buscar por ID primero
             if ($platoId) {
                 foreach ($contenido['categorias'] as $catIdx => $categoria) {
@@ -775,23 +777,23 @@ class MenuController extends Controller
                     }
                 }
             }
-            
+
             // Si no se encontró por ID, buscar por índices (compatibilidad)
-            if (!$plato && $categoriaIndex !== null && $platoIndex !== null) {
+            if (! $plato && $categoriaIndex !== null && $platoIndex !== null) {
                 if (isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                     $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
                 }
             }
-            
-            if (!$plato) {
+
+            if (! $plato) {
                 return response()->json(['error' => 'Plato no encontrado.'], 404);
             }
-            
+
             // Guardar ruta de imagen anterior para eliminarla
             $oldImageRelativePath = null;
-            if (isset($plato['imagen']) && !empty($plato['imagen'])) {
+            if (isset($plato['imagen']) && ! empty($plato['imagen'])) {
                 $oldImageRelativePath = str_replace('/storage/', '', $plato['imagen']);
-                
+
                 // Eliminar imagen anterior en ambos lugares
                 $this->deleteMenuItemSafely($oldImageRelativePath);
             }
@@ -801,23 +803,24 @@ class MenuController extends Controller
 
             // Guardar JSON actualizado
             $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
+
             if ($jsonResult === false) {
-                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+                return response()->json(['error' => 'Error al actualizar el menú: '.json_last_error_msg()], 500);
             }
-            
+
             $menu->contexto_gpt = $jsonResult;
             $menu->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Imagen eliminada exitosamente'
+                'message' => 'Imagen eliminada exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al eliminar imagen de plato: ' . $e->getMessage());
+            \Log::error('Error al eliminar imagen de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al eliminar la imagen: ' . $e->getMessage()
+                'error' => 'Error al eliminar la imagen: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -828,12 +831,12 @@ class MenuController extends Controller
     public function updatePlatoPrecio(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -846,11 +849,11 @@ class MenuController extends Controller
 
         try {
             $contenido = $this->getMenuContent($menu);
-            
+
             $categoriaIndex = $validated['categoria_index'];
             $platoIndex = $validated['plato_index'];
-            
-            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
@@ -862,13 +865,14 @@ class MenuController extends Controller
             return response()->json([
                 'success' => true,
                 'precio' => $plato['precio'],
-                'message' => 'Precio actualizado exitosamente'
+                'message' => 'Precio actualizado exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al actualizar precio de plato: ' . $e->getMessage());
+            \Log::error('Error al actualizar precio de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al actualizar el precio: ' . $e->getMessage()
+                'error' => 'Error al actualizar el precio: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -879,12 +883,12 @@ class MenuController extends Controller
     public function updatePlatoNombre(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -897,11 +901,11 @@ class MenuController extends Controller
 
         try {
             $contenido = $this->getMenuContent($menu);
-            
+
             $categoriaIndex = $validated['categoria_index'];
             $platoIndex = $validated['plato_index'];
-            
-            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
@@ -913,13 +917,14 @@ class MenuController extends Controller
             return response()->json([
                 'success' => true,
                 'nombre' => $plato['nombre'],
-                'message' => 'Nombre actualizado exitosamente'
+                'message' => 'Nombre actualizado exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al actualizar nombre de plato: ' . $e->getMessage());
+            \Log::error('Error al actualizar nombre de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al actualizar el nombre: ' . $e->getMessage()
+                'error' => 'Error al actualizar el nombre: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -930,11 +935,11 @@ class MenuController extends Controller
     public function updatePlatoDescripcion(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -947,11 +952,11 @@ class MenuController extends Controller
 
         try {
             $contenido = $this->getMenuContent($menu);
-            
+
             $categoriaIndex = $validated['categoria_index'];
             $platoIndex = $validated['plato_index'];
-            
-            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
@@ -963,13 +968,14 @@ class MenuController extends Controller
             return response()->json([
                 'success' => true,
                 'descripcion' => $plato['descripcion'],
-                'message' => 'Descripción actualizada exitosamente'
+                'message' => 'Descripción actualizada exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al actualizar descripción de plato: ' . $e->getMessage());
+            \Log::error('Error al actualizar descripción de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al actualizar la descripción: ' . $e->getMessage()
+                'error' => 'Error al actualizar la descripción: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -980,11 +986,11 @@ class MenuController extends Controller
     public function updatePlatoTags(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -998,21 +1004,21 @@ class MenuController extends Controller
 
         try {
             $contenido = $this->getMenuContent($menu);
-            
+
             $categoriaIndex = $validated['categoria_index'];
             $platoIndex = $validated['plato_index'];
-            
-            if (!isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
                 return response()->json(['error' => 'Índices de plato inválidos.'], 400);
             }
 
             $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
-            
+
             // Filtrar tags vacíos y normalizar
-            $tags = array_filter(array_map('trim', $validated['tags'] ?? []), function($tag) {
-                return !empty($tag);
+            $tags = array_filter(array_map('trim', $validated['tags'] ?? []), function ($tag) {
+                return ! empty($tag);
             });
-            
+
             $plato['tags'] = array_values($tags); // Reindexar array
 
             $this->saveMenuContent($menu, $contenido);
@@ -1020,13 +1026,14 @@ class MenuController extends Controller
             return response()->json([
                 'success' => true,
                 'tags' => $plato['tags'],
-                'message' => 'Tags actualizados exitosamente'
+                'message' => 'Tags actualizados exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al actualizar tags de plato: ' . $e->getMessage());
+            \Log::error('Error al actualizar tags de plato: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al actualizar los tags: ' . $e->getMessage()
+                'error' => 'Error al actualizar los tags: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1037,11 +1044,11 @@ class MenuController extends Controller
     public function reordenarPlatos(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -1054,16 +1061,16 @@ class MenuController extends Controller
 
         try {
             $contenido = $this->getMenuContent($menu);
-            
+
             $categoriaIndex = $validated['categoria_index'];
-            
-            if (!isset($contenido['categorias'][$categoriaIndex])) {
+
+            if (! isset($contenido['categorias'][$categoriaIndex])) {
                 return response()->json(['error' => 'Categoría inválida.'], 400);
             }
 
             $categoria = &$contenido['categorias'][$categoriaIndex];
             $platosOrden = $validated['platos_order'];
-            
+
             // Validar que los índices coincidan con la cantidad de platos
             if (count($platosOrden) !== count($categoria['platos'])) {
                 return response()->json(['error' => 'El orden no coincide con la cantidad de platos.'], 400);
@@ -1076,20 +1083,21 @@ class MenuController extends Controller
                     $nuevosPlatos[] = $categoria['platos'][$indiceOriginal];
                 }
             }
-            
+
             $categoria['platos'] = $nuevosPlatos;
 
             $this->saveMenuContent($menu, $contenido);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Platos reordenados exitosamente'
+                'message' => 'Platos reordenados exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al reordenar platos: ' . $e->getMessage());
+            \Log::error('Error al reordenar platos: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al reordenar los platos: ' . $e->getMessage()
+                'error' => 'Error al reordenar los platos: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1100,7 +1108,7 @@ class MenuController extends Controller
     private function getMenuContent(Menu $menu): array
     {
         $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-        
+
         if (empty($rawContent)) {
             throw new \Exception('No hay contenido procesado en este menú.');
         }
@@ -1110,10 +1118,10 @@ class MenuController extends Controller
             $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
             $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
         }
-        
+
         $contenido = json_decode(trim($jsonContent), true);
-        
-        if (!$contenido || !isset($contenido['categorias'])) {
+
+        if (! $contenido || ! isset($contenido['categorias'])) {
             throw new \Exception('Formato de menú inválido.');
         }
 
@@ -1126,11 +1134,11 @@ class MenuController extends Controller
     private function saveMenuContent(Menu $menu, array $contenido): void
     {
         $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        
+
         if ($jsonResult === false) {
-            throw new \Exception('Error al actualizar el menú: ' . json_last_error_msg());
+            throw new \Exception('Error al actualizar el menú: '.json_last_error_msg());
         }
-        
+
         $menu->contexto_gpt = $jsonResult;
         $menu->save();
     }
@@ -1147,28 +1155,28 @@ class MenuController extends Controller
             $directories = [
                 "{$basePath}/menu-items",
                 "{$basePath}/menus",
-                "{$basePath}/logos"
+                "{$basePath}/logos",
             ];
-            
+
             foreach ($directories as $dir) {
                 $fullPath = storage_path("app/public/{$dir}");
-                if (!is_dir($fullPath)) {
+                if (! is_dir($fullPath)) {
                     @mkdir($fullPath, 0775, true);
                     @chmod($fullPath, 0775);
                 }
             }
-            
+
             // Crear en public_html si estamos en producción
             if (file_exists('/home/u560898880/domains')) {
                 $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
                 $publicHtmlDirs = [
                     "{$publicHtmlBase}/menu-items",
                     "{$publicHtmlBase}/menus",
-                    "{$publicHtmlBase}/logos"
+                    "{$publicHtmlBase}/logos",
                 ];
-                
+
                 foreach ($publicHtmlDirs as $dir) {
-                    if (!is_dir($dir)) {
+                    if (! is_dir($dir)) {
                         @mkdir($dir, 0775, true);
                         @chmod($dir, 0775);
                     }
@@ -1178,29 +1186,29 @@ class MenuController extends Controller
             // No fallar si hay error, solo loguear
             Log::warning('Error al crear directorios del comercio', [
                 'comercio_id' => $comercioId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
-    
+
     /**
      * Asegurar que el archivo del menú esté en public_html/storage (sin errores si falla)
      */
     private function ensureMenuFileInPublicHtml(string $archivoPath, int $comercioId): void
     {
         // Solo verificar/copiar si estamos en producción
-        if (!file_exists('/home/u560898880/domains')) {
+        if (! file_exists('/home/u560898880/domains')) {
             return;
         }
-        
+
         $filename = basename($archivoPath);
-        $targetFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/" . $filename;
-        
+        $targetFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/".$filename;
+
         // Si ya existe en public_html, no hacer nada
         if (file_exists($targetFile)) {
             return;
         }
-        
+
         // Si no existe, copiarlo automáticamente
         $this->copyMenuToPublicHtml($archivoPath, $comercioId);
     }
@@ -1215,33 +1223,33 @@ class MenuController extends Controller
         }
 
         // Verificar entorno de producción - salir rápido si no estamos en producción
-        if (!file_exists('/home/u560898880/domains')) {
+        if (! file_exists('/home/u560898880/domains')) {
             return;
         }
 
         // Nueva estructura: comercios/{id}/menu-items
         $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menu-items";
-        $sourceFile = storage_path('app/public/' . $archivoPath);
-        
+        $sourceFile = storage_path('app/public/'.$archivoPath);
+
         // Verificaciones rápidas sin logs excesivos
-        if (!file_exists($sourceFile)) {
+        if (! file_exists($sourceFile)) {
             return;
         }
 
         // Crear directorio si no existe (sin logs)
-        if (!is_dir($publicHtmlPath)) {
+        if (! is_dir($publicHtmlPath)) {
             @mkdir($publicHtmlPath, 0775, true);
             @chmod($publicHtmlPath, 0775);
         }
 
         // Verificar permisos rápidamente
-        if (!is_writable($publicHtmlPath)) {
+        if (! is_writable($publicHtmlPath)) {
             return;
         }
 
         // Copiar archivo
         $filename = basename($archivoPath);
-        $targetFile = $publicHtmlPath . '/' . $filename;
+        $targetFile = $publicHtmlPath.'/'.$filename;
 
         if (@copy($sourceFile, $targetFile)) {
             @chmod($targetFile, 0664);
@@ -1255,61 +1263,64 @@ class MenuController extends Controller
     {
         // Nueva estructura: comercios/{id}/menus
         $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus";
-        
+
         // Verificar si estamos en producción (Hostinger)
-        if (!file_exists('/home/u560898880/domains')) {
+        if (! file_exists('/home/u560898880/domains')) {
             // No estamos en producción, salir silenciosamente
             return;
         }
-        
+
         try {
             // Ruta del archivo fuente
-            $sourceFile = storage_path('app/public/' . $archivoPath);
-            
-            if (!file_exists($sourceFile)) {
+            $sourceFile = storage_path('app/public/'.$archivoPath);
+
+            if (! file_exists($sourceFile)) {
                 Log::error('Archivo de menú no encontrado para copiar', ['path' => $sourceFile]);
+
                 return;
             }
-            
+
             // Crear directorio si no existe
-            if (!is_dir($publicHtmlPath)) {
-                if (!mkdir($publicHtmlPath, 0775, true)) {
+            if (! is_dir($publicHtmlPath)) {
+                if (! mkdir($publicHtmlPath, 0775, true)) {
                     Log::error('No se pudo crear directorio de menús en public_html', ['path' => $publicHtmlPath]);
+
                     return;
                 }
                 chmod($publicHtmlPath, 0775);
             }
-            
+
             // Extraer nombre del archivo
             $filename = basename($archivoPath);
-            $targetFile = $publicHtmlPath . '/' . $filename;
-            
+            $targetFile = $publicHtmlPath.'/'.$filename;
+
             // Intentar copiar
-            if (!copy($sourceFile, $targetFile)) {
+            if (! copy($sourceFile, $targetFile)) {
                 $error = error_get_last();
                 Log::error('Error al copiar archivo de menú', [
                     'source' => $sourceFile,
                     'target' => $targetFile,
                     'error' => $error,
                     'source_exists' => file_exists($sourceFile),
-                    'target_dir_writable' => is_writable($publicHtmlPath)
+                    'target_dir_writable' => is_writable($publicHtmlPath),
                 ]);
+
                 return;
             }
-            
+
             // Asegurar permisos
             chmod($targetFile, 0664);
-            
+
             Log::info('Archivo de menú copiado exitosamente a public_html', [
                 'file' => $filename,
                 'target' => $targetFile,
-                'size' => filesize($targetFile)
+                'size' => filesize($targetFile),
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Excepción al copiar archivo de menú', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
@@ -1322,18 +1333,18 @@ class MenuController extends Controller
         if (empty($archivoPath)) {
             return;
         }
-        
+
         // Eliminar de storage/app/public
         if (Storage::disk('public')->exists($archivoPath)) {
             Storage::disk('public')->delete($archivoPath);
         }
-        
+
         // Extraer comercio_id de la ruta (formato: comercios/{id}/menus/filename)
         $comercioId = null;
         if (preg_match('/comercios\/(\d+)\/menus\//', $archivoPath, $matches)) {
             $comercioId = $matches[1];
         }
-        
+
         // Eliminar también de public_html/storage si existe (producción)
         if ($comercioId && file_exists('/home/u560898880/domains')) {
             $filename = basename($archivoPath);
@@ -1364,7 +1375,7 @@ class MenuController extends Controller
         if (preg_match('/comercios\/(\d+)\/menu-items\//', $archivoPath, $matches)) {
             $comercioId = $matches[1];
         }
-        
+
         // Eliminar también de public_html/storage si existe (producción)
         if ($comercioId && file_exists('/home/u560898880/domains')) {
             $filename = basename($archivoPath);
@@ -1382,12 +1393,12 @@ class MenuController extends Controller
     public function uploadPromocionImagen(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -1401,7 +1412,7 @@ class MenuController extends Controller
         try {
             // Obtener y decodificar JSON actual
             $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-            
+
             if (empty($rawContent)) {
                 return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
             }
@@ -1412,10 +1423,10 @@ class MenuController extends Controller
                 $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                 $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
             }
-            
+
             $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
+
+            if (! $contenido || ! isset($contenido['categorias'])) {
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
@@ -1433,12 +1444,12 @@ class MenuController extends Controller
                 $promocionesCategoriaIndex = count($contenido['categorias']);
                 $contenido['categorias'][] = [
                     'nombre' => 'Promociones del Día',
-                    'platos' => []
+                    'platos' => [],
                 ];
             }
 
             // Asegurar que el array de platos existe
-            if (!isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
+            if (! isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
                 $contenido['categorias'][$promocionesCategoriaIndex]['platos'] = [];
             }
 
@@ -1447,7 +1458,7 @@ class MenuController extends Controller
             $promoIndex = $validated['promo_index'] ?? null;
             $promo = null;
             $promoArrayIndex = null;
-            
+
             // Buscar por ID primero
             if ($promoId && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
                 foreach ($contenido['categorias'][$promocionesCategoriaIndex]['platos'] as $idx => $plato) {
@@ -1458,76 +1469,77 @@ class MenuController extends Controller
                     }
                 }
             }
-            
+
             // Si no se encontró por ID, buscar por índice (compatibilidad)
-            if (!$promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+            if (! $promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
                 $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
                 $promoArrayIndex = $promoIndex;
             }
-            
+
             // NO crear placeholder vacío - solo actualizar si ya existe
             // La promoción solo se guardará en el JSON cuando tenga al menos nombre o precio
-            if (!$promo) {
+            if (! $promo) {
                 // La promoción no existe aún - no crear registro vacío
                 // Solo guardar la imagen en storage y devolver la URL
                 // El registro se creará cuando se guarden los datos de texto vía savePromociones()
                 // Asegurar que existan las carpetas del comercio
                 $this->createComercioDirectories($comercio->id);
                 $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
-                
+
                 // Copiar a public_html
                 $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
-                
+
                 return response()->json([
                     'success' => true,
-                    'imagen_url' => asset('storage/' . $imagenPath),
-                    'imagen_path' => '/storage/' . $imagenPath,
-                    'message' => 'Imagen subida. Completa los datos (nombre o precio) y guarda la promoción para que se guarde en el JSON.'
+                    'imagen_url' => asset('storage/'.$imagenPath),
+                    'imagen_path' => '/storage/'.$imagenPath,
+                    'message' => 'Imagen subida. Completa los datos (nombre o precio) y guarda la promoción para que se guarde en el JSON.',
                 ]);
             }
 
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
-            
+
             // Guardar imagen en la nueva estructura
             $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
-            
+
             // Preparar referencia a la imagen anterior (si existe)
             $oldImageRelativePath = null;
-            if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+            if (isset($promo['imagen']) && ! empty($promo['imagen'])) {
                 $oldImageRelativePath = str_replace('/storage/', '', $promo['imagen']);
             }
 
             // Actualizar JSON con la nueva ruta de imagen
-            $promo['imagen'] = '/storage/' . $imagenPath;
+            $promo['imagen'] = '/storage/'.$imagenPath;
 
             // Guardar JSON actualizado
             $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
+
             if ($jsonResult === false) {
-                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+                return response()->json(['error' => 'Error al actualizar el menú: '.json_last_error_msg()], 500);
             }
-            
+
             $menu->contexto_gpt = $jsonResult;
             $menu->save();
 
             // Copiar y eliminar después del guardado
             $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
-            
+
             if ($oldImageRelativePath) {
                 $this->deleteMenuItemSafely($oldImageRelativePath);
             }
 
             return response()->json([
                 'success' => true,
-                'imagen_url' => asset('storage/' . $imagenPath),
-                'imagen_path' => $promo['imagen']
+                'imagen_url' => asset('storage/'.$imagenPath),
+                'imagen_path' => $promo['imagen'],
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al subir imagen de promoción: ' . $e->getMessage());
+            \Log::error('Error al subir imagen de promoción: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al procesar la imagen: ' . $e->getMessage()
+                'error' => 'Error al procesar la imagen: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1543,28 +1555,28 @@ class MenuController extends Controller
         try {
             $promoId = $request->input('promo_id');
             $promoIndex = $request->input('promo_index'); // Mantener para compatibilidad
-            
+
             if ($promoId === null && $promoIndex === null) {
                 return response()->json(['success' => false, 'error' => 'ID o índice de promoción no proporcionado'], 400);
             }
-            
-            if (!$menu->contexto_gpt) {
+
+            if (! $menu->contexto_gpt) {
                 return response()->json(['success' => false, 'error' => 'El menú no tiene contexto GPT'], 400);
             }
-            
+
             // Parsear JSON
             $jsonContent = $menu->contexto_gpt;
             if (strpos($jsonContent, '```json') !== false) {
                 $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                 $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
             }
-            
+
             $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
+
+            if (! $contenido || ! isset($contenido['categorias'])) {
                 return response()->json(['success' => false, 'error' => 'JSON inválido'], 400);
             }
-            
+
             // Buscar categoría de promociones
             $promocionesIndex = -1;
             foreach ($contenido['categorias'] as $idx => $cat) {
@@ -1573,11 +1585,11 @@ class MenuController extends Controller
                     break;
                 }
             }
-            
+
             if ($promocionesIndex < 0) {
                 return response()->json(['success' => false, 'error' => 'No se encontró la categoría de promociones'], 400);
             }
-            
+
             // Buscar y eliminar la promoción por ID o índice
             $promoEncontrada = false;
             if (isset($contenido['categorias'][$promocionesIndex]['platos'])) {
@@ -1595,49 +1607,50 @@ class MenuController extends Controller
                         break;
                     }
                 }
-                
+
                 if ($promoEncontrada) {
                     // Reindexar el array
                     $contenido['categorias'][$promocionesIndex]['platos'] = array_values($contenido['categorias'][$promocionesIndex]['platos']);
-                    
+
                     // Si no quedan promociones, eliminar la categoría completa
                     if (empty($contenido['categorias'][$promocionesIndex]['platos'])) {
                         unset($contenido['categorias'][$promocionesIndex]);
                         $contenido['categorias'] = array_values($contenido['categorias']);
                     }
                 }
-                
+
                 // Guardar JSON actualizado
                 $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 $menu->contexto_gpt = $jsonResult;
                 $menu->save();
-                
+
                 Log::info('Promoción eliminada del JSON', [
                     'menu_id' => $menu->id,
                     'promo_index' => $promoIndex,
-                    'promociones_restantes' => isset($contenido['categorias'][$promocionesIndex]) ? count($contenido['categorias'][$promocionesIndex]['platos']) : 0
+                    'promociones_restantes' => isset($contenido['categorias'][$promocionesIndex]) ? count($contenido['categorias'][$promocionesIndex]['platos']) : 0,
                 ]);
-                
+
                 return response()->json(['success' => true, 'message' => 'Promoción eliminada exitosamente']);
             } else {
                 return response()->json(['success' => false, 'error' => 'Promoción no encontrada'], 404);
             }
-            
+
         } catch (\Exception $e) {
-            Log::error('Error al eliminar promoción: ' . $e->getMessage());
+            Log::error('Error al eliminar promoción: '.$e->getMessage());
+
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
-    
+
     public function deletePromocionImagen(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
         }
@@ -1650,7 +1663,7 @@ class MenuController extends Controller
         try {
             // Obtener y decodificar JSON actual
             $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-            
+
             if (empty($rawContent)) {
                 return response()->json(['error' => 'No hay contenido procesado en este menú.'], 400);
             }
@@ -1661,10 +1674,10 @@ class MenuController extends Controller
                 $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                 $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
             }
-            
+
             $contenido = json_decode(trim($jsonContent), true);
-            
-            if (!$contenido || !isset($contenido['categorias'])) {
+
+            if (! $contenido || ! isset($contenido['categorias'])) {
                 return response()->json(['error' => 'Formato de menú inválido.'], 400);
             }
 
@@ -1686,7 +1699,7 @@ class MenuController extends Controller
             $promoIndex = $validated['promo_index'] ?? null;
             $promo = null;
             $promoArrayIndex = null;
-            
+
             // Buscar por ID primero
             if (isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'])) {
                 foreach ($contenido['categorias'][$promocionesCategoriaIndex]['platos'] as $idx => $plato) {
@@ -1697,34 +1710,36 @@ class MenuController extends Controller
                     }
                 }
             }
-            
+
             // Si no se encontró por ID, buscar por índice (compatibilidad)
-            if (!$promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
+            if (! $promo && $promoIndex !== null && isset($contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex])) {
                 $promo = &$contenido['categorias'][$promocionesCategoriaIndex]['platos'][$promoIndex];
                 $promoArrayIndex = $promoIndex;
-                
+
                 // IMPORTANTE: Verificar que el ID coincide si se encontró por índice
                 if (isset($promo['id']) && $promo['id'] != $promoId) {
                     Log::warning('⚠️ ADVERTENCIA: Promoción encontrada por índice pero el ID no coincide', [
                         'promo_id_buscado' => $promoId,
                         'promo_id_encontrado' => $promo['id'] ?? 'NO TIENE',
                         'promo_index' => $promoIndex,
-                        'imagen_path_enviado' => $request->input('imagen_path')
+                        'imagen_path_enviado' => $request->input('imagen_path'),
                     ]);
+
                     // NO eliminar si el ID no coincide - esto previene eliminar la imagen de otra promoción
                     return response()->json(['error' => 'El ID de la promoción no coincide. No se eliminará la imagen para prevenir errores.'], 400);
                 }
             }
-            
-            if (!$promo) {
+
+            if (! $promo) {
                 Log::warning('⚠️ Promoción no encontrada al intentar eliminar imagen', [
                     'promo_id' => $promoId,
                     'promo_index' => $promoIndex,
-                    'imagen_path_enviado' => $request->input('imagen_path')
+                    'imagen_path_enviado' => $request->input('imagen_path'),
                 ]);
+
                 return response()->json(['error' => 'Promoción no encontrada.'], 404);
             }
-            
+
             // Verificar que el ID de la promoción encontrada coincide con el buscado
             if (isset($promo['id']) && $promo['id'] != $promoId) {
                 Log::error('❌ ERROR CRÍTICO: El ID de la promoción encontrada NO coincide con el buscado', [
@@ -1732,16 +1747,17 @@ class MenuController extends Controller
                     'promo_id_encontrado' => $promo['id'],
                     'promo_index' => $promoIndex,
                     'imagen_path_enviado' => $request->input('imagen_path'),
-                    'imagen_en_promo' => $promo['imagen'] ?? 'NO TIENE'
+                    'imagen_en_promo' => $promo['imagen'] ?? 'NO TIENE',
                 ]);
+
                 return response()->json(['error' => 'El ID de la promoción no coincide. No se eliminará la imagen para prevenir errores.'], 400);
             }
-            
+
             // Guardar ruta de imagen anterior para eliminarla
             $oldImagePath = null;
-            if (isset($promo['imagen']) && !empty($promo['imagen'])) {
+            if (isset($promo['imagen']) && ! empty($promo['imagen'])) {
                 $oldImagePath = str_replace('/storage/', '', $promo['imagen']);
-                
+
                 // IMPORTANTE: Verificar que la imagen que se va a eliminar coincide con la de la promoción
                 $imagenPathEnviado = $request->input('imagen_path');
                 if ($imagenPathEnviado) {
@@ -1752,13 +1768,14 @@ class MenuController extends Controller
                             'imagen_en_promo' => $promo['imagen'],
                             'imagen_enviada' => $imagenPathEnviado,
                             'imagen_en_promo_clean' => $oldImagePath,
-                            'imagen_enviada_clean' => $imagenPathEnviadoClean
+                            'imagen_enviada_clean' => $imagenPathEnviadoClean,
                         ]);
+
                         // NO eliminar si no coincide - esto previene eliminar la imagen de otra promoción
                         return response()->json(['error' => 'La imagen que se quiere eliminar no coincide con la de la promoción. No se eliminará para prevenir errores.'], 400);
                     }
                 }
-                
+
                 // Eliminar la imagen del JSON
                 unset($promo['imagen']);
             } else {
@@ -1767,11 +1784,11 @@ class MenuController extends Controller
 
             // Guardar JSON actualizado
             $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
+
             if ($jsonResult === false) {
-                return response()->json(['error' => 'Error al actualizar el menú: ' . json_last_error_msg()], 500);
+                return response()->json(['error' => 'Error al actualizar el menú: '.json_last_error_msg()], 500);
             }
-            
+
             $menu->contexto_gpt = $jsonResult;
             $menu->save();
 
@@ -1782,13 +1799,14 @@ class MenuController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Imagen eliminada exitosamente'
+                'message' => 'Imagen eliminada exitosamente',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al eliminar imagen de promoción: ' . $e->getMessage());
+            \Log::error('Error al eliminar imagen de promoción: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al eliminar la imagen: ' . $e->getMessage()
+                'error' => 'Error al eliminar la imagen: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1799,75 +1817,77 @@ class MenuController extends Controller
     public function savePromocionesAjax(Request $request, Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['success' => false, 'error' => 'No tienes permiso para actualizar este menú.'], 403);
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             return response()->json(['success' => false, 'error' => 'Menú no encontrado en este comercio.'], 404);
         }
-        
+
         // Obtener datos del body JSON
         // Cuando se envía con Content-Type: application/json, Laravel no lo procesa automáticamente
         $jsonBody = json_decode($request->getContent(), true);
         $promocionesData = $jsonBody['promociones'] ?? [];
-        
+
         // Fallback: intentar con input() por si acaso viene como form-data
         if (empty($promocionesData)) {
             $promocionesData = $request->input('promociones', []);
         }
-        
+
         // Validar que sea un array
-        if (!is_array($promocionesData)) {
+        if (! is_array($promocionesData)) {
             Log::error('savePromocionesAjax: datos inválidos', [
                 'promociones_data' => $promocionesData,
                 'request_all' => $request->all(),
-                'request_content' => $request->getContent()
+                'request_content' => $request->getContent(),
             ]);
+
             return response()->json(['success' => false, 'error' => 'Datos de promociones inválidos'], 400);
         }
-        
+
         try {
             // Recibir logs del frontend si vienen
             $frontendLogs = $jsonBody['frontend_logs'] ?? [];
-            if (!empty($frontendLogs)) {
+            if (! empty($frontendLogs)) {
                 Log::info('📱 ========== LOGS DEL FRONTEND (collectPromocionesData) ==========');
                 foreach ($frontendLogs as $log) {
-                    Log::info('📱 ' . $log);
+                    Log::info('📱 '.$log);
                 }
                 Log::info('📱 ========== FIN LOGS DEL FRONTEND ==========');
             }
-            
+
             Log::info('savePromocionesAjax llamado', [
                 'menu_id' => $menu->id,
                 'promociones_count' => count($promocionesData),
                 'promociones_recibidas' => $promocionesData,
                 'request_all' => $request->all(),
-                'request_content_type' => $request->header('Content-Type')
+                'request_content_type' => $request->header('Content-Type'),
             ]);
-            
+
             // Llamar al método privado savePromociones
             $this->savePromociones($menu, $promocionesData);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Promociones guardadas exitosamente',
-                'count' => count($promocionesData)
+                'count' => count($promocionesData),
             ]);
-            
+
         } catch (\Exception $e) {
-            Log::error('Error al guardar promociones vía AJAX: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            Log::error('Error al guardar promociones vía AJAX: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => 'Error al guardar las promociones: ' . $e->getMessage()
+                'error' => 'Error al guardar las promociones: '.$e->getMessage(),
             ], 500);
         }
     }
-    
+
     /**
      * Guardar promociones en el contexto_gpt del menú
      */
@@ -1877,33 +1897,33 @@ class MenuController extends Controller
             Log::info('savePromociones llamado', [
                 'menu_id' => $menu->id,
                 'promociones_recibidas' => $promociones,
-                'count' => count($promociones)
+                'count' => count($promociones),
             ]);
-            
+
             // Solo guardar promociones que tengan al menos nombre o precio (además de imagen)
             // No crear registros vacíos solo con imagen
-            $promocionesFiltradas = array_filter($promociones, function($promo) {
+            $promocionesFiltradas = array_filter($promociones, function ($promo) {
                 $tieneNombre = isset($promo['nombre']) && trim($promo['nombre']) !== '';
                 $tienePrecio = isset($promo['precio']) && trim($promo['precio']) !== '';
-                
+
                 // Debe tener al menos nombre O precio para guardarse en el JSON
                 return $tieneNombre || $tienePrecio;
             });
 
             // Reindexar array para eliminar índices vacíos
             $promocionesFiltradas = array_values($promocionesFiltradas);
-            
+
             Log::info('Promociones filtradas (con algún dato)', [
                 'count' => count($promocionesFiltradas),
-                'promociones' => $promocionesFiltradas
+                'promociones' => $promocionesFiltradas,
             ]);
 
             // Leer contexto_gpt actual
             $jsonContent = $menu->contexto_gpt;
-            if (!$jsonContent) {
+            if (! $jsonContent) {
                 // Si no hay contexto_gpt, crear estructura básica
                 $contenido = [
-                    'categorias' => []
+                    'categorias' => [],
                 ];
             } else {
                 // Limpiar markdown si existe
@@ -1913,12 +1933,12 @@ class MenuController extends Controller
                     $clean = preg_replace('/```\s*$/', '', $clean);
                 }
                 $contenido = json_decode(trim($clean), true);
-                
-                if (!$contenido || !is_array($contenido)) {
+
+                if (! $contenido || ! is_array($contenido)) {
                     $contenido = ['categorias' => []];
                 }
-                
-                if (!isset($contenido['categorias']) || !is_array($contenido['categorias'])) {
+
+                if (! isset($contenido['categorias']) || ! is_array($contenido['categorias'])) {
                     $contenido['categorias'] = [];
                 }
             }
@@ -1938,61 +1958,61 @@ class MenuController extends Controller
             $idsExistentes = []; // Para generar IDs únicos
             if ($promocionesIndex >= 0 && isset($contenido['categorias'][$promocionesIndex]['platos'])) {
                 $platosExistentes = $contenido['categorias'][$promocionesIndex]['platos'];
-                Log::info("📋 Indexando imágenes existentes del JSON", [
+                Log::info('📋 Indexando imágenes existentes del JSON', [
                     'total_platos_en_json' => count($platosExistentes),
-                    'promociones_recibidas' => count($promociones)
+                    'promociones_recibidas' => count($promociones),
                 ]);
                 foreach ($platosExistentes as $idx => $platoExistente) {
                     // Si tiene ID, usarlo; si no, generar uno nuevo (migración)
                     $idExistente = isset($platoExistente['id']) ? $platoExistente['id'] : null;
-                    if (!$idExistente) {
+                    if (! $idExistente) {
                         // Generar ID único si no existe (migración para items antiguos)
                         // Usar un contador incremental basado en el máximo existente
-                        $idExistente = !empty($idsExistentes) ? max($idsExistentes) + 1 + $idx : ($idx + 1);
+                        $idExistente = ! empty($idsExistentes) ? max($idsExistentes) + 1 + $idx : ($idx + 1);
                     }
                     $idsExistentes[] = $idExistente;
-                    
+
                     // Indexar imagen SOLO por ID (método más confiable y seguro)
                     // NO indexar por nombre/precio para evitar asignaciones incorrectas
-                    if (isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])) {
+                    if (isset($platoExistente['imagen']) && ! empty($platoExistente['imagen'])) {
                         $imagenesExistentes[$idExistente] = $platoExistente['imagen'];
-                        Log::info("Imagen indexada por ID para preservación", [
+                        Log::info('Imagen indexada por ID para preservación', [
                             'id' => $idExistente,
-                            'imagen' => $platoExistente['imagen']
+                            'imagen' => $platoExistente['imagen'],
                         ]);
                     } else {
                         Log::info("⚠️ Plato ID {$idExistente} NO tiene imagen en JSON", [
                             'nombre' => $platoExistente['nombre'] ?? 'SIN NOMBRE',
-                            'tiene_imagen' => isset($platoExistente['imagen']) && !empty($platoExistente['imagen'])
+                            'tiene_imagen' => isset($platoExistente['imagen']) && ! empty($platoExistente['imagen']),
                         ]);
                     }
                 }
-                Log::info("📊 Resumen de indexación", [
+                Log::info('📊 Resumen de indexación', [
                     'total_imagenes_indexadas' => count($imagenesExistentes),
                     'ids_con_imagen' => array_keys($imagenesExistentes),
-                    'ids_sin_imagen' => array_diff($idsExistentes, array_keys($imagenesExistentes))
+                    'ids_sin_imagen' => array_diff($idsExistentes, array_keys($imagenesExistentes)),
                 ]);
             } else {
-                Log::warning("⚠️ No se encontró categoría de promociones en JSON", [
+                Log::warning('⚠️ No se encontró categoría de promociones en JSON', [
                     'promocionesIndex' => $promocionesIndex,
-                    'tiene_categorias' => isset($contenido['categorias'])
+                    'tiene_categorias' => isset($contenido['categorias']),
                 ]);
             }
 
             // Preparar array de platos para promociones, preservando imágenes e IDs
             $platosPromociones = [];
-            
+
             Log::info('🔍 ========== INICIO savePromociones ==========', [
                 'total_recibidas' => count($promocionesFiltradas),
                 'total_filtradas' => count($promocionesFiltradas),
                 'promociones_recibidas' => $promocionesFiltradas,
                 'imagenes_existentes_indexadas' => array_keys($imagenesExistentes),
-                'total_imagenes_existentes' => count($imagenesExistentes)
+                'total_imagenes_existentes' => count($imagenesExistentes),
             ]);
-            
+
             // Generar próximo ID único (basado en el máximo existente + 1)
-            $proximoId = !empty($idsExistentes) ? max($idsExistentes) + 1 : 1;
-            
+            $proximoId = ! empty($idsExistentes) ? max($idsExistentes) + 1 : 1;
+
             // Usar promocionesFiltradas (ya filtradas para tener al menos un dato)
             foreach ($promocionesFiltradas as $idx => $promo) {
                 Log::info("📦 Procesando promoción índice $idx", [
@@ -2000,23 +2020,23 @@ class MenuController extends Controller
                     'tiene_campo_imagen' => isset($promo['imagen']),
                     'valor_imagen' => isset($promo['imagen']) ? ($promo['imagen'] ?: 'VACÍA') : 'NO ENVIADA',
                     'tiene_id' => isset($promo['id']),
-                    'id_valor' => $promo['id'] ?? 'NO TIENE'
+                    'id_valor' => $promo['id'] ?? 'NO TIENE',
                 ]);
-                
+
                 // Asegurar que siempre tengamos los campos básicos (aunque estén vacíos)
-                if (!isset($promo['nombre'])) {
+                if (! isset($promo['nombre'])) {
                     $promo['nombre'] = '';
                 }
-                if (!isset($promo['precio'])) {
+                if (! isset($promo['precio'])) {
                     $promo['precio'] = '';
                 }
-                if (!isset($promo['descripcion'])) {
+                if (! isset($promo['descripcion'])) {
                     $promo['descripcion'] = '';
                 }
-                
+
                 // Obtener o generar ID único
                 $idPromocion = null;
-                if (isset($promo['id']) && !empty($promo['id'])) {
+                if (isset($promo['id']) && ! empty($promo['id'])) {
                     // Si viene con ID, preservarlo
                     $idPromocion = $promo['id'];
                     Log::info("  ✅ ID preservado: $idPromocion");
@@ -2025,37 +2045,37 @@ class MenuController extends Controller
                     $idPromocion = $proximoId++;
                     Log::info("  🆕 ID generado: $idPromocion");
                 }
-                
+
                 $nombreNormalizado = mb_strtolower(trim($promo['nombre']));
-                
+
                 $plato = [
                     'id' => $idPromocion, // ID único e inmutable
                     'nombre' => trim($promo['nombre'] ?? ''),
                     'precio' => trim($promo['precio'] ?? ''),
-                    'descripcion' => trim($promo['descripcion'] ?? '')
+                    'descripcion' => trim($promo['descripcion'] ?? ''),
                 ];
-                
+
                 // LÓGICA ULTRA SIMPLE DE IMÁGENES (RESPETAR LO QUE ENVÍA EL FRONTEND):
                 // 1. Si viene imagen NO vacía en el request → usar esa (el usuario la agregó/modificó)
                 // 2. Si viene imagen VACÍA ('') en el request → NO asignar ninguna (el usuario la borró)
                 // 3. Si NO viene el campo 'imagen' en el request → preservar SOLO si existe por ID y físicamente
-                
+
                 $imagenEnRequest = isset($promo['imagen']) ? trim($promo['imagen']) : null;
-                
+
                 Log::info("  🔍 Analizando imagen para promoción ID $idPromocion:", [
                     'imagen_en_request' => $imagenEnRequest !== null ? ($imagenEnRequest ?: 'VACÍA') : 'NO ENVIADA',
                     'id_existe_en_imagenes_existentes' => isset($imagenesExistentes[$idPromocion]),
-                    'imagen_en_existentes' => isset($imagenesExistentes[$idPromocion]) ? $imagenesExistentes[$idPromocion] : 'NO EXISTE'
+                    'imagen_en_existentes' => isset($imagenesExistentes[$idPromocion]) ? $imagenesExistentes[$idPromocion] : 'NO EXISTE',
                 ]);
-                
+
                 if ($imagenEnRequest !== null) {
                     // El campo 'imagen' fue enviado explícitamente en el request
-                    if (!empty($imagenEnRequest)) {
+                    if (! empty($imagenEnRequest)) {
                         // Caso 1: Viene con valor → validar que existe físicamente y usar esa (prioridad máxima)
                         // IMPORTANTE: Si el frontend envía una imagen, SIEMPRE usarla, incluso si no está en el JSON actual
                         $imagenStoragePath = str_replace('/storage/', '', $imagenEnRequest);
-                        $fullPath = storage_path('app/public/' . $imagenStoragePath);
-                        
+                        $fullPath = storage_path('app/public/'.$imagenStoragePath);
+
                         // IMPORTANTE: Si el frontend envía una imagen, confiar en ella aunque no esté en el JSON
                         // El frontend solo envía imágenes que están en el DOM, así que si la envía, debe existir
                         // Pero validar que el archivo existe físicamente antes de asignarla
@@ -2067,7 +2087,7 @@ class MenuController extends Controller
                                 'full_path' => $fullPath,
                                 'existe' => true,
                                 'estaba_en_json' => isset($imagenesExistentes[$idPromocion]) ? 'SÍ' : 'NO',
-                                'imagen_en_json' => $imagenesExistentes[$idPromocion] ?? 'NO EXISTE'
+                                'imagen_en_json' => $imagenesExistentes[$idPromocion] ?? 'NO EXISTE',
                             ]);
                         } else {
                             // La imagen no existe físicamente → verificar si hay una alternativa en el JSON
@@ -2075,11 +2095,11 @@ class MenuController extends Controller
                             // Intentar buscar el archivo con diferentes variaciones de la ruta
                             $alternativas = [
                                 $fullPath,
-                                storage_path('app/public/' . ltrim($imagenEnRequest, '/')),
+                                storage_path('app/public/'.ltrim($imagenEnRequest, '/')),
                                 public_path($imagenEnRequest),
-                                public_path('storage/' . str_replace('/storage/', '', $imagenEnRequest))
+                                public_path('storage/'.str_replace('/storage/', '', $imagenEnRequest)),
                             ];
-                            
+
                             $imagenEncontrada = false;
                             foreach ($alternativas as $altPath) {
                                 if (file_exists($altPath)) {
@@ -2088,27 +2108,27 @@ class MenuController extends Controller
                                         'imagen_request' => $imagenEnRequest,
                                         'ruta_original' => $fullPath,
                                         'ruta_encontrada' => $altPath,
-                                        'existe' => true
+                                        'existe' => true,
                                     ]);
                                     $imagenEncontrada = true;
                                     break;
                                 }
                             }
-                            
-                            if (!$imagenEncontrada) {
+
+                            if (! $imagenEncontrada) {
                                 // Si no existe físicamente, intentar preservar desde existentes si existe
-                                if (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
+                                if (isset($imagenesExistentes[$idPromocion]) && ! empty($imagenesExistentes[$idPromocion])) {
                                     $imagenExistente = $imagenesExistentes[$idPromocion];
                                     $imagenExistenteStoragePath = str_replace('/storage/', '', $imagenExistente);
-                                    $imagenExistenteFullPath = storage_path('app/public/' . $imagenExistenteStoragePath);
-                                    
+                                    $imagenExistenteFullPath = storage_path('app/public/'.$imagenExistenteStoragePath);
+
                                     if (file_exists($imagenExistenteFullPath)) {
                                         $plato['imagen'] = $imagenExistente;
                                         Log::warning("⚠️ Imagen del request no existe, pero se preservó desde JSON para promoción ID $idPromocion", [
                                             'imagen_request' => $imagenEnRequest,
                                             'imagen_preservada' => $imagenExistente,
                                             'full_path_request' => $fullPath,
-                                            'full_path_preservada' => $imagenExistenteFullPath
+                                            'full_path_preservada' => $imagenExistenteFullPath,
                                         ]);
                                     } else {
                                         Log::warning("⚠️ Imagen del request no existe físicamente para promoción ID $idPromocion - NO se asignará", [
@@ -2116,7 +2136,7 @@ class MenuController extends Controller
                                             'full_path' => $fullPath,
                                             'existe' => file_exists($fullPath),
                                             'razon' => 'Archivo físico no encontrado aunque viene en request',
-                                            'rutas_verificadas' => $alternativas
+                                            'rutas_verificadas' => $alternativas,
                                         ]);
                                     }
                                 } else {
@@ -2126,7 +2146,7 @@ class MenuController extends Controller
                                         'full_path' => $fullPath,
                                         'existe' => file_exists($fullPath),
                                         'razon' => 'Archivo físico no encontrado aunque viene en request',
-                                        'rutas_verificadas' => $alternativas
+                                        'rutas_verificadas' => $alternativas,
                                     ]);
                                 }
                             }
@@ -2136,15 +2156,15 @@ class MenuController extends Controller
                         // NO preservar aunque exista en existentes
                         Log::info("🗑️ Imagen explícitamente vacía en request para promoción ID $idPromocion - usuario la borró, NO preservar", [
                             'nombre' => $plato['nombre'],
-                            'precio' => $plato['precio']
+                            'precio' => $plato['precio'],
                         ]);
                     }
-                } elseif (isset($imagenesExistentes[$idPromocion]) && !empty($imagenesExistentes[$idPromocion])) {
+                } elseif (isset($imagenesExistentes[$idPromocion]) && ! empty($imagenesExistentes[$idPromocion])) {
                     // Caso 3: NO viene el campo 'imagen' en el request → preservar si existe por ID y físicamente
                     $imagenPath = $imagenesExistentes[$idPromocion];
                     $imagenStoragePath = str_replace('/storage/', '', $imagenPath);
-                    $fullPath = storage_path('app/public/' . $imagenStoragePath);
-                    
+                    $fullPath = storage_path('app/public/'.$imagenStoragePath);
+
                     // SOLO preservar si la imagen existe físicamente
                     if (file_exists($fullPath)) {
                         $plato['imagen'] = $imagenPath;
@@ -2152,7 +2172,7 @@ class MenuController extends Controller
                             'imagen' => $imagenPath,
                             'nombre' => $plato['nombre'],
                             'full_path' => $fullPath,
-                            'existe' => true
+                            'existe' => true,
                         ]);
                     } else {
                         // La imagen no existe físicamente → no preservar
@@ -2160,7 +2180,7 @@ class MenuController extends Controller
                             'imagen_path' => $imagenPath,
                             'full_path' => $fullPath,
                             'existe' => file_exists($fullPath),
-                            'razon' => 'Archivo físico no encontrado'
+                            'razon' => 'Archivo físico no encontrado',
                         ]);
                     }
                 } else {
@@ -2173,27 +2193,27 @@ class MenuController extends Controller
                         'imagen_en_request' => $imagenEnRequest !== null ? ($imagenEnRequest ?: 'VACÍA') : 'NO ENVIADA',
                         'id_existe_en_existentes' => isset($imagenesExistentes[$idPromocion]) ? 'SÍ' : 'NO',
                         'total_imagenes_existentes' => count($imagenesExistentes),
-                        'ids_existentes' => array_keys($imagenesExistentes)
+                        'ids_existentes' => array_keys($imagenesExistentes),
                     ]);
                 }
                 // NO buscar por nombre/precio para evitar asignaciones incorrectas de imágenes
-                
-                Log::info("  ✅ Promoción procesada:", [
+
+                Log::info('  ✅ Promoción procesada:', [
                     'id' => $idPromocion,
                     'nombre' => $plato['nombre'],
                     'precio' => $plato['precio'],
                     'tiene_imagen' => isset($plato['imagen']),
-                    'imagen' => $plato['imagen'] ?? 'NO ASIGNADA'
+                    'imagen' => $plato['imagen'] ?? 'NO ASIGNADA',
                 ]);
-                
+
                 $platosPromociones[] = $plato;
             }
-            
+
             Log::info('🔍 ========== FIN savePromociones ==========', [
                 'total_procesadas' => count($platosPromociones),
-                'promociones_finales' => $platosPromociones
+                'promociones_finales' => $platosPromociones,
             ]);
-            
+
             // Si no hay promociones válidas, eliminar la categoría completa
             if (empty($platosPromociones)) {
                 if ($promocionesIndex >= 0) {
@@ -2208,16 +2228,17 @@ class MenuController extends Controller
                 } else {
                     $contenido['categorias'][] = [
                         'nombre' => 'Promociones del Día',
-                        'platos' => $platosPromociones
+                        'platos' => $platosPromociones,
                     ];
                 }
             }
 
             // Guardar JSON actualizado (solo si hay cambios)
             $jsonResult = json_encode($contenido, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            
+
             if ($jsonResult === false) {
-                Log::error('Error al codificar JSON de promociones: ' . json_last_error_msg());
+                Log::error('Error al codificar JSON de promociones: '.json_last_error_msg());
+
                 return;
             }
 
@@ -2228,11 +2249,11 @@ class MenuController extends Controller
                 'menu_id' => $menu->id,
                 'cantidad' => count($platosPromociones),
                 'json_length' => strlen($jsonResult),
-                'platos' => $platosPromociones
+                'platos' => $platosPromociones,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error al guardar promociones: ' . $e->getMessage());
+            Log::error('Error al guardar promociones: '.$e->getMessage());
         }
     }
 
@@ -2242,20 +2263,20 @@ class MenuController extends Controller
     public function export(Comercio $comercio, Menu $menu)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para exportar este menú.');
         }
-        
+
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
         }
-        
-        $nombreBase = ($menu->nombre ?: 'menu') . '_' . date('Y-m-d');
+
+        $nombreBase = ($menu->nombre ?: 'menu').'_'.date('Y-m-d');
         $nombreBase = preg_replace('/[^a-zA-Z0-9_-]/', '_', $nombreBase);
-        $nombreArchivo = $nombreBase . '.xlsx';
-        
+        $nombreArchivo = $nombreBase.'.xlsx';
+
         return Excel::download(new MenuExport($menu), $nombreArchivo, ExcelType::XLSX);
     }
 
@@ -2265,9 +2286,9 @@ class MenuController extends Controller
     public function previewImport(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para importar menús en este comercio.');
         }
 
@@ -2279,18 +2300,19 @@ class MenuController extends Controller
         try {
             $file = $request->file('archivo');
             $import = new MenuImport($comercio->id);
-            
+
             // Leer el archivo sin guardar
             $rows = Excel::toCollection($import, $file)->first();
-            
+
             // Validar estructura
             $structureErrors = MenuImport::validateStructure($rows);
-            if (!empty($structureErrors)) {
-                $redirectRoute = $request->has('menu_id') 
+            if (! empty($structureErrors)) {
+                $redirectRoute = $request->has('menu_id')
                     ? route('menus.edit', [$comercio, $request->input('menu_id')])
                     : route('menus.index', $comercio);
+
                 return redirect($redirectRoute)
-                    ->with('error', 'Error en la estructura del archivo: ' . implode(', ', $structureErrors));
+                    ->with('error', 'Error en la estructura del archivo: '.implode(', ', $structureErrors));
             }
 
             // Procesar datos
@@ -2298,12 +2320,12 @@ class MenuController extends Controller
             $data = $import->getData();
 
             // Guardar datos procesados en sesión en lugar de archivo temporal
-            $sessionKey = 'menu_import_data_' . $comercio->id . '_' . time();
+            $sessionKey = 'menu_import_data_'.$comercio->id.'_'.time();
             session([$sessionKey => $data]);
-            
+
             // Obtener menús existentes para seleccionar cuál actualizar
             $menusExistentes = $comercio->menus()->orderBy('created_at', 'desc')->get();
-            
+
             // Si viene desde edición de un menú específico, usar ese menú
             $menuIdFromRequest = $request->input('menu_id');
             $menuEditando = null;
@@ -2312,16 +2334,17 @@ class MenuController extends Controller
                     ->where('comercio_id', $comercio->id)
                     ->first();
             }
-            
+
             return view('menus.preview-import', compact('comercio', 'data', 'sessionKey', 'menusExistentes', 'menuEditando'));
-            
+
         } catch (\Exception $e) {
-            Log::error('Error al previsualizar importación: ' . $e->getMessage());
-            $redirectRoute = $request->has('menu_id') 
+            Log::error('Error al previsualizar importación: '.$e->getMessage());
+            $redirectRoute = $request->has('menu_id')
                 ? route('menus.edit', [$comercio, $request->input('menu_id')])
                 : route('menus.index', $comercio);
+
             return redirect($redirectRoute)
-                ->with('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
+                ->with('error', 'Error al leer el archivo Excel: '.$e->getMessage());
         }
     }
 
@@ -2331,9 +2354,9 @@ class MenuController extends Controller
     public function import(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             abort(403, 'No tienes permiso para importar menús en este comercio.');
         }
 
@@ -2347,8 +2370,8 @@ class MenuController extends Controller
         try {
             $sessionKey = $request->input('session_key');
             $data = session($sessionKey);
-            
-            if (!$data || !is_array($data)) {
+
+            if (! $data || ! is_array($data)) {
                 return redirect()->route('menus.index', $comercio)
                     ->with('error', 'Los datos de importación han expirado. Por favor, vuelve a subir el archivo.');
             }
@@ -2357,16 +2380,16 @@ class MenuController extends Controller
             session()->forget($sessionKey);
 
             $accion = $request->input('accion');
-            
+
             if ($accion === 'actualizar' && $request->has('menu_id')) {
                 // Actualizar menú existente
                 $menu = Menu::where('id', $request->input('menu_id'))
                     ->where('comercio_id', $comercio->id)
                     ->firstOrFail();
-                
+
                 // Guardar estado activo actual
                 $estabaActivo = $menu->activo;
-                
+
                 // Actualizar datos
                 if ($request->filled('nombre')) {
                     $menu->nombre = $request->input('nombre');
@@ -2376,29 +2399,30 @@ class MenuController extends Controller
                 $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 $menu->activo = $estabaActivo; // Mantener estado activo
                 $menu->save();
-                
+
                 $mensaje = 'Menú actualizado exitosamente desde Excel.';
             } else {
                 // Crear nuevo menú
-                $menu = new Menu();
+                $menu = new Menu;
                 $menu->comercio_id = $comercio->id;
-                $menu->nombre = $request->input('nombre') ?: 'Menú Importado ' . date('Y-m-d');
+                $menu->nombre = $request->input('nombre') ?: 'Menú Importado '.date('Y-m-d');
                 $menu->formato = 'excel';
                 $menu->procesado = true;
                 $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 $menu->activo = false; // No activar automáticamente
                 $menu->save();
-                
+
                 $mensaje = 'Menú importado exitosamente desde Excel. Puedes editarlo y activarlo cuando esté listo.';
             }
 
             return redirect()->route('menus.index', $comercio)
                 ->with('success', $mensaje);
-                
+
         } catch (\Exception $e) {
-            Log::error('Error al importar menú: ' . $e->getMessage());
+            Log::error('Error al importar menú: '.$e->getMessage());
+
             return redirect()->route('menus.index', $comercio)
-                ->with('error', 'Error al importar el menú: ' . $e->getMessage());
+                ->with('error', 'Error al importar el menú: '.$e->getMessage());
         }
     }
 
@@ -2408,9 +2432,9 @@ class MenuController extends Controller
     public function updateThemeColors(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar los colores.'], 403);
         }
 
@@ -2430,17 +2454,19 @@ class MenuController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Colores actualizados correctamente'
+                'message' => 'Colores actualizados correctamente',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Error de validación al actualizar colores: ' . json_encode($e->errors()));
+            Log::error('Error de validación al actualizar colores: '.json_encode($e->errors()));
+
             return response()->json([
                 'error' => 'Error de validación',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error al actualizar colores: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al actualizar los colores: ' . $e->getMessage()], 500);
+            Log::error('Error al actualizar colores: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al actualizar los colores: '.$e->getMessage()], 500);
         }
     }
 
@@ -2450,9 +2476,9 @@ class MenuController extends Controller
     public function updateChatbotConfig(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
-        
+
         // Validar permisos
-        if (!$user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
             return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
         }
 
@@ -2461,6 +2487,16 @@ class MenuController extends Controller
                 'chatbot_name' => 'nullable|string|max:50',
                 'welcome_message' => 'nullable|string|max:500',
                 'pedido_habilitado' => 'nullable|boolean',
+                // Personalidad del asistente
+                'chatbot_config' => 'nullable|array',
+                'chatbot_config.tono' => 'nullable|string|in:cercano_divertido,calido_atento,formal_elegante,canchero',
+                'chatbot_config.trato' => 'nullable|string|in:voseo,tuteo,neutro',
+                'chatbot_config.emojis' => 'nullable|string|in:moderado,minimo,ninguno',
+                'chatbot_config.focos' => 'nullable|array',
+                'chatbot_config.focos.*' => 'string|in:promos,compartir,veganas,bebidas,postres,combos',
+                'chatbot_config.estrellas' => 'nullable|array',
+                'chatbot_config.estrellas.*' => 'string|max:120',
+                'chatbot_config.detalles' => 'nullable|string|max:600',
             ]);
 
             if ($request->has('chatbot_name')) {
@@ -2472,22 +2508,27 @@ class MenuController extends Controller
             if ($request->has('pedido_habilitado')) {
                 $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
             }
-            
+            if ($request->has('chatbot_config')) {
+                $comercio->chatbot_config = $validated['chatbot_config'] ?? null;
+            }
+
             $comercio->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Configuración actualizada correctamente'
+                'message' => 'Configuración actualizada correctamente',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Error de validación al actualizar configuración: ' . json_encode($e->errors()));
+            Log::error('Error de validación al actualizar configuración: '.json_encode($e->errors()));
+
             return response()->json([
                 'error' => 'Error de validación',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error al actualizar configuración: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al actualizar la configuración: ' . $e->getMessage()], 500);
+            Log::error('Error al actualizar configuración: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al actualizar la configuración: '.$e->getMessage()], 500);
         }
     }
 }
