@@ -24,6 +24,7 @@ class Comercio extends Model
         'menu_description',
         'contact_info',
         'chatbot_name',
+        'chatbot_config',
         'show_contact_info',
         'enable_ai_responses',
         'page_title',
@@ -44,6 +45,7 @@ class Comercio extends Model
         'show_contact_info' => 'boolean',
         'enable_ai_responses' => 'boolean',
         'pedido_habilitado' => 'boolean',
+        'chatbot_config' => 'array',
     ];
 
     public function user()

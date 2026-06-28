@@ -436,12 +436,88 @@ class ChatbotService
     /**
      * Crear prompt para OpenAI
      */
+    /**
+     * Bloque de indicaciones personalizadas del local (tono, focos de venta, estrellas, detalles).
+     */
+    private function indicacionesLocal(Comercio $comercio): string
+    {
+        $c = $comercio->chatbot_config;
+        if (! is_array($c)) {
+            return '';
+        }
+
+        $lineas = [];
+
+        $tonos = [
+            'cercano_divertido' => 'cercano y divertido',
+            'calido_atento' => 'cálido y atento',
+            'formal_elegante' => 'formal y elegante',
+            'canchero' => 'canchero y relajado',
+        ];
+        if (! empty($c['tono']) && isset($tonos[$c['tono']])) {
+            $lineas[] = 'Hablá en un tono '.$tonos[$c['tono']].'.';
+        }
+
+        $tratos = [
+            'voseo' => 'Tratá al cliente de "vos" (voseo argentino).',
+            'tuteo' => 'Tratá al cliente de "tú".',
+            'neutro' => 'Usá un trato neutral (ni vos ni tú marcado).',
+        ];
+        if (! empty($c['trato']) && isset($tratos[$c['trato']])) {
+            $lineas[] = $tratos[$c['trato']];
+        }
+
+        $emojis = [
+            'moderado' => 'Usá emojis con moderación.',
+            'minimo' => 'Usá muy pocos emojis.',
+            'ninguno' => 'No uses emojis.',
+        ];
+        if (! empty($c['emojis']) && isset($emojis[$c['emojis']])) {
+            $lineas[] = $emojis[$c['emojis']];
+        }
+
+        if (! empty($c['estrellas']) && is_array($c['estrellas'])) {
+            $est = implode(', ', array_filter(array_map('trim', $c['estrellas'])));
+            if ($est !== '') {
+                $lineas[] = 'Recomendá primero, cuando encajen con lo que pide el cliente, estos platos estrella: '.$est.'.';
+            }
+        }
+
+        $focosMap = [
+            'promos' => 'las promos del día',
+            'compartir' => 'opciones para compartir',
+            'veganas' => 'opciones veganas o sin TACC',
+            'bebidas' => 'una bebida o trago para acompañar',
+            'postres' => 'un postre para cerrar',
+            'combos' => 'combos',
+        ];
+        if (! empty($c['focos']) && is_array($c['focos'])) {
+            $f = array_values(array_filter(array_map(fn ($x) => $focosMap[$x] ?? null, $c['focos'])));
+            if (! empty($f)) {
+                $lineas[] = 'Cuando tenga sentido, ofrecé o destacá: '.implode(', ', $f).'.';
+            }
+        }
+
+        if (! empty($c['detalles'])) {
+            $lineas[] = trim($c['detalles']);
+        }
+
+        if (empty($lineas)) {
+            return '';
+        }
+
+        return "\nINDICACIONES DE ESTE LOCAL (respetalas siempre):\n- ".implode("\n- ", $lineas)."\n";
+    }
+
     private function createPrompt(Comercio $comercio, string $contexto, string $message): string
     {
+        $indicaciones = $this->indicacionesLocal($comercio);
+
         return "Eres un asistente virtual gourmet y experto en ventas gastronómicas. Tu misión es hacer que los clientes se enamoren de nuestros platos y quieran venir YA al restaurante.
 
 INFORMACIÓN DEL RESTAURANTE Y MENÚ:
 {$contexto}
+{$indicaciones}
 
 REGLAS ABSOLUTAS - NO INVENTAR NADA:
 - SOLO menciona platos que REALMENTE aparecen en el menú proporcionado arriba
