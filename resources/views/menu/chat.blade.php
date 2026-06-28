@@ -944,12 +944,16 @@
             }
             
             chatMessages.appendChild(messageDiv);
-            scrollToBottom();
-            // Re-scroll cuando carguen las imágenes de la respuesta (cambian la altura)
-            messageDiv.querySelectorAll('img').forEach(img => {
-                img.addEventListener('load', scrollToBottom);
-                img.addEventListener('error', scrollToBottom);
-            });
+            if (sender === 'user') {
+                scrollToBottom();
+            } else {
+                // La respuesta del bot: mostrar desde la primera línea
+                scrollToMessageTop(messageDiv);
+                messageDiv.querySelectorAll('img').forEach(img => {
+                    img.addEventListener('load', () => scrollToMessageTop(messageDiv));
+                    img.addEventListener('error', () => scrollToMessageTop(messageDiv));
+                });
+            }
         }
 
         // ===== Wishlist (pre‑pedido simple con "Lo quiero") =====
@@ -1056,6 +1060,16 @@
             setTimeout(() => {
                 const chatScroll = document.getElementById('chatScroll');
                 if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
+            }, 100);
+        }
+
+        // Posiciona el inicio de un mensaje cerca del tope (leer desde la 1ra línea)
+        function scrollToMessageTop(el) {
+            setTimeout(() => {
+                const sc = document.getElementById('chatScroll');
+                if (!sc || !el) return;
+                const delta = el.getBoundingClientRect().top - sc.getBoundingClientRect().top;
+                sc.scrollTop += delta - 12; // 12px de aire arriba
             }, 100);
         }
 
