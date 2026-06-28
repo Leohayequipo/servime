@@ -927,6 +927,7 @@
                             <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
+                                ${(platos && platos.length >= 1 && platos.length <= 6) ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -1119,6 +1120,11 @@
             sendMessage(question);
             hideCategories();
             hideTags();
+        }
+
+        // Re-pregunta lo mismo pero pidiendo TODAS las opciones que coincidan (sin el límite de recomendación)
+        function verMasOpciones() {
+            sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.');
         }
 
         // Delegación de eventos para botones "Lo quiero"
