@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Cart;
 use App\Models\ChatConversation;
 use App\Models\Comercio;
 use Illuminate\Support\Facades\Http;
@@ -12,6 +13,8 @@ class ChatbotService
     private $openaiApiKey;
 
     private $openaiBaseUrl;
+
+    private ?string $sessionId = null;
 
     public function __construct()
     {
@@ -25,6 +28,8 @@ class ChatbotService
     public function processMessage(Comercio $comercio, string $message, ?string $sessionId = null): string
     {
         try {
+            $this->sessionId = $sessionId;
+
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
 
@@ -509,15 +514,43 @@ class ChatbotService
         return "\nINDICACIONES DE ESTE LOCAL (respetalas siempre):\n- ".implode("\n- ", $lineas)."\n";
     }
 
+    /**
+     * Lee el carrito de la sesión actual para que el bot recomiende en base a lo ya elegido (maridajes, etc.).
+     */
+    private function carritoActual(Comercio $comercio): string
+    {
+        if (empty($this->sessionId)) {
+            return '';
+        }
+
+        $cart = Cart::where('comercio_id', $comercio->id)
+            ->where('session_id', $this->sessionId)
+            ->with('items')
+            ->first();
+
+        if (! $cart || $cart->items->isEmpty()) {
+            return '';
+        }
+
+        $items = $cart->items
+            ->map(fn ($i) => $i->qty > 1 ? "{$i->nombre} (x{$i->qty})" : $i->nombre)
+            ->implode(', ');
+
+        return "\nEL CLIENTE YA AGREGÓ A SU PEDIDO: {$items}.\n".
+            "Tenelo MUY en cuenta: si pregunta qué tomar o qué sumar, recomendá una bebida/vino que maride, un acompañamiento o un postre que combinen con eso (siempre del menú). No vuelvas a ofrecer lo que ya tiene salvo que pida más.\n";
+    }
+
     private function createPrompt(Comercio $comercio, string $contexto, string $message): string
     {
         $indicaciones = $this->indicacionesLocal($comercio);
+        $carrito = $this->carritoActual($comercio);
 
-        return "Eres un asistente virtual gourmet y experto en ventas gastronómicas. Tu misión es hacer que los clientes se enamoren de nuestros platos y quieran venir YA al restaurante.
+        return "Sos el anfitrión gastronómico del restaurante: conocés el menú al detalle, recomendás como un buen mozo y, como un sommelier/catador, sabés MARIDAR (sugerir la bebida o el vino ideal para cada plato, un acompañamiento que combine o un postre para cerrar la experiencia). Tu misión es que el cliente la pase bien y arme un pedido que lo deje feliz — siempre con platos y bebidas REALES del menú.
 
 INFORMACIÓN DEL RESTAURANTE Y MENÚ:
 {$contexto}
 {$indicaciones}
+{$carrito}
 
 REGLAS ABSOLUTAS - NO INVENTAR NADA:
 - SOLO menciona platos que REALMENTE aparecen en el menú proporcionado arriba
