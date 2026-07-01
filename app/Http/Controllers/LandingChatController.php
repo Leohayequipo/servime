@@ -52,7 +52,7 @@ $30 USD/mes. Un solo plan, todo incluido, sin sorpresas.
 - Respondés ÚNICAMENTE sobre ServiME, gastronomía digital y la industria gastronómica
 - Si te preguntan algo completamente fuera de ese contexto, lo decís con humor y redirigís: "Eso escapa a mi especialidad, ¡pero en lo que es ServiME soy todo tuyo!"
 - NUNCA inventás precios, funcionalidades ni garantías que no estén en este prompt
-- Si no podés responder con certeza, ofrecés el contacto humano (email o WhatsApp)
+- Si no podés responder con certeza, ofrecés el contacto humano usando SOLO los datos de contacto reales que figuran más abajo (NUNCA inventes email, teléfono ni dominio)
 - Respondés en español rioplatense (vos, che, etc.), tono cercano pero profesional
 - Respuestas cortas y directas — máximo 3 párrafos
 - Usá **negrita** para resaltar cosas importantes
@@ -63,22 +63,35 @@ PROMPT;
     public function chat(Request $request): JsonResponse
     {
         $request->validate([
-            'message'    => 'required|string|max:500',
+            'message' => 'required|string|max:500',
             'session_id' => 'required|string|max:64',
-            'history'    => 'array|max:20',
-            'history.*.role'    => 'required|in:user,assistant',
+            'history' => 'array|max:20',
+            'history.*.role' => 'required|in:user,assistant',
             'history.*.content' => 'required|string|max:2000',
         ]);
 
-        $apiKey  = config('services.openai.api_key');
+        $apiKey = config('services.openai.api_key');
         $baseUrl = config('services.openai.base_url', 'https://api.openai.com/v1');
 
         if (empty($apiKey)) {
             return response()->json(['error' => 'Servicio no disponible'], 503);
         }
 
-        // System prompt + últimos 10 turnos de historial + mensaje nuevo
-        $messages = [['role' => 'system', 'content' => self::SYSTEM_PROMPT]];
+        // Datos de contacto REALES (desde config): se inyectan para que el bot no los invente.
+        $email = config('services.support.email');
+        $whatsapp = config('services.support.whatsapp'); // E164 sin '+', o ''
+
+        $contacto = "\n\n## Datos de contacto reales (los ÚNICOS válidos)\n";
+        if (! empty($email)) {
+            $contacto .= "- Email: {$email}\n";
+        }
+        if (! empty($whatsapp)) {
+            $contacto .= "- WhatsApp: https://wa.me/{$whatsapp}\n";
+        }
+        $contacto .= 'IMPORTANTE: estos son los ÚNICOS datos de contacto. NUNCA inventes otro email, teléfono o dominio (por ejemplo, no uses @servime.com.ar ni números de ejemplo). Si un dato no figura acá, no lo des e invitá a escribir al email.';
+
+        // System prompt + contacto + últimos 10 turnos de historial + mensaje nuevo
+        $messages = [['role' => 'system', 'content' => self::SYSTEM_PROMPT.$contacto]];
 
         $history = array_slice($request->input('history', []), -10);
         foreach ($history as $turn) {
@@ -88,14 +101,14 @@ PROMPT;
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type'  => 'application/json',
-            ])->timeout(20)->post($baseUrl . '/chat/completions', [
-                'model'             => 'gpt-4o-mini',
-                'messages'          => $messages,
-                'max_tokens'        => 400,
-                'temperature'       => 0.5,
-                'presence_penalty'  => 0.2,
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(20)->post($baseUrl.'/chat/completions', [
+                'model' => 'gpt-4o-mini',
+                'messages' => $messages,
+                'max_tokens' => 400,
+                'temperature' => 0.5,
+                'presence_penalty' => 0.2,
                 'frequency_penalty' => 0.1,
             ]);
 
@@ -103,10 +116,10 @@ PROMPT;
                 $text = trim($response->json('choices.0.message.content', ''));
 
                 ChatLanding::create([
-                    'session_id'   => $request->input('session_id'),
+                    'session_id' => $request->input('session_id'),
                     'user_message' => $request->input('message'),
                     'bot_response' => $text,
-                    'user_ip'      => $request->ip(),
+                    'user_ip' => $request->ip(),
                 ]);
 
                 return response()->json(['response' => $text]);
@@ -114,12 +127,14 @@ PROMPT;
 
             Log::warning('LandingChat OpenAI error', [
                 'status' => $response->status(),
-                'body'   => substr($response->body(), 0, 500),
+                'body' => substr($response->body(), 0, 500),
             ]);
+
             return response()->json(['response' => 'Hubo un problema al procesar tu consulta. Contactanos directamente.']);
 
         } catch (\Exception $e) {
-            Log::error('LandingChat exception: ' . $e->getMessage());
+            Log::error('LandingChat exception: '.$e->getMessage());
+
             return response()->json(['response' => 'Hubo un problema al procesar tu consulta. Contactanos directamente.']);
         }
     }
