@@ -17,7 +17,8 @@
       "Bash(curl -sI http://127.0.0.1:8000/admin/login)",
       "Bash(tasklist)",
       "Bash(cp resources/views/comercios/edit.blade.php /tmp/edit_backup.blade.php)",
-      "Bash(sed -i '270,284d;380,549d' resources/views/comercios/edit.blade.php)"
+      "Bash(sed -i '270,284d;380,549d' resources/views/comercios/edit.blade.php)",
+      "Bash(./vendor/bin/pint app/Http/Controllers/LandingChatController.php tests/Feature/LandingChatContactTest.php)"
     ]
   }
 }
