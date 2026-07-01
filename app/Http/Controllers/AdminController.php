@@ -6,6 +6,7 @@ use App\Mail\WelcomeEmail;
 use App\Models\User;
 use App\Models\Comercio;
 use App\Models\Menu;
+use App\Models\ChatLanding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -348,5 +349,22 @@ class AdminController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    public function landingChat(Request $request)
+    {
+        $query = ChatLanding::latest();
+
+        if ($request->filled('session_id')) {
+            $query->where('session_id', 'like', '%'.$request->session_id.'%');
+        }
+
+        $mensajes = $query->paginate(50)->withQueryString();
+
+        $totalMensajes = ChatLanding::count();
+        $totalSesiones = ChatLanding::distinct('session_id')->count('session_id');
+        $hoy = ChatLanding::whereDate('created_at', today())->count();
+
+        return view('admin.landing-chat.index', compact('mensajes', 'totalMensajes', 'totalSesiones', 'hoy'));
     }
 }

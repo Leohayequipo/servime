@@ -158,6 +158,7 @@
                         </div>
                     </div>
                 </div>
+
             @else
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                     <a href="{{ route('comercios.index') }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
@@ -198,7 +199,7 @@
 
             <!-- Panel Super Admin -->
             @if(auth()->user()->isSuperAdmin())
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
 
                     <!-- Usuarios recientes -->
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
@@ -219,17 +220,15 @@
                         <div class="space-y-2">
                             @forelse($recentUsers as $recentUser)
                                 <a href="{{ route('admin.users.index', ['user_id' => $recentUser->id]) }}"
-                                   class="flex items-center justify-between bg-primary-dark hover:bg-background rounded-xl px-4 py-3 transition-colors group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-9 h-9 rounded-full bg-accent-blue/20 flex items-center justify-center text-accent-blue font-semibold text-sm flex-shrink-0">
-                                            {{ strtoupper(substr($recentUser->name, 0, 1)) }}
-                                        </div>
-                                        <div>
-                                            <p class="text-text-primary text-sm font-medium">{{ $recentUser->name }}</p>
-                                            <p class="text-text-secondary text-xs">{{ $recentUser->email }}</p>
-                                        </div>
+                                   class="flex items-center gap-3 bg-primary-dark hover:bg-background rounded-xl px-4 py-3 transition-colors group">
+                                    <div class="w-9 h-9 rounded-full bg-accent-blue/20 flex items-center justify-center text-accent-blue font-semibold text-sm flex-shrink-0">
+                                        {{ strtoupper(substr($recentUser->name, 0, 1)) }}
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-text-primary text-sm font-medium truncate">{{ $recentUser->name }}</p>
+                                        <p class="text-text-secondary text-xs truncate">{{ $recentUser->email }}</p>
+                                    </div>
+                                    <div class="flex-shrink-0 flex flex-col items-end gap-1">
                                         <span class="px-2 py-0.5 text-xs rounded-full {{ $recentUser->role === 'super_admin' ? 'bg-accent-blue/20 text-accent-blue' : 'bg-accent-gray/50 text-text-secondary' }}">
                                             {{ $recentUser->role === 'super_admin' ? 'Admin' : 'Usuario' }}
                                         </span>
@@ -279,6 +278,35 @@
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Chat del landing -->
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-10">
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                                <span>🤖</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-text-primary">Chat del Landing</h3>
+                                <p class="text-text-secondary text-xs">Últimas consultas al asistente de ventas</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('admin.landing-chat.index') }}" class="text-accent-blue hover:opacity-70 text-sm font-medium transition-opacity">
+                            Ver todos →
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        @forelse($recentLandingChats as $lc)
+                            <div class="bg-primary-dark rounded-xl px-4 py-3">
+                                <p class="text-text-primary text-sm font-medium line-clamp-2">{{ $lc->user_message }}</p>
+                                <p class="text-text-secondary text-xs mt-1 line-clamp-2">{{ $lc->bot_response }}</p>
+                                <p class="text-text-secondary text-xs mt-2 opacity-60">{{ $lc->created_at->diffForHumans() }}</p>
+                            </div>
+                        @empty
+                            <p class="text-text-secondary py-6 text-sm col-span-4">Sin mensajes aún.</p>
+                        @endforelse
+                    </div>
                 </div>
             @endif
 

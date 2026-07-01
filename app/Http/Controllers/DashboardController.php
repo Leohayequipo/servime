@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatConversation;
+use App\Models\ChatLanding;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Models\User;
@@ -38,6 +39,7 @@ class DashboardController extends Controller
             $chatsIA = ChatConversation::where('used_openai', true)->where('created_at', '>=', $cutoff)->count();
             $recentUsers = User::latest()->take(8)->get();
             $recentComercios = Comercio::with('user')->latest()->take(8)->get();
+            $recentLandingChats = ChatLanding::latest()->take(8)->get();
         } else {
             // Usuario común ve solo sus comercios y menús
             $comercios = Comercio::where('user_id', auth()->id())->get();
@@ -77,6 +79,8 @@ class DashboardController extends Controller
         })->take(10);
 
         // Comercios que agotaron su cuota mensual de IA (aviso para el dueño, no para el super admin)
+        $recentLandingChats = $recentLandingChats ?? collect();
+
         $comerciosSinCuotaIA = $user->isSuperAdmin()
             ? collect()
             : $comercios->filter(fn ($comercio) => ! $comercio->puedeUsarIA())->values();
@@ -99,6 +103,7 @@ class DashboardController extends Controller
             'comerciosSinCuotaIA',
             'recentUsers',
             'recentComercios',
+            'recentLandingChats',
             'totalUsers',
             'chatsHoy',
             'chatsIA'
