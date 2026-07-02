@@ -19,7 +19,7 @@
                     Bienvenido, {{ auth()->user()->name }}
                 </h1>
                 <p class="text-text-secondary">
-                    {{ now()->format('l d \d\e F, Y') }}
+                    {{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM[,] YYYY') }}
                 </p>
             </div>
 

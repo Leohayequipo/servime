@@ -94,6 +94,12 @@
             <p class="text-text-secondary">Accede a tu panel de administración</p>
         </div>
 
+        @if(session('status'))
+            <div class="mb-5 rounded-xl px-4 py-3 text-sm font-medium text-center" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;">
+                ✓ {{ session('status') }}
+            </div>
+        @endif
+
         <!-- Login Form -->
         <div class="rounded-2xl p-8 neon-glow" style="background:rgba(12,9,6,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,0.18);">
     <form method="POST" action="{{ route('login') }}">

@@ -84,9 +84,15 @@
                         </div>
                         <h3 class="font-bold text-text-primary">Comercios</h3>
                     </div>
-                    <span class="px-2.5 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary font-medium">
-                        {{ $user->comercios->count() }} comercio(s)
-                    </span>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-0.5 text-xs rounded-full bg-accent-gray/50 text-text-secondary font-medium">
+                            {{ $user->comercios->count() }} comercio(s)
+                        </span>
+                        <a href="{{ route('comercios.create', ['for_user' => $user->id]) }}"
+                           class="px-3 py-1.5 bg-accent-green/10 hover:bg-accent-green/20 text-accent-green border border-accent-green/20 rounded-lg text-xs font-medium transition-colors">
+                            + Crear comercio
+                        </a>
+                    </div>
                 </div>
 
                 @if($user->comercios->count() > 0)

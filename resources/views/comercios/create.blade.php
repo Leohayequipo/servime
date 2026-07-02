@@ -32,25 +32,31 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         @if(auth()->user()->isSuperAdmin() && isset($users))
-                            <!-- Selección de Usuario (Solo para Super Admin) -->
+                            <!-- Selección de Usuario -->
                             <div class="md:col-span-2">
                                 <x-input-label for="user_id" :value="__('Asignar a Usuario')" class="text-text-primary font-medium mb-2" />
                                 <select id="user_id" name="user_id" class="input-field w-full" required>
                                     <option value="">Seleccionar usuario...</option>
-                                    @forelse($users as $user)
-                                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
-                                            {{ $user->name }} ({{ $user->email }})
+                                    @foreach($users as $u)
+                                        <option value="{{ $u->id }}" {{ (old('user_id', $forUserId ?? '') == $u->id) ? 'selected' : '' }}>
+                                            {{ $u->name }} ({{ $u->email }})
                                         </option>
-                                    @empty
-                                        <option value="" disabled>No hay usuarios disponibles (todos ya tienen comercio)</option>
-                                    @endforelse
+                                    @endforeach
                                 </select>
-                                @if($users->isEmpty())
-                                    <p class="mt-2 text-sm text-yellow-400">
-                                        ℹ️ Todos los usuarios ya tienen un comercio asignado. Solo se muestran usuarios disponibles.
-                                    </p>
-                                @endif
                                 <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
+                            </div>
+
+                            <!-- Selección de Plan -->
+                            <div class="md:col-span-2">
+                                <x-input-label for="plan_id" :value="__('Plan')" class="text-text-primary font-medium mb-2" />
+                                <select id="plan_id" name="plan_id" class="input-field w-full">
+                                    @foreach($plans as $plan)
+                                        <option value="{{ $plan->id }}" {{ (old('plan_id') == $plan->id || $plan->key === 'pro') ? 'selected' : '' }}>
+                                            {{ $plan->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('plan_id')" class="mt-2" />
                             </div>
                         @endif
 

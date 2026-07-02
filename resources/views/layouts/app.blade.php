@@ -100,6 +100,10 @@
                                     Comercios
                                 </a>
                                 @if(Auth::user()->isSuperAdmin())
+                                    <a href="{{ route('admin.users.index') }}"
+                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.users.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                        Usuarios
+                                    </a>
                                     <a href="{{ route('admin.menus.index') }}"
                                        class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
                                         Menús
@@ -192,6 +196,7 @@
                     <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('dashboard') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Dashboard</a>
                     <a href="{{ route('comercios.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('comercios.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Comercios</a>
                     @if(Auth::user()->isSuperAdmin())
+                        <a href="{{ route('admin.users.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.users.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Usuarios</a>
                         <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
                         <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Planes</a>
                     @elseif($miComercio)

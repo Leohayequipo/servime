@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comercio;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -43,12 +44,11 @@ class ComercioController extends Controller
         $user = auth()->user();
 
         if ($user->isSuperAdmin()) {
-            // Super Admin puede crear comercios para cualquier usuario (solo los que no tengan comercio)
-            $users = User::where('role', 'user')
-                ->whereDoesntHave('comercios')
-                ->get();
+            $users = User::where('role', 'user')->get();
+            $plans = Plan::where('activo', true)->orderBy('orden')->get();
+            $forUserId = request('for_user');
 
-            return view('comercios.create', compact('users'));
+            return view('comercios.create', compact('users', 'plans', 'forUserId'));
         } else {
             // Usuario común: verificar si ya tiene un comercio
             if ($user->comercios()->count() > 0) {
@@ -77,8 +77,8 @@ class ComercioController extends Controller
         ];
 
         if ($user->isSuperAdmin()) {
-            // Super Admin puede asignar el comercio a cualquier usuario
             $validationRules['user_id'] = 'required|exists:users,id';
+            $validationRules['plan_id'] = 'nullable|exists:plans,id';
         }
 
         $validated = $request->validate($validationRules);
@@ -104,6 +104,16 @@ class ComercioController extends Controller
         $comercio->descripcion = $validated['descripcion'];
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
+
+        // Asignar plan: el elegido por admin, o Pro por defecto
+        if ($user->isSuperAdmin() && !empty($validated['plan_id'])) {
+            $comercio->plan_id = $validated['plan_id'];
+        } else {
+            $planPro = Plan::where('key', 'pro')->first();
+            if ($planPro) {
+                $comercio->plan_id = $planPro->id;
+            }
+        }
 
         $comercio->save();
 
