@@ -2222,7 +2222,7 @@
             if (!file) return;
             
             // NO convertir PDF a imagen - procesarlo directamente
-            // El backend procesará el PDF completo directamente con OpenAI Vision
+            // El backend procesará el PDF completo directamente con IA
             convertedImageFile = null;
         }
         

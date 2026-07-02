@@ -75,7 +75,7 @@
                     </div>
                 </div>
 
-                <!-- Uso de OpenAI -->
+                <!-- Uso de IA -->
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
@@ -87,7 +87,7 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Con OpenAI</p>
+                                <p class="text-sm font-medium text-text-secondary">Con IA</p>
                                 <p class="text-2xl font-bold text-text-primary">{{ $stats['openai_usage'] }}</p>
                             </div>
                         </div>

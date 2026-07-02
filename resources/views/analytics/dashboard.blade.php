@@ -93,11 +93,11 @@
                 </div>
             </div>
 
-            <!-- Uso de OpenAI -->
+            <!-- Uso de IA -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-text-primary mb-4">🤖 Uso de OpenAI</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4">🤖 Uso de IA</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-text-secondary">Respuestas con IA</span>
@@ -114,7 +114,7 @@
                                 @endphp
                                 <div class="bg-green-600 h-2 rounded-full" style="width: {{ $openaiPercentage }}%"></div>
                             </div>
-                            <p class="text-xs text-text-secondary">{{ $openaiPercentage }}% usa OpenAI</p>
+                            <p class="text-xs text-text-secondary">{{ $openaiPercentage }}% usa IA</p>
                         </div>
                     </div>
                 </div>
