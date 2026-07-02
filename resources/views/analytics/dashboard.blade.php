@@ -212,13 +212,13 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div class="flex space-x-2">
+                                            <div class="flex items-center gap-2">
                                                 <a href="{{ route('analytics.comercio', $comercio) }}"
-                                                   class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-blue text-background rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow shadow-accent-blue/30">
                                                     📊 Ver Analytics
                                                 </a>
                                                 <a href="{{ route('analytics.export', $comercio) }}"
-                                                   class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-green/10 hover:bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg text-xs font-medium transition-colors">
                                                     📥 Exportar
                                                 </a>
                                             </div>
