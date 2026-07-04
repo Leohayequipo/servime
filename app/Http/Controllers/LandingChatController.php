@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatLanding;
+use App\Models\Plan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -10,16 +11,13 @@ use Illuminate\Support\Facades\Log;
 
 class LandingChatController extends Controller
 {
-    private const SYSTEM_PROMPT = <<<'PROMPT'
+    private const BASE_PROMPT = <<<'PROMPT'
 Sos el asistente de ventas de ServiME, un SaaS argentino de menús digitales con IA para bares y restaurantes.
 
 Tu objetivo es ayudar a dueños de gastronomía a entender el producto, resolver sus dudas y motivarlos a dar el paso. Sos cercano, buena onda y con foco en tecnología — como alguien del equipo que entiende tanto de producto como de gastronomía.
 
 ## Qué es ServiME
 ServiME convierte el menú físico de un bar o restaurante en una experiencia digital con IA. El dueño sube su carta (PDF o fotos) y el sistema la procesa automáticamente. Los clientes acceden escaneando un QR desde su celular — sin instalar ninguna app.
-
-## Precio
-$30 USD/mes. Un solo plan, todo incluido, sin sorpresas.
 
 ## Funcionalidades para el comensal
 - Acceso al menú desde el celular con QR, sin instalar nada
@@ -60,6 +58,35 @@ $30 USD/mes. Un solo plan, todo incluido, sin sorpresas.
 - No uses headers con ## en tus respuestas
 PROMPT;
 
+    private const FEATURE_LABELS = [
+        'analytics' => 'Analytics avanzado de consultas',
+        'excel' => 'Exportar conversaciones a Excel',
+        'promociones' => 'Gestión de promociones destacadas',
+        'intencion_ia' => 'Clasificación de intención con IA',
+    ];
+
+    private function buildSystemPrompt(): string
+    {
+        $planes = Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get();
+
+        $planesText = "\n\n## Planes y precios\n";
+        foreach ($planes as $plan) {
+            $precio = $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.').'/mes' : 'A consultar';
+            $msgs = $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' mensajes IA por mes' : 'IA ilimitada';
+
+            $planesText .= "\n### {$plan->nombre} — {$precio}\n";
+            $planesText .= "{$plan->descripcion}\n";
+            $planesText .= "- {$msgs}\n";
+
+            foreach ($plan->features ?? [] as $feature) {
+                $label = self::FEATURE_LABELS[$feature] ?? $feature;
+                $planesText .= "- {$label}\n";
+            }
+        }
+
+        return self::BASE_PROMPT.$planesText;
+    }
+
     public function chat(Request $request): JsonResponse
     {
         $request->validate([
@@ -77,9 +104,8 @@ PROMPT;
             return response()->json(['error' => 'Servicio no disponible'], 503);
         }
 
-        // Datos de contacto REALES (desde config): se inyectan para que el bot no los invente.
         $email = config('services.support.email');
-        $whatsapp = config('services.support.whatsapp'); // E164 sin '+', o ''
+        $whatsapp = config('services.support.whatsapp');
 
         $contacto = "\n\n## Datos de contacto reales (los ÚNICOS válidos)\n";
         if (! empty($email)) {
@@ -88,10 +114,9 @@ PROMPT;
         if (! empty($whatsapp)) {
             $contacto .= "- WhatsApp: https://wa.me/{$whatsapp}\n";
         }
-        $contacto .= 'IMPORTANTE: estos son los ÚNICOS datos de contacto. NUNCA inventes otro email, teléfono o dominio (por ejemplo, no uses @servime.com.ar ni números de ejemplo). Si un dato no figura acá, no lo des e invitá a escribir al email.';
+        $contacto .= 'IMPORTANTE: estos son los ÚNICOS datos de contacto. NUNCA inventes otro email, teléfono o dominio. Si un dato no figura acá, no lo des e invitá a escribir al email.';
 
-        // System prompt + contacto + últimos 10 turnos de historial + mensaje nuevo
-        $messages = [['role' => 'system', 'content' => self::SYSTEM_PROMPT.$contacto]];
+        $messages = [['role' => 'system', 'content' => $this->buildSystemPrompt().$contacto]];
 
         $history = array_slice($request->input('history', []), -10);
         foreach ($history as $turn) {
@@ -125,7 +150,7 @@ PROMPT;
                 return response()->json(['response' => $text]);
             }
 
-            Log::warning('LandingChat OpenAI error', [
+            Log::warning('LandingChat error', [
                 'status' => $response->status(),
                 'body' => substr($response->body(), 0, 500),
             ]);

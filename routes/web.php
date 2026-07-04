@@ -11,7 +11,8 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect('/dashboard');
     }
-    return view('marketing.landing');
+    $planes = \App\Models\Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get();
+    return view('marketing.landing', compact('planes'));
 });
 
 // Ruta para servir logos directamente

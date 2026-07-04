@@ -6,7 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>ServiME — Menú digital con QR e IA para restaurantes y bares</title>
-        <meta name="description" content="Creá tu carta digital con QR en minutos. Tus clientes escanean, ven el menú y consultan al chatbot de IA entrenado con tu menú. Sin apps. Desde $30 USD/mes." />
+        <meta name="description" content="Creá tu carta digital con QR en minutos. Tus clientes escanean, ven el menú y consultan al chatbot de IA entrenado con tu menú. Sin apps. Desde ${{ number_format($planes->min('precio'), 0, ',', '.') }}/mes." />
         <link rel="canonical" href="{{ url('/') }}" />
 
         <meta property="og:title" content="ServiME — Menú digital con QR e IA para restaurantes" />
@@ -32,8 +32,8 @@
             "inLanguage": "es",
             "offers": {
                 "@type": "Offer",
-                "price": "30",
-                "priceCurrency": "USD",
+                "price": "{{ (int) $planes->min('precio') }}",
+                "priceCurrency": "ARS",
                 "description": "Plan mensual ServiME"
             },
             "featureList": [
@@ -392,6 +392,64 @@
                 </div>
             </section>
 
+            <!-- ── Planes ─────────────────────────────────────────── -->
+            <section id="planes" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
+                <div class="text-center mb-10">
+                    <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Planes y precios</h2>
+                    <p class="mt-3 text-[color:var(--muted)] max-w-xl mx-auto">Elegí el que mejor se adapta a tu negocio. Podés cambiar en cualquier momento.</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    @foreach($planes as $plan)
+                        @php
+                            $esPro     = $plan->key === 'pro';
+                            $precio    = $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.').'/mes' : 'A consultar';
+                            $msgs      = $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' msgs IA/mes' : 'IA ilimitada';
+                            $features  = [
+                                'analytics'   => 'Analytics avanzado',
+                                'excel'       => 'Exportar a Excel',
+                                'promociones' => 'Gestión de promociones',
+                                'intencion_ia'=> 'Clasificación de intención con IA',
+                            ];
+                        @endphp
+                        <div class="relative rounded-3xl ring-1 p-7 flex flex-col gap-5
+                            {{ $esPro ? 'bg-[var(--accent)]/10 ring-[var(--accent)]/40' : 'bg-white/3 ring-white/10' }}">
+
+                            @if($esPro)
+                                <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--accent)] text-black text-xs font-bold px-3 py-1 rounded-full">
+                                    Más popular
+                                </span>
+                            @endif
+
+                            <div>
+                                <p class="text-xs text-white/50 font-semibold tracking-widest uppercase mb-2">{{ $plan->nombre }}</p>
+                                <p class="text-3xl font-bold {{ $esPro ? 'text-[var(--accent)]' : 'text-white' }}">{{ $precio }}</p>
+                                <p class="mt-2 text-sm text-[color:var(--muted)]">{{ $plan->descripcion }}</p>
+                            </div>
+
+                            <ul class="space-y-2 flex-1">
+                                <li class="flex items-center gap-2 text-sm text-white/80">
+                                    <span class="{{ $esPro ? 'text-[var(--accent)]' : 'text-white/40' }}">✓</span>
+                                    {{ $msgs }}
+                                </li>
+                                @foreach($plan->features ?? [] as $feature)
+                                    <li class="flex items-center gap-2 text-sm text-white/80">
+                                        <span class="{{ $esPro ? 'text-[var(--accent)]' : 'text-white/40' }}">✓</span>
+                                        {{ $features[$feature] ?? $feature }}
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            <a href="#" data-open-contact
+                               class="mt-2 inline-flex justify-center items-center rounded-2xl font-semibold px-5 py-2.5 text-sm transition
+                               {{ $esPro ? 'bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black shadow shadow-amber-500/20' : 'bg-white/5 hover:bg-white/10 text-white ring-1 ring-white/15' }}">
+                                Quiero este plan
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
             <section id="probar" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
                 <div class="grid lg:grid-cols-12 gap-6 items-start">
                     <div class="lg:col-span-5">
@@ -447,7 +505,7 @@
         </footer>
 
         {{-- ── Demo toast ── --}}
-        <div id="demo-toast" class="toast-hidden fixed top-20 right-4 sm:right-6 z-40 w-[min(18rem,calc(100vw-2rem))] rounded-2xl bg-[#1b1814] ring-1 ring-white/15 shadow-xl shadow-black/50 p-4">
+        <div id="demo-toast" class="toast-hidden fixed top-20 right-4 sm:right-6 z-[60] w-[min(18rem,calc(100vw-2rem))] rounded-2xl bg-[#1b1814] ring-1 ring-white/15 shadow-xl shadow-black/50 p-4">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold">¿Querés ver una demo?</p>
