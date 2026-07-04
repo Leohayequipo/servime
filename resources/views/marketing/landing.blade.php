@@ -703,6 +703,13 @@
             document.getElementById('demo-toast-no')?.addEventListener('click', dismissDemoToast);
             document.getElementById('demo-toast-close')?.addEventListener('click', dismissDemoToast);
 
+            // ── Título al cambiar de pestaña ───────────────────────
+            const ORIGINAL_TITLE = document.title;
+            const AWAY_TITLE = '👀 Volvé, que el futuro te espera';
+            document.addEventListener('visibilitychange', () => {
+                document.title = document.hidden ? AWAY_TITLE : ORIGINAL_TITLE;
+            });
+
             // ── Chat Logic ─────────────────────────────────────────
             const chatMessages = document.getElementById('chat-messages');
             const chatInput    = document.getElementById('chat-input');
