@@ -78,7 +78,7 @@
     <div class="min-h-screen flex flex-col">
         @php $miComercio = auth()->user()->getComercio(); @endphp
         <!-- Navigation -->
-        <nav class="bg-background border-b border-accent-gray sticky top-0 z-50">
+        <nav class="bg-background border-b border-accent-gray md:sticky md:top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-3">
                     <div class="flex items-center">

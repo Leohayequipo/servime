@@ -212,7 +212,7 @@
             <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between py-3">
                     <a href="{{ url('/') }}" class="flex items-center group">
-                        <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="h-11 sm:h-16 w-auto opacity-90 group-hover:opacity-100 transition">
+                        <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" style="height:140px;width:auto;" class="opacity-90 group-hover:opacity-100 transition">
                     </a>
 
                     <nav class="flex items-center gap-2 sm:gap-3">
