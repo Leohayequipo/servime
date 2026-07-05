@@ -170,6 +170,9 @@ class MenuController extends Controller
             'tamaño_archivo' => file_exists(storage_path('app/public/'.$menu->archivo_original)) ? filesize(storage_path('app/public/'.$menu->archivo_original)) : 'N/A',
         ]);
 
+        // Marcar como "procesando" antes de encolar (cubre subida nueva y re-subida)
+        $menu->update(['estado' => Menu::ESTADO_PROCESANDO, 'procesado' => false]);
+
         // Despachar procesamiento a la queue para no bloquear el request
         \App\Jobs\ProcessMenuJob::dispatch($menu);
 

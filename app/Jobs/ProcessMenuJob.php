@@ -14,21 +14,29 @@ class ProcessMenuJob implements ShouldQueue
     use Queueable;
 
     public int $timeout = 700;
-    public int $tries   = 2;
+
+    public int $tries = 2;
 
     public function __construct(public Menu $menu) {}
 
     public function handle(): void
     {
-        (new MenuProcessorService())->processMenu($this->menu);
+        (new MenuProcessorService)->processMenu($this->menu);
 
         $this->menu->refresh()->load('comercio.user');
+
+        // Si el procesamiento no terminó en "listo", no mandamos mail de éxito.
+        // El estado de error ya lo dejó marcado el servicio.
+        if (! $this->menu->estaListo()) {
+            return;
+        }
+
         $user = $this->menu->comercio?->user;
 
         if ($user?->email) {
-            $menuName   = $this->menu->nombre ?? 'tu menú';
+            $menuName = $this->menu->nombre ?? 'tu menú';
             $comercioName = $this->menu->comercio->nombre ?? '';
-            $menuUrl    = route('menus.index', $this->menu->comercio);
+            $menuUrl = route('menus.index', $this->menu->comercio);
 
             Mail::html(
                 view('emails.menu_procesado', compact('user', 'menuName', 'comercioName', 'menuUrl'))->render(),
@@ -42,8 +50,8 @@ class ProcessMenuJob implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        Log::error("ProcessMenuJob: falló para menú #{$this->menu->id}: " . $e->getMessage());
-        $this->menu->update(['procesado' => false]);
+        Log::error("ProcessMenuJob: falló para menú #{$this->menu->id}: ".$e->getMessage());
+        $this->menu->update(['procesado' => false, 'estado' => \App\Models\Menu::ESTADO_ERROR]);
 
         $this->menu->load('comercio.user');
         $user = $this->menu->comercio?->user;

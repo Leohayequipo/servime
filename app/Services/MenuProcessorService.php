@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Log;
 class MenuProcessorService
 {
     protected $openaiApiKey;
+
     protected $openaiModel;
+
     protected $savedExtractedText = ''; // Para guardar texto extraído de PDFs
+
     protected $menuId = null; // Para logs de truncamiento
 
     public function __construct()
@@ -27,6 +30,7 @@ class MenuProcessorService
     {
         try {
             $menu->load('comercio');
+
             return [
                 'comercio_id' => $menu->comercio_id,
                 'comercio_nombre' => $menu->comercio->nombre ?? 'N/A',
@@ -47,10 +51,10 @@ class MenuProcessorService
         try {
             // Guardar ID del menú para logs
             $this->menuId = $menu->id;
-            
+
             // Obtener contexto del comercio
             $comercioContext = $this->getComercioContext($menu);
-            
+
             // Log simplificado del inicio de procesamiento
             Log::info("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] 🔍 Iniciando procesamiento de menú #{$menu->id} ({$menu->formato})", [
                 'comercio_id' => $comercioContext['comercio_id'],
@@ -58,12 +62,12 @@ class MenuProcessorService
                 'menu_id' => $menu->id,
                 'formato' => $menu->formato,
             ]);
-            
+
             // 1. Extraer texto del archivo
             $extractedText = $this->extractTextFromFile($menu);
-            
+
             // El texto se extrajo correctamente
-            
+
             if (empty($extractedText)) {
                 throw new \Exception('No se pudo extraer texto del archivo');
             }
@@ -71,11 +75,11 @@ class MenuProcessorService
             // 2. Guardar el texto extraído primero (si existe texto sin procesar)
             // Para PDFs con texto extraíble, savedExtractedText contiene el texto sin procesar
             // Para imágenes/PDFs escaneados, no hay texto extraído, solo la respuesta procesada de OpenAI
-            $textoExtraido = !empty($this->savedExtractedText) ? $this->savedExtractedText : ($menu->formato === 'pdf' ? 'PDF procesado con OpenAI Vision' : 'Imagen procesada con OpenAI Vision');
-            
+            $textoExtraido = ! empty($this->savedExtractedText) ? $this->savedExtractedText : ($menu->formato === 'pdf' ? 'PDF procesado con OpenAI Vision' : 'Imagen procesada con OpenAI Vision');
+
             $menu->update([
                 'texto_extraido' => $textoExtraido,
-                'procesado' => false
+                'procesado' => false,
             ]);
 
             // Limpiar el texto guardado después de usarlo
@@ -86,19 +90,19 @@ class MenuProcessorService
             // Para PDFs escaneados/imágenes, processPdfAsImageWithOpenAI/processImageWithOpenAI ya procesan
             // Entonces extractedText es el JSON procesado, no texto sin procesar
             $gptResponse = $extractedText;
-            
-            if (!empty($gptResponse)) {
+
+            if (! empty($gptResponse)) {
                 // Guardar JSON procesado en archivo temporal para comparación
-                $jsonProcesadoPath = storage_path('app/temp/json_procesado_antes_de_guardar_' . $menu->id . '_' . uniqid() . '.txt');
-                if (!is_dir(storage_path('app/temp'))) {
+                $jsonProcesadoPath = storage_path('app/temp/json_procesado_antes_de_guardar_'.$menu->id.'_'.uniqid().'.txt');
+                if (! is_dir(storage_path('app/temp'))) {
                     mkdir(storage_path('app/temp'), 0755, true);
                 }
                 file_put_contents($jsonProcesadoPath, "=== JSON PROCESADO ANTES DE GUARDAR EN BD - MENÚ {$menu->id} ===\n\n");
-                file_put_contents($jsonProcesadoPath, $gptResponse . "\n", FILE_APPEND);
+                file_put_contents($jsonProcesadoPath, $gptResponse."\n", FILE_APPEND);
                 file_put_contents($jsonProcesadoPath, "\n=== TAMAÑO DEL JSON ===\n", FILE_APPEND);
-                file_put_contents($jsonProcesadoPath, "Longitud: " . strlen($gptResponse) . " caracteres\n", FILE_APPEND);
-                file_put_contents($jsonProcesadoPath, "Es JSON válido: " . (json_decode($gptResponse) !== null ? 'SÍ' : 'NO') . "\n", FILE_APPEND);
-                
+                file_put_contents($jsonProcesadoPath, 'Longitud: '.strlen($gptResponse)." caracteres\n", FILE_APPEND);
+                file_put_contents($jsonProcesadoPath, 'Es JSON válido: '.(json_decode($gptResponse) !== null ? 'SÍ' : 'NO')."\n", FILE_APPEND);
+
                 // Validar que el JSON sea válido antes de guardar
                 $jsonValidacion = json_decode($gptResponse, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
@@ -108,18 +112,19 @@ class MenuProcessorService
                         'menu_id' => $menu->id,
                         'json_error' => json_last_error_msg(),
                     ]);
-                    throw new \Exception('JSON inválido antes de guardar: ' . json_last_error_msg());
+                    throw new \Exception('JSON inválido antes de guardar: '.json_last_error_msg());
                 }
-                
+
                 // 4. Actualizar con la respuesta de GPT (ya procesada)
                 $menu->update([
                     'contexto_gpt' => $gptResponse,
-                    'procesado' => true
+                    'procesado' => true,
+                    'estado' => \App\Models\Menu::ESTADO_LISTO,
                 ]);
-                
+
                 // Obtener proveedor usado (si está guardado en savedExtractedText o inferirlo del formato)
                 $provider = $this->detectProvider($menu, $gptResponse);
-                
+
                 // Log simplificado de éxito
                 Log::info("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ✅ Menú #{$menu->id} procesado exitosamente con {$provider}", [
                     'comercio_id' => $comercioContext['comercio_id'],
@@ -129,21 +134,25 @@ class MenuProcessorService
                     'provider' => $provider,
                     'tamaño_json' => strlen($gptResponse),
                 ]);
-                
+
                 return true;
             }
 
-            // Si no hay respuesta procesada, queda marcado como procesado = false
+            // Si no hay respuesta procesada, marcar como error (respuesta vacía)
+            $menu->update(['procesado' => false, 'estado' => Menu::ESTADO_ERROR]);
             Log::warning("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ⚠️ Menú #{$menu->id} no procesado - respuesta vacía", [
                 'comercio_id' => $comercioContext['comercio_id'],
                 'comercio_nombre' => $comercioContext['comercio_nombre'],
                 'menu_id' => $menu->id,
-                'formato' => $menu->formato
+                'formato' => $menu->formato,
             ]);
 
             return false;
 
         } catch (\Exception $e) {
+            // El catch se traga la excepción (no re-lanza), así que marcamos el error acá
+            // mismo: si no, el menú quedaría "procesando" para siempre.
+            $menu->update(['procesado' => false, 'estado' => Menu::ESTADO_ERROR]);
             $comercioContext = $this->getComercioContext($menu);
             Log::error("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ❌ Error procesando menú #{$menu->id}: {$e->getMessage()}", [
                 'comercio_id' => $comercioContext['comercio_id'],
@@ -151,6 +160,7 @@ class MenuProcessorService
                 'menu_id' => $menu->id,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -161,22 +171,22 @@ class MenuProcessorService
     protected function detectProvider(Menu $menu, string $gptResponse): string
     {
         // Verificar si hay archivo temporal de respuesta de Gemini
-        $geminiFiles = glob(storage_path('app/temp/respuesta_gemini_pdf_*_' . basename($menu->archivo_original, '.pdf') . '_*.json'));
-        if (!empty($geminiFiles)) {
+        $geminiFiles = glob(storage_path('app/temp/respuesta_gemini_pdf_*_'.basename($menu->archivo_original, '.pdf').'_*.json'));
+        if (! empty($geminiFiles)) {
             return 'Gemini';
         }
-        
+
         // Si el texto extraído contiene "PDF procesado con OpenAI Vision" o "Imagen procesada con OpenAI Vision"
         $textoExtraido = $menu->texto_extraido ?? '';
         if (strpos($textoExtraido, 'OpenAI Vision') !== false) {
             return 'OpenAI Vision';
         }
-        
+
         // Si hay texto extraído pero no es vision, probablemente fue extracción de texto + OpenAI
-        if (!empty($textoExtraido) && strlen($textoExtraido) > 100) {
+        if (! empty($textoExtraido) && strlen($textoExtraido) > 100) {
             return 'OpenAI (extracción de texto)';
         }
-        
+
         return 'OpenAI';
     }
 
@@ -187,18 +197,18 @@ class MenuProcessorService
     {
         // REFRESCAR el menú desde la BD para asegurar que tenemos la ruta correcta
         $menu->refresh();
-        
-        $filePath = storage_path('app/public/' . $menu->archivo_original);
+
+        $filePath = storage_path('app/public/'.$menu->archivo_original);
         $comercioContext = $this->getComercioContext($menu);
-        
-        if (!file_exists($filePath)) {
+
+        if (! file_exists($filePath)) {
             Log::error("[Comercio: {$comercioContext['comercio_nombre']} (ID:{$comercioContext['comercio_id']})] ❌ Archivo no encontrado para menú #{$menu->id}", [
                 'comercio_id' => $comercioContext['comercio_id'],
                 'comercio_nombre' => $comercioContext['comercio_nombre'],
                 'menu_id' => $menu->id,
                 'file_path' => $filePath,
             ]);
-            throw new \Exception('Archivo no encontrado: ' . $filePath);
+            throw new \Exception('Archivo no encontrado: '.$filePath);
         }
 
         if ($menu->formato === 'pdf') {
@@ -217,51 +227,52 @@ class MenuProcessorService
     protected function processPDFWithOpenAI($filePath)
     {
         // Log simplificado - ya se logueó el inicio en processMenu
-        
+
         // ESTRATEGIA 1: Intentar con Gemini (procesa PDFs directamente)
         try {
-            $geminiProcessor = new GeminiPdfProcessorService();
+            $geminiProcessor = new GeminiPdfProcessorService;
             $result = $geminiProcessor->processPdfToMenu($filePath);
-            
-            if ($result['success'] && !empty($result['menu_data'])) {
+
+            if ($result['success'] && ! empty($result['menu_data'])) {
                 // Guardar respuesta de Gemini en archivo temporal
                 $this->saveGeminiResponseToTemp($filePath, $result['menu_data']);
-                
+
                 return $result['menu_data'];
             }
         } catch (\Exception $e) {
             // Log solo si es un error crítico, no warnings de fallbacks
         }
-        
+
         // ESTRATEGIA 2: Intentar extraer texto directamente del PDF
         try {
-            $pdfProcessor = new PdfProcessorService();
+            $pdfProcessor = new PdfProcessorService;
             $result = $pdfProcessor->processPdfToMenu($filePath);
-            
-            if ($result['success'] && !empty($result['menu_data'])) {
+
+            if ($result['success'] && ! empty($result['menu_data'])) {
                 // Guardar el texto extraído para referencia
                 $extractedText = $result['extracted_text'] ?? '';
                 $this->savedExtractedText = $extractedText;
-                
+
                 // Inicializar variables para archivos temporales
                 $textoExtraidoFile = null;
                 $respuestaOpenAIFile = null;
-                
+
                 // Texto extraído guardado en savedExtractedText para referencia
-                
+
                 return $result['menu_data'];
             }
         } catch (\Exception $e) {
             // Error silencioso - continuar con siguiente estrategia
         }
-        
+
         // ESTRATEGIA 3: Si falló la extracción de texto, convertir a imágenes y usar OpenAI Vision
         try {
             $result = $this->processPdfDirectlyWithOpenAI($filePath);
+
             return $result;
         } catch (\Exception $e) {
             // El error final se loguea en el catch principal de processMenu
-            throw new \Exception('No se pudo procesar el PDF. Intentó con Gemini, extracción de texto y conversión a imágenes, todos fallaron: ' . $e->getMessage());
+            throw new \Exception('No se pudo procesar el PDF. Intentó con Gemini, extracción de texto y conversión a imágenes, todos fallaron: '.$e->getMessage());
         }
     }
 
@@ -272,12 +283,12 @@ class MenuProcessorService
     {
         try {
             $tempDir = storage_path('app/temp');
-            if (!is_dir($tempDir)) {
+            if (! is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
-            
-            $respuestaGeminiFile = $tempDir . '/respuesta_gemini_pdf_' . basename($filePath, '.pdf') . '_' . date('Y-m-d_His') . '_' . uniqid() . '.json';
-            
+
+            $respuestaGeminiFile = $tempDir.'/respuesta_gemini_pdf_'.basename($filePath, '.pdf').'_'.date('Y-m-d_His').'_'.uniqid().'.json';
+
             $contenidoRespuesta = [
                 'metadata' => [
                     'fecha' => date('Y-m-d H:i:s'),
@@ -285,12 +296,12 @@ class MenuProcessorService
                     'ruta_completa_pdf' => $filePath,
                     'metodo' => 'Procesamiento directo de PDF con Gemini (sin conversión)',
                     'provider' => 'gemini',
-                    'tamaño_respuesta' => strlen($menuData) . ' caracteres',
-                    'tamaño_respuesta_kb' => number_format(strlen($menuData) / 1024, 2) . ' KB'
+                    'tamaño_respuesta' => strlen($menuData).' caracteres',
+                    'tamaño_respuesta_kb' => number_format(strlen($menuData) / 1024, 2).' KB',
                 ],
-                'respuesta_gemini' => $menuData
+                'respuesta_gemini' => $menuData,
             ];
-            
+
             // Intentar parsear como JSON para validar
             $jsonData = json_decode($menuData, true);
             if (json_last_error() === JSON_ERROR_NONE) {
@@ -298,13 +309,13 @@ class MenuProcessorService
                 $contenidoRespuesta['estructura_json'] = [
                     'tiene_restaurante' => isset($jsonData['restaurante']),
                     'tiene_categorias' => isset($jsonData['categorias']),
-                    'numero_categorias' => isset($jsonData['categorias']) ? count($jsonData['categorias']) : 0
+                    'numero_categorias' => isset($jsonData['categorias']) ? count($jsonData['categorias']) : 0,
                 ];
             } else {
                 $contenidoRespuesta['es_json_valido'] = false;
                 $contenidoRespuesta['error_json'] = json_last_error_msg();
             }
-            
+
             file_put_contents($respuestaGeminiFile, json_encode($contenidoRespuesta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         } catch (\Exception $e) {
             // Error silencioso - no crítico
@@ -318,22 +329,25 @@ class MenuProcessorService
     {
         try {
             if (class_exists('Imagick')) {
-                $imagick = new \Imagick();
+                $imagick = new \Imagick;
                 $imagick->setResolution(150, 150);
                 try {
                     $imagick->readImage($filePath);
                     $pageCount = $imagick->getNumberImages();
                     $imagick->clear();
                     $imagick->destroy();
+
                     return $pageCount;
                 } catch (\Exception $e) {
-                    Log::warning('No se pudo leer PDF con Imagick para contar páginas: ' . $e->getMessage());
+                    Log::warning('No se pudo leer PDF con Imagick para contar páginas: '.$e->getMessage());
                 }
             }
+
             // Si no se puede contar, asumir 1 página
             return 1;
         } catch (\Exception $e) {
-            Log::warning('Error contando páginas del PDF: ' . $e->getMessage());
+            Log::warning('Error contando páginas del PDF: '.$e->getMessage());
+
             return 1;
         }
     }
@@ -345,24 +359,28 @@ class MenuProcessorService
     {
         try {
             if (class_exists('Imagick')) {
-                $imagick = new \Imagick();
+                $imagick = new \Imagick;
                 $imagick->setResolution(150, 150);
                 try {
-                    $imagick->readImage($pdfPath . '[' . ($pageNumber - 1) . ']');
+                    $imagick->readImage($pdfPath.'['.($pageNumber - 1).']');
                     $imagick->setImageFormat('png');
                     $imagick->setImageCompressionQuality(90);
                     $imagick->writeImage($outputPath);
                     $imagick->clear();
                     $imagick->destroy();
+
                     return file_exists($outputPath) && filesize($outputPath) > 0;
                 } catch (\Exception $e) {
-                    Log::error('Error convirtiendo página ' . $pageNumber . ' con Imagick: ' . $e->getMessage());
+                    Log::error('Error convirtiendo página '.$pageNumber.' con Imagick: '.$e->getMessage());
+
                     return false;
                 }
             }
+
             return false;
         } catch (\Exception $e) {
-            Log::error('Error convirtiendo página del PDF: ' . $e->getMessage());
+            Log::error('Error convirtiendo página del PDF: '.$e->getMessage());
+
             return false;
         }
     }
@@ -374,9 +392,9 @@ class MenuProcessorService
     {
         // Aumentar el tiempo de ejecución para procesar múltiples secciones
         set_time_limit(600); // 10 minutos
-        
-        Log::info('Procesando imagen dividida en ' . count($sections) . ' secciones', [
-            'modelo_usado' => $this->openaiModel
+
+        Log::info('Procesando imagen dividida en '.count($sections).' secciones', [
+            'modelo_usado' => $this->openaiModel,
         ]);
 
         $jsonResults = []; // Array indexado por número de sección para preservar orden
@@ -384,33 +402,33 @@ class MenuProcessorService
         foreach ($sections as $section) {
             $sectionNumber = $section['number']; // Número original de la sección (1, 2, 3...)
             $sectionIndex = $sectionNumber - 1; // Índice para el array (0, 1, 2...)
-            
-            Log::info('Procesando sección ' . $sectionNumber . ' de ' . count($sections), [
+
+            Log::info('Procesando sección '.$sectionNumber.' de '.count($sections), [
                 'modelo' => $this->openaiModel,
                 'seccion_path' => $section['path'],
-                'section_index' => $sectionIndex
+                'section_index' => $sectionIndex,
             ]);
-            
+
             try {
                 $imageData = file_get_contents($section['path']);
                 $base64Image = base64_encode($imageData);
-                
+
                 // Obtener dimensiones de la imagen para logging
                 $imageInfo = getimagesize($section['path']);
                 $imageWidth = $imageInfo[0] ?? 'N/A';
                 $imageHeight = $imageInfo[1] ?? 'N/A';
                 $imageSize = strlen($imageData);
                 $base64Size = strlen($base64Image);
-                
+
                 Log::info('Enviando sección a OpenAI', [
                     'seccion' => $sectionNumber,
-                    'dimensiones' => $imageWidth . 'x' . $imageHeight,
+                    'dimensiones' => $imageWidth.'x'.$imageHeight,
                     'tamaño_imagen_bytes' => $imageSize,
                     'tamaño_base64_bytes' => $base64Size,
-                    'tamaño_base64_mb' => round($base64Size / 1024 / 1024, 2)
+                    'tamaño_base64_mb' => round($base64Size / 1024 / 1024, 2),
                 ]);
                 $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                    'Authorization' => 'Bearer '.$this->openaiApiKey,
                     'Content-Type' => 'application/json',
                 ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', [
                     'model' => $this->openaiModel, // gpt-4o-mini o gpt-4.1
@@ -420,27 +438,26 @@ class MenuProcessorService
                             'content' => [
                                 [
                                     'type' => 'text',
-                                    'text' => $this->buildExtractionPrompt($sectionNumber, $sections)
+                                    'text' => $this->buildExtractionPrompt($sectionNumber, $sections),
                                 ],
                                 [
                                     'type' => 'image_url',
                                     'image_url' => [
-                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
-                                        'detail' => 'high'
-                                    ]
-                                ]
-                            ]
-                        ]
+                                        'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                        'detail' => 'high',
+                                    ],
+                                ],
+                            ],
+                        ],
                     ],
                     'temperature' => 0,
-                    'max_tokens' => 16384
+                    'max_tokens' => 16384,
                 ]);
-                
 
                 if ($response->successful()) {
                     $data = $response->json();
                     $content = $data['choices'][0]['message']['content'] ?? null;
-                    
+
                     if ($content) {
                         // Limpiar markdown si existe
                         $cleanContent = $content;
@@ -452,79 +469,79 @@ class MenuProcessorService
                             $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
                             $cleanContent = trim($cleanContent);
                         }
-                        
+
                         // Guardar respuesta de OpenAI en archivo de texto para revisión
-                        $txtPath = storage_path('app/temp/openai_response_section_' . $sectionNumber . '_' . uniqid() . '.txt');
-                        if (!is_dir(storage_path('app/temp'))) {
+                        $txtPath = storage_path('app/temp/openai_response_section_'.$sectionNumber.'_'.uniqid().'.txt');
+                        if (! is_dir(storage_path('app/temp'))) {
                             mkdir(storage_path('app/temp'), 0755, true);
                         }
                         file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - SECCIÓN {$sectionNumber} ===\n\n");
-                        file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
+                        file_put_contents($txtPath, $content."\n\n", FILE_APPEND);
                         file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
-                        file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
+                        file_put_contents($txtPath, $cleanContent."\n", FILE_APPEND);
                         Log::info('Respuesta de OpenAI guardada en archivo', [
                             'seccion' => $sectionNumber,
-                            'archivo' => $txtPath
+                            'archivo' => $txtPath,
                         ]);
-                        
+
                         // Validar que el JSON sea válido antes de agregarlo
                         $jsonTest = json_decode($cleanContent, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
                             // Guardar JSON original antes de normalizar
-                            $jsonOriginalPath = storage_path('app/temp/json_original_section_' . $sectionNumber . '_' . uniqid() . '.txt');
-                            if (!is_dir(storage_path('app/temp'))) {
+                            $jsonOriginalPath = storage_path('app/temp/json_original_section_'.$sectionNumber.'_'.uniqid().'.txt');
+                            if (! is_dir(storage_path('app/temp'))) {
                                 mkdir(storage_path('app/temp'), 0755, true);
                             }
                             file_put_contents($jsonOriginalPath, "=== JSON ORIGINAL DE GPT - SECCIÓN {$sectionNumber} ===\n\n");
-                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n", FILE_APPEND);
                             file_put_contents($jsonOriginalPath, "\n=== ESTRUCTURA ORIGINAL ===\n", FILE_APPEND);
-                            file_put_contents($jsonOriginalPath, "Keys disponibles: " . implode(', ', array_keys($jsonTest)) . "\n", FILE_APPEND);
+                            file_put_contents($jsonOriginalPath, 'Keys disponibles: '.implode(', ', array_keys($jsonTest))."\n", FILE_APPEND);
                             Log::info('JSON original guardado antes de normalizar', [
                                 'seccion' => $sectionNumber,
-                                'archivo' => $jsonOriginalPath
+                                'archivo' => $jsonOriginalPath,
                             ]);
-                            
+
                             // Normalizar cualquier estructura JSON al formato estándar
                             try {
                                 $jsonTest = $this->normalizeMenuJsonStructure($jsonTest);
                                 $cleanContent = json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-                                
+
                                 Log::info('JSON normalizado exitosamente', [
                                     'seccion' => $sectionNumber,
                                     'estructura_original' => array_keys($jsonTest),
-                                    'tiene_categorias' => isset($jsonTest['categorias'])
+                                    'tiene_categorias' => isset($jsonTest['categorias']),
                                 ]);
                             } catch (\Exception $normalizeError) {
-                                Log::error('Error normalizando JSON de sección ' . $sectionNumber . ': ' . $normalizeError->getMessage());
+                                Log::error('Error normalizando JSON de sección '.$sectionNumber.': '.$normalizeError->getMessage());
                             }
-                            
+
                             // Validar estructura básica después de normalizar
                             if (isset($jsonTest['categorias']) && is_array($jsonTest['categorias'])) {
                                 // IMPORTANTE: Guardar en el índice correcto según el número de sección original
                                 // Esto preserva el orden incluso si las secciones terminan en orden diferente
                                 $jsonResults[$sectionIndex] = $cleanContent;
-                                Log::info('Sección ' . $sectionNumber . ' procesada exitosamente', [
+                                Log::info('Sección '.$sectionNumber.' procesada exitosamente', [
                                     'section_index' => $sectionIndex,
                                     'categorias_encontradas' => count($jsonTest['categorias']),
-                                    'total_platos' => array_sum(array_map(function($cat) {
+                                    'total_platos' => array_sum(array_map(function ($cat) {
                                         return isset($cat['platos']) && is_array($cat['platos']) ? count($cat['platos']) : 0;
-                                    }, $jsonTest['categorias']))
+                                    }, $jsonTest['categorias'])),
                                 ]);
                             } else {
-                                Log::warning('Sección ' . $sectionNumber . ' procesada pero sin estructura válida después de normalizar', [
+                                Log::warning('Sección '.$sectionNumber.' procesada pero sin estructura válida después de normalizar', [
                                     'keys_disponibles' => array_keys($jsonTest),
                                     'tiene_items' => isset($jsonTest['items']),
                                     'tiene_categorias' => isset($jsonTest['categorias']),
-                                    'tiene_sections' => isset($jsonTest['sections'])
+                                    'tiene_sections' => isset($jsonTest['sections']),
                                 ]);
                             }
                         } else {
-                            Log::warning('Sección ' . $sectionNumber . ' procesada pero JSON inválido: ' . json_last_error_msg());
+                            Log::warning('Sección '.$sectionNumber.' procesada pero JSON inválido: '.json_last_error_msg());
                         }
                     }
                 }
             } catch (\Exception $e) {
-                Log::error('Error procesando sección ' . $sectionNumber . ': ' . $e->getMessage());
+                Log::error('Error procesando sección '.$sectionNumber.': '.$e->getMessage());
             }
         }
 
@@ -534,7 +551,7 @@ class MenuProcessorService
 
         // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
         ksort($jsonResults);
-        
+
         // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
         $jsonResults = array_values($jsonResults);
 
@@ -542,7 +559,7 @@ class MenuProcessorService
         $combinedJson = $this->combineMenuJsons_SIMPLE($jsonResults);
         Log::info('Imagen procesada exitosamente por secciones', [
             'secciones_procesadas' => count($jsonResults),
-            'total_secciones' => count($sections)
+            'total_secciones' => count($sections),
         ]);
 
         return $combinedJson;
@@ -557,6 +574,7 @@ class MenuProcessorService
         // Reemplazar "sección" por "página" en el prompt
         $prompt = str_replace('sección', 'página', $prompt);
         $prompt = str_replace('SECCIÓN', 'PÁGINA', $prompt);
+
         return $prompt;
     }
 
@@ -567,10 +585,10 @@ class MenuProcessorService
     protected function buildExtractionPrompt($sectionNumber, $sections): string
     {
         $totalSections = is_array($sections) ? count($sections) : 1;
-        
+
         return 'Eres un experto en extracción de información de menús de restaurantes. Tu tarea es analizar esta imagen y extraer TODA la información del menú de forma precisa y completa.
 
-Esta es la sección ' . $sectionNumber . ' de ' . $totalSections . ' de una imagen de menú.
+Esta es la sección '.$sectionNumber.' de '.$totalSections.' de una imagen de menú.
 
 🎯 OBJETIVO PRINCIPAL:
 Extrae TODA la información que veas en esta imagen: nombres de platos, precios, descripciones, categorías, tags, y cualquier otro detalle relevante.
@@ -813,9 +831,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         // Si no reconoce el formato, intentar extraer información de cualquier estructura
         Log::warning('Formato JSON no reconocido, intentando extracción genérica', [
-            'keys' => array_keys($data)
+            'keys' => array_keys($data),
         ]);
-        
+
         return $this->extractGenericMenuStructure($data);
     }
 
@@ -824,7 +842,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
      */
     protected function convertItemsFormatToCategoriasFormat(array $data): array
     {
-        if (!isset($data['items']) || !is_array($data['items'])) {
+        if (! isset($data['items']) || ! is_array($data['items'])) {
             return $data;
         }
 
@@ -834,28 +852,28 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         foreach ($data['items'] as $item) {
             $categoriaNombre = $item['category'] ?? 'Sin categoría';
             $subCategoria = $item['sub_category'] ?? '';
-            
+
             // Si hay subcategoría, incluirla en el nombre de la categoría
-            if (!empty($subCategoria)) {
-                $categoriaNombre = $categoriaNombre . ' - ' . $subCategoria;
+            if (! empty($subCategoria)) {
+                $categoriaNombre = $categoriaNombre.' - '.$subCategoria;
             }
 
             // Normalizar nombre de categoría (lowercase para agrupar)
             $categoriaKey = strtolower(trim($categoriaNombre));
-            
+
             // Crear categoría si no existe
-            if (!isset($categoriasMap[$categoriaKey])) {
+            if (! isset($categoriasMap[$categoriaKey])) {
                 $categoriasMap[$categoriaKey] = [
                     'nombre' => $categoriaNombre,
-                    'platos' => []
+                    'platos' => [],
                 ];
             }
 
             // Crear plato
             $precio = $item['price'] ?? '';
             // Agregar $ si no lo tiene y no está vacío
-            if (!empty($precio) && strpos($precio, '$') === false) {
-                $precio = '$' . $precio;
+            if (! empty($precio) && strpos($precio, '$') === false) {
+                $precio = '$'.$precio;
             }
             if (empty($precio)) {
                 $precio = 'Precio no especificado';
@@ -866,14 +884,14 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                 'precio' => $precio,
                 'descripcion' => $item['description'] ?? '',
                 'tags' => $item['tags'] ?? [],
-                'imagen' => ''
+                'imagen' => '',
             ];
 
             // Agregar opciones a la descripción si existen
-            if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])) {
+            if (isset($item['options']) && is_array($item['options']) && ! empty($item['options'])) {
                 $opcionesTexto = implode(', ', $item['options']);
-                if (!empty($plato['descripcion'])) {
-                    $plato['descripcion'] .= ' (' . $opcionesTexto . ')';
+                if (! empty($plato['descripcion'])) {
+                    $plato['descripcion'] .= ' ('.$opcionesTexto.')';
                 } else {
                     $plato['descripcion'] = $opcionesTexto;
                 }
@@ -888,9 +906,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         return [
             'restaurante' => [
                 'nombre' => $data['restaurante']['nombre'] ?? $data['restaurant']['name'] ?? '',
-                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? ''
+                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? '',
             ],
-            'categorias' => $categorias
+            'categorias' => $categorias,
         ];
     }
 
@@ -903,22 +921,22 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         foreach ($data['sections'] ?? [] as $section) {
             $sectionTitle = $section['title'] ?? $section['nombre'] ?? 'Sin categoría';
-            
+
             // Si tiene subsections
             if (isset($section['subsections']) && is_array($section['subsections'])) {
                 foreach ($section['subsections'] as $subsection) {
                     $subsectionTitle = $subsection['title'] ?? $subsection['nombre'] ?? '';
-                    $categoriaNombre = !empty($subsectionTitle) ? $sectionTitle . ' - ' . $subsectionTitle : $sectionTitle;
-                    
+                    $categoriaNombre = ! empty($subsectionTitle) ? $sectionTitle.' - '.$subsectionTitle : $sectionTitle;
+
                     $platos = [];
                     foreach ($subsection['items'] ?? [] as $item) {
                         $platos[] = $this->normalizePlatoFromItem($item);
                     }
-                    
-                    if (!empty($platos)) {
+
+                    if (! empty($platos)) {
                         $categorias[] = [
                             'nombre' => $categoriaNombre,
-                            'platos' => $platos
+                            'platos' => $platos,
                         ];
                     }
                 }
@@ -928,11 +946,11 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                 foreach ($section['items'] ?? [] as $item) {
                     $platos[] = $this->normalizePlatoFromItem($item);
                 }
-                
-                if (!empty($platos)) {
+
+                if (! empty($platos)) {
                     $categorias[] = [
                         'nombre' => $sectionTitle,
-                        'platos' => $platos
+                        'platos' => $platos,
                     ];
                 }
             }
@@ -941,9 +959,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         return [
             'restaurante' => [
                 'nombre' => $data['restaurante']['nombre'] ?? $data['restaurant']['name'] ?? '',
-                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? ''
+                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? '',
             ],
-            'categorias' => $categorias
+            'categorias' => $categorias,
         ];
     }
 
@@ -956,16 +974,16 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         foreach ($data['categories'] ?? [] as $category) {
             $categoriaNombre = $category['name'] ?? $category['nombre'] ?? $category['title'] ?? 'Sin categoría';
-            
+
             $platos = [];
             foreach ($category['items'] ?? $category['platos'] ?? $category['dishes'] ?? [] as $item) {
                 $platos[] = $this->normalizePlatoFromItem($item);
             }
-            
-            if (!empty($platos) || !empty($categoriaNombre)) {
+
+            if (! empty($platos) || ! empty($categoriaNombre)) {
                 $categorias[] = [
                     'nombre' => $categoriaNombre,
-                    'platos' => $platos
+                    'platos' => $platos,
                 ];
             }
         }
@@ -973,9 +991,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         return [
             'restaurante' => [
                 'nombre' => $data['restaurante']['nombre'] ?? $data['restaurant']['name'] ?? '',
-                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? ''
+                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? '',
             ],
-            'categorias' => $categorias
+            'categorias' => $categorias,
         ];
     }
 
@@ -986,13 +1004,13 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
     {
         // Detectar nombre (múltiples variantes)
         $nombre = $item['nombre'] ?? $item['name'] ?? $item['title'] ?? $item['dish'] ?? '';
-        
+
         // Detectar precio (múltiples variantes)
         $precio = $item['precio'] ?? $item['price'] ?? $item['cost'] ?? '';
-        
+
         // Normalizar precio: agregar $ si no lo tiene y no está vacío
-        if (!empty($precio) && strpos($precio, '$') === false && is_numeric(str_replace(['.', ','], '', $precio))) {
-            $precio = '$' . $precio;
+        if (! empty($precio) && strpos($precio, '$') === false && is_numeric(str_replace(['.', ','], '', $precio))) {
+            $precio = '$'.$precio;
         }
         if (empty($precio) || $precio === 'null' || $precio === null) {
             $precio = 'Precio no especificado';
@@ -1000,19 +1018,19 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         // Detectar descripción (múltiples variantes)
         $descripcion = $item['descripcion'] ?? $item['description'] ?? $item['desc'] ?? '';
-        
+
         // Detectar tags (múltiples variantes)
         $tags = $item['tags'] ?? $item['tag'] ?? $item['labels'] ?? [];
-        if (!is_array($tags)) {
+        if (! is_array($tags)) {
             $tags = [];
         }
 
         // Agregar opciones a la descripción si existen
         $opciones = $item['options'] ?? $item['opciones'] ?? $item['variants'] ?? [];
-        if (is_array($opciones) && !empty($opciones)) {
+        if (is_array($opciones) && ! empty($opciones)) {
             $opcionesTexto = implode(', ', $opciones);
-            if (!empty($descripcion)) {
-                $descripcion .= ' (' . $opcionesTexto . ')';
+            if (! empty($descripcion)) {
+                $descripcion .= ' ('.$opcionesTexto.')';
             } else {
                 $descripcion = $opcionesTexto;
             }
@@ -1023,7 +1041,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             'precio' => $precio,
             'descripcion' => $descripcion,
             'tags' => $tags,
-            'imagen' => $item['imagen'] ?? $item['image'] ?? ''
+            'imagen' => $item['imagen'] ?? $item['image'] ?? '',
         ];
     }
 
@@ -1043,7 +1061,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         } else {
             // Buscar recursivamente arrays que parezcan items
             foreach ($data as $key => $value) {
-                if (is_array($value) && !empty($value)) {
+                if (is_array($value) && ! empty($value)) {
                     $firstItem = reset($value);
                     if (is_array($firstItem) && (isset($firstItem['name']) || isset($firstItem['nombre']) || isset($firstItem['title']))) {
                         $items = $value;
@@ -1054,34 +1072,36 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         }
 
         // Si encontramos items, agruparlos por categoría
-        if (!empty($items)) {
+        if (! empty($items)) {
             $categoriasMap = [];
-            
+
             foreach ($items as $item) {
-                if (!is_array($item)) continue;
-                
+                if (! is_array($item)) {
+                    continue;
+                }
+
                 $categoriaNombre = $item['category'] ?? $item['categoria'] ?? $item['section'] ?? 'Sin categoría';
                 $categoriaKey = strtolower(trim($categoriaNombre));
-                
-                if (!isset($categoriasMap[$categoriaKey])) {
+
+                if (! isset($categoriasMap[$categoriaKey])) {
                     $categoriasMap[$categoriaKey] = [
                         'nombre' => $categoriaNombre,
-                        'platos' => []
+                        'platos' => [],
                     ];
                 }
-                
+
                 $categoriasMap[$categoriaKey]['platos'][] = $this->normalizePlatoFromItem($item);
             }
-            
+
             $categorias = array_values($categoriasMap);
         }
 
         return [
             'restaurante' => [
                 'nombre' => $data['restaurante']['nombre'] ?? $data['restaurant']['name'] ?? '',
-                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? ''
+                'descripcion' => $data['restaurante']['descripcion'] ?? $data['restaurant']['description'] ?? '',
             ],
-            'categorias' => $categorias
+            'categorias' => $categorias,
         ];
     }
 
@@ -1093,9 +1113,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         if (empty($tag)) {
             return null;
         }
-        
+
         $tagLower = strtolower(trim($tag));
-        
+
         // Mapeo de variaciones a tags estándar
         $tagMap = [
             // Vegano
@@ -1104,11 +1124,11 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             'v' => 'VEGANO',
             'vg' => 'VEGANO',
             '🌱' => 'VEGANO',
-            
+
             // Vegetariano
             'vegetariano' => 'VEGETARIANO',
             'veget' => 'VEGETARIANO',
-            
+
             // Sin TACC / Gluten Free
             'sin tacc' => 'SIN_TACC',
             'sin gluten' => 'SIN_TACC',
@@ -1121,79 +1141,79 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             'celiaco' => 'SIN_TACC',
             'celíaco' => 'SIN_TACC',
             'celiac' => 'SIN_TACC',
-            
+
             // Sin Lactosa
             'sin lactosa' => 'SIN_LACTOSA',
             'lactose free' => 'SIN_LACTOSA',
             'lactosefree' => 'SIN_LACTOSA',
             'sin lacteos' => 'SIN_LACTOSA',
-            
+
             // Sin Azúcar
             'sin azúcar' => 'SIN_AZUCAR',
             'sin azucar' => 'SIN_AZUCAR',
             'sugar free' => 'SIN_AZUCAR',
             'sugarfree' => 'SIN_AZUCAR',
-            
+
             // Low Carb / Keto
             'low carb' => 'LOW_CARB',
             'lowcarb' => 'LOW_CARB',
             'keto' => 'KETO',
-            
+
             // Kosher
             'kosher' => 'KOSHER',
-            
+
             // Halal
             'halal' => 'HALAL',
-            
+
             // Diabético Friendly
             'diabetico friendly' => 'DIABETICO_FRIENDLY',
             'diabético friendly' => 'DIABETICO_FRIENDLY',
             'diabetic friendly' => 'DIABETICO_FRIENDLY',
             'apto diabeticos' => 'DIABETICO_FRIENDLY',
             'apto diabéticos' => 'DIABETICO_FRIENDLY',
-            
+
             // Bajo Sodio
             'bajo sodio' => 'BAJO_SODIO',
             'low sodium' => 'BAJO_SODIO',
             'bajo en sodio' => 'BAJO_SODIO',
-            
+
             // Alto en Proteínas
             'alto en proteinas' => 'ALTO_EN_PROTEINAS',
             'alto en proteínas' => 'ALTO_EN_PROTEINAS',
             'high protein' => 'ALTO_EN_PROTEINAS',
             'rico en proteinas' => 'ALTO_EN_PROTEINAS',
-            
+
             // Light / Bajo en Calorías
             'light' => 'LIGHT',
             'bajo en calorias' => 'LIGHT',
             'bajo en calorías' => 'LIGHT',
             'low calorie' => 'LIGHT',
             'low cal' => 'LIGHT',
-            
+
             // Orgánico
             'organico' => 'ORGANICO',
             'orgánico' => 'ORGANICO',
             'organic' => 'ORGANICO',
             'bio' => 'ORGANICO',
-            
+
             // Raw / Crudivegano
             'raw' => 'RAW',
             'crudivegano' => 'RAW',
             'crudo' => 'RAW',
         ];
-        
+
         // Buscar coincidencia exacta
         if (isset($tagMap[$tagLower])) {
             return $tagMap[$tagLower];
         }
-        
+
         // Buscar coincidencia parcial (contiene)
         foreach ($tagMap as $variation => $standard) {
             if (strpos($tagLower, $variation) !== false || strpos($variation, $tagLower) !== false) {
                 return $standard;
             }
         }
-        
+
         // Si no coincide con ningún tag estándar, retornar null (se filtrará)
         return null;
     }
@@ -1206,10 +1226,11 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         $normalized = [];
         foreach ($tags as $tag) {
             $normalizedTag = $this->normalizeTag($tag);
-            if ($normalizedTag !== null && !in_array($normalizedTag, $normalized)) {
+            if ($normalizedTag !== null && ! in_array($normalizedTag, $normalized)) {
                 $normalized[] = $normalizedTag;
             }
         }
+
         return $normalized;
     }
 
@@ -1224,11 +1245,12 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         // Remover espacios extra
         $precio = trim($precio);
-        
+
         // Detectar precios sospechosos comunes que OpenAI inventa
         $suspiciousPrices = ['$8000', '$9000', '$5900', '$30.00', '$30', '$3.50', '$800', '$900'];
         if (in_array($precio, $suspiciousPrices)) {
-            Log::warning('Precio sospechoso detectado (posiblemente inventado): ' . $precio);
+            Log::warning('Precio sospechoso detectado (posiblemente inventado): '.$precio);
+
             return 'Precio no especificado';
         }
 
@@ -1245,60 +1267,68 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         if (count($jsonStrings) === 1) {
             return $jsonStrings[0];
         }
-        
+
         Log::info('🔗 UNIENDO JSONs DE SECCIONES (método simplificado)', [
-            'total_secciones' => count($jsonStrings)
+            'total_secciones' => count($jsonStrings),
         ]);
-        
+
         $allCategorias = []; // [nombre_categoria_lower => categoria_completa]
         $categoriaOrder = []; // [nombre_categoria_lower => primera_seccion] para mantener orden
-        
+
         // Procesar cada sección en orden
         foreach ($jsonStrings as $sectionIndex => $jsonString) {
-            if (empty($jsonString)) continue;
-            
+            if (empty($jsonString)) {
+                continue;
+            }
+
             try {
                 $data = json_decode($jsonString, true);
-                if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-                    Log::warning('JSON inválido en sección ' . ($sectionIndex + 1) . ': ' . json_last_error_msg());
+                if (json_last_error() !== JSON_ERROR_NONE || ! is_array($data)) {
+                    Log::warning('JSON inválido en sección '.($sectionIndex + 1).': '.json_last_error_msg());
+
                     continue;
                 }
-                
+
                 // Normalizar estructura si es necesario
                 $data = $this->normalizeMenuJsonStructure($data);
-                
-                if (!isset($data['categorias']) || !is_array($data['categorias'])) {
-                    Log::warning('Sección ' . ($sectionIndex + 1) . ' sin categorías válidas');
+
+                if (! isset($data['categorias']) || ! is_array($data['categorias'])) {
+                    Log::warning('Sección '.($sectionIndex + 1).' sin categorías válidas');
+
                     continue;
                 }
-                
+
                 // Procesar cada categoría de esta sección
                 foreach ($data['categorias'] as $categoria) {
-                    if (!is_array($categoria) || empty($categoria['nombre'])) continue;
-                    
+                    if (! is_array($categoria) || empty($categoria['nombre'])) {
+                        continue;
+                    }
+
                     $nombreCategoria = trim($categoria['nombre']);
                     $nombreCategoriaLower = strtolower($nombreCategoria);
-                    
+
                     // Si es la primera vez que vemos esta categoría, crearla
-                    if (!isset($allCategorias[$nombreCategoriaLower])) {
+                    if (! isset($allCategorias[$nombreCategoriaLower])) {
                         $allCategorias[$nombreCategoriaLower] = [
                             'nombre' => $nombreCategoria,
-                            'platos' => []
+                            'platos' => [],
                         ];
                         $categoriaOrder[$nombreCategoriaLower] = $sectionIndex;
                         Log::info('✅ Nueva categoría encontrada', [
                             'categoria' => $nombreCategoria,
-                            'seccion' => $sectionIndex + 1
+                            'seccion' => $sectionIndex + 1,
                         ]);
                     }
-                    
+
                     // Agregar platos de esta categoría (si existen)
                     if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                         foreach ($categoria['platos'] as $plato) {
-                            if (!is_array($plato) || empty($plato['nombre'])) continue;
-                            
+                            if (! is_array($plato) || empty($plato['nombre'])) {
+                                continue;
+                            }
+
                             $nombrePlato = trim($plato['nombre']);
-                            
+
                             // Verificar si el plato ya existe (evitar duplicados exactos)
                             $platoExiste = false;
                             foreach ($allCategorias[$nombreCategoriaLower]['platos'] as $platoExistente) {
@@ -1307,70 +1337,71 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                                     break;
                                 }
                             }
-                            
-                            if (!$platoExiste) {
+
+                            if (! $platoExiste) {
                                 // Normalizar tags si existen
-                                $tags = isset($plato['tags']) && is_array($plato['tags']) 
-                                    ? $this->normalizeTags($plato['tags']) 
+                                $tags = isset($plato['tags']) && is_array($plato['tags'])
+                                    ? $this->normalizeTags($plato['tags'])
                                     : [];
-                                
+
                                 // Validar precio
                                 $precio = $this->validatePrice($plato['precio'] ?? '');
-                                
+
                                 $allCategorias[$nombreCategoriaLower]['platos'][] = [
                                     'nombre' => $nombrePlato,
                                     'precio' => $precio,
                                     'descripcion' => trim($plato['descripcion'] ?? ''),
                                     'imagen' => $plato['imagen'] ?? '',
-                                    'tags' => $tags
+                                    'tags' => $tags,
                                 ];
                             }
                         }
                     }
                 }
-                
-                Log::info('Sección ' . ($sectionIndex + 1) . ' procesada', [
+
+                Log::info('Sección '.($sectionIndex + 1).' procesada', [
                     'categorias_en_seccion' => count($data['categorias']),
-                    'total_categorias_acumuladas' => count($allCategorias)
+                    'total_categorias_acumuladas' => count($allCategorias),
                 ]);
-                
+
             } catch (\Exception $e) {
-                Log::error('Error procesando sección ' . ($sectionIndex + 1) . ' en combineMenuJsons: ' . $e->getMessage());
+                Log::error('Error procesando sección '.($sectionIndex + 1).' en combineMenuJsons: '.$e->getMessage());
             }
         }
-        
+
         // Ordenar categorías por orden de aparición (primera sección donde aparecieron)
-        uksort($allCategorias, function($a, $b) use ($categoriaOrder) {
+        uksort($allCategorias, function ($a, $b) use ($categoriaOrder) {
             $orderA = $categoriaOrder[$a] ?? 999;
             $orderB = $categoriaOrder[$b] ?? 999;
             if ($orderA !== $orderB) {
                 return $orderA <=> $orderB;
             }
+
             // Si aparecieron en la misma sección, mantener orden alfabético
             return strcmp($a, $b);
         });
-        
+
         // Construir JSON final
         $finalJson = [
             'restaurante' => [
                 'nombre' => '',
-                'descripcion' => ''
+                'descripcion' => '',
             ],
-            'categorias' => array_values($allCategorias)
+            'categorias' => array_values($allCategorias),
         ];
-        
+
         $result = json_encode($finalJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        
+
         Log::info('✅ JSONs unidos exitosamente', [
             'total_categorias' => count($finalJson['categorias']),
-            'total_platos' => array_sum(array_map(function($cat) {
+            'total_platos' => array_sum(array_map(function ($cat) {
                 return count($cat['platos'] ?? []);
-            }, $finalJson['categorias']))
+            }, $finalJson['categorias'])),
         ]);
-        
+
         return $result;
     }
-    
+
     /**
      * MÉTODO ANTIGUO - NO USAR (mantenido por referencia)
      */
@@ -1380,45 +1411,51 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         $seenPlatos = []; // Para detectar platos duplicados
         $platosConOrden = []; // Para preservar el orden de los platos: [categoria => [platos con orden]]
         $categoriasConOrden = []; // Array temporal: [timestamp => categoria_completa]
-        
+
         // Primero, recopilar todas las categorías con su orden
         foreach ($jsonStrings as $index => $jsonString) {
             try {
                 if (empty($jsonString)) {
-                    Log::warning('JSON vacío en sección ' . ($index + 1));
+                    Log::warning('JSON vacío en sección '.($index + 1));
+
                     continue;
                 }
 
                 $data = json_decode($jsonString, true);
-                if (!$data || !is_array($data)) {
-                    Log::warning('JSON inválido en sección ' . ($index + 1) . ': ' . substr($jsonString, 0, 100));
+                if (! $data || ! is_array($data)) {
+                    Log::warning('JSON inválido en sección '.($index + 1).': '.substr($jsonString, 0, 100));
+
                     continue;
                 }
 
                 // Combinar información del restaurante (solo de la primera sección si está vacío)
-                if (isset($data['restaurante']) && is_array($data['restaurante']) && !empty($data['restaurante']['nombre']) && empty($restaurante['nombre'])) {
+                if (isset($data['restaurante']) && is_array($data['restaurante']) && ! empty($data['restaurante']['nombre']) && empty($restaurante['nombre'])) {
                     $restaurante = $data['restaurante'];
                 }
 
                 // Combinar categorías preservando el orden
                 if (isset($data['categorias']) && is_array($data['categorias'])) {
                     // Log del orden en que OpenAI devolvió las categorías en esta sección
-                    $categoriasEnSeccion = array_map(function($cat) {
+                    $categoriasEnSeccion = array_map(function ($cat) {
                         return $cat['nombre'] ?? '';
                     }, $data['categorias']);
-                    Log::info('Categorías devueltas por OpenAI en sección ' . ($index + 1), [
+                    Log::info('Categorías devueltas por OpenAI en sección '.($index + 1), [
                         'seccion_index' => $index,
-                        'categorias_orden' => $categoriasEnSeccion
+                        'categorias_orden' => $categoriasEnSeccion,
                     ]);
-                    
+
                     foreach ($data['categorias'] as $categoriaIndex => $categoria) {
-                        if (!is_array($categoria)) continue;
-                        
+                        if (! is_array($categoria)) {
+                            continue;
+                        }
+
                         $nombreCategoria = trim($categoria['nombre'] ?? '');
-                        if (empty($nombreCategoria)) continue;
+                        if (empty($nombreCategoria)) {
+                            continue;
+                        }
 
                         $nombreCategoriaLower = strtolower($nombreCategoria);
-                        
+
                         // Calcular timestamp para esta categoría (orden absoluto)
                         // IMPORTANTE: $index es el índice de la sección (0, 1, 2...)
                         // $categoriaIndex es el índice dentro del array de categorías devuelto por OpenAI
@@ -1430,43 +1467,45 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                         $categoriaExistenteKey = null;
                         foreach ($categoriasConOrden as $key => $catData) {
                             $nombreExistente = strtolower(trim($catData['categoria']['nombre'] ?? ''));
-                            
+
                             // Comparación exacta (mismo nombre)
                             if ($nombreExistente === $nombreCategoriaLower) {
                                 $categoriaExistenteKey = $key;
                                 break;
                             }
-                            
+
                             // Verificar si una podría ser subcategoría de la otra
                             // Si el nombre contiene el otro nombre + palabras de subcategoría, no combinar
                             $palabrasSubcategoria = ['clásica', 'clasica', 'especial', 'veggie', 'veggies', 'tradicional', 'gourmet', 'premium', 'clásicas', 'especiales'];
-                            
+
                             // Caso 1: La categoría actual podría ser subcategoría de una existente
                             // Ej: existente="Hamburguesas", actual="Hamburguesas Clásicas"
                             foreach ($palabrasSubcategoria as $palabra) {
-                                if (strpos($nombreCategoriaLower, $palabra) !== false && 
+                                if (strpos($nombreCategoriaLower, $palabra) !== false &&
                                     strpos($nombreCategoriaLower, $nombreExistente) === 0) {
                                     // Es una subcategoría, no combinar
                                     Log::info('Categoría detectada como subcategoría, no combinando', [
                                         'categoria_padre' => $catData['categoria']['nombre'],
                                         'subcategoria' => $nombreCategoria,
-                                        'seccion' => $index + 1
+                                        'seccion' => $index + 1,
                                     ]);
+
                                     continue 2; // Continuar con la siguiente categoría existente
                                 }
                             }
-                            
+
                             // Caso 2: La categoría existente podría ser subcategoría de la actual
                             // Ej: existente="Hamburguesas Clásicas", actual="Hamburguesas"
                             foreach ($palabrasSubcategoria as $palabra) {
-                                if (strpos($nombreExistente, $palabra) !== false && 
+                                if (strpos($nombreExistente, $palabra) !== false &&
                                     strpos($nombreExistente, $nombreCategoriaLower) === 0) {
                                     // La existente es subcategoría, no combinar
                                     Log::info('Categoría existente es subcategoría, no combinando', [
                                         'categoria_actual' => $nombreCategoria,
                                         'subcategoria_existente' => $catData['categoria']['nombre'],
-                                        'seccion' => $index + 1
+                                        'seccion' => $index + 1,
                                     ]);
+
                                     continue 2; // Continuar con la siguiente categoría existente
                                 }
                             }
@@ -1477,60 +1516,65 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                             Log::info('Categoría existente encontrada, agregando platos', [
                                 'categoria' => $nombreCategoria,
                                 'seccion' => $index + 1,
-                                'categoria_existente_key' => $categoriaExistenteKey
+                                'categoria_existente_key' => $categoriaExistenteKey,
                             ]);
-                            
+
                             // Agregar platos a la categoría existente, validando duplicados y precios
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                                 // Inicializar platosConOrden si no existe
-                                if (!isset($platosConOrden[$nombreCategoriaLower])) {
+                                if (! isset($platosConOrden[$nombreCategoriaLower])) {
                                     $platosConOrden[$nombreCategoriaLower] = [];
                                 }
-                                
+
                                 $platosAgregados = 0;
                                 foreach ($categoria['platos'] as $platoIndex => $plato) {
-                                    if (!is_array($plato)) continue;
-                                    
+                                    if (! is_array($plato)) {
+                                        continue;
+                                    }
+
                                     $nombrePlato = trim($plato['nombre'] ?? '');
-                                    if (empty($nombrePlato)) continue;
-                                    
+                                    if (empty($nombrePlato)) {
+                                        continue;
+                                    }
+
                                     $precioOriginal = $plato['precio'] ?? '';
-                                    
+
                                     // Validar precio
                                     $precio = $this->validatePrice($precioOriginal);
-                                    
+
                                     // Log detallado si el precio cambió
-                                    if ($precio !== $precioOriginal && !empty($precioOriginal)) {
+                                    if ($precio !== $precioOriginal && ! empty($precioOriginal)) {
                                         Log::warning('⚠️ PRECIO MODIFICADO por validatePrice', [
                                             'categoria' => $nombreCategoria,
                                             'plato' => $nombrePlato,
                                             'precio_original' => $precioOriginal,
                                             'precio_validado' => $precio,
-                                            'seccion' => $index + 1
+                                            'seccion' => $index + 1,
                                         ]);
                                     }
-                                    
+
                                     // Crear clave única para detectar duplicados
-                                    $platoKey = $nombreCategoriaLower . '|' . strtolower($nombrePlato);
-                                    
+                                    $platoKey = $nombreCategoriaLower.'|'.strtolower($nombrePlato);
+
                                     // Si el plato ya existe, no agregarlo (evitar duplicados)
                                     if (isset($seenPlatos[$platoKey])) {
                                         Log::info('Plato duplicado detectado y omitido', [
                                             'categoria' => $nombreCategoria,
                                             'plato' => $nombrePlato,
                                             'seccion' => $index + 1,
-                                            'plato_key' => $platoKey
+                                            'plato_key' => $platoKey,
                                         ]);
+
                                         continue;
                                     }
-                                    
+
                                     $seenPlatos[$platoKey] = true;
-                                    
+
                                     // Normalizar tags si existen
-                                    $tags = isset($plato['tags']) && is_array($plato['tags']) 
-                                        ? $this->normalizeTags($plato['tags']) 
+                                    $tags = isset($plato['tags']) && is_array($plato['tags'])
+                                        ? $this->normalizeTags($plato['tags'])
                                         : [];
-                                    
+
                                     // Guardar plato con información de orden (sección y posición)
                                     $platoData = [
                                         'plato' => [
@@ -1538,14 +1582,14 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                                             'precio' => $precio,
                                             'descripcion' => trim($plato['descripcion'] ?? ''),
                                             'imagen' => $plato['imagen'] ?? '',
-                                            'tags' => $tags // Tags normalizados
+                                            'tags' => $tags, // Tags normalizados
                                         ],
                                         'seccion' => $index, // Índice de la sección (0, 1, 2...)
-                                        'posicion' => $platoIndex // Posición dentro de la categoría en esta sección
+                                        'posicion' => $platoIndex, // Posición dentro de la categoría en esta sección
                                     ];
-                                    
+
                                     $platosConOrden[$nombreCategoriaLower][] = $platoData;
-                                    
+
                                     // Log detallado del plato agregado
                                     Log::info('✅ Plato agregado a categoría existente', [
                                         'categoria' => $nombreCategoria,
@@ -1554,121 +1598,126 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                                         'precio_final' => $precio,
                                         'seccion' => $index + 1,
                                         'posicion' => $platoIndex,
-                                        'plato_key' => $platoKey
+                                        'plato_key' => $platoKey,
                                     ]);
-                                    
+
                                     $platosAgregados++;
                                 }
-                                
+
                                 Log::info('Platos agregados a categoría existente', [
                                     'categoria' => $nombreCategoria,
                                     'seccion' => $index + 1,
                                     'platos_agregados' => $platosAgregados,
-                                    'total_platos_en_categoria' => count($platosConOrden[$nombreCategoriaLower])
+                                    'total_platos_en_categoria' => count($platosConOrden[$nombreCategoriaLower]),
                                 ]);
                             } else {
                                 Log::warning('Categoría existente sin platos en esta sección', [
                                     'categoria' => $nombreCategoria,
-                                    'seccion' => $index + 1
+                                    'seccion' => $index + 1,
                                 ]);
                             }
                         } else {
                             // Nueva categoría - agregar platos primero
                             if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                                 foreach ($categoria['platos'] as $platoIndex => $plato) {
-                                    if (!is_array($plato)) continue;
-                                    
+                                    if (! is_array($plato)) {
+                                        continue;
+                                    }
+
                                     $nombrePlato = trim($plato['nombre'] ?? '');
-                                    if (empty($nombrePlato)) continue;
-                                    
-                                    $platoKey = $nombreCategoriaLower . '|' . strtolower($nombrePlato);
-                                    
+                                    if (empty($nombrePlato)) {
+                                        continue;
+                                    }
+
+                                    $platoKey = $nombreCategoriaLower.'|'.strtolower($nombrePlato);
+
                                     if (isset($seenPlatos[$platoKey])) {
                                         Log::info('Plato duplicado detectado y omitido', [
                                             'categoria' => $nombreCategoria,
                                             'plato' => $nombrePlato,
-                                            'seccion' => $index + 1
+                                            'seccion' => $index + 1,
                                         ]);
+
                                         continue;
                                     }
-                                    
+
                                     $seenPlatos[$platoKey] = true;
-                                    
+
                                     // Guardar plato con información de orden
-                                    if (!isset($platosConOrden[$nombreCategoriaLower])) {
+                                    if (! isset($platosConOrden[$nombreCategoriaLower])) {
                                         $platosConOrden[$nombreCategoriaLower] = [];
                                     }
                                     // Normalizar tags si existen
-                                    $tags = isset($plato['tags']) && is_array($plato['tags']) 
-                                        ? $this->normalizeTags($plato['tags']) 
+                                    $tags = isset($plato['tags']) && is_array($plato['tags'])
+                                        ? $this->normalizeTags($plato['tags'])
                                         : [];
-                                    
+
                                     $platosConOrden[$nombreCategoriaLower][] = [
                                         'plato' => [
                                             'nombre' => $nombrePlato,
                                             'precio' => $this->validatePrice($plato['precio'] ?? ''),
                                             'descripcion' => trim($plato['descripcion'] ?? ''),
                                             'imagen' => $plato['imagen'] ?? '',
-                                            'tags' => $tags // Tags normalizados
+                                            'tags' => $tags, // Tags normalizados
                                         ],
                                         'seccion' => $index,
-                                        'posicion' => $platoIndex
+                                        'posicion' => $platoIndex,
                                     ];
                                 }
                             }
-                            
+
                             // Agregar categoría a categoriasConOrden con su timestamp
                             // IMPORTANTE: NO incluir los platos originales aquí, solo el nombre
                             // Los platos se agregarán desde platosConOrden más adelante
                             $categoriasConOrden[$timestamp] = [
                                 'categoria' => [
                                     'nombre' => $categoria['nombre'] ?? '',
-                                    'platos' => [] // Inicializar vacío - se llenará desde platosConOrden
+                                    'platos' => [], // Inicializar vacío - se llenará desde platosConOrden
                                 ],
-                                'nombre_lower' => $nombreCategoriaLower
+                                'nombre_lower' => $nombreCategoriaLower,
                             ];
-                            
+
                             Log::info('Categoría nueva registrada', [
                                 'categoria' => $nombreCategoria,
                                 'seccion' => $index,
                                 'posicion_en_seccion' => $categoriaIndex,
-                                'timestamp' => $timestamp
+                                'timestamp' => $timestamp,
                             ]);
                         }
                     }
                 }
             } catch (\Exception $e) {
-                Log::error('Error combinando JSON de sección ' . ($index + 1) . ': ' . $e->getMessage(), [
-                    'json_preview' => substr($jsonString ?? '', 0, 200)
+                Log::error('Error combinando JSON de sección '.($index + 1).': '.$e->getMessage(), [
+                    'json_preview' => substr($jsonString ?? '', 0, 200),
                 ]);
             }
         }
 
         // Ordenar categorías por timestamp (orden absoluto de aparición)
         ksort($categoriasConOrden);
-        
+
         // Construir array final de categorías en el orden correcto
         // IMPORTANTE: Detectar y prevenir mezcla de categorías padre-hijo
         $combinedCategorias = [];
         $categoriasProcesadas = []; // Para rastrear qué categorías ya se procesaron
-        
+
         foreach ($categoriasConOrden as $timestamp => $catData) {
             $categoria = $catData['categoria'];
             $nombreCategoria = trim($categoria['nombre'] ?? '');
             $nombreCategoriaLower = strtolower($nombreCategoria);
-            
+
             // Verificar si esta categoría podría ser una subcategoría de otra ya procesada
             $palabrasSubcategoria = ['clásica', 'clasica', 'especial', 'veggie', 'veggies', 'tradicional', 'gourmet', 'premium', 'clásicas', 'especiales'];
             $esSubcategoria = false;
             $categoriaPadre = null;
-            
+
             foreach ($categoriasProcesadas as $catProcesada) {
                 $nombreProcesada = strtolower(trim($catProcesada['nombre'] ?? ''));
-                
+
                 // Verificar si la categoría actual es subcategoría de una procesada
                 // Ejemplo: procesada="Hamburguesas", actual="Hamburguesas Clásicas"
                 foreach ($palabrasSubcategoria as $palabra) {
-                    if (strpos($nombreCategoriaLower, $palabra) !== false && 
+                    if (strpos($nombreCategoriaLower, $palabra) !== false &&
                         strpos($nombreCategoriaLower, $nombreProcesada) === 0) {
                         // Es una subcategoría
                         $esSubcategoria = true;
@@ -1677,55 +1726,56 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                             'categoria_padre' => $catProcesada['nombre'],
                             'subcategoria' => $nombreCategoria,
                             'timestamp' => $timestamp,
-                            'accion' => 'Se mantiene como categoría separada para preservar jerarquía'
+                            'accion' => 'Se mantiene como categoría separada para preservar jerarquía',
                         ]);
                         break 2;
                     }
                 }
             }
-            
+
             // Agregar la categoría al array final
             // Si es subcategoría, se mantiene separada (no se combina con la padre)
             // Esto preserva la estructura jerárquica
             $combinedCategorias[] = $categoria;
             $categoriasProcesadas[] = $categoria;
         }
-        
+
         Log::info('Categorías ordenadas por timestamp', [
             'total_categorias' => count($combinedCategorias),
-            'orden' => array_map(function($cat) {
+            'orden' => array_map(function ($cat) {
                 return $cat['nombre'] ?? '';
-            }, $combinedCategorias)
+            }, $combinedCategorias),
         ]);
-        
+
         // Ordenar platos dentro de cada categoría según el orden de las secciones (de arriba hacia abajo)
         foreach ($combinedCategorias as &$categoria) {
             $categoriaNombreLower = strtolower(trim($categoria['nombre'] ?? ''));
-            
+
             // SIEMPRE usar platosConOrden si existe, nunca los platos originales
             // Los platos originales pueden tener datos incorrectos o mezclados
-            if (isset($platosConOrden[$categoriaNombreLower]) && !empty($platosConOrden[$categoriaNombreLower])) {
+            if (isset($platosConOrden[$categoriaNombreLower]) && ! empty($platosConOrden[$categoriaNombreLower])) {
                 // Ordenar platos por sección y luego por posición dentro de la sección
-                usort($platosConOrden[$categoriaNombreLower], function($a, $b) {
+                usort($platosConOrden[$categoriaNombreLower], function ($a, $b) {
                     // Primero por sección (orden de arriba hacia abajo)
                     if ($a['seccion'] !== $b['seccion']) {
                         return $a['seccion'] <=> $b['seccion'];
                     }
+
                     // Si están en la misma sección, por posición dentro de la sección
                     return $a['posicion'] <=> $b['posicion'];
                 });
-                
+
                 // Reemplazar los platos con los ordenados
-                $categoria['platos'] = array_map(function($item) {
+                $categoria['platos'] = array_map(function ($item) {
                     return $item['plato'];
                 }, $platosConOrden[$categoriaNombreLower]);
-                
+
                 Log::info('Platos asignados desde platosConOrden', [
                     'categoria' => $categoria['nombre'] ?? '',
                     'total_platos' => count($categoria['platos']),
-                    'primeros_3_platos' => array_slice(array_map(function($p) {
-                        return $p['nombre'] . ' - ' . $p['precio'];
-                    }, $categoria['platos']), 0, 3)
+                    'primeros_3_platos' => array_slice(array_map(function ($p) {
+                        return $p['nombre'].' - '.$p['precio'];
+                    }, $categoria['platos']), 0, 3),
                 ]);
             } else {
                 // Si no hay platos en platosConOrden, vaciar los platos originales
@@ -1733,9 +1783,9 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                 Log::warning('⚠️ Categoría sin platos en platosConOrden - VACIANDO platos originales', [
                     'categoria' => $categoria['nombre'] ?? '',
                     'platos_originales_count' => count($categoria['platos'] ?? []),
-                    'platos_originales_preview' => array_slice(array_map(function($p) {
-                        return ($p['nombre'] ?? '') . ' - ' . ($p['precio'] ?? '');
-                    }, $categoria['platos'] ?? []), 0, 3)
+                    'platos_originales_preview' => array_slice(array_map(function ($p) {
+                        return ($p['nombre'] ?? '').' - '.($p['precio'] ?? '');
+                    }, $categoria['platos'] ?? []), 0, 3),
                 ]);
                 $categoria['platos'] = [];
             }
@@ -1744,17 +1794,17 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
         Log::info('JSON combinado', [
             'total_categorias' => count($combinedCategorias),
-            'total_platos' => array_sum(array_map(function($cat) {
+            'total_platos' => array_sum(array_map(function ($cat) {
                 return isset($cat['platos']) && is_array($cat['platos']) ? count($cat['platos']) : 0;
-            }, $combinedCategorias))
+            }, $combinedCategorias)),
         ]);
 
         return json_encode([
             'restaurante' => $restaurante,
-            'categorias' => $combinedCategorias
+            'categorias' => $combinedCategorias,
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
-    
+
     /**
      * Combina múltiples JSONs de menú en uno solo (SIMPLIFICADO)
      * Solo une las categorías y platos de cada sección, sin lógica compleja
@@ -1765,60 +1815,68 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         if (count($jsonStrings) === 1) {
             return $jsonStrings[0];
         }
-        
+
         Log::info('🔗 UNIENDO JSONs DE SECCIONES (método simplificado)', [
-            'total_secciones' => count($jsonStrings)
+            'total_secciones' => count($jsonStrings),
         ]);
-        
+
         $allCategorias = []; // [nombre_categoria_lower => categoria_completa]
         $categoriaOrder = []; // [nombre_categoria_lower => primera_seccion] para mantener orden
-        
+
         // Procesar cada sección en orden
         foreach ($jsonStrings as $sectionIndex => $jsonString) {
-            if (empty($jsonString)) continue;
-            
+            if (empty($jsonString)) {
+                continue;
+            }
+
             try {
                 $data = json_decode($jsonString, true);
-                if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-                    Log::warning('JSON inválido en sección ' . ($sectionIndex + 1) . ': ' . json_last_error_msg());
+                if (json_last_error() !== JSON_ERROR_NONE || ! is_array($data)) {
+                    Log::warning('JSON inválido en sección '.($sectionIndex + 1).': '.json_last_error_msg());
+
                     continue;
                 }
-                
+
                 // Normalizar estructura si es necesario
                 $data = $this->normalizeMenuJsonStructure($data);
-                
-                if (!isset($data['categorias']) || !is_array($data['categorias'])) {
-                    Log::warning('Sección ' . ($sectionIndex + 1) . ' sin categorías válidas');
+
+                if (! isset($data['categorias']) || ! is_array($data['categorias'])) {
+                    Log::warning('Sección '.($sectionIndex + 1).' sin categorías válidas');
+
                     continue;
                 }
-                
+
                 // Procesar cada categoría de esta sección
                 foreach ($data['categorias'] as $categoria) {
-                    if (!is_array($categoria) || empty($categoria['nombre'])) continue;
-                    
+                    if (! is_array($categoria) || empty($categoria['nombre'])) {
+                        continue;
+                    }
+
                     $nombreCategoria = trim($categoria['nombre']);
                     $nombreCategoriaLower = strtolower($nombreCategoria);
-                    
+
                     // Si es la primera vez que vemos esta categoría, crearla
-                    if (!isset($allCategorias[$nombreCategoriaLower])) {
+                    if (! isset($allCategorias[$nombreCategoriaLower])) {
                         $allCategorias[$nombreCategoriaLower] = [
                             'nombre' => $nombreCategoria,
-                            'platos' => []
+                            'platos' => [],
                         ];
                         $categoriaOrder[$nombreCategoriaLower] = $sectionIndex;
                         Log::info('✅ Nueva categoría encontrada', [
                             'categoria' => $nombreCategoria,
-                            'seccion' => $sectionIndex + 1
+                            'seccion' => $sectionIndex + 1,
                         ]);
                     }
-                    
+
                     // Agregar platos de esta categoría (si existen)
                     if (isset($categoria['platos']) && is_array($categoria['platos'])) {
                         foreach ($categoria['platos'] as $plato) {
-                            if (!is_array($plato) || empty($plato['nombre'])) continue;
-                            
+                            if (! is_array($plato) || empty($plato['nombre'])) {
+                                continue;
+                            }
+
                             $nombrePlato = trim($plato['nombre']);
-                            
+
                             // Verificar si el plato ya existe (evitar duplicados exactos)
                             $platoExiste = false;
                             foreach ($allCategorias[$nombreCategoriaLower]['platos'] as $platoExistente) {
@@ -1827,67 +1885,68 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                                     break;
                                 }
                             }
-                            
-                            if (!$platoExiste) {
+
+                            if (! $platoExiste) {
                                 // Normalizar tags si existen
-                                $tags = isset($plato['tags']) && is_array($plato['tags']) 
-                                    ? $this->normalizeTags($plato['tags']) 
+                                $tags = isset($plato['tags']) && is_array($plato['tags'])
+                                    ? $this->normalizeTags($plato['tags'])
                                     : [];
-                                
+
                                 // Validar precio
                                 $precio = $this->validatePrice($plato['precio'] ?? '');
-                                
+
                                 $allCategorias[$nombreCategoriaLower]['platos'][] = [
                                     'nombre' => $nombrePlato,
                                     'precio' => $precio,
                                     'descripcion' => trim($plato['descripcion'] ?? ''),
                                     'imagen' => $plato['imagen'] ?? '',
-                                    'tags' => $tags
+                                    'tags' => $tags,
                                 ];
                             }
                         }
                     }
                 }
-                
-                Log::info('Sección ' . ($sectionIndex + 1) . ' procesada', [
+
+                Log::info('Sección '.($sectionIndex + 1).' procesada', [
                     'categorias_en_seccion' => count($data['categorias']),
-                    'total_categorias_acumuladas' => count($allCategorias)
+                    'total_categorias_acumuladas' => count($allCategorias),
                 ]);
-                
+
             } catch (\Exception $e) {
-                Log::error('Error procesando sección ' . ($sectionIndex + 1) . ' en combineMenuJsons: ' . $e->getMessage());
+                Log::error('Error procesando sección '.($sectionIndex + 1).' en combineMenuJsons: '.$e->getMessage());
             }
         }
-        
+
         // Ordenar categorías por orden de aparición (primera sección donde aparecieron)
-        uksort($allCategorias, function($a, $b) use ($categoriaOrder) {
+        uksort($allCategorias, function ($a, $b) use ($categoriaOrder) {
             $orderA = $categoriaOrder[$a] ?? 999;
             $orderB = $categoriaOrder[$b] ?? 999;
             if ($orderA !== $orderB) {
                 return $orderA <=> $orderB;
             }
+
             // Si aparecieron en la misma sección, mantener orden alfabético
             return strcmp($a, $b);
         });
-        
+
         // Construir JSON final
         $finalJson = [
             'restaurante' => [
                 'nombre' => '',
-                'descripcion' => ''
+                'descripcion' => '',
             ],
-            'categorias' => array_values($allCategorias)
+            'categorias' => array_values($allCategorias),
         ];
-        
+
         $result = json_encode($finalJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        
+
         Log::info('✅ JSONs unidos exitosamente', [
             'total_categorias' => count($finalJson['categorias']),
-            'total_platos' => array_sum(array_map(function($cat) {
+            'total_platos' => array_sum(array_map(function ($cat) {
                 return count($cat['platos'] ?? []);
-            }, $finalJson['categorias']))
+            }, $finalJson['categorias'])),
         ]);
-        
+
         return $result;
     }
 
@@ -1898,11 +1957,11 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
     {
         Log::info('Iniciando procesamiento página por página', [
             'total_páginas' => $pageCount,
-            'archivo' => basename($pdfPath)
+            'archivo' => basename($pdfPath),
         ]);
 
         // Crear directorio temp si no existe
-        if (!is_dir(storage_path('app/temp'))) {
+        if (! is_dir(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
@@ -1912,14 +1971,15 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
         try {
             // Procesar cada página
             for ($page = 1; $page <= $pageCount; $page++) {
-                Log::info('Procesando página ' . $page . ' de ' . $pageCount);
-                
+                Log::info('Procesando página '.$page.' de '.$pageCount);
+
                 // Convertir página a imagen
-                $imagePath = storage_path('app/temp/pdf_page_' . $page . '_' . uniqid() . '.png');
+                $imagePath = storage_path('app/temp/pdf_page_'.$page.'_'.uniqid().'.png');
                 $tempFiles[] = $imagePath;
-                
-                if (!$this->convertPdfPageToImage($pdfPath, $page, $imagePath)) {
-                    Log::warning('No se pudo convertir página ' . $page . ' a imagen');
+
+                if (! $this->convertPdfPageToImage($pdfPath, $page, $imagePath)) {
+                    Log::warning('No se pudo convertir página '.$page.' a imagen');
+
                     continue;
                 }
 
@@ -1941,7 +2001,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             // }
             Log::info('Archivos temporales guardados en temp para revisión', [
                 'archivos' => count($tempFiles),
-                'ruta' => storage_path('app/temp')
+                'ruta' => storage_path('app/temp'),
             ]);
 
             // Combinar resultados
@@ -1951,14 +2011,14 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
 
             // Ordenar por clave (índice) para asegurar orden correcto antes de combinar
             ksort($jsonResults);
-            
+
             // Reindexar array para que combineMenuJsons reciba índices consecutivos (0, 1, 2...)
             $jsonResults = array_values($jsonResults);
 
             $combinedJson = $this->combineMenuJsons_SIMPLE($jsonResults);
             Log::info('PDF procesado exitosamente página por página', [
                 'páginas_procesadas' => count($jsonResults),
-                'total_páginas' => $pageCount
+                'total_páginas' => $pageCount,
             ]);
 
             return $combinedJson;
@@ -1972,7 +2032,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             // }
             Log::info('Páginas de PDF guardadas en temp (incluso con error)', [
                 'archivos' => count($tempFiles),
-                'ruta' => storage_path('app/temp')
+                'ruta' => storage_path('app/temp'),
             ]);
             throw $e;
         }
@@ -1990,7 +2050,7 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             $mimeType = $imageInfo['mime'] ?? 'image/png';
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
             ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->openaiModel,
@@ -2000,26 +2060,26 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => $this->buildExtractionPromptForPage($pageNumber, $totalPages)
+                                'text' => $this->buildExtractionPromptForPage($pageNumber, $totalPages),
                             ],
-                                [
-                                    'type' => 'image_url',
-                                    'image_url' => [
-                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
-                                        'detail' => 'high'
-                                    ]
-                                ]
-                        ]
-                    ]
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                    'detail' => 'high',
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'max_tokens' => 16384,
-                'temperature' => 0
+                'temperature' => 0,
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 $content = $data['choices'][0]['message']['content'] ?? null;
-                
+
                 if ($content) {
                     // Limpiar markdown si existe
                     $cleanContent = $content;
@@ -2031,61 +2091,64 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                         $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
                         $cleanContent = trim($cleanContent);
                     }
-                    
+
                     // Guardar respuesta de OpenAI en archivo de texto para revisión
-                    $txtPath = storage_path('app/temp/openai_response_page_' . $pageNumber . '_' . uniqid() . '.txt');
-                    if (!is_dir(storage_path('app/temp'))) {
+                    $txtPath = storage_path('app/temp/openai_response_page_'.$pageNumber.'_'.uniqid().'.txt');
+                    if (! is_dir(storage_path('app/temp'))) {
                         mkdir(storage_path('app/temp'), 0755, true);
                     }
                     file_put_contents($txtPath, "=== RESPUESTA DE OPENAI - PÁGINA {$pageNumber} de {$totalPages} ===\n\n");
-                    file_put_contents($txtPath, $content . "\n\n", FILE_APPEND);
+                    file_put_contents($txtPath, $content."\n\n", FILE_APPEND);
                     file_put_contents($txtPath, "=== CONTENIDO LIMPIO ===\n\n", FILE_APPEND);
-                    file_put_contents($txtPath, $cleanContent . "\n", FILE_APPEND);
+                    file_put_contents($txtPath, $cleanContent."\n", FILE_APPEND);
                     Log::info('Respuesta de OpenAI guardada en archivo', [
                         'pagina' => $pageNumber,
-                        'archivo' => $txtPath
+                        'archivo' => $txtPath,
                     ]);
-                    
+
                     // Normalizar cualquier estructura JSON al formato estándar
                     try {
                         $jsonTest = json_decode($cleanContent, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
                             // Guardar JSON original antes de normalizar
-                            $jsonOriginalPath = storage_path('app/temp/json_original_page_' . $pageNumber . '_' . uniqid() . '.txt');
-                            if (!is_dir(storage_path('app/temp'))) {
+                            $jsonOriginalPath = storage_path('app/temp/json_original_page_'.$pageNumber.'_'.uniqid().'.txt');
+                            if (! is_dir(storage_path('app/temp'))) {
                                 mkdir(storage_path('app/temp'), 0755, true);
                             }
                             file_put_contents($jsonOriginalPath, "=== JSON ORIGINAL DE GPT - PÁGINA {$pageNumber} de {$totalPages} ===\n\n");
-                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n", FILE_APPEND);
                             file_put_contents($jsonOriginalPath, "\n=== ESTRUCTURA ORIGINAL ===\n", FILE_APPEND);
-                            file_put_contents($jsonOriginalPath, "Keys disponibles: " . implode(', ', array_keys($jsonTest)) . "\n", FILE_APPEND);
+                            file_put_contents($jsonOriginalPath, 'Keys disponibles: '.implode(', ', array_keys($jsonTest))."\n", FILE_APPEND);
                             Log::info('JSON original guardado antes de normalizar', [
                                 'pagina' => $pageNumber,
-                                'archivo' => $jsonOriginalPath
+                                'archivo' => $jsonOriginalPath,
                             ]);
-                            
+
                             $jsonTest = $this->normalizeMenuJsonStructure($jsonTest);
                             $cleanContent = json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-                            
+
                             Log::info('JSON de página normalizado exitosamente', [
                                 'pagina' => $pageNumber,
-                                'tiene_categorias' => isset($jsonTest['categorias'])
+                                'tiene_categorias' => isset($jsonTest['categorias']),
                             ]);
                         }
                     } catch (\Exception $normalizeError) {
-                        Log::error('Error normalizando JSON de página ' . $pageNumber . ': ' . $normalizeError->getMessage());
+                        Log::error('Error normalizando JSON de página '.$pageNumber.': '.$normalizeError->getMessage());
                     }
-                    
-                    Log::info('Página ' . $pageNumber . ' procesada exitosamente');
+
+                    Log::info('Página '.$pageNumber.' procesada exitosamente');
+
                     return $cleanContent;
                 }
             }
 
-            Log::warning('Error procesando página ' . $pageNumber . ': ' . ($response->body() ?? 'Sin respuesta'));
+            Log::warning('Error procesando página '.$pageNumber.': '.($response->body() ?? 'Sin respuesta'));
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Error procesando página ' . $pageNumber . ': ' . $e->getMessage());
+            Log::error('Error procesando página '.$pageNumber.': '.$e->getMessage());
+
             return null;
         }
     }
@@ -2103,65 +2166,65 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             // Verificar tamaño del archivo (OpenAI tiene límite de ~20MB)
             $fileSize = filesize($filePath);
             $maxSize = 20 * 1024 * 1024; // 20MB
-            
+
             if ($fileSize > $maxSize) {
                 Log::warning('PDF demasiado grande para OpenAI', [
                     'tamaño' => $fileSize,
                     'máximo' => $maxSize,
-                    'archivo' => basename($filePath)
+                    'archivo' => basename($filePath),
                 ]);
                 throw new \Exception('El PDF es demasiado grande. Por favor, reduce el tamaño a menos de 20MB o convierte solo la primera página a imagen.');
             }
-            
+
             // Contar páginas del PDF
             $pageCount = $this->getPdfPageCount($filePath);
-            Log::info('PDF detectado con ' . $pageCount . ' página(s)', [
+            Log::info('PDF detectado con '.$pageCount.' página(s)', [
                 'archivo' => basename($filePath),
-                'páginas' => $pageCount
+                'páginas' => $pageCount,
             ]);
-            
+
             // CONVERTIR PDF A IMÁGENES PRIMERO
             // OpenAI Vision solo acepta imágenes (PNG, JPEG), NO PDFs directamente
             Log::info('🎯 CONVIRTIENDO PDF A IMÁGENES para procesar con OpenAI Vision', [
                 'total_páginas' => $pageCount,
-                'archivo' => basename($filePath)
+                'archivo' => basename($filePath),
             ]);
-            
+
             // Aumentar el tiempo de ejecución de PHP para permitir conversión y llamada a OpenAI
             set_time_limit(600); // 10 minutos
-            
+
             // Crear directorio temporal si no existe
             $tempDir = storage_path('app/temp');
-            if (!is_dir($tempDir)) {
+            if (! is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
-            
+
             // Convertir cada página del PDF a imagen
             $imagePaths = [];
             $tempFilesToCleanup = [];
-            
+
             for ($page = 1; $page <= $pageCount; $page++) {
-                $imagePath = $tempDir . '/pdf_page_' . uniqid() . '_' . $page . '.png';
+                $imagePath = $tempDir.'/pdf_page_'.uniqid().'_'.$page.'.png';
                 $tempFilesToCleanup[] = $imagePath;
-                
-                Log::info('Convirtiendo página ' . $page . ' de ' . $pageCount . ' a imagen', [
-                    'output_path' => $imagePath
+
+                Log::info('Convirtiendo página '.$page.' de '.$pageCount.' a imagen', [
+                    'output_path' => $imagePath,
                 ]);
-                
+
                 if ($this->convertPdfPageToImage($filePath, $page, $imagePath)) {
                     if (file_exists($imagePath) && filesize($imagePath) > 0) {
                         $imagePaths[] = $imagePath;
-                        Log::info('✅ Página ' . $page . ' convertida exitosamente', [
-                            'tamaño_imagen' => filesize($imagePath)
+                        Log::info('✅ Página '.$page.' convertida exitosamente', [
+                            'tamaño_imagen' => filesize($imagePath),
                         ]);
                     } else {
-                        Log::warning('⚠️ Página ' . $page . ' convertida pero archivo no válido');
+                        Log::warning('⚠️ Página '.$page.' convertida pero archivo no válido');
                     }
                 } else {
-                    Log::error('❌ Error convirtiendo página ' . $page);
+                    Log::error('❌ Error convirtiendo página '.$page);
                 }
             }
-            
+
             if (empty($imagePaths)) {
                 // Limpiar archivos temporales antes de fallar
                 foreach ($tempFilesToCleanup as $tempFile) {
@@ -2171,12 +2234,12 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
                 }
                 throw new \Exception('No se pudo convertir ninguna página del PDF a imagen. Asegúrate de tener ImageMagick o Ghostscript instalado.');
             }
-            
-            Log::info('✅ PDF convertido a ' . count($imagePaths) . ' imagen(es)', [
+
+            Log::info('✅ PDF convertido a '.count($imagePaths).' imagen(es)', [
                 'total_páginas' => $pageCount,
-                'imágenes_generadas' => count($imagePaths)
+                'imágenes_generadas' => count($imagePaths),
             ]);
-            
+
             // Preparar contenido para OpenAI: texto del prompt + todas las imágenes
             $contentArray = [
                 [
@@ -2263,10 +2326,10 @@ FORMATO JSON REQUERIDO:
 
 IMPORTANTE: Transcribe SOLO lo que REALMENTE VES. Si no está escrito en el PDF, NO existe.
 
-Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.'
-                ]
+Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.',
+                ],
             ];
-            
+
             // Agregar todas las imágenes convertidas al contenido
             foreach ($imagePaths as $imagePath) {
                 $imageData = file_get_contents($imagePath);
@@ -2274,78 +2337,78 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 $contentArray[] = [
                     'type' => 'image_url',
                     'image_url' => [
-                        'url' => 'data:image/png;base64,' . $base64Image,
-                        'detail' => 'high'
-                    ]
+                        'url' => 'data:image/png;base64,'.$base64Image,
+                        'detail' => 'high',
+                    ],
                 ];
             }
-            
-            Log::info('Enviando ' . count($imagePaths) . ' imagen(es) a OpenAI Vision', [
+
+            Log::info('Enviando '.count($imagePaths).' imagen(es) a OpenAI Vision', [
                 'total_páginas' => $pageCount,
-                'tamaño_total_imágenes' => array_sum(array_map('filesize', $imagePaths))
+                'tamaño_total_imágenes' => array_sum(array_map('filesize', $imagePaths)),
             ]);
-            
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
             ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->openaiModel,
                 'messages' => [
                     [
                         'role' => 'user',
-                        'content' => $contentArray
-                    ]
+                        'content' => $contentArray,
+                    ],
                 ],
                 'max_tokens' => 16384,
-                'temperature' => 0
+                'temperature' => 0,
             ]);
-            
+
             // Guardar número de imágenes para el log
             $imagesProcessed = count($imagePaths);
-            
+
             try {
                 if ($response->successful()) {
                     $data = $response->json();
                     $content = $data['choices'][0]['message']['content'] ?? null;
-                    
+
                     // Verificar si la respuesta fue truncada
                     $finishReason = $data['choices'][0]['finish_reason'] ?? null;
                     if ($finishReason === 'length') {
                         Log::warning('Respuesta de OpenAI truncada por límite de tokens', [
                             'menu_id' => $this->menuId ?? null,
-                            'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido'
+                            'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido',
                         ]);
                     }
-                    
+
                     if ($content) {
                         Log::info('PDF procesado exitosamente con OpenAI Vision (convertido a imágenes)', [
                             'tamaño_respuesta' => strlen($content),
                             'finish_reason' => $finishReason,
-                            'páginas_procesadas' => $imagesProcessed
+                            'páginas_procesadas' => $imagesProcessed,
                         ]);
+
                         return $content;
                     }
                 }
 
                 Log::error('Error en respuesta de OpenAI', [
                     'status' => $response->status(),
-                    'body'   => substr($response->body(), 0, 500),
+                    'body' => substr($response->body(), 0, 500),
                 ]);
 
-                throw new \Exception('Error al procesar con OpenAI: ' . $response->body());
-                
+                throw new \Exception('Error al procesar con OpenAI: '.$response->body());
             } finally {
                 // Limpiar archivos temporales siempre, incluso si hay errores
                 foreach ($tempFilesToCleanup as $tempFile) {
                     if (file_exists($tempFile)) {
                         @unlink($tempFile);
-                        Log::debug('Archivo temporal eliminado: ' . $tempFile);
+                        Log::debug('Archivo temporal eliminado: '.$tempFile);
                     }
                 }
             }
 
         } catch (\Exception $e) {
-            Log::error('Error procesando PDF con OpenAI: ' . $e->getMessage());
+            Log::error('Error procesando PDF con OpenAI: '.$e->getMessage());
             throw $e;
         }
     }
@@ -2358,22 +2421,22 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
         // Dimensiones A4 en mm: 210mm x 297mm
         $a4WidthMm = 210;
         $a4HeightMm = 297;
-        
+
         // Calcular DPI aproximado basado en el ancho de la imagen
         // Asumimos que el ancho de la imagen corresponde aproximadamente al ancho de A4
         // Si la imagen es más ancha que A4, ajustamos
         $estimatedDpi = ($imageWidth / $a4WidthMm) * 25.4; // 25.4mm = 1 pulgada
-        
+
         // Si el DPI calculado es muy bajo o muy alto, usar valores estándar
         if ($estimatedDpi < 100) {
             $estimatedDpi = 150; // DPI estándar para imágenes de baja resolución
         } elseif ($estimatedDpi > 400) {
             $estimatedDpi = 300; // DPI estándar para imágenes de alta resolución
         }
-        
+
         // Calcular altura de A4 en píxeles
         $a4HeightPx = ($a4HeightMm / 25.4) * $estimatedDpi;
-        
+
         // Redondear a entero
         return (int) round($a4HeightPx);
     }
@@ -2384,8 +2447,9 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
     protected function divideImageIntoSections($imagePath, $maxHeight = null): array
     {
         try {
-            if (!class_exists('Imagick')) {
+            if (! class_exists('Imagick')) {
                 Log::warning('Imagick no disponible, no se puede dividir la imagen');
+
                 return [];
             }
 
@@ -2395,7 +2459,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
 
             // Calcular altura de A4 basado en la resolución de la imagen
             $a4Height = $this->calculateA4Height($width, $height);
-            
+
             // Si no se especifica maxHeight, usar el tamaño de A4
             if ($maxHeight === null) {
                 $maxHeight = $a4Height;
@@ -2407,20 +2471,21 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 $imagick->destroy();
                 Log::info('Imagen no requiere división (menor o igual a A4)', [
                     'altura_imagen' => $height,
-                    'altura_a4' => $a4Height
+                    'altura_a4' => $a4Height,
                 ]);
+
                 return [];
             }
 
             Log::info('Dividiendo imagen grande en secciones tipo A4', [
-                'dimensiones_originales' => $width . 'x' . $height,
+                'dimensiones_originales' => $width.'x'.$height,
                 'altura_a4_calculada' => $a4Height,
                 'altura_máxima_por_sección' => $maxHeight,
-                'secciones_estimadas' => ceil($height / $a4Height)
+                'secciones_estimadas' => ceil($height / $a4Height),
             ]);
 
             // Crear directorio temp si no existe
-            if (!is_dir(storage_path('app/temp'))) {
+            if (! is_dir(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
@@ -2431,12 +2496,12 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             while ($currentY < $height) {
                 // Usar altura de A4 para cada sección
                 $sectionHeight = min($a4Height, $height - $currentY);
-                
+
                 // Crear nueva imagen para esta sección
                 $sectionImage = clone $imagick;
                 $sectionImage->cropImage($width, $sectionHeight, 0, $currentY);
-                
-                $sectionPath = storage_path('app/temp/image_section_' . $sectionNumber . '_' . uniqid() . '.png');
+
+                $sectionPath = storage_path('app/temp/image_section_'.$sectionNumber.'_'.uniqid().'.png');
                 $sectionImage->writeImage($sectionPath);
                 $sectionImage->clear();
                 $sectionImage->destroy();
@@ -2447,12 +2512,12 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         'number' => $sectionNumber,
                         'y_start' => $currentY,
                         'y_end' => $currentY + $sectionHeight,
-                        'height' => $sectionHeight
+                        'height' => $sectionHeight,
                     ];
-                    Log::info('Sección ' . $sectionNumber . ' creada', [
+                    Log::info('Sección '.$sectionNumber.' creada', [
                         'path' => $sectionPath,
                         'y_start' => $currentY,
-                        'y_end' => $currentY + $sectionHeight
+                        'y_end' => $currentY + $sectionHeight,
                     ]);
                 }
 
@@ -2466,7 +2531,8 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             return $sections;
 
         } catch (\Exception $e) {
-            Log::error('Error dividiendo imagen: ' . $e->getMessage());
+            Log::error('Error dividiendo imagen: '.$e->getMessage());
+
             return [];
         }
     }
@@ -2484,43 +2550,43 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             // Verificar tamaño del archivo (OpenAI tiene límite de ~20MB para imágenes)
             $fileSize = filesize($filePath);
             $maxSize = 20 * 1024 * 1024; // 20MB
-            
+
             if ($fileSize > $maxSize) {
                 Log::warning('Imagen demasiado grande para OpenAI', [
                     'tamaño' => $fileSize,
                     'máximo' => $maxSize,
-                    'archivo' => basename($filePath)
+                    'archivo' => basename($filePath),
                 ]);
                 throw new \Exception('La imagen es demasiado grande. Por favor, reduce el tamaño a menos de 20MB.');
             }
-            
+
             // Determinar el tipo de imagen
             $imageInfo = getimagesize($filePath);
-            
+
             if ($imageInfo === false) {
                 throw new \Exception('No se pudo leer la información de la imagen');
             }
-            
+
             $mimeType = $imageInfo['mime'];
-            
+
             // PROCESAR IMAGEN COMPLETA DIRECTAMENTE (sin dividir en secciones)
             // Esto evita problemas de combinación y mejora la precisión
             Log::info('🎯 PROCESANDO IMAGEN COMPLETA DIRECTAMENTE (sin dividir en secciones)', [
-                'dimensiones' => $imageInfo[0] . 'x' . $imageInfo[1],
+                'dimensiones' => $imageInfo[0].'x'.$imageInfo[1],
                 'tamaño_archivo_mb' => round($fileSize / 1024 / 1024, 2),
                 'archivo' => basename($filePath),
-                'modelo' => $this->openaiModel
+                'modelo' => $this->openaiModel,
             ]);
-            
+
             // Procesar imagen completa directamente
             // Leer la imagen y convertir a base64
             $imageData = file_get_contents($filePath);
             $base64Image = base64_encode($imageData);
-            
+
             // Calcular hash del archivo para verificación
             $fileHash = md5_file($filePath);
             $base64Hash = md5($base64Image);
-            
+
             Log::info('Procesando imagen con OpenAI Vision', [
                 'archivo_path' => $filePath,
                 'archivo_hash' => $fileHash,
@@ -2528,17 +2594,17 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                 'tamaño_archivo' => $fileSize,
                 'tamaño_base64' => strlen($base64Image),
                 'tipo' => $mimeType,
-                'dimensiones' => $imageInfo[0] . 'x' . $imageInfo[1]
+                'dimensiones' => $imageInfo[0].'x'.$imageInfo[1],
             ]);
-            
+
             // Aumentar el tiempo de ejecución de PHP para permitir que la llamada a OpenAI complete
             // OpenAI puede tardar más de 5 minutos con imágenes muy grandes
             set_time_limit(600); // 10 minutos
-            
+
             // La imagen está lista para enviar a OpenAI
-            
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
             ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->openaiModel,
@@ -2671,26 +2737,26 @@ FORMATO JSON REQUERIDO:
 - Si la respuesta se trunca, detente donde puedas - NO inventes para completar
 - Es MEJOR un JSON incompleto que un JSON con contenido inventado
 
-Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.'
+Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.',
                             ],
-                                [
-                                    'type' => 'image_url',
-                                    'image_url' => [
-                                        'url' => 'data:' . $mimeType . ';base64,' . $base64Image,
-                                        'detail' => 'high'
-                                    ]
-                                ]
-                        ]
-                    ]
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                    'detail' => 'high',
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'max_tokens' => 16384,
-                'temperature' => 0
+                'temperature' => 0,
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 $content = $data['choices'][0]['message']['content'] ?? null;
-                
+
                 // Verificar si la respuesta fue truncada
                 $finishReason = $data['choices'][0]['finish_reason'] ?? null;
                 if ($finishReason === 'length') {
@@ -2698,7 +2764,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         'menu_id' => $this->menuId ?? null,
                         'tokens_usados' => $data['usage']['total_tokens'] ?? 'desconocido',
                         'tamaño_respuesta' => strlen($content ?? ''),
-                        'mensaje' => 'La respuesta se cortó por límite de tokens. El JSON puede estar incompleto.'
+                        'mensaje' => 'La respuesta se cortó por límite de tokens. El JSON puede estar incompleto.',
                     ]);
                     // Si se truncó, validar que el JSON esté completo antes de retornar
                     if ($content) {
@@ -2722,7 +2788,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         }
                     }
                 }
-                
+
                 if ($content) {
                     // Limpiar el contenido de markdown si existe
                     $cleanContent = $content;
@@ -2734,54 +2800,55 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         $cleanContent = preg_replace('/```\s*/', '', $cleanContent);
                         $cleanContent = trim($cleanContent);
                     }
-                    
+
                     // Normalizar cualquier estructura JSON al formato estándar
                     try {
                         $jsonTest = json_decode($cleanContent, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($jsonTest)) {
                             // Guardar JSON original antes de normalizar
-                            $jsonOriginalPath = storage_path('app/temp/json_original_completo_' . uniqid() . '.txt');
-                            if (!is_dir(storage_path('app/temp'))) {
+                            $jsonOriginalPath = storage_path('app/temp/json_original_completo_'.uniqid().'.txt');
+                            if (! is_dir(storage_path('app/temp'))) {
                                 mkdir(storage_path('app/temp'), 0755, true);
                             }
                             file_put_contents($jsonOriginalPath, "=== JSON ORIGINAL DE GPT - IMAGEN COMPLETA ===\n\n");
-                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+                            file_put_contents($jsonOriginalPath, json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n", FILE_APPEND);
                             file_put_contents($jsonOriginalPath, "\n=== ESTRUCTURA ORIGINAL ===\n", FILE_APPEND);
-                            file_put_contents($jsonOriginalPath, "Keys disponibles: " . implode(', ', array_keys($jsonTest)) . "\n", FILE_APPEND);
-                            
+                            file_put_contents($jsonOriginalPath, 'Keys disponibles: '.implode(', ', array_keys($jsonTest))."\n", FILE_APPEND);
+
                             $jsonTest = $this->normalizeMenuJsonStructure($jsonTest);
                             $cleanContent = json_encode($jsonTest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-                            
+
                             Log::info('JSON normalizado exitosamente (imagen completa)', [
                                 'estructura_original' => array_keys($jsonTest),
                                 'tiene_categorias' => isset($jsonTest['categorias']),
-                                'archivo_original' => $jsonOriginalPath
+                                'archivo_original' => $jsonOriginalPath,
                             ]);
                         }
                     } catch (\Exception $normalizeError) {
-                        Log::error('Error normalizando JSON de imagen completa: ' . $normalizeError->getMessage());
+                        Log::error('Error normalizando JSON de imagen completa: '.$normalizeError->getMessage());
                     }
-                    
+
                     Log::info('Imagen procesada exitosamente con OpenAI Vision', [
                         'archivo_hash' => $fileHash ?? 'N/A',
                         'tamaño_respuesta' => strlen($content),
                         'tamaño_respuesta_limpia' => strlen($cleanContent),
                         'finish_reason' => $finishReason,
-                        'preview_respuesta' => mb_substr($cleanContent, 0, 1000, 'UTF-8')
+                        'preview_respuesta' => mb_substr($cleanContent, 0, 1000, 'UTF-8'),
                     ]);
-                    
+
                     return $cleanContent;
                 }
-                
+
                 return $content;
             }
-            
-            Log::error('Error en API de OpenAI Vision: ' . substr($response->body(), 0, 500));
+
+            Log::error('Error en API de OpenAI Vision: '.substr($response->body(), 0, 500));
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Error procesando imagen con OpenAI: ' . $e->getMessage());
-            throw new \Exception('Error procesando imagen: ' . $e->getMessage());
+            Log::error('Error procesando imagen con OpenAI: '.$e->getMessage());
+            throw new \Exception('Error procesando imagen: '.$e->getMessage());
         }
     }
 
@@ -2792,39 +2859,43 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
     {
         if (empty($this->openaiApiKey) || $this->openaiApiKey === 'your_openai_api_key_here') {
             Log::warning('OpenAI API key no configurada');
+
             return $this->getMockResponse($format);
         }
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
+                'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
             ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->openaiModel,
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'Eres un experto en análisis de menús de restaurantes. Analiza el texto del menú y extrae la información estructurada en formato JSON con: nombre del restaurante, categorías de platos, platos con precios, descripciones, y cualquier información relevante.'
+                        'content' => 'Eres un experto en análisis de menús de restaurantes. Analiza el texto del menú y extrae la información estructurada en formato JSON con: nombre del restaurante, categorías de platos, platos con precios, descripciones, y cualquier información relevante.',
                     ],
                     [
                         'role' => 'user',
-                        'content' => "Analiza este menú en formato {$format}:\n\n{$text}"
-                    ]
+                        'content' => "Analiza este menú en formato {$format}:\n\n{$text}",
+                    ],
                 ],
                 'max_tokens' => 2000,
-                'temperature' => 0
+                'temperature' => 0,
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
+
                 return $data['choices'][0]['message']['content'] ?? null;
             }
 
-            Log::error('Error en API de OpenAI: ' . substr($response->body(), 0, 500));
+            Log::error('Error en API de OpenAI: '.substr($response->body(), 0, 500));
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Error conectando con OpenAI: ' . $e->getMessage());
+            Log::error('Error conectando con OpenAI: '.$e->getMessage());
+
             return null;
         }
     }
@@ -2843,9 +2914,9 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         [
                             'nombre' => 'Ensalada César',
                             'precio' => '$8.99',
-                            'descripcion' => 'Lechuga romana, crutones, queso parmesano'
-                        ]
-                    ]
+                            'descripcion' => 'Lechuga romana, crutones, queso parmesano',
+                        ],
+                    ],
                 ],
                 [
                     'nombre' => 'Platos Principales',
@@ -2853,13 +2924,13 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                         [
                             'nombre' => 'Hamburguesa Clásica',
                             'precio' => '$12.99',
-                            'descripcion' => 'Carne de res, lechuga, tomate, cebolla'
-                        ]
-                    ]
-                ]
+                            'descripcion' => 'Carne de res, lechuga, tomate, cebolla',
+                        ],
+                    ],
+                ],
             ],
             'formato_original' => $format,
-            'procesado_el' => now()->toISOString()
+            'procesado_el' => now()->toISOString(),
         ], JSON_PRETTY_PRINT);
     }
 }

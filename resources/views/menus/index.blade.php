@@ -38,7 +38,7 @@
 
             <!-- Success Messages -->
             @if(session('success'))
-                <div class="mb-8 animate-fade-in-down">
+                <div class="mb-8 animate-fade-in-down js-flash">
                     <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
                         <!-- Animated background -->
                         <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
@@ -66,7 +66,7 @@
 
             <!-- Error Messages -->
             @if(session('error'))
-                <div class="mb-8 animate-fade-in-down">
+                <div class="mb-8 animate-fade-in-down js-flash">
                     <div class="relative overflow-hidden bg-gradient-to-r from-red-900/30 to-rose-900/30 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
                         <!-- Animated background -->
                         <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-rose-500/10 animate-pulse"></div>
@@ -91,6 +91,19 @@
                     </div>
                 </div>
             @endif
+
+            <script>
+                // Auto-cerrar los carteles flash a los 3s (sincronizado con la barra de progreso)
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.querySelectorAll('.js-flash').forEach(function (el) {
+                        setTimeout(function () {
+                            el.style.transition = 'opacity .5s ease';
+                            el.style.opacity = '0';
+                            setTimeout(function () { el.remove(); }, 500);
+                        }, 3000);
+                    });
+                });
+            </script>
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-4 mb-8">
@@ -161,12 +174,16 @@
                                 
                                 <!-- Estado del procesamiento -->
                                 <div class="absolute top-4 right-4">
-                                    @if($menu->procesado)
-                                        <div class="w-8 h-8 bg-accent-green/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow-green">
+                                    @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
+                                        <div class="w-8 h-8 bg-accent-green/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow-green" title="Listo">
                                             <span class="text-accent-green text-sm">✓</span>
                                         </div>
+                                    @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
+                                        <div class="w-8 h-8 bg-red-500/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Error al procesar">
+                                            <span class="text-red-400 text-sm">⚠️</span>
+                                        </div>
                                     @else
-                                        <div class="w-8 h-8 bg-yellow-500/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                        <div class="w-8 h-8 bg-yellow-500/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Procesando">
                                             <span class="text-yellow-400 text-sm">⏳</span>
                                         </div>
                                     @endif
@@ -197,9 +214,13 @@
                                 <div class="space-y-2 text-sm text-text-secondary mb-6">
                                     <div class="flex items-center justify-between">
                                         <span>Estado:</span>
-                                        <span class="px-2 py-1 rounded-full text-xs {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green' : 'bg-yellow-500/20 text-yellow-400' }}">
-                                            {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
-                                        </span>
+                                        @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
+                                            <span class="px-2 py-1 rounded-full text-xs bg-accent-green/20 text-accent-green">Listo</span>
+                                        @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
+                                            <span class="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400">Error — volvé a subirlo</span>
+                                        @else
+                                            <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Procesando…</span>
+                                        @endif
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span>Actualizado:</span>
