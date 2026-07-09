@@ -176,8 +176,13 @@ class MenuProcessorService
             return 'Gemini';
         }
 
-        // Si el texto extraído contiene "PDF procesado con OpenAI Vision" o "Imagen procesada con OpenAI Vision"
+        // Si el texto extraído indica que se procesó directamente con Gemini (ej: imágenes)
         $textoExtraido = $menu->texto_extraido ?? '';
+        if (strpos($textoExtraido, 'con Gemini') !== false) {
+            return 'Gemini';
+        }
+
+        // Si el texto extraído contiene "PDF procesado con OpenAI Vision" o "Imagen procesada con OpenAI Vision"
         if (strpos($textoExtraido, 'OpenAI Vision') !== false) {
             return 'OpenAI Vision';
         }
@@ -214,8 +219,37 @@ class MenuProcessorService
         if ($menu->formato === 'pdf') {
             return $this->processPDFWithOpenAI($filePath);
         } else {
-            return $this->processImageWithOpenAI($filePath);
+            return $this->processImageWithGemini($filePath);
         }
+    }
+
+    /**
+     * Procesa imágenes con estrategia híbrida:
+     * 1. Primero Gemini (más preciso con precios y separa tamaños/variantes)
+     * 2. Si Gemini falla o no está configurado, cae a OpenAI Vision
+     *
+     * OpenAI Vision tiende a inventar precios y a concatenar los precios de
+     * platos con varios tamaños, por eso Gemini es la estrategia primaria.
+     */
+    protected function processImageWithGemini($filePath)
+    {
+        // ESTRATEGIA 1: Intentar con Gemini
+        try {
+            $geminiProcessor = new GeminiPdfProcessorService;
+            $result = $geminiProcessor->processImageToMenu($filePath);
+
+            if ($result['success'] && ! empty($result['menu_data'])) {
+                // Marcar el proveedor para detectProvider() y para el texto_extraido
+                $this->savedExtractedText = 'Imagen procesada directamente con Gemini';
+
+                return $result['menu_data'];
+            }
+        } catch (\Exception $e) {
+            // Silencioso - continuar con fallback a OpenAI Vision
+        }
+
+        // ESTRATEGIA 2 (fallback): OpenAI Vision
+        return $this->processImageWithOpenAI($filePath);
     }
 
     /**

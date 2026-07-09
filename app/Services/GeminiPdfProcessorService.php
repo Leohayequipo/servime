@@ -53,7 +53,7 @@ class GeminiPdfProcessorService
             $mimeType = 'application/pdf';
 
             // Construir el prompt
-            $prompt = $this->buildPrompt();
+            $prompt = $this->buildPrompt('PDF');
 
             // Llamar a la API de Gemini
             $response = $this->callGeminiAPI($prompt, $base64Pdf, $mimeType);
@@ -82,15 +82,78 @@ class GeminiPdfProcessorService
     }
 
     /**
-     * Construir el prompt para Gemini
+     * Procesar una IMAGEN de menú directamente con Gemini.
+     * Gemini procesa imágenes nativamente (jpg/png/webp), igual que los PDFs.
+     * Se usa como estrategia primaria para imágenes porque OpenAI Vision tiende
+     * a inventar precios y a concatenar variantes/tamaños de un mismo plato.
      */
-    private function buildPrompt(): string
+    public function processImageToMenu(string $imagePath): array
     {
-        return "Analiza este PDF de menú de restaurante y extráelo en formato JSON estructurado.
+        try {
+            if (empty($this->geminiApiKey) || $this->geminiApiKey === 'your_gemini_api_key_here') {
+                throw new \Exception('Gemini API key no configurada. Verifica que GEMINI_API_KEY esté en tu archivo .env');
+            }
+
+            if (!file_exists($imagePath)) {
+                throw new \Exception('Archivo de imagen no encontrado: ' . $imagePath);
+            }
+
+            // Verificar tamaño del archivo (Gemini tiene límite de ~20MB)
+            $fileSize = filesize($imagePath);
+            $maxSize = 20 * 1024 * 1024; // 20MB
+            if ($fileSize > $maxSize) {
+                throw new \Exception('La imagen es demasiado grande. Tamaño: ' . number_format($fileSize / 1024 / 1024, 2) . ' MB. Máximo permitido: 20 MB');
+            }
+
+            // Detectar el mime type real de la imagen
+            $imageInfo = @getimagesize($imagePath);
+            if ($imageInfo === false || empty($imageInfo['mime'])) {
+                throw new \Exception('No se pudo leer la información de la imagen');
+            }
+            $mimeType = $imageInfo['mime'];
+
+            // Aumentar el tiempo de ejecución de PHP
+            set_time_limit(600); // 10 minutos
+
+            $imageData = file_get_contents($imagePath);
+            $base64Image = base64_encode($imageData);
+
+            $prompt = $this->buildPrompt('imagen');
+
+            $response = $this->callGeminiAPI($prompt, $base64Image, $mimeType);
+
+            if ($response['success']) {
+                return [
+                    'success' => true,
+                    'menu_data' => $response['menu_data'],
+                    'extracted_text' => 'Imagen procesada directamente con Gemini',
+                    'provider' => 'gemini'
+                ];
+            }
+
+            throw new \Exception($response['error'] ?? 'Error desconocido al procesar con Gemini');
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error al procesar la imagen con Gemini: ' . $e->getMessage(),
+                'provider' => 'gemini'
+            ];
+        }
+    }
+
+    /**
+     * Construir el prompt para Gemini
+     *
+     * @param string $tipo Etiqueta del documento a analizar ("PDF" o "imagen")
+     */
+    private function buildPrompt(string $tipo = 'PDF'): string
+    {
+        return "Analiza este {$tipo} de menú de restaurante y extráelo en formato JSON estructurado.
 
 INSTRUCCIONES CRÍTICAS:
-- SOLO extrae información que REALMENTE APARECE en el PDF
-- NO inventes platos, precios, descripciones o categorías que no estén en el PDF
+- SOLO extrae información que REALMENTE APARECE en el {$tipo}
+- NO inventes platos, precios, descripciones o categorías que no estén en el {$tipo}
 
 🚨🚨🚨 DETECCIÓN DE PRECIOS - LEE ESTO CON MUCHA ATENCIÓN 🚨🚨🚨:
 - **PRECIOS SON OBLIGATORIOS Y CRÍTICOS** - cada plato DEBE tener SU precio específico y correcto
@@ -143,7 +206,11 @@ FORMATO JSON REQUERIDO:
    c. VERIFICA visualmente que el precio pertenece a ese plato específico
    d. NO uses precios de otros platos
 4. Si los precios están en una columna separada, asócialos POR POSICIÓN VERTICAL: el primer precio de la columna va al primer plato de la lista, el segundo al segundo, etc.
-5. Si un plato tiene múltiples variantes (ej: \"SOLO\", \"JAMÓN Y QUESO\", \"COMPLETO\"), cada variante tiene su propio precio - créalos como platos separados con sus respectivos precios
+5. 🍕 VARIANTES Y TAMAÑOS (MUY IMPORTANTE - NO CONCATENES PRECIOS):
+   - Si un plato tiene MÚLTIPLES TAMAÑOS o VARIANTES con precios distintos (ej: pizza \"Chica \$3000 / Mediana \$4500 / Grande \$6000\", o \"SOLO\", \"JAMÓN Y QUESO\", \"COMPLETO\"), NO pongas todos los precios juntos en un solo plato
+   - Crea UN PLATO SEPARADO por cada tamaño/variante, con SU precio individual y el tamaño en el nombre. Ejemplo: \"Pizza Muzzarella (Chica)\" → \$3000, \"Pizza Muzzarella (Mediana)\" → \$4500, \"Pizza Muzzarella (Grande)\" → \$6000
+   - PROHIBIDO concatenar precios como \"\$3000 \$4500 \$6000\" o \"\$3000/\$4500/\$6000\" en el campo precio de un solo plato
+   - Cuando veas varios números de precio en la misma fila que un plato, casi siempre significa que hay varios tamaños: sepáralos en platos distintos
 6. **DOBLE VERIFICACIÓN**: Antes de finalizar, revisa que cada plato tenga SU precio correcto, no un precio genérico o copiado de otro plato
 
 REGLA FINAL: 
