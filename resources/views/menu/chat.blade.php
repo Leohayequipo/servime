@@ -482,7 +482,7 @@
                                 <span class="promo-fire-icon">{{ $categoria['icon'] }}</span> {{ $categoria['nombre'] }}
                             </button>
                         @else
-                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();"
+                            <button onclick="askQuestion('{{ $categoria['nombre'] }}', 'categoria', '{{ $categoria['nombre'] }}'); hideCategories();"
                                     class="cat-chip"
                                     onmouseover="this.style.background='#1f1f1f';"
                                     onmouseout="this.style.background='#141414';">
@@ -519,6 +519,9 @@
 
     <script>
         let isLoading = false;
+        // Contexto para el botón "Ver más opciones" (para no volcar el menú completo)
+        let lastCategoria = null;   // última categoría tocada
+        let lastQuery = null;       // última consulta escrita a mano / atajo
         const pedidosHabilitados = @json($comercio->pedido_habilitado);
         
         // ===== Reconocimiento de Voz =====
@@ -701,8 +704,17 @@
         }
 
         // Enviar mensaje
-        function sendMessage(message) {
+        function sendMessage(message, tipo, scope, esReconsulta) {
             if (isLoading) return;
+
+            // Recordar contexto para "Ver más opciones" (la reconsulta 'ver_mas' NO pisa el estado)
+            if (tipo === 'categoria') {
+                lastCategoria = scope || message;
+                lastQuery = null;
+            } else if (!tipo) {
+                lastCategoria = null;
+                lastQuery = message;
+            }
             
             isLoading = true;
             
@@ -734,13 +746,18 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'X-Session-ID': sessionId
                 },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify(
+                    tipo
+                        ? { message: message, tipo: tipo, scope: scope || message }
+                        : { message: message }
+                )
             })
             .then(response => response.json())
             .then(data => {
                 hideTypingIndicator();
                 if (data.response) {
-                    addMessage(data.response, 'bot', data.platos || []);
+                    // Si esta respuesta ya es un "ver más" (lista completa), no repetir el botón
+                    addMessage(data.response, 'bot', data.platos || [], !esReconsulta);
                 } else {
                     addMessage('Lo siento, no pude procesar tu mensaje. Inténtalo de nuevo.', 'bot');
                 }
@@ -953,7 +970,7 @@
             return `<div class="mt-3 space-y-3">${cards}</div>`;
         }
 
-        function addMessage(text, sender, platos = []) {
+        function addMessage(text, sender, platos = [], permitirVerMas = true) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
 
@@ -973,7 +990,7 @@
                             <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
-                                ${(platos && platos.length >= 1 && platos.length <= 6) ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>' : ''}
+                                ${(permitirVerMas && platos && platos.length >= 1 && platos.length <= 6) ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -1204,15 +1221,25 @@
             clearWish();
         });
         
-        function askQuestion(question) {
-            sendMessage(question);
+        function askQuestion(question, tipo, scope) {
+            sendMessage(question, tipo, scope);
             hideCategories();
             hideTags();
         }
 
-        // Re-pregunta lo mismo pero pidiendo TODAS las opciones que coincidan (sin el límite de recomendación)
+        // "Ver más": lista TODO lo que coincide, acotado al contexto de la última consulta (no el menú entero)
         function verMasOpciones() {
-            sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.');
+            // Si venías mirando una categoría, listá TODA esa categoría
+            if (lastCategoria) {
+                sendMessage('Mostrame TODAS las opciones de la categoría ' + lastCategoria + ', sin limitarte a unas pocas.', 'categoria', lastCategoria, true);
+                return;
+            }
+            // Si fue una consulta escrita, listá solo lo que coincide con ESA consulta
+            if (lastQuery) {
+                sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', 'ver_mas', lastQuery, true);
+                return;
+            }
+            sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', null, null, true);
         }
 
         // Delegación de eventos para botones "Lo quiero"

@@ -16,6 +16,15 @@ class ChatbotService
 
     private ?string $sessionId = null;
 
+    /**
+     * Modo de acotación cuando el cliente usa un atajo de la UI:
+     * 'categoria' = tocó un filtro de categoría; 'ver_mas' = pidió listar todo lo que coincide.
+     */
+    private ?string $modoRespuesta = null;
+
+    /** A qué acotar la respuesta: nombre de la categoría, o la consulta original en "ver más". */
+    private ?string $scopeRespuesta = null;
+
     public function __construct()
     {
         $this->openaiApiKey = config('services.openai.api_key');
@@ -25,10 +34,12 @@ class ChatbotService
     /**
      * Procesar mensaje del chatbot con contexto del menú y memoria de conversación
      */
-    public function processMessage(Comercio $comercio, string $message, ?string $sessionId = null): string
+    public function processMessage(Comercio $comercio, string $message, ?string $sessionId = null, ?string $modoRespuesta = null, ?string $scopeRespuesta = null): string
     {
         try {
             $this->sessionId = $sessionId;
+            $this->modoRespuesta = $modoRespuesta;
+            $this->scopeRespuesta = $scopeRespuesta;
 
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
@@ -544,6 +555,22 @@ class ChatbotService
     {
         $indicaciones = $this->indicacionesLocal($comercio);
         $carrito = $this->carritoActual($comercio);
+        $scope = $this->scopeRespuesta ?: $message;
+        $modoExtra = '';
+        if ($this->modoRespuesta === 'categoria') {
+            $modoExtra = "\n\n⚠️ MODO CATEGORÍA — ESTA REGLA MANDA SOBRE TODAS LAS ANTERIORES:\n"
+                ."El cliente está mirando SOLO la categoría \"{$scope}\" del menú (tocó ese filtro, no escribió una pregunta libre).\n"
+                ."- Recomendá/mostrá ÚNICAMENTE platos que pertenezcan a la categoría \"{$scope}\" en el menú de arriba. NO menciones NI sugieras nada de otras categorías.\n"
+                ."- PROHIBIDA la venta cruzada: NO sumes una bebida, guarnición, entrada ni postre de otra categoría. Ignorá cualquier regla anterior que pida acompañamientos.\n"
+                ."- Si el cliente pide ver TODAS/más opciones, listá TODOS los platos de la categoría \"{$scope}\" (sin límite). Si no, presentá unas pocas bien elegidas de esa misma categoría (3 a 5).\n"
+                ."- Si esa categoría no existe en el menú, decilo con amabilidad y ofrecé ver otra categoría real.\n";
+        } elseif ($this->modoRespuesta === 'ver_mas') {
+            $modoExtra = "\n\n⚠️ MODO VER MÁS — ESTA REGLA MANDA SOBRE TODAS LAS ANTERIORES:\n"
+                ."El cliente pidió ver TODAS las opciones que coincidan con su consulta anterior: \"{$scope}\".\n"
+                ."- Listá ÚNICAMENTE los platos del menú que coincidan con esa consulta (mismo tipo/categoría de producto).\n"
+                ."- NO vuelques el menú completo. NO agregues platos ni categorías que no tengan relación con \"{$scope}\".\n"
+                ."- PROHIBIDA la venta cruzada con otras categorías. Sin límite de cantidad: mostrá TODAS las que coincidan.\n";
+        }
 
         return "Sos el anfitrión gastronómico del restaurante: conocés el menú al detalle, recomendás como un buen mozo y, como un sommelier/catador, sabés MARIDAR (sugerir la bebida o el vino ideal para cada plato, un acompañamiento que combine o un postre para cerrar la experiencia). Tu misión es que el cliente la pase bien y arme un pedido que lo deje feliz — siempre con platos y bebidas REALES del menú.
 
@@ -674,7 +701,7 @@ REGLAS FINALES ABSOLUTAS ANTES DE RESPONDER:
 5. Nombrá cada plato que recomiendes con su NOMBRE EXACTO del menú: la app le pone sola la foto, el precio y el botón \"Lo quiero\". NO escribas precios, NO pegues imágenes/links, NO uses listas con guiones.
 6. RECOMENDÁ pocos platos (2 o 3) en prosa. Pero si piden \"ver más\", \"todas las opciones\" o el menú completo, listá TODAS las que coincidan con su consulta, sin limitarte. Sumá una sugerencia para acompañar cuando tenga sentido.
 7. LENGUAJE NEUTRAL: NUNCA uses frases como \"ven a disfrutar\", \"atrévete ahora y ven\", \"ven a probar\" porque el cliente puede estar DENTRO del local. Usa frases neutrales como \"Disfruta de...\", \"Prueba...\", \"Pide...\", \"No te lo pierdas\", \"Imperdible\".
-
+{$modoExtra}
 RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú):";
     }
 

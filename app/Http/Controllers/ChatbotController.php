@@ -25,9 +25,13 @@ class ChatbotController extends Controller
         try {
             $request->validate([
                 'message' => 'required|string|max:500',
+                'tipo' => 'nullable|string|in:categoria,ver_mas',
+                'scope' => 'nullable|string|max:500',
             ]);
 
             $message = $request->input('message');
+            $modoRespuesta = $request->input('tipo'); // 'categoria' | 'ver_mas' | null
+            $scopeRespuesta = $modoRespuesta ? $request->input('scope') : null;
             $startTime = microtime(true);
             // DEBUG: Log del mensaje recibido
             \Log::info('Chatbot Debug - Mensaje recibido', [
@@ -59,7 +63,7 @@ class ChatbotController extends Controller
             }
 
             // Usar el servicio de chatbot con OpenAI (pasar sessionId para memoria de conversación)
-            $response = $this->chatbotService->processMessage($comercio, $message, $sessionId);
+            $response = $this->chatbotService->processMessage($comercio, $message, $sessionId, $modoRespuesta, $scopeRespuesta);
             $responseTime = round((microtime(true) - $startTime) * 1000);
 
             // Contabilizar el consumo de IA del mes (para la cuota del plan)
