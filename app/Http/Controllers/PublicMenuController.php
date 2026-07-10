@@ -12,7 +12,9 @@ class PublicMenuController extends Controller
      */
     public function choose(Comercio $comercio)
     {
-        return view('menu.choose', compact('comercio'));
+        $chips = $comercio->getChipsSugeridos();
+
+        return view('menu.choose', compact('comercio', 'chips'));
     }
 
     /**

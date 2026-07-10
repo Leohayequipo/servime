@@ -76,7 +76,8 @@
         
         /* Fullscreen mobile app layout */
         .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-        .app-header { position: sticky; top: 0; z-index: 10; padding: 12px 16px; background: #000000; }
+        /* El header scrollea con el contenido (no queda fijo, libera altura en mobile) */
+        .app-header { padding: 8px 16px 14px; background: transparent; }
         .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; padding-bottom: 96px; }
         .input-fixed { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #000000; border-top: 1px solid rgba(255,255,255,0.1); }
         .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -229,16 +230,35 @@
 
         /* FAB button base */
         .fab-btn {
+            position: relative;
             width: 56px; height: 56px; border: none; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: transform .2s, box-shadow .2s;
             box-shadow: 0 10px 24px rgba(0,0,0,0.35);
         }
         .fab-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,.45); }
+        /* Feedback inmediato al tocar (mobile): el botón "se hunde" al presionar */
+        .fab-btn:active { transform: scale(.9); transition: transform .08s ease; box-shadow: 0 6px 14px rgba(0,0,0,.5); }
         .fab-btn-wish       { background: #2563eb; }
         .fab-btn-categories { background: var(--accent-color); }
         .fab-btn-tags       { background: #ff8c00; }
         .fab-btn span       { font-size: 22px; display: inline-block; }
+
+        /* Cada fab: botón + etiqueta debajo */
+        .fab-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .fab-label {
+            font-size: 10px; font-weight: 600; color: #fff; line-height: 1; letter-spacing: .2px;
+            background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 6px;
+            white-space: nowrap; pointer-events: none;
+        }
+        /* Badge de cantidad en el fab del pedido */
+        .fab-btn .fab-badge {
+            position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px;
+            padding: 0 5px; border-radius: 10px; background: #ef4444; color: #fff;
+            font-size: 12px; font-weight: 700; line-height: 20px; text-align: center;
+            border: 2px solid #000; box-shadow: 0 2px 6px rgba(0,0,0,.4); display: none;
+        }
+        .fab-btn .fab-badge.show { display: block; }
 
         /* FAB container */
         .fab-container {
@@ -257,6 +277,13 @@
         /* Input bar */
         .chat-input-bar { border-radius: 8px; }
 
+        /* Fondo oscuro detrás de cualquier panel abierto (lo separa del chat) */
+        .panel-backdrop {
+            display: none; position: fixed; inset: 0; z-index: 45;
+            background: rgba(0,0,0,.6); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+        }
+        .panel-backdrop.show { display: block; }
+
         /* Wish panel */
         .wish-panel {
             display: none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;
@@ -267,6 +294,7 @@
         }
         .wish-header {
             display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;
+            flex-wrap: wrap;
         }
         .wish-header h4 { font-size: 14px; font-weight: 700; color: #fff; margin: 0; }
         .wish-header-buttons { display: flex; gap: 8px; }
@@ -274,8 +302,8 @@
             padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
             font-size: 12px; cursor: pointer;
         }
-        .wish-btn-copy  { background: #141414; color: #fff; }
-        .wish-btn-clear { background: #221111; color: #ffb4b4; }
+        .wish-btn-clear { background: #221111; color: #ffb4b4; margin-right: 6px; }
+        .wish-btn-clear.armed { background: #7f1d1d; color: #fff; border-color: rgba(255,255,255,.35); }
         .wish-btn-close { background: #141414; color: #fff; }
         .wish-list {
             display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto;
@@ -319,12 +347,20 @@
 </head>
 <body class="bg-background">
     <div class="app">
-        <!-- Header fijo -->
+        <!-- Área de conversación (el header va adentro para que scrollee con el contenido) -->
+        <div id="chatScroll" class="chat-scroll">
+        <!-- Header (ahora scrollea con el contenido, no queda fijo) -->
         <div class="app-header">
             <div class="max-w-md mx-auto px-4">
                 <!-- Logo centrado -->
                 <div class="flex justify-center mb-3">
-                    <img src="{{ $comercio->logo_url ? asset('storage/' . $comercio->logo_url) : 'http://127.0.0.1:8000/storage/logos/7KSRtWP0gxvJn8aclINW6dS3QYHAVRf0uAe1XVc4.jpg' }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow">
+                    @if(!empty($comercio->logo_url))
+                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow">
+                    @else
+                        <div class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow flex items-center justify-center" style="background: linear-gradient(135deg, {{ $comercio->primary_color ?? '#3b82f6' }}, {{ $comercio->secondary_color ?? '#334155' }});">
+                            <span class="text-white text-3xl font-bold">{{ strtoupper(mb_substr($comercio->nombre ?? 'M', 0, 1)) }}</span>
+                        </div>
+                    @endif
                 </div>
                 <!-- Nombre del comercio centrado -->
                 <div class="text-center">
@@ -348,9 +384,7 @@
             </div>
         </div>
 
-        <!-- Área de conversación -->
-        <div id="chatScroll" class="chat-scroll">
-            <div id="chatMessages" class="max-w-md mx-auto space-y-4 px-4">
+            <div id="chatMessages" class="max-w-md mx-auto space-y-4 pl-4 pr-16">
                 <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-fade-in">
                     <div class="flex items-start">
                         <div class="flex-1">
@@ -382,22 +416,35 @@
         </div>
     </div>
 
+    <!-- Fondo oscuro que se muestra cuando hay un panel abierto (lo separa del chat) -->
+    <div id="panelBackdrop" class="panel-backdrop"></div>
+
     <!-- FAB Categorías + Tags + Pre‑pedido -->
     <div class="fab-container">
         @if($comercio->pedido_habilitado)
-            <button id="fabWish" title="Resumen para el mozo" class="fab-btn fab-btn-wish">
-                <span>🧾</span>
-            </button>
+            <div class="fab-item">
+                <button id="fabWish" title="Resumen para el mozo" class="fab-btn fab-btn-wish">
+                    <span>🧾</span>
+                    <span class="fab-badge" id="wishBadge"></span>
+                </button>
+                <span class="fab-label">Pedido</span>
+            </div>
         @endif
         @if(!empty($categorias))
-            <button id="fabCategories" title="Categorías del menú" class="fab-btn fab-btn-categories fab-categories-animated">
-                <span>📋</span>
-            </button>
+            <div class="fab-item">
+                <button id="fabCategories" title="Categorías del menú" class="fab-btn fab-btn-categories fab-categories-animated">
+                    <span>📋</span>
+                </button>
+                <span class="fab-label">Categorías</span>
+            </div>
         @endif
         @if(!empty($tags))
-            <button id="fabTags" title="Filtrar por tags" class="fab-btn fab-btn-tags">
-                <span>🏷️</span>
-            </button>
+            <div class="fab-item">
+                <button id="fabTags" title="Filtrar por tags" class="fab-btn fab-btn-tags">
+                    <span>🏷️</span>
+                </button>
+                <span class="fab-label">Filtros</span>
+            </div>
         @endif
     </div>
 
@@ -408,7 +455,6 @@
                 <div class="wish-header">
                     <h4>Resumen para el mozo</h4>
                     <div class="wish-header-buttons">
-                        <button id="wishCopy"  class="wish-btn wish-btn-copy">Copiar</button>
                         <button id="wishClear" class="wish-btn wish-btn-clear">Vaciar</button>
                         <button id="wishClose" class="wish-btn wish-btn-close">Cerrar</button>
                     </div>
@@ -959,7 +1005,28 @@
                 await fetch('/api/cart/show', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: sessionId})});
             } catch(e) {}
         }
-        function saveWish(arr){ localStorage.setItem(wishKey(), JSON.stringify(arr)); renderWish(); }
+        function saveWish(arr){ localStorage.setItem(wishKey(), JSON.stringify(arr)); renderWish(); updateWishBadge(); }
+        // Badge del fab de pedido: muestra la cantidad total de ítems cargados
+        function updateWishBadge(){
+            const badge = document.getElementById('wishBadge');
+            if(!badge) return;
+            const w = loadWish();
+            const total = w.reduce((s,it)=> s + (Number(it.qty)||1), 0);
+            if(total > 0){ badge.textContent = total > 99 ? '99+' : String(total); badge.classList.add('show'); }
+            else { badge.classList.remove('show'); }
+        }
+        // Quitar un ítem del pedido por nombre (para el toggle del botón "Lo quiero")
+        function removeWishByName(nombre){
+            if(!pedidosHabilitados) return;
+            const clean=(nombre||'').trim(); if(!clean) return;
+            const w=loadWish();
+            const i=w.findIndex(x=>x.nombre.toLowerCase()===clean.toLowerCase());
+            if(i>=0){
+                w.splice(i,1);
+                saveWish(w);
+                fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: clean})});
+            }
+        }
         function parsePriceToCents(txt){ if(!txt) return null; const m=String(txt).replace(/[^0-9,\.]/g,'').replace(',', '.'); const v=parseFloat(m); return isNaN(v)?null:Math.round(v*100); }
         function addWish(nombre, priceText){
             if (!pedidosHabilitados) return;
@@ -986,7 +1053,6 @@
         function incWish(idx){ if(!pedidosHabilitados) return; const w=loadWish(); if(w[idx]){ w[idx].qty+=1; saveWish(w); fetch('/api/cart/incr',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: w[idx].nombre, delta: 1})}); } }
         function delWish(idx){ if(!pedidosHabilitados) return; const w=loadWish(); const name=w[idx]?.nombre; w.splice(idx,1); saveWish(w); if(name){ fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: name})}); } }
         function clearWish(){ if(!pedidosHabilitados) return; saveWish([]); fetch('/api/cart/clear',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId()})}); }
-        function copyWish(){ if(!pedidosHabilitados) return; const w=loadWish(); const t=w.length?w.map(it=>`- ${it.nombre} x${it.qty}${it.priceText?` — ${it.priceText}`:''}`).join('\n'):'Sin ítems'; navigator.clipboard.writeText(`Resumen para el mozo\n${t}`); }
         function renderWish(){
             if(!pedidosHabilitados) return;
             const list=document.getElementById('wishList'); if(!list) return;
@@ -1061,57 +1127,82 @@
             }, 100);
         }
 
-        // Wishlist panel handlers
+        // ===== Gestión unificada de paneles + botón "atrás" del teléfono =====
         const fabWish = document.getElementById('fabWish');
         const wishPanel = document.getElementById('wishPanel');
-        if (fabWish && wishPanel) fabWish.addEventListener('click', () => {
-            const shown = wishPanel.style.display === 'block';
-            wishPanel.style.display = shown ? 'none' : 'block';
-            if (!shown) renderWish();
-        });
-        document.getElementById('wishClose')?.addEventListener('click', () => { if (wishPanel) wishPanel.style.display = 'none'; });
-        document.getElementById('wishClear')?.addEventListener('click', clearWish);
-        document.getElementById('wishCopy')?.addEventListener('click', copyWish);
-
-        // Categories panel handlers
         const fabCategories = document.getElementById('fabCategories');
         const categoriesPanel = document.getElementById('categoriesPanel');
-        function showCategories() { 
-            if (categoriesPanel) {
-                categoriesPanel.style.display = 'block';
-                if (tagsPanel) tagsPanel.style.display = 'none';
-            }
-        }
-        function hideCategories() { if (categoriesPanel) categoriesPanel.style.display = 'none'; }
-        function toggleCategories() { 
-            if (categoriesPanel) {
-                const isVisible = categoriesPanel.style.display === 'block';
-                categoriesPanel.style.display = isVisible ? 'none' : 'block';
-                if (!isVisible && tagsPanel) tagsPanel.style.display = 'none';
-            }
-        }
-        if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
-        document.getElementById('closeCategories')?.addEventListener('click', hideCategories);
-        
-        // Tags panel handlers
         const fabTags = document.getElementById('fabTags');
         const tagsPanel = document.getElementById('tagsPanel');
-        function showTags() { 
-            if (tagsPanel) {
-                tagsPanel.style.display = 'block';
-                if (categoriesPanel) categoriesPanel.style.display = 'none';
-            }
+
+        // Los paneles son mutuamente excluyentes: sólo uno abierto a la vez
+        let openPanelEl = null;
+
+        const panelBackdrop = document.getElementById('panelBackdrop');
+
+        function openPanel(el, onOpen) {
+            if (!el) return;
+            [wishPanel, categoriesPanel, tagsPanel].forEach(p => { if (p && p !== el) p.style.display = 'none'; });
+            const yaHabiaPanel = !!openPanelEl;
+            el.style.display = 'block';
+            openPanelEl = el;
+            if (panelBackdrop) panelBackdrop.classList.add('show'); // atenúa el chat detrás
+            if (typeof onOpen === 'function') onOpen();
+            // Empujamos un estado al historial: así el botón "atrás" cierra el panel y NO sale del menú
+            if (!yaHabiaPanel) history.pushState({ servimePanel: true }, '');
         }
-        function hideTags() { if (tagsPanel) tagsPanel.style.display = 'none'; }
-        function toggleTags() { 
-            if (tagsPanel) {
-                const isVisible = tagsPanel.style.display === 'block';
-                tagsPanel.style.display = isVisible ? 'none' : 'block';
-                if (!isVisible && categoriesPanel) categoriesPanel.style.display = 'none';
-            }
+
+        function closePanel(desdePopstate) {
+            if (!openPanelEl) return;
+            openPanelEl.style.display = 'none';
+            openPanelEl = null;
+            if (panelBackdrop) panelBackdrop.classList.remove('show');
+            // Si se cerró con un botón (no con "atrás"), consumimos el estado que empujamos
+            if (!desdePopstate && history.state && history.state.servimePanel) history.back();
         }
+
+        function togglePanel(el, onOpen) {
+            if (openPanelEl === el) closePanel(); else openPanel(el, onOpen);
+        }
+
+        // Tocar el fondo oscuro cierra el panel abierto
+        if (panelBackdrop) panelBackdrop.addEventListener('click', () => closePanel());
+
+        // Botón "atrás" del teléfono: cierra el panel abierto en lugar de abandonar el chat
+        window.addEventListener('popstate', () => { if (openPanelEl) closePanel(true); });
+
+        // Usadas por los onclick del markup y por askQuestion()
+        function hideCategories() { if (openPanelEl === categoriesPanel) closePanel(); }
+        function hideTags() { if (openPanelEl === tagsPanel) closePanel(); }
+        function toggleCategories() { togglePanel(categoriesPanel); }
+        function toggleTags() { togglePanel(tagsPanel); }
+
+        if (fabWish && wishPanel) fabWish.addEventListener('click', () => togglePanel(wishPanel, renderWish));
+        document.getElementById('wishClose')?.addEventListener('click', () => closePanel());
+        if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
+        document.getElementById('closeCategories')?.addEventListener('click', () => closePanel());
         if (fabTags) fabTags.addEventListener('click', toggleTags);
-        document.getElementById('closeTags')?.addEventListener('click', hideTags);
+        document.getElementById('closeTags')?.addEventListener('click', () => closePanel());
+
+        // "Vaciar" pedido: requiere doble toque para evitar borrados accidentales
+        const wishClearBtn = document.getElementById('wishClear');
+        let wishClearArmed = false, wishClearTimer = null;
+        function resetWishClear() {
+            wishClearArmed = false;
+            if (wishClearTimer) clearTimeout(wishClearTimer);
+            if (wishClearBtn) { wishClearBtn.textContent = 'Vaciar'; wishClearBtn.classList.remove('armed'); }
+        }
+        wishClearBtn?.addEventListener('click', () => {
+            if (!wishClearArmed) {
+                wishClearArmed = true;
+                wishClearBtn.textContent = '¿Vaciar?';
+                wishClearBtn.classList.add('armed');
+                wishClearTimer = setTimeout(resetWishClear, 3000);
+                return;
+            }
+            resetWishClear();
+            clearWish();
+        });
         
         function askQuestion(question) {
             sendMessage(question);
@@ -1130,22 +1221,26 @@
             if (t && t.classList.contains('btn-lo-quiero')) {
                 const nombre = t.getAttribute('data-nombre');
                 const priceText = t.getAttribute('data-price');
+
+                // Toggle: si ya está agregado, lo quitamos del pedido y volvemos a "Lo quiero"
+                if (t.dataset.added) {
+                    removeWishByName(nombre);
+                    delete t.dataset.added;
+                    t.textContent = 'Lo quiero';
+                    t.classList.remove('added');
+                    t.style.transform = 'scale(.95)';
+                    setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);
+                    return;
+                }
+
                 addWish(nombre, priceText);
 
-                // Feedback visual: pop + "✓ Agregado" y vuelve a su estado
-                if (!t.dataset.busy) {
-                    t.dataset.busy = '1';
-                    const original = t.textContent;
-                    t.textContent = '✓ Agregado';
-                    t.classList.add('added');
-                    t.style.transform = 'scale(1.12)';
-                    setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);
-                    setTimeout(() => {
-                        t.textContent = original;
-                        t.classList.remove('added');
-                        delete t.dataset.busy;
-                    }, 1200);
-                }
+                // Feedback visual: pop y QUEDA en verde con "✓ Agregado"
+                t.dataset.added = '1';
+                t.textContent = '✓ Agregado';
+                t.classList.add('added');
+                t.style.transform = 'scale(1.12)';
+                setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);
 
                 // Rebote del carrito flotante para que se note dónde se sumó
                 const fab = document.getElementById('fabWish');
@@ -1156,7 +1251,20 @@
         // Render inicial por si había selección previa
         if (pedidosHabilitados) {
             renderWish();
+            updateWishBadge();
         }
+
+        // Pregunta pre-cargada desde la pantalla de bienvenida (?q=...)
+        (function () {
+            try {
+                const preQ = new URLSearchParams(window.location.search).get('q');
+                if (preQ && preQ.trim()) {
+                    // Limpiar el query para que no se reenvíe si el usuario refresca
+                    history.replaceState(null, '', window.location.pathname);
+                    setTimeout(() => sendMessage(preQ.trim()), 400);
+                }
+            } catch (e) {}
+        })();
 
         // Event listeners
         document.getElementById('sendButton').addEventListener('click', function() {

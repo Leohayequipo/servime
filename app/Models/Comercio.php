@@ -331,4 +331,76 @@ class Comercio extends Model
 
         return '🍽️'; // Default icon
     }
+
+    /**
+     * Chips sugeridos para la pantalla de bienvenida, generados a partir del
+     * menú REAL del comercio (promos, tags dietéticos y categorías). Máx $max.
+     * Cada chip: ['emoji' => ..., 'label' => ..., 'q' => <pregunta para el chat>].
+     */
+    public function getChipsSugeridos(int $max = 3): array
+    {
+        $chips = [];
+
+        // 1. Recomendación: universal, siempre útil como primer acceso
+        $chips[] = ['emoji' => '✨', 'label' => '¿Qué me recomendás?', 'q' => '¿Qué me recomendás?'];
+
+        $categorias = $this->getCategoriasDelMenu();
+        $tags = $this->getTagsDelMenu();
+
+        // 2. Promos: si el menú tiene una categoría de promociones
+        $tienePromos = collect($categorias)->contains(fn ($c) => ! empty($c['es_promocion']));
+        if ($tienePromos) {
+            $chips[] = ['emoji' => '🔥', 'label' => 'Ver promos', 'q' => '¿Qué promociones tienen hoy?'];
+        }
+
+        // 3. Tags dietéticos (match tolerante: "Sin TACC", "sin-tacc", "SIN_TACC"...)
+        $tagsNorm = array_map(fn ($t) => strtoupper(str_replace([' ', '-'], '_', trim((string) $t))), $tags);
+        $tagChips = [
+            'SIN_TACC' => ['🌾', 'Sin TACC', '¿Tienen opciones sin TACC?'],
+            'VEGANO' => ['🌱', 'Veganas', '¿Tienen opciones veganas?'],
+            'VEGETARIANO' => ['🥗', 'Vegetarianas', '¿Tienen opciones vegetarianas?'],
+            'SIN_LACTOSA' => ['🥛', 'Sin lactosa', '¿Tienen opciones sin lactosa?'],
+            'SIN_AZUCAR' => ['🍬', 'Sin azúcar', '¿Tienen opciones sin azúcar?'],
+        ];
+        foreach ($tagChips as $tag => [$emoji, $label, $q]) {
+            if (in_array($tag, $tagsNorm, true)) {
+                $chips[] = ['emoji' => $emoji, 'label' => $label, 'q' => $q];
+            }
+        }
+
+        // 4. Categorías reales del menú (con su ícono)
+        foreach ($categorias as $cat) {
+            if (! empty($cat['es_promocion'])) {
+                continue;
+            }
+            $nombre = trim($cat['nombre'] ?? '');
+            if ($nombre === '') {
+                continue;
+            }
+            // Suavizar nombres TODO EN MAYÚSCULAS ("NUESTRAS PIZZAS" -> "Nuestras pizzas")
+            $label = $nombre;
+            if (mb_strtoupper($label, 'UTF-8') === $label) {
+                $label = \Illuminate\Support\Str::ucfirst(mb_strtolower($label, 'UTF-8'));
+            }
+            $chips[] = [
+                'emoji' => $cat['icon'] ?? '🍽️',
+                'label' => \Illuminate\Support\Str::limit($label, 22, ''),
+                'q' => '¿Qué tienen en '.$nombre.'?',
+            ];
+        }
+
+        // 5. Fallbacks universales (solo si no alcanzó con lo del menú)
+        $chips[] = ['emoji' => '🍽️', 'label' => '¿Qué tienen?', 'q' => '¿Qué tienen para comer?'];
+
+        // Dedupe por label y recortar a $max
+        $unique = [];
+        foreach ($chips as $chip) {
+            $key = mb_strtolower($chip['label']);
+            if (! isset($unique[$key])) {
+                $unique[$key] = $chip;
+            }
+        }
+
+        return array_slice(array_values($unique), 0, $max);
+    }
 }

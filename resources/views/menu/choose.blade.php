@@ -141,68 +141,6 @@
         /* ── Sección identidad ── */
         .identity { margin-bottom: 32px; }
 
-        /* ── Card IA: levitación ── */
-        @keyframes float-card {
-            0%, 100% { transform: translateY(0px); }
-            50%       { transform: translateY(-8px); }
-        }
-        .card-ia-float {
-            width: 100%;
-            margin-bottom: 10px;
-            position: relative;
-            animation: float-card 3.8s ease-in-out infinite;
-        }
-        .card-ia-float:hover { animation-play-state: paused; }
-
-        /* ── Card IA: glow que respira detrás ── */
-        @keyframes glow-breathe {
-            0%, 100% { opacity: 0.28; transform: scale(0.96); }
-            50%       { opacity: 0.55; transform: scale(1.04); }
-        }
-        .card-ia-glow {
-            position: absolute;
-            inset: 12px 8px;
-            border-radius: 22px;
-            background: #f59e0b;
-            filter: blur(24px);
-            z-index: 0;
-            animation: glow-breathe 3.8s ease-in-out infinite;
-            pointer-events: none;
-        }
-
-        /* ── Sparkles ── */
-        @keyframes sparkle-float {
-            0%, 100% { opacity: 0; transform: translateY(0) scale(0.3); }
-            30%, 70% { opacity: 1; }
-            50%       { opacity: 0.85; transform: translateY(-16px) scale(1); }
-        }
-        .spark {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            background: rgba(255,255,255,0.8);
-        }
-        .spark-1 { width: 3px; height: 3px; right: 28px; bottom: 52px; animation: sparkle-float 2.8s ease-in-out infinite 0.0s; }
-        .spark-2 { width: 2px; height: 2px; right: 52px; bottom: 38px; animation: sparkle-float 2.8s ease-in-out infinite 0.9s; }
-        .spark-3 { width: 3px; height: 3px; right: 40px; bottom: 72px; animation: sparkle-float 2.8s ease-in-out infinite 1.7s; }
-
-        /* ── Badge IA pulsante ── */
-        @keyframes badge-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(26,15,0,0.2); }
-            50%       { box-shadow: 0 0 0 5px rgba(26,15,0,0); }
-        }
-        .ia-badge-anim {
-            animation: badge-pulse 2.5s ease-in-out infinite;
-        }
-
-        /* ── Separador ── */
-        .divider {
-            width: 1px;
-            height: 28px;
-            background: linear-gradient(to bottom, transparent, rgba(245,158,11,0.3), transparent);
-            margin: 0 auto 28px;
-        }
-
         /* ── Label pregunta ── */
         .question-label {
             font-size: 11px;
@@ -211,146 +149,6 @@
             color: #374151;
             text-transform: uppercase;
             margin-bottom: 14px;
-        }
-
-        /* ── Card IA ── */
-        .card-ia {
-            display: block;
-            width: 100%;
-            background: #f59e0b;
-            border-radius: 20px;
-            padding: 24px;
-            text-decoration: none;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 10px;
-            transition: transform 0.22s cubic-bezier(0.22,1,0.36,1),
-                        box-shadow 0.22s ease;
-            text-align: left;
-        }
-        /* shimmer en reposo */
-        .card-ia::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -75%;
-            width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.14), transparent);
-            transform: skewX(-15deg);
-            animation: shimmer-idle 4.5s ease-in-out infinite 1.5s;
-        }
-        @keyframes shimmer-idle {
-            0%   { left: -75%; opacity: 0; }
-            10%  { opacity: 1; }
-            40%  { left: 135%; opacity: 0; }
-            100% { left: 135%; opacity: 0; }
-        }
-        /* shimmer al hover */
-        .card-ia::after {
-            content: '';
-            position: absolute;
-            top: 0; left: -75%;
-            width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.26), transparent);
-            transform: skewX(-15deg);
-            opacity: 0;
-        }
-        .card-ia:hover {
-            transform: translateY(-3px) scale(1.01);
-            box-shadow: 0 24px 52px rgba(245,158,11,0.35),
-                        0 0 0 1px rgba(245,158,11,0.55);
-        }
-        .card-ia:hover::after {
-            animation: shimmer-hover 0.55s ease-out forwards;
-        }
-        @keyframes shimmer-hover {
-            0%   { left: -75%; opacity: 1; }
-            100% { left: 135%; opacity: 0.5; }
-        }
-
-        .card-ia .ia-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .card-ia .ia-icon {
-            width: 44px; height: 44px;
-            background: rgba(0,0,0,0.16);
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .card-ia .ia-badge {
-            font-size: 9px; font-weight: 800; letter-spacing: 0.12em;
-            color: rgba(26,15,0,0.45);
-            background: rgba(0,0,0,0.1);
-            padding: 4px 10px; border-radius: 999px;
-        }
-        .card-ia .ia-title {
-            font-size: 20px; font-weight: 700;
-            color: #1a0f00; margin-bottom: 6px;
-            line-height: 1.2;
-        }
-        .card-ia .ia-desc {
-            font-size: 13px; line-height: 1.55;
-            color: rgba(26,15,0,0.58);
-        }
-        .card-ia .ia-cta {
-            display: inline-flex; align-items: center; gap: 6px;
-            margin-top: 18px;
-            font-size: 12px; font-weight: 700;
-            color: rgba(26,15,0,0.55);
-            letter-spacing: 0.04em;
-        }
-
-        /* ── Card clásica ── */
-        .card-classic {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(8px);
-            border-radius: 16px;
-            padding: 18px 20px;
-            text-decoration: none;
-            transition: border-color 0.22s ease,
-                        background 0.22s ease,
-                        transform 0.22s cubic-bezier(0.22,1,0.36,1);
-            text-align: left;
-        }
-        .card-classic:hover {
-            border-color: rgba(255,255,255,0.18);
-            background: rgba(255,255,255,0.06);
-            transform: translateY(-2px);
-        }
-        .card-classic .classic-left {
-            display: flex; align-items: center; gap: 14px;
-        }
-        .card-classic .classic-icon {
-            width: 38px; height: 38px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: background 0.2s ease;
-        }
-        .card-classic:hover .classic-icon { background: rgba(255,255,255,0.1); }
-        .card-classic .classic-title {
-            font-size: 15px; font-weight: 600; color: #fff;
-            margin-bottom: 2px;
-        }
-        .card-classic .classic-desc {
-            font-size: 11.5px; color: #4b5563;
-        }
-        .card-classic .classic-arrow {
-            font-size: 18px; color: rgba(255,255,255,0.2);
-            transition: transform 0.2s ease, color 0.2s ease;
-            flex-shrink: 0;
-        }
-        .card-classic:hover .classic-arrow {
-            transform: translate(2px,-2px);
-            color: rgba(255,255,255,0.5);
         }
 
         /* ── Dot open ── */
@@ -381,6 +179,99 @@
             border-radius: 50%;
             background: #1f2937;
         }
+
+        /* ── Barra IA (buscador/chat) ── */
+        @keyframes bar-glow {
+            0%, 100% { box-shadow: 0 0 0 1.5px rgba(245,158,11,0.5), 0 0 16px rgba(245,158,11,0.10); }
+            50%      { box-shadow: 0 0 0 1.5px rgba(245,158,11,0.95), 0 0 34px rgba(245,158,11,0.42); }
+        }
+        .ai-bar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 11px 13px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.035);
+            border: 1.5px solid rgba(245,158,11,0.6);
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            animation: bar-glow 1.2s ease-in-out infinite;
+            transition: transform 0.2s cubic-bezier(0.22,1,0.36,1);
+            margin-bottom: 18px;
+        }
+        .ai-bar:hover  { transform: translateY(-2px); }
+        .ai-bar:active { transform: scale(0.99); }
+        .ai-bar-icon {
+            flex-shrink: 0;
+            width: 46px; height: 46px;
+            border-radius: 13px;
+            background: #f59e0b;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 16px rgba(245,158,11,0.35);
+        }
+        .ai-bar-text {
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            color: #e5e7eb;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @keyframes caret-blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+        .ai-caret {
+            color: #f59e0b;
+            font-weight: 400;
+            margin-left: 1px;
+            animation: caret-blink 0.85s step-end infinite;
+        }
+        .ai-bar-arrow {
+            flex-shrink: 0;
+            color: #f59e0b;
+            display: flex; align-items: center;
+        }
+
+        /* ── Chips de preguntas frecuentes ── */
+        .chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09);
+            color: #d1d5db;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+        .chip:hover {
+            border-color: rgba(245,158,11,0.4);
+            background: rgba(245,158,11,0.08);
+            transform: translateY(-1px);
+        }
+
+        /* ── Link discreto al menú clásico ── */
+        .classic-link {
+            font-size: 13px;
+            color: #6b7280;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: color 0.2s ease;
+        }
+        .classic-link:hover { color: #9ca3af; }
     </style>
 </head>
 <body>
@@ -453,67 +344,43 @@
                 </div>
             </div>
 
-            <!-- Divisor -->
-            <div class="divider fu d4"></div>
-
             <!-- Pregunta -->
             <p class="question-label fu d4">¿Cómo querés explorar el menú?</p>
 
-            <!-- Cards -->
+            <!-- Barra IA + accesos rápidos -->
             <div style="width:100%;" class="fu d5">
 
-                <!-- Card IA -->
-                <div class="card-ia-float">
-                    <div class="card-ia-glow"></div>
-                    <a href="{{ route('menu.chat', $comercio) }}" class="card-ia" style="position:relative;z-index:1;" data-track-choice="ia">
-                        <!-- Sparkles -->
-                        <span class="spark spark-1"></span>
-                        <span class="spark spark-2"></span>
-                        <span class="spark spark-3"></span>
-
-                        <div class="ia-header">
-                            <div class="ia-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                                     stroke="rgba(26,15,0,0.75)" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                    <circle cx="9" cy="10" r="1" fill="rgba(26,15,0,0.75)"/>
-                                    <circle cx="12" cy="10" r="1" fill="rgba(26,15,0,0.75)"/>
-                                    <circle cx="15" cy="10" r="1" fill="rgba(26,15,0,0.75)"/>
-                                </svg>
-                            </div>
-                            <span class="ia-badge ia-badge-anim">IA</span>
-                        </div>
-                        <div class="ia-title">Explorar con IA</div>
-                        <div class="ia-desc">Preguntá lo que quieras — qué tiene, qué te recomiendo, si hay opciones sin TACC — te respondemos al instante.</div>
-                        <div class="ia-cta">
-                            Empezar ahora
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2.5"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14M12 5l7 7-7 7"/>
-                            </svg>
-                        </div>
-                    </a>
-                </div>
-
-                <!-- Card clásica -->
-                <a href="{{ route('menu.classic', $comercio) }}" class="card-classic" data-track-choice="classic">
-                    <div class="classic-left">
-                        <div class="classic-icon">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                                 stroke="rgba(255,255,255,0.55)" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M4 6h16M4 10h16M4 14h10M4 18h7"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="classic-title">Ver menú completo</div>
-                            <div class="classic-desc">Navegá todas las secciones a tu ritmo</div>
-                        </div>
-                    </div>
-                    <span class="classic-arrow">↗</span>
+                <!-- Barra tipo buscador/chat: lleva al chat con IA -->
+                <a href="{{ route('menu.chat', $comercio) }}" class="ai-bar" data-track-choice="ia">
+                    <span class="ai-bar-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(26,15,0,0.9)">
+                            <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z"/>
+                            <path d="M19 13.5l.85 2.35L22 16.7l-2.15.7L19 19.7l-.85-2.3L16 16.7l2.15-.85L19 13.5z"/>
+                        </svg>
+                    </span>
+                    <span class="ai-bar-text"><span id="aiTypewriter"></span><span class="ai-caret">|</span></span>
+                    <span class="ai-bar-arrow">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </span>
                 </a>
+
+                <!-- Chips generados a partir del menú real del comercio (pre-cargan la pregunta en el chat) -->
+                @if(!empty($chips))
+                    <div class="chips-row fu d6">
+                        @foreach($chips as $chip)
+                            <a class="chip" href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">{{ $chip['emoji'] }} {{ $chip['label'] }}</a>
+                        @endforeach
+                    </div>
+                @endif
+
+                <!-- Link discreto al menú tradicional -->
+                <div class="fu d6" style="text-align:center;margin-top:2px;">
+                    <a href="{{ route('menu.classic', $comercio) }}" class="classic-link" data-track-choice="classic">Prefiero ver el menú completo</a>
+                </div>
 
             </div>
 
@@ -526,6 +393,35 @@
 
         </div>
     </div>
+
+    <script>
+        // Efecto máquina de escribir en la barra IA
+        (function () {
+            var phrases = [
+                '¿Qué me recomendás hoy?',
+                '¿Tienen opciones sin TACC?',
+                '¿Qué tiene el combo de la tarde?',
+                'Preguntame lo que quieras...'
+            ];
+            var el = document.getElementById('aiTypewriter');
+            if (!el) return;
+            var pi = 0, ci = 0, deleting = false;
+            function tick() {
+                var full = phrases[pi];
+                if (!deleting) {
+                    ci++;
+                    el.textContent = full.slice(0, ci);
+                    if (ci === full.length) { deleting = true; return setTimeout(tick, 1600); }
+                    return setTimeout(tick, 55 + Math.random() * 45);
+                }
+                ci--;
+                el.textContent = full.slice(0, ci);
+                if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; return setTimeout(tick, 350); }
+                return setTimeout(tick, 28);
+            }
+            setTimeout(tick, 500);
+        })();
+    </script>
 
     @include('menu.partials.tracking', ['trackView' => 'choose'])
 </body>
