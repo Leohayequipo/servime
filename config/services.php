@@ -36,8 +36,8 @@ return [
     ],
 
     'support' => [
-        'email'     => env('SUPPORT_EMAIL', 'info.servime@gmail.com'),
-        'whatsapp'  => env('SUPPORT_WHATSAPP_E164', ''),
+        'email' => env('SUPPORT_EMAIL', 'info.servime@gmail.com'),
+        'whatsapp' => env('SUPPORT_WHATSAPP_E164', ''),
     ],
 
     'openai' => [
@@ -50,6 +50,13 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'), // Modelo estable y rápido para procesar PDFs
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+    ],
+
+    // Geolocalización de IPs para saber desde qué país/ciudad entran a la web.
+    // ipwho.is: gratis, sin API key, HTTPS. Se puede apagar con GEOIP_ENABLED=false.
+    'geoip' => [
+        'enabled' => env('GEOIP_ENABLED', true),
+        'url' => env('GEOIP_URL', 'https://ipwho.is'),
     ],
 
 ];

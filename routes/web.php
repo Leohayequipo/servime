@@ -2,9 +2,9 @@
 
 // Auto-deploy test
 
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -12,25 +12,26 @@ Route::get('/', function () {
         return redirect('/dashboard');
     }
     $planes = \App\Models\Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get();
-    return view('marketing.landing', compact('planes'));
-});
+    $stats = \App\Models\SiteVisit::stats();
+
+    return view('marketing.landing', compact('planes', 'stats'));
+})->middleware(\App\Http\Middleware\TrackSiteVisit::class);
 
 // Ruta para servir logos directamente
 Route::get('/logos/{filename}', function ($filename) {
-    if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
+    if (! preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
         abort(404);
     }
 
     $allowedDir = realpath(storage_path('app/public/logos'));
-    $realPath   = realpath($allowedDir . DIRECTORY_SEPARATOR . $filename);
+    $realPath = realpath($allowedDir.DIRECTORY_SEPARATOR.$filename);
 
-    if (!$realPath || !str_starts_with($realPath, $allowedDir) || !is_file($realPath)) {
+    if (! $realPath || ! str_starts_with($realPath, $allowedDir) || ! is_file($realPath)) {
         abort(404);
     }
 
     return response()->file($realPath);
 })->name('logos.show');
-
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -38,13 +39,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Rutas de Administración (Solo Super Administradores)
     Route::middleware('super_admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', function () {
             return redirect()->route('dashboard');
         })->name('dashboard');
-        
+
         // Gestión de Usuarios
         Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])->name('users.index');
         Route::get('/users/create', [App\Http\Controllers\AdminController::class, 'createUser'])->name('users.create');
@@ -53,7 +54,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}/edit', [App\Http\Controllers\AdminController::class, 'editUser'])->name('users.edit');
         Route::put('/users/{user}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
-        
+
         // Gestión de Planes y asignación a comercios
         Route::get('/plans', [App\Http\Controllers\PlanController::class, 'index'])->name('plans.index');
         Route::get('/plans/create', [App\Http\Controllers\PlanController::class, 'create'])->name('plans.create');
@@ -69,7 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
         Route::delete('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
-        
+
         // Gestión de Menús
         Route::get('/menus', [App\Http\Controllers\AdminController::class, 'menus'])->name('menus.index');
         Route::get('/menus/deleted', [App\Http\Controllers\AdminController::class, 'menusDeleted'])->name('menus.deleted');
@@ -80,8 +81,11 @@ Route::middleware('auth')->group(function () {
 
         // Chat del landing
         Route::get('/landing-chat', [App\Http\Controllers\AdminController::class, 'landingChat'])->name('landing-chat.index');
+
+        // Analytics de la web pública (de dónde entran: canal, país/ciudad, dispositivo)
+        Route::get('/web-analytics', [App\Http\Controllers\AdminController::class, 'webAnalytics'])->name('web-analytics.index');
     });
-    
+
     // Rutas de Comercios (usando slug)
     Route::get('/comercios/create', [ComercioController::class, 'create'])->name('comercios.create');
     Route::post('/comercios', [ComercioController::class, 'store'])->name('comercios.store');
@@ -115,7 +119,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen')->middleware('plan.feature:promociones');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion')->middleware('plan.feature:promociones');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones')->middleware('plan.feature:promociones');
-    
+
     // Rutas de personalización (ahora integradas en editar, usando slug)
 });
 
@@ -123,6 +127,11 @@ Route::middleware('auth')->group(function () {
 Route::post('/api/landing-chat', [App\Http\Controllers\LandingChatController::class, 'chat'])
     ->middleware('throttle:20,1')
     ->name('landing.chat');
+
+// Contador en vivo del footer de la landing (stats cacheadas 30s)
+Route::get('/api/site-stats', fn () => response()->json(\App\Models\SiteVisit::stats()))
+    ->middleware('throttle:60,1')
+    ->name('site.stats');
 
 // Rutas públicas (sin autenticación, usando slug)
 Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
@@ -142,15 +151,15 @@ Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
     Route::post('/clear', [App\Http\Controllers\CartController::class, 'clear'])->name('api.cart.clear');
 });
 
-    // Rutas de Analytics (requieren autenticación, usando slug)
-    Route::middleware(['auth'])->group(function () {
-        Route::prefix('analytics')->name('analytics.')->group(function () {
-            Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
-            Route::get('/comercio/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
-            Route::get('/export/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
-            Route::post('/comercio/{comercio:slug}/reclassify', [App\Http\Controllers\AnalyticsController::class, 'reclassifyIntents'])
-                ->name('reclassify')->middleware('plan.feature:intencion_ia');
-        });
+// Rutas de Analytics (requieren autenticación, usando slug)
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\AnalyticsController::class, 'dashboard'])->name('dashboard');
+        Route::get('/comercio/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'comercio'])->name('comercio');
+        Route::get('/export/{comercio:slug}', [App\Http\Controllers\AnalyticsController::class, 'exportConversations'])->name('export');
+        Route::post('/comercio/{comercio:slug}/reclassify', [App\Http\Controllers\AnalyticsController::class, 'reclassifyIntents'])
+            ->name('reclassify')->middleware('plan.feature:intencion_ia');
     });
+});
 
 require __DIR__.'/auth.php';

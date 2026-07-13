@@ -501,6 +501,49 @@
                         <a class="text-white/70 hover:text-white transition" href="{{ route('login') }}">Entrar</a>
                     </div>
                 </div>
+
+                {{-- ── Contador en vivo (se oculta si no hay datos: migración pendiente, DB caída, etc.) ── --}}
+                @if (($stats['visitas'] ?? 0) > 0 || ($stats['consultas_ia'] ?? 0) > 0)
+                <div class="mt-10 pt-8 border-t border-white/5">
+                    <div id="live-counter"
+                         class="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-4
+                                rounded-2xl bg-white/[0.03] ring-1 ring-white/10 px-6 py-4">
+
+                        {{-- Navegando ahora --}}
+                        <span class="inline-flex items-center gap-2.5">
+                            <span class="relative flex h-2 w-2" aria-hidden="true">
+                                <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping"></span>
+                                <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                            </span>
+                            <strong data-counter data-value="{{ $stats['activos'] ?? 0 }}"
+                                    class="font-display text-lg tabular-nums text-white">0</strong>
+                            <span class="text-sm text-white/55">navegando ahora</span>
+                        </span>
+
+                        <span class="hidden sm:block h-5 w-px bg-white/10" aria-hidden="true"></span>
+
+                        {{-- Visitas totales --}}
+                        <span class="inline-flex items-center gap-2.5">
+                            <strong data-counter data-value="{{ $stats['visitas'] ?? 0 }}"
+                                    class="font-display text-lg tabular-nums text-white">0</strong>
+                            <span class="text-sm text-white/55">visitas</span>
+                        </span>
+
+                        <span class="hidden sm:block h-5 w-px bg-white/10" aria-hidden="true"></span>
+
+                        {{-- Consultas resueltas por IA --}}
+                        <span class="inline-flex items-center gap-2.5">
+                            <svg class="h-4 w-4 text-[color:var(--accent)]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M10 1.5l1.9 4.6 4.6 1.9-4.6 1.9L10 14.5 8.1 9.9 3.5 8l4.6-1.9L10 1.5zM4.5 13l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/>
+                            </svg>
+                            <strong data-counter data-value="{{ $stats['consultas_ia'] ?? 0 }}"
+                                    class="font-display text-lg tabular-nums text-white">0</strong>
+                            <span class="text-sm text-white/55">consultas resueltas por IA</span>
+                        </span>
+                    </div>
+
+                </div>
+                @endif
             </div>
         </footer>
 
@@ -1010,6 +1053,74 @@
                 }
 
                 schedule(() => runConvo(0), 600);
+            })();
+        </script>
+
+        {{-- ── Contador en vivo del footer ── --}}
+        <script>
+            (() => {
+                const panel = document.getElementById('live-counter');
+                if (!panel) return;
+
+                const nodes = [...panel.querySelectorAll('[data-counter]')];
+                const nf = new Intl.NumberFormat('es-AR');
+                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                // Anima de su valor actual al nuevo (easing suave, ~1.1s)
+                function animar(el, hasta) {
+                    const desde = Number(el.dataset.shown || 0);
+                    if (desde === hasta) return;
+
+                    el.dataset.shown = String(hasta);
+
+                    if (reduce) {
+                        el.textContent = nf.format(hasta);
+                        return;
+                    }
+
+                    const dur = 1100;
+                    const t0 = performance.now();
+
+                    function frame(t) {
+                        const p = Math.min((t - t0) / dur, 1);
+                        const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+                        el.textContent = nf.format(Math.round(desde + (hasta - desde) * eased));
+                        if (p < 1) requestAnimationFrame(frame);
+                    }
+                    requestAnimationFrame(frame);
+                }
+
+                function pintar() {
+                    nodes.forEach(el => animar(el, Number(el.dataset.value || 0)));
+                }
+
+                // Trae los números frescos del server (incluye la visita actual)
+                async function refrescar() {
+                    if (document.hidden) return;
+                    try {
+                        const r = await fetch('{{ route('site.stats') }}', { headers: { 'Accept': 'application/json' } });
+                        if (!r.ok) return;
+                        const s = await r.json();
+                        const map = [s.activos, s.visitas, s.consultas_ia];
+                        nodes.forEach((el, i) => {
+                            if (typeof map[i] === 'number') {
+                                el.dataset.value = String(map[i]);
+                                animar(el, map[i]);
+                            }
+                        });
+                    } catch (_) { /* el contador nunca rompe la página */ }
+                }
+
+                // Contar recién cuando el footer entra en pantalla
+                const io = new IntersectionObserver((entries, obs) => {
+                    if (!entries.some(e => e.isIntersecting)) return;
+                    obs.disconnect();
+
+                    pintar();                       // anima los valores del server-render
+                    setTimeout(refrescar, 1500);    // ya con la visita actual contada
+                    setInterval(refrescar, 30000);  // y en vivo de ahí en más
+                }, { threshold: 0.35 });
+                io.observe(panel);
             })();
         </script>
 

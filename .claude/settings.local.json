@@ -18,7 +18,23 @@
       "Bash(tasklist)",
       "Bash(cp resources/views/comercios/edit.blade.php /tmp/edit_backup.blade.php)",
       "Bash(sed -i '270,284d;380,549d' resources/views/comercios/edit.blade.php)",
-      "Bash(./vendor/bin/pint app/Http/Controllers/LandingChatController.php tests/Feature/LandingChatContactTest.php)"
+      "Bash(./vendor/bin/pint app/Http/Controllers/LandingChatController.php tests/Feature/LandingChatContactTest.php)",
+      "PowerShell(netstat *)",
+      "Bash(grep -nE \"use App\\\\\\\\\\\\\\\\Models\\\\\\\\\\\\\\\\Menu;\" app/Http/Controllers/MenuController.php)",
+      "Bash(sed -E 's/\\(PASSWORD=\\).*/\\\\1***/')",
+      "Bash(php -l app/Services/ChatbotService.php)",
+      "Bash(php -l app/Http/Controllers/ChatbotController.php)",
+      "Bash(curl -s -o /tmp/home2.html -w \" home status = %{http_code}\\\\n\" -A \"Mozilla/5.0 Chrome/120\" http://127.0.0.1:8099/)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -A 'Mozilla/5.0 Chrome/120' http://127.0.0.1:8099/api/site-stats)",
+      "Bash(echo \" stats -> $\\(curl -s -A 'Mozilla/5.0 Chrome/120' http://127.0.0.1:8099/api/site-stats\\)\")",
+      "Bash(pkill -f \"artisan serve\")",
+      "Bash(./vendor/bin/pint app/Models/SiteVisit.php)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" -A \"Mozilla/5.0 Chrome/120\" http://127.0.0.1:8000/)",
+      "Bash(curl -s -A \"Mozilla/5.0 Chrome/120\" http://127.0.0.1:8000/)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"artisan serve --port=8000\")",
+      "Bash(php artisan tinker '--execute= *)"
     ]
   }
 }

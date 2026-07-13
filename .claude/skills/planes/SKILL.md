@@ -51,6 +51,22 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 - **Dashboard**: `DashboardController` pasa `$comerciosSinCuotaIA`; la vista muestra un aviso amarillo
   cuando un comercio llegó al límite.
 
+## En el landing público (marketing)
+
+Los planes también se muestran **públicamente** (no solo en el admin):
+
+- **Sección de precios** en `resources/views/marketing/landing.blade.php`: la ruta `/`
+  (`routes/web.php`) pasa `$planes = Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get()`.
+  Renderiza una card por plan con precio, descripción, cuota de IA y features. El plan de demo
+  (`orden = 0`) queda **excluido** por el filtro `orden > 0`.
+- **Precios en PESOS (ARS)**, no USD: se muestran como `$X/mes`; si el plan **no tiene precio**
+  cargado → muestra **"A consultar"**. La `<meta>` description y el schema.org (`priceCurrency: ARS`)
+  toman el precio mínimo (`$planes->min('precio')`, que ignora nulls).
+- **Chatbot de ventas del landing** (`LandingChatController`): arma su system prompt con los planes
+  vigentes desde DB (`buildSystemPrompt()`), no con un precio hardcodeado. Tiene `FEATURE_LABELS`
+  (incluye `intencion_ia`) para nombrar las features en lenguaje humano.
+- Cargar/editar precios: `/admin/plans` (no requiere deploy).
+
 ## Panel admin (super admin, prefijo `/admin`)
 
 `App\Http\Controllers\PlanController` + rutas en `routes/web.php` (dentro del grupo `super_admin`):
