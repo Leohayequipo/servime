@@ -81,9 +81,6 @@ Route::middleware('auth')->group(function () {
 
         // Chat del landing
         Route::get('/landing-chat', [App\Http\Controllers\AdminController::class, 'landingChat'])->name('landing-chat.index');
-
-        // Analytics de la web pública (de dónde entran: canal, país/ciudad, dispositivo)
-        Route::get('/web-analytics', [App\Http\Controllers\AdminController::class, 'webAnalytics'])->name('web-analytics.index');
     });
 
     // Rutas de Comercios (usando slug)

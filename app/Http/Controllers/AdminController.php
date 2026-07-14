@@ -6,7 +6,6 @@ use App\Mail\WelcomeEmail;
 use App\Models\ChatLanding;
 use App\Models\Comercio;
 use App\Models\Menu;
-use App\Models\SiteVisit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -373,61 +372,5 @@ class AdminController extends Controller
         $hoy = ChatLanding::whereDate('created_at', today())->count();
 
         return view('admin.landing-chat.index', compact('mensajes', 'totalMensajes', 'totalSesiones', 'hoy'));
-    }
-
-    /**
-     * Analytics de la web pública: de dónde entran (canal, país/ciudad) y con qué dispositivo.
-     */
-    public function webAnalytics(Request $request)
-    {
-        $dias = (int) $request->input('dias', 30);
-        $dias = in_array($dias, [7, 30, 90, 365], true) ? $dias : 30;
-        $desde = now()->subDays($dias);
-
-        $visitas = SiteVisit::where('created_at', '>=', $desde)->count();
-        $visitantes = SiteVisit::where('created_at', '>=', $desde)
-            ->distinct('visitor_id')->count('visitor_id');
-
-        // Ranking por columna, ya normalizado a {label, total} para que la vista sea tonta
-        $ranking = function (string $columna, int $limite = 10) use ($desde) {
-            return SiteVisit::where('created_at', '>=', $desde)
-                ->whereNotNull($columna)
-                ->selectRaw("{$columna} as valor, COUNT(*) as total")
-                ->groupBy($columna)
-                ->orderByDesc('total')
-                ->limit($limite)
-                ->get()
-                ->map(fn ($f) => ['label' => (string) $f->valor, 'total' => (int) $f->total])
-                ->all();
-        };
-
-        $porCanal = $ranking('source');
-        $porDispositivo = $ranking('device', 5);
-        $porCiudad = $ranking('city', 10);
-
-        $porPais = SiteVisit::where('created_at', '>=', $desde)
-            ->whereNotNull('country_code')
-            ->selectRaw('country_code, country, COUNT(*) as total')
-            ->groupBy('country_code', 'country')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get()
-            ->map(fn ($f) => [
-                'label' => $f->country ?: $f->country_code,
-                'code' => $f->country_code,
-                'total' => (int) $f->total,
-            ])
-            ->all();
-
-        // Visitas que todavía no se geolocalizaron (cola pendiente, IP local o fallo del proveedor)
-        $sinGeo = SiteVisit::where('created_at', '>=', $desde)
-            ->whereNull('country_code')->count();
-
-        $canalTop = $porCanal[0]['label'] ?? '—';
-
-        return view('admin.web-analytics.index', compact(
-            'dias', 'visitas', 'visitantes', 'porCanal', 'porDispositivo',
-            'porPais', 'porCiudad', 'sinGeo', 'canalTop'
-        ));
     }
 }

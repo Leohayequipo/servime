@@ -94,6 +94,57 @@ class SiteVisit extends Model
     }
 
     /**
+     * Resumen de "de dónde entran" para el dashboard de analytics (solo super admin).
+     * Devuelve todo ya normalizado a {label, total} para que la vista sea tonta.
+     */
+    public static function resumen(int $dias): array
+    {
+        $desde = now()->subDays($dias);
+
+        $ranking = function (string $columna, int $limite = 10) use ($desde) {
+            return static::where('created_at', '>=', $desde)
+                ->whereNotNull($columna)
+                ->selectRaw("{$columna} as valor, COUNT(*) as total")
+                ->groupBy($columna)
+                ->orderByDesc('total')
+                ->limit($limite)
+                ->get()
+                ->map(fn ($f) => ['label' => (string) $f->valor, 'total' => (int) $f->total])
+                ->all();
+        };
+
+        $porCanal = $ranking('source');
+
+        $porPais = static::where('created_at', '>=', $desde)
+            ->whereNotNull('country_code')
+            ->selectRaw('country_code, country, COUNT(*) as total')
+            ->groupBy('country_code', 'country')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get()
+            ->map(fn ($f) => [
+                'label' => $f->country ?: $f->country_code,
+                'code' => $f->country_code,
+                'total' => (int) $f->total,
+            ])
+            ->all();
+
+        return [
+            'dias' => $dias,
+            'visitas' => static::where('created_at', '>=', $desde)->count(),
+            'visitantes' => static::where('created_at', '>=', $desde)
+                ->distinct('visitor_id')->count('visitor_id'),
+            'canal_top' => $porCanal[0]['label'] ?? '—',
+            'por_canal' => $porCanal,
+            'por_dispositivo' => $ranking('device', 5),
+            'por_pais' => $porPais,
+            'por_ciudad' => $ranking('city', 10),
+            // Visitas sin geolocalizar (cola pendiente, IP local o el proveedor no la reconoció)
+            'sin_geo' => static::where('created_at', '>=', $desde)->whereNull('country_code')->count(),
+        ];
+    }
+
+    /**
      * Métricas del contador del footer. Cacheadas: el footer se renderiza en cada visita
      * y no queremos pegarle a la DB cada vez.
      *

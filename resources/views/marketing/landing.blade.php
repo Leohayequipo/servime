@@ -645,11 +645,23 @@
                 </div>
             </div>
 
-            <button id="contact-fab-btn" type="button" aria-label="Abrir chat de ventas"
-                    class="fab-live-anim h-14 w-14 rounded-full bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black shadow-lg shadow-amber-500/30 flex items-center justify-center transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4z"/>
-                </svg>
+            <button id="contact-fab-btn" type="button" aria-label="Abrir chat de ayuda"
+                    class="fab-live-anim flex items-center gap-2.5 h-14 pl-3 pr-5 rounded-full
+                           bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black
+                           shadow-lg shadow-amber-500/30 transition-colors">
+                {{-- Ícono + punto verde: "hay alguien del otro lado" --}}
+                <span class="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/10 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4z"/>
+                    </svg>
+                    <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5" aria-hidden="true">
+                        <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-70 animate-ping"></span>
+                        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[color:var(--accent)]"></span>
+                    </span>
+                </span>
+
+                {{-- Lo que faltaba: decir qué es --}}
+                <span class="text-sm font-semibold whitespace-nowrap leading-none">¿Te ayudo?</span>
             </button>
         </div>
 

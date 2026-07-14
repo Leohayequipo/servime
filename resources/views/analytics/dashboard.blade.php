@@ -273,6 +273,169 @@
                     </div>
                 </div>
             @endif
+
+            {{-- ── Analytics de la web pública (solo super admin) ── --}}
+            @if($web)
+                <div class="mt-12">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-medium text-text-primary">🌐 Tráfico de la web (servime.net)</h3>
+                            <p class="text-sm text-text-secondary mt-0.5">De dónde entran los visitantes de la landing</p>
+                        </div>
+
+                        {{-- Filtro de período --}}
+                        <div class="flex flex-wrap items-center gap-2">
+                            @foreach ([7 => '7 días', 30 => '30 días', 90 => '90 días', 365 => '1 año'] as $d => $txt)
+                                <a href="{{ route('analytics.dashboard', ['dias' => $d]) }}#trafico-web"
+                                   class="px-3 py-1.5 rounded-lg text-sm transition-all
+                                          {{ $web['dias'] === $d
+                                             ? 'bg-accent-blue text-gray-900 font-semibold'
+                                             : 'text-text-secondary border border-accent-gray hover:border-accent-blue/40' }}">
+                                    {{ $txt }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div id="trafico-web" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <p class="text-sm text-text-secondary">Visitas</p>
+                            <p class="text-2xl font-bold text-text-primary mt-1 tabular-nums">{{ number_format($web['visitas']) }}</p>
+                            <p class="text-xs text-text-secondary/60 mt-1">últimos {{ $web['dias'] }} días</p>
+                        </div>
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <p class="text-sm text-text-secondary">Visitantes únicos</p>
+                            <p class="text-2xl font-bold text-text-primary mt-1 tabular-nums">{{ number_format($web['visitantes']) }}</p>
+                            <p class="text-xs text-text-secondary/60 mt-1">personas distintas</p>
+                        </div>
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <p class="text-sm text-text-secondary">Canal principal</p>
+                            <p class="text-2xl font-bold text-text-primary mt-1 capitalize">{{ $web['canal_top'] }}</p>
+                            <p class="text-xs text-text-secondary/60 mt-1">de donde más llegan</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        @include('analytics.partials._ranking', [
+                            'titulo'  => 'Canal de entrada',
+                            'icono'   => '🔗',
+                            'items'   => $web['por_canal'],
+                            'visitas' => $web['visitas'],
+                            'vacio'   => 'Todavía no hay visitas en este período.',
+                            'nombres' => [
+                                'directo'      => 'Directo (escribió la URL)',
+                                'instagram'    => 'Instagram',
+                                'facebook'     => 'Facebook',
+                                'whatsapp'     => 'WhatsApp',
+                                'google'       => 'Google',
+                                'tiktok'       => 'TikTok',
+                                'youtube'      => 'YouTube',
+                                'linkedin'     => 'LinkedIn',
+                                'x'            => 'X (Twitter)',
+                                'bing'         => 'Bing',
+                                'mercadolibre' => 'Mercado Libre',
+                                'otro'         => 'Otros sitios',
+                            ],
+                        ])
+
+                        @include('analytics.partials._ranking', [
+                            'titulo'  => 'Dispositivo',
+                            'icono'   => '📱',
+                            'items'   => $web['por_dispositivo'],
+                            'visitas' => $web['visitas'],
+                            'vacio'   => 'Sin datos de dispositivo todavía.',
+                            'nombres' => [
+                                'mobile'      => 'Celular',
+                                'desktop'     => 'Computadora',
+                                'tablet'      => 'Tablet',
+                                'desconocido' => 'Desconocido',
+                            ],
+                        ])
+
+                        @include('analytics.partials._ranking', [
+                            'titulo'  => 'País',
+                            'icono'   => '🌎',
+                            'items'   => $web['por_pais'],
+                            'visitas' => $web['visitas'],
+                            'vacio'   => 'Todavía no se geolocalizó ninguna visita.',
+                        ])
+
+                        @include('analytics.partials._ranking', [
+                            'titulo'  => 'Ciudad',
+                            'icono'   => '📍',
+                            'items'   => $web['por_ciudad'],
+                            'visitas' => $web['visitas'],
+                            'vacio'   => 'Todavía no se geolocalizó ninguna visita.',
+                        ])
+                    </div>
+
+                    @if($web['sin_geo'] > 0)
+                        <p class="text-xs text-text-secondary/60 mt-4">
+                            {{ number_format($web['sin_geo']) }} {{ $web['sin_geo'] === 1 ? 'visita sin ubicar' : 'visitas sin ubicar' }}
+                            (geolocalización en cola, IP local, o el proveedor no la reconoció).
+                        </p>
+                    @endif
+
+                    {{-- Detalle: quién entró, cuándo y desde qué IP --}}
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden mt-6">
+                        <div class="p-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                                <h4 class="text-base font-medium text-text-primary">🧾 Últimas visitas</h4>
+                                <p class="text-xs text-text-secondary/60">
+                                    La IP es un dato personal: usala solo para diagnóstico, no la compartas.
+                                </p>
+                            </div>
+
+                            @if($webVisitas->isEmpty())
+                                <p class="text-sm text-text-secondary">Todavía no hay visitas en este período.</p>
+                            @else
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-accent-gray/50">
+                                        <thead class="bg-primary-dark">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Fecha</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">IP</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Ubicación</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Canal</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Dispositivo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-accent-gray/50">
+                                            @foreach($webVisitas as $v)
+                                                <tr>
+                                                    <td class="px-4 py-3 text-sm text-text-secondary whitespace-nowrap tabular-nums">
+                                                        {{ $v->created_at->format('d/m/Y H:i') }}
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-text-primary whitespace-nowrap font-mono text-xs">
+                                                        {{ $v->user_ip ?: '—' }}
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
+                                                        @if($v->country_code)
+                                                            {{ $v->city ? $v->city.', ' : '' }}{{ $v->country }}
+                                                        @else
+                                                            <span class="opacity-50">sin ubicar</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-text-secondary capitalize whitespace-nowrap">
+                                                        {{ $v->source ?: '—' }}
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
+                                                        {{ ['mobile' => 'Celular', 'desktop' => 'Computadora', 'tablet' => 'Tablet'][$v->device] ?? ($v->device ?: '—') }}
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-5">
+                                    {{ $webVisitas->links() }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

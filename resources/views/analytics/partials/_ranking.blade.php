@@ -14,14 +14,11 @@
     $nombres = $nombres ?? [];
 @endphp
 
-<div class="metric-card">
-    <div class="flex items-center gap-3 mb-5">
-        <span class="text-lg">{{ $icono }}</span>
-        <h3 class="font-semibold text-text-primary">{{ $titulo }}</h3>
-    </div>
+<div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+    <h4 class="text-base font-medium text-text-primary mb-5">{{ $icono }} {{ $titulo }}</h4>
 
     @if (empty($items))
-        <p class="text-text-secondary text-sm py-4">{{ $vacio }}</p>
+        <p class="text-text-secondary text-sm py-2">{{ $vacio }}</p>
     @else
         <div class="space-y-3">
             @foreach ($items as $item)

@@ -7,8 +7,10 @@ use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\IntentClassificationRun;
 use App\Models\Menu;
+use App\Models\SiteVisit;
 use App\Models\TrackingEvent;
 use App\Services\AnalyticsInsightsService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -16,7 +18,7 @@ class AnalyticsController extends Controller
     /**
      * Dashboard principal de analytics
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $user = auth()->user();
         $esAdmin = $user->isSuperAdmin();
@@ -50,7 +52,25 @@ class AnalyticsController extends Controller
             : collect();
         $iaRunsMensajes = $esAdmin ? (int) IntentClassificationRun::sum('mensajes_procesados') : 0;
 
-        return view('analytics.dashboard', compact('comercios', 'stats', 'iaRuns', 'iaRunsMensajes'));
+        // Analytics de la web pública: de dónde entran a la landing. Solo super admin:
+        // es tráfico del sitio de ServiME, no de los comercios.
+        $web = null;
+        $webVisitas = null;
+
+        if ($esAdmin) {
+            $dias = (int) $request->input('dias', 30);
+            $dias = in_array($dias, [7, 30, 90, 365], true) ? $dias : 30;
+
+            $web = SiteVisit::resumen($dias);
+            $webVisitas = SiteVisit::where('created_at', '>=', now()->subDays($dias))
+                ->latest()
+                ->paginate(25)
+                ->withQueryString();
+        }
+
+        return view('analytics.dashboard', compact(
+            'comercios', 'stats', 'iaRuns', 'iaRunsMensajes', 'web', 'webVisitas'
+        ));
     }
 
     /**
