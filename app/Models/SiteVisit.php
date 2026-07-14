@@ -27,6 +27,17 @@ class SiteVisit extends Model
     ];
 
     /**
+     * Umbral para mostrar el contador en la landing.
+     *
+     * La prueba social con números chicos RESTA credibilidad en vez de sumarla:
+     * "3 visitas" le grita al visitante que no nos usa nadie, justo donde queríamos
+     * decir lo contrario. Mejor no mostrar nada hasta tener volumen real.
+     * Cuando el proyecto tenga tracción, bajar/ajustar este número y el contador
+     * vuelve solo (el tracking nunca dejó de correr).
+     */
+    public const MIN_VISITAS_CONTADOR = 500;
+
+    /**
      * Sólo visitas confirmadas por un navegador real (ejecutó JS).
      * Los bots quedan guardados pero fuera de toda métrica.
      */
@@ -168,22 +179,26 @@ class SiteVisit extends Model
      * Métricas del contador del footer. Cacheadas: el footer se renderiza en cada visita
      * y no queremos pegarle a la DB cada vez.
      *
-     * @return array{activos:int, visitas:int, consultas_ia:int}
+     * @return array{activos:int, visitas:int, consultas_ia:int, mostrar:bool}
      */
     public static function stats(): array
     {
         try {
             return Cache::remember('site_visits_stats', now()->addSeconds(30), function () {
+                // Sólo personas: los bots no inflan el contador público
+                $visitas = static::humanas()->count();
+
                 return [
-                    // Sólo personas: los bots no inflan el contador público
                     // Visitantes con actividad en los últimos 5 minutos ("navegando ahora")
                     'activos' => static::humanas()
                         ->where('created_at', '>=', now()->subMinutes(5))
                         ->distinct('visitor_id')
                         ->count('visitor_id'),
-                    'visitas' => static::humanas()->count(),
+                    'visitas' => $visitas,
                     // Consultas realmente respondidas por IA (menús + chat de la landing)
                     'consultas_ia' => ChatConversation::count() + ChatLanding::count(),
+                    // El contador aparece solo cuando los números ya juegan a favor
+                    'mostrar' => $visitas >= self::MIN_VISITAS_CONTADOR,
                 ];
             });
         } catch (\Throwable $e) {
@@ -192,7 +207,7 @@ class SiteVisit extends Model
             // No cacheamos el fallo, así se recupera solo apenas la migración corra.
             report($e);
 
-            return ['activos' => 0, 'visitas' => 0, 'consultas_ia' => 0];
+            return ['activos' => 0, 'visitas' => 0, 'consultas_ia' => 0, 'mostrar' => false];
         }
     }
 }

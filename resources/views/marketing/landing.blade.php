@@ -502,8 +502,11 @@
                     </div>
                 </div>
 
-                {{-- ── Contador en vivo (se oculta si no hay datos: migración pendiente, DB caída, etc.) ── --}}
-                @if (($stats['visitas'] ?? 0) > 0 || ($stats['consultas_ia'] ?? 0) > 0)
+                {{-- ── Contador en vivo ──
+                     Oculto hasta superar SiteVisit::MIN_VISITAS_CONTADOR: la prueba social con
+                     números chicos resta credibilidad. El tracking sigue corriendo igual, así que
+                     cuando haya volumen el contador aparece solo, sin tocar nada. --}}
+                @if ($stats['mostrar'] ?? false)
                 <div class="mt-10 pt-8 border-t border-white/5">
                     <div id="live-counter"
                          class="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-4
