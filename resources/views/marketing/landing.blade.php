@@ -1068,6 +1068,25 @@
             })();
         </script>
 
+        {{-- ── Confirmación de visita humana ──
+             Los bots y crawlers no ejecutan JS, así que nunca llegan a este fetch:
+             su visita queda guardada pero no suma en ninguna métrica. --}}
+        <script>
+            (() => {
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!token) return;
+
+                // Un pequeño delay evita contar cargas que se abandonan al instante
+                setTimeout(() => {
+                    fetch('{{ route('visit.confirm') }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token },
+                        keepalive: true,
+                    }).catch(() => { /* nunca romper la página por el contador */ });
+                }, 1500);
+            })();
+        </script>
+
         {{-- ── Contador en vivo del footer ── --}}
         <script>
             (() => {

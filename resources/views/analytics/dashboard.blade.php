@@ -280,13 +280,17 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <h3 class="text-lg font-medium text-text-primary">🌐 Tráfico de la web (servime.net)</h3>
-                            <p class="text-sm text-text-secondary mt-0.5">De dónde entran los visitantes de la landing</p>
+                            <p class="text-sm text-text-secondary mt-0.5">
+                                {{ $web['incluir_bots']
+                                    ? 'Mostrando TODO, incluidos bots y crawlers'
+                                    : 'Solo personas reales (los bots no suman)' }}
+                            </p>
                         </div>
 
-                        {{-- Filtro de período --}}
                         <div class="flex flex-wrap items-center gap-2">
+                            {{-- Filtro de período --}}
                             @foreach ([7 => '7 días', 30 => '30 días', 90 => '90 días', 365 => '1 año'] as $d => $txt)
-                                <a href="{{ route('analytics.dashboard', ['dias' => $d]) }}#trafico-web"
+                                <a href="{{ route('analytics.dashboard', ['dias' => $d, 'bots' => $web['incluir_bots'] ? 1 : null]) }}#trafico-web"
                                    class="px-3 py-1.5 rounded-lg text-sm transition-all
                                           {{ $web['dias'] === $d
                                              ? 'bg-accent-blue text-gray-900 font-semibold'
@@ -294,8 +298,27 @@
                                     {{ $txt }}
                                 </a>
                             @endforeach
+
+                            {{-- Toggle de bots --}}
+                            <a href="{{ route('analytics.dashboard', ['dias' => $web['dias'], 'bots' => $web['incluir_bots'] ? null : 1]) }}#trafico-web"
+                               class="ml-2 px-3 py-1.5 rounded-lg text-sm transition-all
+                                      {{ $web['incluir_bots']
+                                         ? 'bg-red-500/20 text-red-300 border border-red-500/40 font-semibold'
+                                         : 'text-text-secondary border border-accent-gray hover:border-accent-blue/40' }}">
+                                🤖 {{ $web['incluir_bots'] ? 'Ocultar bots' : 'Ver bots' }}
+                            </a>
                         </div>
                     </div>
+
+                    @if(! $web['incluir_bots'] && $web['bots'] > 0)
+                        <div class="mb-6 rounded-xl bg-primary-dark border border-accent-gray px-4 py-3">
+                            <p class="text-sm text-text-secondary">
+                                🤖 Se descartaron <span class="text-text-primary font-semibold">{{ number_format($web['bots']) }}</span>
+                                {{ $web['bots'] === 1 ? 'visita' : 'visitas' }} de bots/crawlers en este período
+                                (no ejecutaron JavaScript, así que no son personas). Están guardadas, pero no suman.
+                            </p>
+                        </div>
+                    @endif
 
                     <div id="trafico-web" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
@@ -394,6 +417,7 @@
                                         <thead class="bg-primary-dark">
                                             <tr>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Fecha</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Tipo</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">IP</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Ubicación</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Canal</th>
@@ -405,6 +429,17 @@
                                                 <tr>
                                                     <td class="px-4 py-3 text-sm text-text-secondary whitespace-nowrap tabular-nums">
                                                         {{ $v->created_at->format('d/m/Y H:i') }}
+                                                    </td>
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        @if($v->humano)
+                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-400">
+                                                                👤 Persona
+                                                            </span>
+                                                        @else
+                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">
+                                                                🤖 Bot
+                                                            </span>
+                                                        @endif
                                                     </td>
                                                     <td class="px-4 py-3 text-sm text-text-primary whitespace-nowrap font-mono text-xs">
                                                         {{ $v->user_ip ?: '—' }}

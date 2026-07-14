@@ -130,6 +130,25 @@ Route::get('/api/site-stats', fn () => response()->json(\App\Models\SiteVisit::s
     ->middleware('throttle:60,1')
     ->name('site.stats');
 
+// El navegador confirma que hay una persona real (los bots no ejecutan JS, así que nunca llegan acá).
+// Sin esta confirmación la visita queda guardada pero NO suma en ninguna métrica.
+Route::post('/api/visit-confirm', function (\Illuminate\Http\Request $request) {
+    $visitorId = $request->cookie('sv_vid');
+
+    if (is_string($visitorId) && $visitorId !== '') {
+        $confirmadas = \App\Models\SiteVisit::where('visitor_id', $visitorId)
+            ->where('humano', false)
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->update(['humano' => true]);
+
+        if ($confirmadas > 0) {
+            \Illuminate\Support\Facades\Cache::forget('site_visits_stats');
+        }
+    }
+
+    return response()->noContent();
+})->middleware('throttle:30,1')->name('visit.confirm');
+
 // Rutas públicas (sin autenticación, usando slug)
 Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
 Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');

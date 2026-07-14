@@ -61,8 +61,12 @@ class AnalyticsController extends Controller
             $dias = (int) $request->input('dias', 30);
             $dias = in_array($dias, [7, 30, 90, 365], true) ? $dias : 30;
 
-            $web = SiteVisit::resumen($dias);
+            // Por defecto solo personas. ?bots=1 muestra también lo que no confirmó por JS.
+            $incluirBots = $request->boolean('bots');
+
+            $web = SiteVisit::resumen($dias, $incluirBots);
             $webVisitas = SiteVisit::where('created_at', '>=', now()->subDays($dias))
+                ->when(! $incluirBots, fn ($q) => $q->humanas())
                 ->latest()
                 ->paginate(25)
                 ->withQueryString();

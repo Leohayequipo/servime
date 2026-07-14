@@ -14,12 +14,26 @@ class SiteVisit extends Model
         'referer',
         'source',
         'device',
+        'humano',
         'country_code',
         'country',
         'city',
         'user_ip',
         'user_agent',
     ];
+
+    protected $casts = [
+        'humano' => 'boolean',
+    ];
+
+    /**
+     * Sólo visitas confirmadas por un navegador real (ejecutó JS).
+     * Los bots quedan guardados pero fuera de toda métrica.
+     */
+    public function scopeHumanas($query)
+    {
+        return $query->where('humano', true);
+    }
 
     /** Dominios conocidos → canal. El primero que matchea gana. */
     private const CANALES = [
@@ -97,12 +111,16 @@ class SiteVisit extends Model
      * Resumen de "de dónde entran" para el dashboard de analytics (solo super admin).
      * Devuelve todo ya normalizado a {label, total} para que la vista sea tonta.
      */
-    public static function resumen(int $dias): array
+    public static function resumen(int $dias, bool $incluirBots = false): array
     {
         $desde = now()->subDays($dias);
 
-        $ranking = function (string $columna, int $limite = 10) use ($desde) {
-            return static::where('created_at', '>=', $desde)
+        // Base del período. Por defecto sólo personas: los bots no deben mover las métricas.
+        $base = fn () => static::where('created_at', '>=', $desde)
+            ->when(! $incluirBots, fn ($q) => $q->humanas());
+
+        $ranking = function (string $columna, int $limite = 10) use ($base) {
+            return $base()
                 ->whereNotNull($columna)
                 ->selectRaw("{$columna} as valor, COUNT(*) as total")
                 ->groupBy($columna)
@@ -115,7 +133,7 @@ class SiteVisit extends Model
 
         $porCanal = $ranking('source');
 
-        $porPais = static::where('created_at', '>=', $desde)
+        $porPais = $base()
             ->whereNotNull('country_code')
             ->selectRaw('country_code, country, COUNT(*) as total')
             ->groupBy('country_code', 'country')
@@ -131,16 +149,18 @@ class SiteVisit extends Model
 
         return [
             'dias' => $dias,
-            'visitas' => static::where('created_at', '>=', $desde)->count(),
-            'visitantes' => static::where('created_at', '>=', $desde)
-                ->distinct('visitor_id')->count('visitor_id'),
+            'incluir_bots' => $incluirBots,
+            'visitas' => $base()->count(),
+            'visitantes' => $base()->distinct('visitor_id')->count('visitor_id'),
+            // Cuántas se descartaron por no confirmar (bots, crawlers, escáneres)
+            'bots' => static::where('created_at', '>=', $desde)->where('humano', false)->count(),
             'canal_top' => $porCanal[0]['label'] ?? '—',
             'por_canal' => $porCanal,
             'por_dispositivo' => $ranking('device', 5),
             'por_pais' => $porPais,
             'por_ciudad' => $ranking('city', 10),
             // Visitas sin geolocalizar (cola pendiente, IP local o el proveedor no la reconoció)
-            'sin_geo' => static::where('created_at', '>=', $desde)->whereNull('country_code')->count(),
+            'sin_geo' => $base()->whereNull('country_code')->count(),
         ];
     }
 
@@ -155,11 +175,13 @@ class SiteVisit extends Model
         try {
             return Cache::remember('site_visits_stats', now()->addSeconds(30), function () {
                 return [
+                    // Sólo personas: los bots no inflan el contador público
                     // Visitantes con actividad en los últimos 5 minutos ("navegando ahora")
-                    'activos' => static::where('created_at', '>=', now()->subMinutes(5))
+                    'activos' => static::humanas()
+                        ->where('created_at', '>=', now()->subMinutes(5))
                         ->distinct('visitor_id')
                         ->count('visitor_id'),
-                    'visitas' => static::count(),
+                    'visitas' => static::humanas()->count(),
                     // Consultas realmente respondidas por IA (menús + chat de la landing)
                     'consultas_ia' => ChatConversation::count() + ChatLanding::count(),
                 ];
