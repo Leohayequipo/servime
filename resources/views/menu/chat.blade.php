@@ -475,7 +475,7 @@
                 <div class="side-panel-grid">
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
-                            <button onclick="askQuestion('{{ $categoria['nombre'] }}'); hideCategories();"
+                            <button onclick="mostrarPromociones('{{ $categoria['nombre'] }}'); hideCategories();"
                                     class="promo-button cat-chip-promo"
                                     onmouseover="this.style.transform='scale(1.08)';"
                                     onmouseout="this.style.transform='scale(1)';">
@@ -1225,6 +1225,22 @@
             sendMessage(question, tipo, scope);
             hideCategories();
             hideTags();
+        }
+
+        // Promos cargadas en el panel de menús: se muestran TODAS tal cual, sin pasar
+        // por la IA (así no se resumen, no cambian precios ni se mezclan con el menú).
+        const promociones = @json($promociones ?? []);
+
+        function mostrarPromociones(titulo) {
+            addMessage(titulo, 'user');
+            if (!promociones.length) {
+                addMessage('Por ahora no tenemos promos cargadas. ¿Te muestro el menú?', 'bot', [], false);
+                return;
+            }
+            const intro = promociones.length === 1
+                ? '🔥 Esta es la promo del día:'
+                : '🔥 Estas son las promos del día:';
+            addMessage(intro, 'bot', promociones, false);
         }
 
         // "Ver más": lista TODO lo que coincide, acotado al contexto de la última consulta (no el menú entero)

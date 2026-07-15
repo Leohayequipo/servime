@@ -30,8 +30,9 @@ class PublicMenuController extends Controller
         
             $categorias = $comercio->getCategoriasDelMenu();
             $tags = $comercio->getTagsDelMenu();
-            
-            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags'));
+            $promociones = $comercio->getPromocionesDelMenu();
+
+            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones'));
         } catch (\Exception $e) {
             \Log::error('Error en PublicMenuController@chat: ' . $e->getMessage(), [
                 'comercio_id' => $comercio->id,
@@ -43,7 +44,8 @@ class PublicMenuController extends Controller
                 'comercio' => $comercio,
                 'menus' => collect([]),
                 'categorias' => [],
-                'tags' => []
+                'tags' => [],
+                'promociones' => []
             ]);
         }
     }

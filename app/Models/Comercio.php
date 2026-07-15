@@ -174,6 +174,94 @@ class Comercio extends Model
     }
 
     /**
+     * Promos cargadas en la sección "Promociones del Día" del panel de menús,
+     * tal cual (nombre, precio, descripción, imagen). El chat las muestra
+     * directamente, sin pasar por la IA. Devuelve TODAS las que existan.
+     */
+    public function getPromocionesDelMenu(): array
+    {
+        $menuActivo = $this->menus()
+            ->where('activo', true)
+            ->where('procesado', true)
+            ->first();
+
+        if (! $menuActivo || ! $menuActivo->contexto_gpt) {
+            return [];
+        }
+
+        try {
+            $clean = trim($menuActivo->contexto_gpt);
+            if (strpos($clean, '```json') !== false) {
+                $clean = preg_replace('/```json\s*/', '', $clean);
+                $clean = preg_replace('/```\s*$/', '', $clean);
+            }
+
+            $data = json_decode(trim($clean), true);
+            if (! is_array($data) || ! isset($data['categorias']) || ! is_array($data['categorias'])) {
+                return [];
+            }
+
+            foreach ($data['categorias'] as $categoria) {
+                $nombreLower = strtolower(trim($categoria['nombre'] ?? ''));
+                if ($nombreLower !== 'promociones del día' && $nombreLower !== 'promociones del dia') {
+                    continue;
+                }
+
+                $promos = [];
+                foreach ($categoria['platos'] ?? [] as $plato) {
+                    $nombre = trim($plato['nombre'] ?? '');
+                    if ($nombre === '') {
+                        continue;
+                    }
+                    $imagen = trim($plato['imagen'] ?? '');
+                    $promos[] = [
+                        'nombre' => $nombre,
+                        'precio' => $this->formatearPrecioPromo($plato['precio'] ?? ''),
+                        'descripcion' => trim($plato['descripcion'] ?? ''),
+                        'imagen' => $imagen === '' ? '' : $this->resolverImagenPromo($imagen),
+                    ];
+                }
+
+                return $promos;
+            }
+
+            return [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Precio del panel ("19500") al formato del menú ("$19.500"). Si el comercio
+     * escribió otra cosa ("2x1", "$19.500"), se respeta tal cual.
+     */
+    private function formatearPrecioPromo(string $precio): string
+    {
+        $precio = trim($precio);
+        if ($precio === '' || ! ctype_digit($precio)) {
+            return $precio;
+        }
+
+        return '$'.number_format((float) $precio, 0, ',', '.');
+    }
+
+    /**
+     * Resuelve la URL de la imagen de una promo (agrega prefijo si vino relativa).
+     */
+    private function resolverImagenPromo(string $ruta): string
+    {
+        if (str_starts_with($ruta, 'http://') || str_starts_with($ruta, 'https://')) {
+            return $ruta;
+        }
+        $ruta = '/'.ltrim($ruta, '/');
+        if (! str_starts_with($ruta, '/storage/')) {
+            $ruta = '/storage/'.ltrim($ruta, '/');
+        }
+
+        return asset($ruta);
+    }
+
+    /**
      * Obtener categorías del menú activo
      */
     public function getCategoriasDelMenu(): array
