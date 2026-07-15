@@ -65,6 +65,8 @@
         /* Mapeo de clases usadas en la vista previa del administrador */
         .bg-background { background: #000000 !important; }
         .bg-secondary-dark { background: var(--secondary-color) !important; }
+        /* Burbuja del bot: gris oscuro cálido neutro (estilo mockup), no el color de marca */
+        .chat-bubble-bot { background: #37332e; }
         .bg-accent-blue { background: var(--accent-blue) !important; }
         /* Tipografía exacta de la previa */
         .text-text-primary { color: #ffffff !important; }
@@ -264,18 +266,85 @@
         .fab-container {
             position: fixed; bottom: 84px; right: 16px; z-index: 50;
             display: flex; gap: 10px; flex-direction: column;
+            transition: transform .35s cubic-bezier(.22,1,.36,1), opacity .3s ease;
+        }
+        /* Dock replegado: los accesos se ocultan hacia la derecha */
+        body.fabs-collapsed .fab-container {
+            transform: translateX(calc(100% + 26px));
+            opacity: 0; pointer-events: none;
         }
 
-        /* Mic button */
+        /* Pestaña (handle) en el borde derecho para mostrar/ocultar los accesos */
+        .fab-tab {
+            position: fixed; right: 0; bottom: 100px; z-index: 55;
+            width: 24px; height: 64px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(55,51,46,0.92); color: #fff;
+            border: 1px solid rgba(255,255,255,0.14); border-right: none;
+            border-radius: 12px 0 0 12px;
+            box-shadow: -3px 0 10px rgba(0,0,0,0.35);
+            cursor: pointer; font-size: 16px; line-height: 1;
+            transition: transform .15s ease, background .2s ease;
+        }
+        .fab-tab:hover { background: rgba(70,64,58,0.96); }
+        .fab-tab:active { transform: scale(.9); }
+        .fab-tab .fab-tab-chevron { pointer-events: none; }
+        .fab-tab .fab-tab-dot {
+            position: absolute; top: -5px; left: -6px; min-width: 16px; height: 16px;
+            padding: 0 4px; border-radius: 8px; background: #ef4444; color: #fff;
+            font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+            border: 2px solid #000; box-shadow: 0 2px 6px rgba(0,0,0,.4); display: none;
+        }
+        /* Animación de "asoma y se esconde" para que se note la pestaña la 1ra vez */
+        @keyframes fab-tab-peek {
+            0%, 100% { transform: translateX(0); }
+            50%      { transform: translateX(-6px); }
+        }
+        .fab-tab.peek { animation: fab-tab-peek 1s ease-in-out 2; }
+
+        /* Flechita animada mientras el dock está oculto: indica que hay opciones */
+        @keyframes fab-chevron-hint {
+            0%, 55%, 100% { transform: translateX(0); opacity: .8; }
+            25%, 40%      { transform: translateX(-3px); opacity: 1; }
+        }
+        body.fabs-collapsed .fab-tab .fab-tab-chevron {
+            display: inline-block;
+            animation: fab-chevron-hint 2.4s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            body.fabs-collapsed .fab-tab .fab-tab-chevron { animation: none; }
+            .fab-tab.peek { animation: none; }
+        }
+
+        /* Al ocultar los accesos, el chat gana ancho */
+        #chatMessages { transition: padding-right .35s ease; }
+        body.fabs-collapsed #chatMessages { padding-right: 1rem; }
+
+        /* Mic button (circular) */
         .mic-button {
             background: var(--accent-color); border: none;
-            border-radius: 8px 0 0 8px; padding: 12px;
-            cursor: pointer; transition: all .2s;
+            border-radius: 9999px; width: 46px; height: 46px; flex: 0 0 auto;
+            text-align: center; line-height: 46px; padding: 0;
+            cursor: pointer; transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,.35);
         }
+        .mic-button:active { transform: scale(.92); }
         .mic-button span { font-size: 20px; }
 
-        /* Input bar */
-        .chat-input-bar { border-radius: 8px; }
+        /* Input bar (píldora cálida) */
+        .chat-input-bar {
+            border-radius: 9999px !important;
+            background: #1f1d1b !important;
+        }
+        .chat-input-bar:focus { box-shadow: 0 0 0 2px var(--accent-blue) !important; }
+        /* Botón enviar (circular, estilo WhatsApp) */
+        .send-btn {
+            border-radius: 9999px; width: 46px; height: 46px; flex: 0 0 auto;
+            display: flex; align-items: center; justify-content: center;
+            border: none; padding: 0; cursor: pointer;
+        }
+        .send-btn:active { transform: scale(.92); }
+        .send-btn svg { width: 20px; height: 20px; fill: currentColor; margin-left: 1px; }
 
         /* Fondo oscuro detrás de cualquier panel abierto (lo separa del chat) */
         .panel-backdrop {
@@ -385,7 +454,7 @@
         </div>
 
             <div id="chatMessages" class="max-w-md mx-auto space-y-4 pl-4 pr-16">
-                <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-fade-in">
+                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-fade-in">
                     <div class="flex items-start">
                         <div class="flex-1">
                             <p class="text-text-primary text-base leading-relaxed" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
@@ -398,19 +467,19 @@
 
         <!-- Input fijo abajo -->
         <div class="input-fixed">
-            <div class="max-w-md mx-auto flex">
+            <div class="max-w-md mx-auto flex items-center gap-2">
                 <button id="micButton"
                         title="Hablar con el asistente"
                         style="display:none"
                         class="mic-button">
-                    <span>🎤</span>
+                    <span><i class="fas fa-microphone"></i></span>
                 </button>
                 <input type="text"
                        id="messageInput"
                        placeholder="Escribe tu mensaje..."
-                       class="flex-1 bg-secondary-dark border border-accent-gray px-3 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue chat-input-bar">
-                <button id="sendButton" class="bg-accent-blue hover:bg-amber-500 px-5 py-3 rounded-r-lg text-white text-base font-medium transition-colors duration-200">
-                    Enviar
+                       class="flex-1 min-w-0 border border-accent-gray px-4 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none chat-input-bar">
+                <button id="sendButton" title="Enviar" class="send-btn bg-accent-blue text-white transition-all duration-200 hover:opacity-90 shadow-lg flex-none">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
                 </button>
             </div>
         </div>
@@ -420,6 +489,12 @@
     <div id="panelBackdrop" class="panel-backdrop"></div>
 
     <!-- FAB Categorías + Tags + Pre‑pedido -->
+    @if($comercio->pedido_habilitado || !empty($categorias) || !empty($tags))
+        <button id="fabTab" class="fab-tab" type="button" title="Mostrar/ocultar accesos" aria-label="Mostrar accesos">
+            <span id="fabTabDot" class="fab-tab-dot"></span>
+            <span class="fab-tab-chevron">‹</span>
+        </button>
+    @endif
     <div class="fab-container">
         @if($comercio->pedido_habilitado)
             <div class="fab-item">
@@ -555,7 +630,7 @@
                     recognition.onstart = function() {
                         isListening = true;
                         micButton.style.background = '#ef4444';
-                        micButton.querySelector('span').textContent = '🔴';
+                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
                         messageInput.placeholder = 'Escuchando...';
                     };
                     
@@ -570,7 +645,7 @@
                     recognition.onerror = function(event) {
                         isListening = false;
                         micButton.style.background = 'var(--accent-color)';
-                        micButton.querySelector('span').textContent = '🎤';
+                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
                         messageInput.placeholder = 'Escribe tu mensaje...';
                         
                         if (event.error === 'not-allowed' || event.error === 'denied') {
@@ -596,7 +671,7 @@
                     recognition.onend = function() {
                         isListening = false;
                         micButton.style.background = 'var(--accent-color)';
-                        micButton.querySelector('span').textContent = '🎤';
+                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
                         messageInput.placeholder = 'Escribe tu mensaje...';
                     };
                     
@@ -667,11 +742,8 @@
             
             // Función para ajustar estilo del input cuando el micrófono está visible
             function updateInputStyle() {
-                if (micButton.style.display === 'block' || micButton.style.display === '') {
-                    messageInput.style.borderRadius = '0';
-                } else {
-                    messageInput.style.borderRadius = '8px';
-                }
+                // El input es una píldora siempre (mic y enviar van separados con gap)
+                messageInput.style.borderRadius = '9999px';
             }
             
             // Ajustar estilo inicial
@@ -724,12 +796,7 @@
             // Mostrar indicador de carga en el botón de envío
             const sendButton = document.getElementById('sendButton');
             const originalContent = sendButton.innerHTML;
-            sendButton.innerHTML = `
-                <div class="flex items-center justify-center space-x-1">
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span class="text-xs">Enviando...</span>
-                </div>
-            `;
+            sendButton.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>`;
             sendButton.disabled = true;
             
             // Agregar mensaje del usuario
@@ -880,7 +947,7 @@
                         const mHead = p.match(/\[{2,}IMG::([\s\S]*?)\]{2,}/);
                         if (mHead && mHead[1]) {
                             const u = mHead[1].trim();
-                            currentPlato.parrafos.push(`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                            currentPlato.parrafos.push(`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-2xl shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
                             currentPlato._imgTaken = true;
                         }
                         return;
@@ -902,7 +969,7 @@
                 if (p.includes('[[IMG::') && currentPlato) {
                     // Asociar imagen solo si aparece inmediatamente tras el encabezado
                     if (!currentPlato._imgTaken && currentPlato._linesSinceStart <= 3) {
-                        const htmlImg = p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g, (m,u)=>`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-lg shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
+                        const htmlImg = p.replace(/\[{2,}IMG::([\s\S]*?)\]{2,}/g, (m,u)=>`<div class=\"mt-2 mb-2\"><img src=\"${u}\" alt=\"Plato\" class=\"w-full max-w-xs rounded-2xl shadow-lg object-cover\" style=\"max-height: 200px;\" onerror=\"this.style.display='none'\"></div>`);
                         currentPlato.parrafos.push(htmlImg);
                         currentPlato._imgTaken = true;
                         return;
@@ -953,16 +1020,16 @@
                 const nombre = escHtml(p.nombre||'');
                 const precio = escHtml(p.precio||'');
                 const desc = escHtml(p.descripcion||'');
-                const img = p.imagen ? `<img src="${escHtml(p.imagen)}" alt="${nombre}" class="w-full h-36 object-cover" onerror="this.style.display='none'">` : '';
+                const img = p.imagen ? `<img src="${escHtml(p.imagen)}" alt="${nombre}" class="w-full h-40 object-cover" onerror="this.style.display='none'">` : '';
                 const btn = pedidosHabilitados ? `<button class="btn-lo-quiero" data-nombre="${nombre}" data-price="${precio}" style="margin-top:10px;font-size:15px">Lo quiero</button>` : '';
-                return `<div class="rounded-xl overflow-hidden border border-white/10 bg-black/20">
+                return `<div class="rounded-2xl overflow-hidden border border-white/10 bg-black/25 shadow-md">
                     ${img}
-                    <div class="p-3">
+                    <div class="p-3.5">
                         <div class="flex items-start justify-between gap-2">
                             <span class="font-semibold text-text-primary">${nombre}</span>
                             ${precio ? `<span class="text-accent-blue font-bold whitespace-nowrap">${precio}</span>` : ''}
                         </div>
-                        ${desc ? `<p class="text-text-secondary text-sm mt-1">${desc}</p>` : ''}
+                        ${desc ? `<p class="text-text-secondary text-sm mt-1 leading-relaxed">${desc}</p>` : ''}
                         ${btn}
                     </div>
                 </div>`;
@@ -980,12 +1047,12 @@
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end animate-slide-in-right">
-                        <div class="bg-gradient-to-r from-accent-blue to-blue-500 rounded-xl p-4 max-w-xs text-white text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105" style="white-space: pre-wrap;">${parsedText}</div>
+                        <div class="bg-accent-blue rounded-3xl rounded-tr-md px-4 py-3 max-w-xs text-white text-base shadow-lg transition-shadow duration-200 hover:shadow-xl" style="white-space: pre-wrap;">${parsedText}</div>
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
+                    <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
                         <div class="flex items-start">
                             <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
@@ -1031,6 +1098,7 @@
             const total = w.reduce((s,it)=> s + (Number(it.qty)||1), 0);
             if(total > 0){ badge.textContent = total > 99 ? '99+' : String(total); badge.classList.add('show'); }
             else { badge.classList.remove('show'); }
+            if (typeof updateFabTabDot === 'function') updateFabTabDot();
         }
         // Quitar un ítem del pedido por nombre (para el toggle del botón "Lo quiero")
         function removeWishByName(nombre){
@@ -1098,7 +1166,7 @@
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
-                <div class="bg-gradient-to-r from-secondary-dark to-secondary-dark/80 rounded-xl p-4 shadow-lg animate-slide-in-left">
+                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
                     <div class="flex items-start">
                         <div class="flex-1">
                             <div class="flex items-center space-x-3">
@@ -1200,6 +1268,45 @@
         document.getElementById('closeCategories')?.addEventListener('click', () => closePanel());
         if (fabTags) fabTags.addEventListener('click', toggleTags);
         document.getElementById('closeTags')?.addEventListener('click', () => closePanel());
+
+        // ===== Repliegue de los accesos (dock) con pestaña en el borde =====
+        const FABS_KEY = 'servime_fabs_collapsed_{{ $comercio->id }}';
+        const fabTab = document.getElementById('fabTab');
+        const fabTabChevron = fabTab?.querySelector('.fab-tab-chevron');
+
+        // Muestra el puntito con la cantidad del pedido cuando el dock está oculto
+        function updateFabTabDot() {
+            const dot = document.getElementById('fabTabDot');
+            if (!dot) return;
+            const collapsed = document.body.classList.contains('fabs-collapsed');
+            let total = 0;
+            if (pedidosHabilitados) total = loadWish().reduce((s, it) => s + (Number(it.qty) || 1), 0);
+            if (collapsed && total > 0) { dot.textContent = total > 99 ? '99+' : String(total); dot.style.display = 'block'; }
+            else { dot.style.display = 'none'; }
+        }
+
+        function setFabsCollapsed(collapsed, persist = true) {
+            document.body.classList.toggle('fabs-collapsed', collapsed);
+            if (fabTabChevron) fabTabChevron.textContent = collapsed ? '‹' : '›';
+            if (fabTab) fabTab.setAttribute('aria-label', collapsed ? 'Mostrar accesos' : 'Ocultar accesos');
+            if (collapsed) closePanel(); // si había un panel abierto, ciérralo al ocultar
+            if (persist) localStorage.setItem(FABS_KEY, collapsed ? '1' : '0');
+            updateFabTabDot();
+        }
+
+        if (fabTab) {
+            fabTab.addEventListener('click', () => setFabsCollapsed(!document.body.classList.contains('fabs-collapsed')));
+
+            // Estado inicial: por defecto oculto; se recuerda la preferencia
+            const savedFabs = localStorage.getItem(FABS_KEY);
+            setFabsCollapsed(savedFabs === null ? true : savedFabs === '1', false);
+
+            // Primera visita: "peek" para que se descubra la pestaña
+            if (savedFabs === null) {
+                fabTab.classList.add('peek');
+                fabTab.addEventListener('animationend', () => fabTab.classList.remove('peek'), { once: true });
+            }
+        }
 
         // "Vaciar" pedido: requiere doble toque para evitar borrados accidentales
         const wishClearBtn = document.getElementById('wishClear');
