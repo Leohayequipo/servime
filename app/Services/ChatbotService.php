@@ -757,4 +757,97 @@ RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú
 
         throw new \Exception('Error al conectar con OpenAI: '.$response->body());
     }
+
+    /**
+     * Igual que processMessage, pero en streaming: llama a $onDelta con cada fragmento
+     * de texto a medida que OpenAI lo genera, y devuelve la respuesta completa.
+     */
+    public function streamMessage(Comercio $comercio, string $message, ?string $sessionId, ?string $modoRespuesta, ?string $scopeRespuesta, callable $onDelta): string
+    {
+        $this->sessionId = $sessionId;
+        $this->modoRespuesta = $modoRespuesta;
+        $this->scopeRespuesta = $scopeRespuesta;
+
+        $contexto = $this->trimContext($this->buildMenuContext($comercio), 48000);
+        $conversationHistory = $sessionId ? $this->getConversationHistory($comercio, $sessionId) : [];
+        $prompt = $this->createPrompt($comercio, $contexto, $message);
+
+        return $this->callOpenAIStream(
+            $prompt,
+            $conversationHistory,
+            $comercio->modeloIA(),
+            $comercio->maxTokensChat(),
+            $onDelta
+        );
+    }
+
+    /**
+     * Llamada a OpenAI con stream:true. Parsea el SSE de OpenAI y emite cada token
+     * por $onDelta. Devuelve el texto completo acumulado.
+     */
+    private function callOpenAIStream(string $prompt, array $conversationHistory, string $model, int $maxTokens, callable $onDelta): string
+    {
+        if (empty($this->openaiApiKey)) {
+            throw new \Exception('OpenAI API key no configurada');
+        }
+
+        $messages = $conversationHistory;
+        $messages[] = ['role' => 'user', 'content' => $prompt];
+
+        $payload = [
+            'model' => $model,
+            'messages' => $messages,
+            'max_tokens' => $maxTokens,
+            'temperature' => 0.7,
+            'presence_penalty' => 0.3,
+            'frequency_penalty' => 0.2,
+            'stream' => true,
+        ];
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer '.$this->openaiApiKey,
+            'Content-Type' => 'application/json',
+        ])->withOptions(['stream' => true])->timeout(60)->post($this->openaiBaseUrl.'/chat/completions', $payload);
+
+        if ($response->status() !== 200) {
+            Log::error('Error OpenAI API (stream)', [
+                'status' => $response->status(),
+                'body' => substr($response->body(), 0, 500),
+            ]);
+
+            throw new \Exception('Error al conectar con OpenAI (stream)');
+        }
+
+        $body = $response->toPsrResponse()->getBody();
+        $buffer = '';
+        $full = '';
+
+        while (! $body->eof()) {
+            $buffer .= $body->read(2048);
+
+            // El SSE de OpenAI manda una línea "data: {...}" por token, separadas por \n
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+
+                if ($line === '' || ! str_starts_with($line, 'data:')) {
+                    continue;
+                }
+
+                $data = trim(substr($line, 5));
+                if ($data === '[DONE]') {
+                    return $full;
+                }
+
+                $json = json_decode($data, true);
+                $delta = $json['choices'][0]['delta']['content'] ?? '';
+                if ($delta !== '') {
+                    $full .= $delta;
+                    $onDelta($delta);
+                }
+            }
+        }
+
+        return $full;
+    }
 }

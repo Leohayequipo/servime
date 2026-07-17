@@ -92,7 +92,7 @@
         .typing-indicator {
             animation: bounce 1.4s infinite ease-in-out both;
         }
-        
+
         @keyframes bounce {
             0%, 80%, 100% {
                 transform: scale(0);
@@ -100,6 +100,23 @@
             40% {
                 transform: scale(1);
             }
+        }
+
+        /* Indicador "escribiendo" estilo mensajería: burbuja compacta con onda de 3 puntos */
+        .typing-bubble {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 14px 16px; width: fit-content;
+        }
+        .typing-bubble .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-secondary);
+            animation: typing-wave 1.3s infinite ease-in-out;
+        }
+        .typing-bubble .dot:nth-child(2) { animation-delay: .18s; }
+        .typing-bubble .dot:nth-child(3) { animation-delay: .36s; }
+        @keyframes typing-wave {
+            0%, 60%, 100% { transform: translateY(0); opacity: .35; }
+            30%           { transform: translateY(-5px); opacity: 1; }
         }
 
         /* Botón "Lo quiero" dentro de mensajes */
@@ -775,8 +792,8 @@
             return sessionId;
         }
 
-        // Enviar mensaje
-        function sendMessage(message, tipo, scope, esReconsulta) {
+        // Enviar mensaje (con streaming: la respuesta se escribe token a token)
+        async function sendMessage(message, tipo, scope, esReconsulta) {
             if (isLoading) return;
 
             // Recordar contexto para "Ver más opciones" (la reconsulta 'ver_mas' NO pisa el estado)
@@ -787,58 +804,132 @@
                 lastCategoria = null;
                 lastQuery = message;
             }
-            
+
             isLoading = true;
-            
-            // Obtener session_id persistente
             const sessionId = getOrCreateSessionId();
-            
-            // Mostrar indicador de carga en el botón de envío
+
+            // Indicador de carga en el botón de envío
             const sendButton = document.getElementById('sendButton');
             const originalContent = sendButton.innerHTML;
             sendButton.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>`;
             sendButton.disabled = true;
-            
-            // Agregar mensaje del usuario
+
             addMessage(message, 'user');
-            
-            // Mostrar indicador de escritura
             showTypingIndicator();
-            
-            // Enviar al servidor con session_id
-            fetch('{{ route("chat.api", $comercio) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Session-ID': sessionId
-                },
-                body: JSON.stringify(
-                    tipo
-                        ? { message: message, tipo: tipo, scope: scope || message }
-                        : { message: message }
-                )
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideTypingIndicator();
-                if (data.response) {
-                    // Si esta respuesta ya es un "ver más" (lista completa), no repetir el botón
-                    addMessage(data.response, 'bot', data.platos || [], !esReconsulta);
-                } else {
-                    addMessage('Lo siento, no pude procesar tu mensaje. Inténtalo de nuevo.', 'bot');
+
+            let wrapper = null, textEl = null, full = '', started = false, finalized = false;
+            const ensureBubble = () => {
+                if (!started) {
+                    hideTypingIndicator();
+                    const b = createBotBubble();
+                    wrapper = b.wrapper;
+                    textEl = b.textEl;
+                    started = true;
                 }
-            })
-            .catch(error => {
-                hideTypingIndicator();
-                addMessage('Error de conexión. Verifica tu internet e inténtalo de nuevo.', 'bot');
+            };
+
+            try {
+                const resp = await fetch('{{ route("chat.stream", $comercio) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify(
+                        tipo ? { message: message, tipo: tipo, scope: scope || message } : { message: message }
+                    )
+                });
+
+                if (!resp.ok || !resp.body) throw new Error('Sin stream');
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    let sep;
+                    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+                        const frame = buffer.slice(0, sep);
+                        buffer = buffer.slice(sep + 2);
+                        const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
+                        if (!dataLine) continue;
+                        let payload;
+                        try { payload = JSON.parse(dataLine.slice(5).trim()); } catch (e) { continue; }
+
+                        if (payload.type === 'delta') {
+                            ensureBubble();
+                            full += payload.content || '';
+                            textEl.textContent = full;
+                            scrollToMessageTop(wrapper);
+                        } else if (payload.type === 'done') {
+                            ensureBubble();
+                            finalizeBotBubble(wrapper, textEl, full, payload.platos || [], !esReconsulta);
+                            finalized = true;
+                        }
+                    }
+                }
+
+                if (!started) {
+                    hideTypingIndicator();
+                    addMessage('Lo siento, no pude procesar tu mensaje. Inténtalo de nuevo.', 'bot', [], false);
+                } else if (!finalized) {
+                    // El stream cortó sin "done": formateamos lo que haya llegado
+                    finalizeBotBubble(wrapper, textEl, full, [], !esReconsulta);
+                }
+            } catch (error) {
                 console.error('Error:', error);
-            })
-            .finally(() => {
+                if (started && textEl) {
+                    finalizeBotBubble(wrapper, textEl, full || 'Error de conexión. Verificá tu internet e intentá de nuevo.', [], false);
+                } else {
+                    hideTypingIndicator();
+                    addMessage('Error de conexión. Verificá tu internet e intentá de nuevo.', 'bot', [], false);
+                }
+            } finally {
                 isLoading = false;
-                // Restaurar botón de envío
                 sendButton.innerHTML = originalContent;
                 sendButton.disabled = false;
+            }
+        }
+
+        // Crea la burbuja del bot vacía para irla llenando con el stream
+        function createBotBubble() {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `
+                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
+                    <div class="flex items-start">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-text-primary text-base leading-relaxed" data-bot-text style="white-space: pre-wrap;"></div>
+                            <div data-bot-extra></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            scrollToMessageTop(messageDiv);
+            return { wrapper: messageDiv, textEl: messageDiv.querySelector('[data-bot-text]') };
+        }
+
+        // Al terminar el stream: formatea Markdown + tarjetas de platos + botón "Ver más"
+        function finalizeBotBubble(wrapper, textEl, full, platos, permitirVerMas) {
+            textEl.style.whiteSpace = 'normal';
+            textEl.innerHTML = parseMarkdown(full);
+            const extra = wrapper.querySelector('[data-bot-extra]');
+            if (extra) {
+                const verMas = (permitirVerMas && platos && platos.length >= 1 && platos.length <= 6)
+                    ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>'
+                    : '';
+                extra.innerHTML = renderPlatoCards(platos) + verMas;
+            }
+            scrollToMessageTop(wrapper);
+            wrapper.querySelectorAll('img').forEach(img => {
+                img.addEventListener('load', () => scrollToMessageTop(wrapper));
+                img.addEventListener('error', () => scrollToMessageTop(wrapper));
             });
         }
 
@@ -1165,20 +1256,10 @@
             const chatMessages = document.getElementById('chatMessages');
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'animate-slide-in-left';
             typingDiv.innerHTML = `
-                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
-                    <div class="flex items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-3">
-                                <div class="flex space-x-1">
-                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce"></div>
-                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                                    <div class="w-2 h-2 bg-accent-blue rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                                </div>
-                                <span class="text-text-primary text-sm font-medium">Escribiendo...</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="chat-bubble-bot rounded-3xl rounded-tl-md shadow-lg border border-white/5 typing-bubble">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                 </div>
             `;
             chatMessages.appendChild(typingDiv);

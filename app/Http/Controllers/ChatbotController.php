@@ -132,6 +132,103 @@ class ChatbotController extends Controller
     }
 
     /**
+     * Igual que chat(), pero devuelve la respuesta en streaming (SSE) para que el texto
+     * aparezca token a token. Emite eventos:
+     *   {"type":"delta","content":"..."}  → fragmento de texto
+     *   {"type":"done","platos":[...]}     → fin + platos detectados (foto/precio/botón)
+     */
+    public function chatStream(Request $request, Comercio $comercio): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $request->validate([
+            'message' => 'required|string|max:500',
+            'tipo' => 'nullable|string|in:categoria,ver_mas',
+            'scope' => 'nullable|string|max:500',
+        ]);
+
+        $message = $request->input('message');
+        $modoRespuesta = $request->input('tipo');
+        $scopeRespuesta = $modoRespuesta ? $request->input('scope') : null;
+        $sessionId = $this->getSessionId($request, $comercio);
+        $startTime = microtime(true);
+
+        // Liberar el lock de sesión: así el stream (varios segundos) no bloquea
+        // otras llamadas de la misma sesión (p.ej. el carrito).
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
+
+        $callback = function () use ($comercio, $message, $modoRespuesta, $scopeRespuesta, $sessionId, $startTime, $request) {
+            // Desactivar buffering para que los tokens salgan al instante
+            @ini_set('zlib.output_compression', '0');
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            $emit = function (array $payload) {
+                echo 'data: '.json_encode($payload, JSON_UNESCAPED_UNICODE)."\n\n";
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            };
+
+            // Abrir el stream cuanto antes. El relleno (~2KB) fuerza a Chrome a soltar
+            // el buffer de olfateo del ReadableStream y entregar los tokens en vivo al JS
+            // (si no, los junta y la respuesta se ve "de golpe").
+            echo ':'.str_repeat(' ', 2048)."\n\n";
+            flush();
+
+            // Chequeos que no se pueden "streamear": IA deshabilitada o sin cuota
+            if (! $comercio->enable_ai_responses || ! $comercio->puedeUsarIA()) {
+                $limit = 'Por el momento el asistente no está disponible. '
+                    .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
+                $emit(['type' => 'delta', 'content' => $limit]);
+                $emit(['type' => 'done', 'platos' => []]);
+                $this->logConversation($comercio, $message, $limit, false, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId);
+
+                return;
+            }
+
+            $full = '';
+            try {
+                $full = $this->chatbotService->streamMessage(
+                    $comercio,
+                    $message,
+                    $sessionId,
+                    $modoRespuesta,
+                    $scopeRespuesta,
+                    function ($delta) use ($emit) {
+                        $emit(['type' => 'delta', 'content' => $delta]);
+                    }
+                );
+            } catch (\Throwable $e) {
+                \Log::error('Error en chatStream: '.$e->getMessage(), ['comercio_id' => $comercio->id]);
+                if ($full === '') {
+                    $full = $this->generateFallbackResponse($comercio, $message);
+                    $emit(['type' => 'delta', 'content' => $full]);
+                }
+            }
+
+            // Contabilizar el uso de IA del mes (cuota del plan)
+            $comercio->registrarUsoIA();
+
+            // Platos mencionados (datos exactos del JSON: foto/precio/botón)
+            $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $full);
+            $emit(['type' => 'done', 'platos' => $platos]);
+
+            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-transform',
+            'X-Accel-Buffering' => 'no',
+            'X-Content-Type-Options' => 'nosniff',
+            'Connection' => 'keep-alive',
+        ]);
+    }
+
+    /**
      * Respuesta de fallback si OpenAI no está disponible
      */
     private function generateFallbackResponse(Comercio $comercio, string $message): string

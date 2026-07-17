@@ -154,6 +154,8 @@ Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::
 Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');
 Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
 Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
+Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
+    ->middleware('throttle:20,1')->name('chat.stream');
 
 // Tracking de eventos del menú público (sin auth, por sesión)
 Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
