@@ -3,9 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $comercio->nombre }} · {{ config('app.name', 'ServiME') }}</title>
+    @php
+        $seoDesc = $comercio->descripcion
+            ? \Illuminate\Support\Str::limit(strip_tags($comercio->descripcion), 155)
+            : 'Mirá el menú de '.$comercio->nombre.' desde tu celular: platos, precios y promociones actualizadas. Consultá al asistente y armá tu pedido.';
+        $seoImg = ! empty($comercio->logo_url) ? asset('storage/'.$comercio->logo_url) : asset('images/og-image.png');
+
+        // Se arma acá (no con @json) porque el directivo de Blade corta la expresión.
+        $schemaJson = json_encode(array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Restaurant',
+            'name' => $comercio->nombre,
+            'url' => route('menu.public', $comercio->slug),
+            'hasMenu' => route('menu.classic', $comercio->slug),
+            'image' => $seoImg,
+            'description' => $seoDesc,
+            'telephone' => $comercio->telefono ?? null,
+            'address' => $comercio->direccion ?? null,
+        ], fn ($v) => ! is_null($v) && $v !== ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    @endphp
+
+    <title>Menú de {{ $comercio->nombre }} — carta digital online</title>
+    <meta name="description" content="{{ $seoDesc }}">
+    <link rel="canonical" href="{{ route('menu.public', $comercio->slug) }}">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $comercio->nombre }}">
+    <meta property="og:title" content="Menú de {{ $comercio->nombre }}">
+    <meta property="og:description" content="{{ $seoDesc }}">
+    <meta property="og:url" content="{{ route('menu.public', $comercio->slug) }}">
+    <meta property="og:image" content="{{ $seoImg }}">
+    <meta property="og:locale" content="es_AR">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script type="application/ld+json">{!! $schemaJson !!}</script>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
-    <link rel="shortcut icon" href="{{ asset('images/servime_ia.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 

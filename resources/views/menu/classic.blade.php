@@ -3,9 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $comercio->nombre }} - Menú - {{ config('app.name', 'ServiME') }}</title>
+    <title>Carta de {{ $comercio->nombre }} — menú completo</title>
+    <meta name="description" content="Menú completo de {{ $comercio->nombre }} con todos los platos y precios actualizados. Miralo desde el celular, sin descargar ninguna app.">
+    <link rel="canonical" href="{{ route('menu.classic', $comercio->slug) }}">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Carta de {{ $comercio->nombre }}">
+    <meta property="og:url" content="{{ route('menu.classic', $comercio->slug) }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
-    <link rel="shortcut icon" href="{{ asset('images/servime_ia.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     

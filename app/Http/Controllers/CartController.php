@@ -19,6 +19,30 @@ class CartController extends Controller
         return $cart->load('items');
     }
 
+    /**
+     * Convierte un texto de precio a centavos usando formato argentino:
+     * el '.' es separador de miles y la ',' es el decimal ("$3.800" => 380000).
+     * Un valor de miles nunca termina en exactamente 2 dígitos tras el punto,
+     * así se distingue "3.800" (=3800) de "3.50" (=3,50) sin ambigüedad.
+     */
+    private function parsePriceToCents(?string $txt): ?int
+    {
+        if ($txt === null) {
+            return null;
+        }
+        $s = preg_replace('/[^0-9.,]/', '', $txt);
+        if ($s === '') {
+            return null;
+        }
+        if (str_contains($s, ',')) {
+            $s = str_replace(['.', ','], ['', '.'], $s);   // coma decimal, puntos son miles
+        } elseif (! preg_match('/^\d+\.\d{2}$/', $s)) {
+            $s = str_replace('.', '', $s);                 // puntos = miles (salvo "X.YY" decimal)
+        }
+
+        return is_numeric($s) ? (int) round(((float) $s) * 100) : null;
+    }
+
     private function recalcTotal(Cart $cart): void
     {
         $total = 0;
@@ -73,13 +97,10 @@ class CartController extends Controller
         $item = $cart->items()->firstOrCreate(['nombre' => $data['nombre']], ['qty' => 0]);
         $item->qty = max(0, $item->qty + $delta);
         if ($item->qty === 0) { $item->delete(); } else {
-            // parse price
+            // parse price (formato argentino: '.' miles, ',' decimales)
             $priceCents = null;
             if (!empty($data['price_text'])) {
-                $txt = preg_replace('/[^0-9,\.]/', '', $data['price_text']);
-                $txt = str_replace(',', '.', $txt);
-                $val = is_numeric($txt) ? (float)$txt : null;
-                if ($val !== null) $priceCents = (int) round($val * 100);
+                $priceCents = $this->parsePriceToCents($data['price_text']);
                 $item->price_text = $data['price_text'];
             }
             if ($item->price_centavos === null && $priceCents !== null) {

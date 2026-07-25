@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $comercio->page_title ?? config('app.name', 'ServiME') }}</title>
+    {{-- App interactiva: no aporta contenido rastreable, así que la fuerza SEO
+         se concentra en la página de elección del menú. --}}
+    <meta name="robots" content="noindex, follow">
+    <link rel="canonical" href="{{ route('menu.public', $comercio->slug) }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
     <link rel="shortcut icon" href="{{ asset('images/servime_ia.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1203,7 +1207,21 @@
                 fetch('/api/cart/remove',{method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId(), nombre: clean})});
             }
         }
-        function parsePriceToCents(txt){ if(!txt) return null; const m=String(txt).replace(/[^0-9,\.]/g,'').replace(',', '.'); const v=parseFloat(m); return isNaN(v)?null:Math.round(v*100); }
+        // Precio a centavos con formato argentino: '.' = separador de miles, ',' = decimales.
+        // Un valor de miles nunca termina en exactamente 2 dígitos tras el punto (agrupan de a 3),
+        // así distinguimos "3.800" (=3800) de "3.50" (=3,50) sin ambigüedad.
+        function parsePriceToCents(txt){
+            if(!txt) return null;
+            let s = String(txt).replace(/[^0-9.,]/g,'');
+            if(!s) return null;
+            if(s.includes(',')){
+                s = s.replace(/\./g,'').replace(',', '.');   // coma decimal, puntos son miles
+            } else if(!/^\d+\.\d{2}$/.test(s)){
+                s = s.replace(/\./g,'');                      // puntos = miles (salvo "X.YY" decimal)
+            }
+            const v = parseFloat(s);
+            return isNaN(v) ? null : Math.round(v*100);
+        }
         function addWish(nombre, priceText){
             if (!pedidosHabilitados) return;
             const clean=(nombre||'').trim(); if(!clean) return;

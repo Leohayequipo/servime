@@ -14,7 +14,19 @@ Route::get('/', function () {
     $planes = \App\Models\Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get();
     $stats = \App\Models\SiteVisit::stats();
 
-    return view('marketing.landing', compact('planes', 'stats'));
+    // Comercio demo para que un prospecto pruebe el producto sin tener cuenta.
+    // Se resuelve una sola vez y se cachea; si no existe, la landing lo omite.
+    $demoSlug = \Illuminate\Support\Facades\Cache::remember('landing_demo_slug', now()->addHours(6), function () {
+        $slug = config('servime.demo_slug');
+
+        return $slug
+            ? \App\Models\Comercio::where('slug', $slug)
+                ->whereHas('menus', fn ($q) => $q->where('procesado', true))
+                ->value('slug')
+            : null;
+    });
+
+    return view('marketing.landing', compact('planes', 'stats', 'demoSlug'));
 })->middleware(\App\Http\Middleware\TrackSiteVisit::class);
 
 // Ruta para servir logos directamente
@@ -124,6 +136,48 @@ Route::middleware('auth')->group(function () {
 Route::post('/api/landing-chat', [App\Http\Controllers\LandingChatController::class, 'chat'])
     ->middleware('throttle:20,1')
     ->name('landing.chat');
+
+// Sitemap dinámico: la landing + el menú público de cada comercio que tenga menú
+// procesado. Se genera solo, así nunca queda desactualizado ni apunta a URLs rotas.
+Route::get('/sitemap.xml', function () {
+    $xml = \Illuminate\Support\Facades\Cache::remember('sitemap_xml', now()->addHour(), function () {
+        $urls = [[
+            'loc' => url('/'),
+            'changefreq' => 'weekly',
+            'priority' => '1.0',
+        ]];
+
+        \App\Models\Comercio::whereHas('menus', fn ($q) => $q->where('procesado', true))
+            ->orderBy('slug')
+            ->chunk(200, function ($comercios) use (&$urls) {
+                foreach ($comercios as $comercio) {
+                    $urls[] = [
+                        'loc' => route('menu.public', $comercio->slug),
+                        'lastmod' => optional($comercio->updated_at)->toAtomString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.8',
+                    ];
+                }
+            });
+
+        $out = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+        $out .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+        foreach ($urls as $url) {
+            $out .= "    <url>\n";
+            $out .= '        <loc>'.htmlspecialchars($url['loc'], ENT_XML1).'</loc>'."\n";
+            if (! empty($url['lastmod'])) {
+                $out .= '        <lastmod>'.$url['lastmod'].'</lastmod>'."\n";
+            }
+            $out .= '        <changefreq>'.$url['changefreq'].'</changefreq>'."\n";
+            $out .= '        <priority>'.$url['priority'].'</priority>'."\n";
+            $out .= "    </url>\n";
+        }
+
+        return $out.'</urlset>';
+    });
+
+    return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+})->name('sitemap');
 
 // Contador en vivo del footer de la landing (stats cacheadas 30s)
 Route::get('/api/site-stats', fn () => response()->json(\App\Models\SiteVisit::stats()))

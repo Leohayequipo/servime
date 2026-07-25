@@ -1,0 +1,34 @@
+FOTOS DEL CHAT DEMO DE LA LANDING
+=================================
+
+Estas son las fotos que se muestran en las tarjetas de plato del chat animado
+del hero (la "vista del cliente" en servime.net).
+
+Poné los archivos acá con EXACTAMENTE estos nombres:
+
+    milanesa-napolitana.jpg
+    nuggets-papas.jpg
+    ensalada-verde.jpg
+    helado-artesanal.jpg
+    malbec-copa.jpg
+
+Sirven .jpg, .jpeg, .png o .webp (busca en ese orden: webp, jpg, jpeg, png).
+
+IMPORTANTE
+----------
+- Si un archivo NO está, la tarjeta se muestra sin foto. No se rompe nada
+  y no aparece ninguna imagen rota: es el mismo comportamiento que tiene el
+  menú real cuando el comercio todavía no cargó la imagen del plato.
+- Se ven recortadas a lo ancho (object-fit: cover) en una franja de 88px de
+  alto, así que conviene que el plato esté centrado en la foto.
+- Tamaño ideal: 600x400 px o más. Después pasarlas por el optimizador:
+
+      php scripts/optimizar-fotos-demo.php
+
+  Eso las redimensiona y genera .webp livianos (bajan ~90% de peso).
+
+- Usá fotos PROPIAS o con licencia para uso comercial. No uses las imágenes
+  que los comercios subieron a sus menús sin permiso: son de ellos.
+
+Para cambiar qué platos aparecen, editá el array CONVOS y la lista $demoFotos
+en resources/views/marketing/landing.blade.php

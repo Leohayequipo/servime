@@ -5,49 +5,161 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>ServiME — Menú digital con QR e IA para restaurantes y bares</title>
-        <meta name="description" content="Creá tu carta digital con QR en minutos. Tus clientes escanean, ven el menú y consultan al chatbot de IA entrenado con tu menú. Sin apps. Desde ${{ number_format($planes->min('precio'), 0, ',', '.') }}/mes." />
-        <link rel="canonical" href="{{ url('/') }}" />
+        @php
+            // Precio "desde": ignoramos nulos y ceros para no publicar "Desde $0".
+            $preciosReales = $planes->pluck('precio')->filter(fn ($p) => ! is_null($p) && (float) $p > 0);
+            $precioDesde = $preciosReales->isNotEmpty() ? (float) $preciosReales->min() : null;
+            $ogImage = asset('images/og-image.png');
 
-        <meta property="og:title" content="ServiME — Menú digital con QR e IA para restaurantes" />
-        <meta property="og:description" content="Carta digital QR + chatbot de IA entrenado con tu menú + pre-pedido para el mozo. Sin apps, listo en minutos." />
+            // Fotos del chat demo del hero: public/images/demo/<nombre>.(webp|jpg|png).
+            // Si el archivo no está, la tarjeta se muestra sin foto — igual que en el menú real
+            // cuando el comercio todavía no cargó la imagen. Nunca queda una imagen rota.
+            $demoFotos = collect([
+                'milanesa-napolitana',
+                'fugazza',
+                'ensalada-verde',
+                'helado-artesanal',
+                'malbec-copa',
+            ])->mapWithKeys(function ($nombre) {
+                foreach (['webp', 'jpg', 'jpeg', 'png'] as $ext) {
+                    $rel = "images/demo/{$nombre}.{$ext}";
+                    if (file_exists(public_path($rel))) {
+                        return [$nombre => asset($rel)];
+                    }
+                }
+
+                return [$nombre => null];
+            })->filter()->all();
+
+            $demoFotosJson = json_encode($demoFotos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            // Fuente única de las FAQ: alimenta el schema FAQPage y la sección visible.
+            // Google exige que el contenido del schema coincida con lo que se ve en la página.
+            $faqs = [
+                [
+                    'q' => '¿Qué es un menú digital con QR?',
+                    'a' => 'Es la carta de tu restaurante publicada en una página web a la que tus clientes entran escaneando un código QR con la cámara del celular. No necesitan descargar ninguna app ni instalar nada: ven el menú actualizado al instante.',
+                ],
+                [
+                    'q' => '¿Mis clientes tienen que descargar una app?',
+                    'a' => 'No. Escanean el QR con la cámara y el menú se abre directamente en el navegador del celular. Funciona en Android y iPhone sin instalar nada.',
+                ],
+                [
+                    'q' => '¿Cuánto tarda en estar listo mi menú digital?',
+                    'a' => 'Minutos. Subís tu carta en PDF o foto y la inteligencia artificial extrae automáticamente categorías, platos, precios y descripciones. Después podés corregir cualquier dato y agregar fotos desde el panel.',
+                ],
+                [
+                    'q' => '¿Cómo funciona el chatbot con inteligencia artificial?',
+                    'a' => 'El asistente se entrena con tu menú real, así que solo recomienda platos que existen en tu carta. Responde consultas como "¿qué opciones sin TACC tienen?" o "¿qué me recomendás para dos personas?", y sugiere maridajes y acompañamientos para aumentar el ticket promedio.',
+                ],
+                [
+                    'q' => '¿Puedo cambiar precios y platos cuando quiera?',
+                    'a' => 'Sí, y sin costo. Editás nombres, precios, descripciones, etiquetas y fotos desde el panel, y el cambio se ve al instante en el menú. No hay que reimprimir cartas ni volver a generar el QR.',
+                ],
+                [
+                    'q' => '¿Sirve para bares, cafeterías, pizzerías y food trucks?',
+                    'a' => 'Sí. Funciona para cualquier comercio gastronómico: restaurantes, bares, cafeterías, pizzerías, cervecerías, heladerías y food trucks. Cada comercio tiene su propio QR, sus colores y su logo.',
+                ],
+                [
+                    'q' => '¿Los clientes pueden hacer pedidos?',
+                    'a' => 'Pueden armar un pre-pedido: marcan los platos que quieren con el botón "Lo quiero" y se genera un resumen con el total estimado para mostrarle al mozo. Esto agiliza la toma del pedido y reduce errores.',
+                ],
+                [
+                    'q' => '¿Cuánto cuesta ServiME?',
+                    'a' => 'Hay tres planes según la cantidad de consultas al asistente y las funciones que necesites (analíticas, promociones e importación por Excel). Podés ver el detalle en la sección de planes y precios de esta página.',
+                ],
+            ];
+
+            // Datos estructurados. Se arma acá (y no con @json) porque el directivo de Blade
+            // corta la expresión al encontrar caracteres como '#' dentro de los strings.
+            $schemaJson = json_encode([
+                '@context' => 'https://schema.org',
+                '@graph' => [
+                    [
+                        '@type' => 'Organization',
+                        '@id' => url('/').'#organization',
+                        'name' => 'ServiME',
+                        'url' => url('/'),
+                        'logo' => [
+                            '@type' => 'ImageObject',
+                            'url' => asset('images/logo_servime.png'),
+                        ],
+                        'image' => $ogImage,
+                        'description' => 'Plataforma de menús digitales con QR e inteligencia artificial para comercios gastronómicos.',
+                        'areaServed' => 'AR',
+                    ],
+                    [
+                        '@type' => 'WebSite',
+                        '@id' => url('/').'#website',
+                        'url' => url('/'),
+                        'name' => 'ServiME',
+                        'inLanguage' => 'es-AR',
+                        'publisher' => ['@id' => url('/').'#organization'],
+                    ],
+                    array_filter([
+                        '@type' => 'SoftwareApplication',
+                        'name' => 'ServiME',
+                        'url' => url('/'),
+                        'description' => 'Plataforma de menú digital con QR e inteligencia artificial para restaurantes y bares. El asistente responde preguntas del menú y facilita el pre-pedido.',
+                        'applicationCategory' => 'BusinessApplication',
+                        'operatingSystem' => 'Web',
+                        'inLanguage' => 'es',
+                        'publisher' => ['@id' => url('/').'#organization'],
+                        'offers' => $precioDesde ? [
+                            '@type' => 'Offer',
+                            'price' => (string) (int) $precioDesde,
+                            'priceCurrency' => 'ARS',
+                            'description' => 'Plan mensual ServiME',
+                        ] : null,
+                        'featureList' => [
+                            'Menú digital con código QR',
+                            'Asistente de IA entrenado con el menú',
+                            'Pre-pedido para el mozo',
+                            'Panel de gestión de menús',
+                            'Analíticas de uso',
+                        ],
+                    ], fn ($v) => ! is_null($v)),
+                    [
+                        '@type' => 'FAQPage',
+                        'mainEntity' => array_map(fn ($f) => [
+                            '@type' => 'Question',
+                            'name' => $f['q'],
+                            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+                        ], $faqs),
+                    ],
+                ],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        @endphp
+
+        <title>Menú digital con QR e IA para restaurantes y bares | ServiME</title>
+        <meta name="description" content="Creá tu carta digital con código QR en minutos. Tus clientes escanean, ven el menú y le preguntan a un asistente con IA entrenado con tus platos. Sin apps.{{ $precioDesde ? ' Desde $'.number_format($precioDesde, 0, ',', '.').'/mes.' : '' }}" />
+        <link rel="canonical" href="{{ url('/') }}" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+        <link rel="alternate" hreflang="es-AR" href="{{ url('/') }}" />
+        <link rel="alternate" hreflang="x-default" href="{{ url('/') }}" />
+        <meta name="theme-color" content="#0c0b0a" />
+
+        <meta property="og:site_name" content="ServiME" />
+        <meta property="og:title" content="Menú digital con QR e IA para restaurantes y bares" />
+        <meta property="og:description" content="Carta digital con QR + asistente de IA entrenado con tu menú + pre-pedido para el mozo. Sin apps, listo en minutos." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="{{ url('/') }}" />
-        <meta property="og:image" content="{{ asset('images/servime_ia.ico') }}" />
+        <meta property="og:image" content="{{ $ogImage }}" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="ServiME — menú digital con QR e IA para restaurantes y bares" />
         <meta property="og:locale" content="es_AR" />
 
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="ServiME — Menú digital con QR e IA" />
-        <meta name="twitter:description" content="Carta digital QR + chatbot IA para restaurantes. Sin apps, listo en minutos." />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Menú digital con QR e IA para restaurantes y bares" />
+        <meta name="twitter:description" content="Carta digital con QR + asistente de IA entrenado con tu menú. Sin apps, listo en minutos." />
+        <meta name="twitter:image" content="{{ $ogImage }}" />
 
-        <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "ServiME",
-            "url": "https://servime.net",
-            "description": "Plataforma de menú digital con QR e inteligencia artificial para restaurantes y bares. El chatbot responde preguntas del menú y facilita el pre-pedido.",
-            "applicationCategory": "BusinessApplication",
-            "operatingSystem": "Web",
-            "inLanguage": "es",
-            "offers": {
-                "@type": "Offer",
-                "price": "{{ (int) $planes->min('precio') }}",
-                "priceCurrency": "ARS",
-                "description": "Plan mensual ServiME"
-            },
-            "featureList": [
-                "Menú digital con código QR",
-                "Chatbot de IA entrenado con el menú",
-                "Pre-pedido para el mozo",
-                "Panel de gestión de menús",
-                "Métricas de uso"
-            ]
-        }
-        </script>
+        <script type="application/ld+json">{!! $schemaJson !!}</script>
 
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
         <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=fraunces:300,400,500,600,700&display=swap" rel="stylesheet" />
@@ -166,17 +278,31 @@
             /* ── Hero demo: real-chat animations ── */
             @keyframes demo-slide-left  { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
             @keyframes demo-slide-right { from { opacity:0; transform:translateX(16px);  } to { opacity:1; transform:translateX(0); } }
-            @keyframes demo-bounce {
-                0%, 80%, 100% { transform: scale(0); }
-                40%           { transform: scale(1); }
+            /* Misma onda de 3 puntos que usa el chat real del menú */
+            @keyframes demo-typing-wave {
+                0%, 60%, 100% { transform: translateY(0);    opacity:.35; }
+                30%           { transform: translateY(-4px); opacity:1;   }
             }
             .demo-tdot {
-                width:7px; height:7px; background:#3b82f6; border-radius:50%; display:inline-block;
-                animation: demo-bounce 1.4s ease-in-out infinite both;
+                width:6px; height:6px; background:#cbd5e1; border-radius:50%; display:inline-block;
+                animation: demo-typing-wave 1.3s ease-in-out infinite;
             }
-            .demo-tdot:nth-child(2) { animation-delay:.1s; }
-            .demo-tdot:nth-child(3) { animation-delay:.2s; }
-            @media (prefers-reduced-motion: reduce) { .demo-tdot { animation:none; opacity:.6; } }
+            .demo-tdot:nth-child(2) { animation-delay:.18s; }
+            .demo-tdot:nth-child(3) { animation-delay:.36s; }
+            /* El chat del hero scrollea solo, pero sin barra visible (como un celular) */
+            #demo-chat-msgs { scrollbar-width: none; -ms-overflow-style: none; }
+            #demo-chat-msgs::-webkit-scrollbar { display: none; }
+
+            /* Cursor del efecto "escribiendo" token a token */
+            @keyframes demo-caret { 0%,49% { opacity:1; } 50%,100% { opacity:0; } }
+            .demo-caret {
+                display:inline-block; width:2px; height:11px; margin-left:2px; vertical-align:-1px;
+                background:#f59e0b; animation: demo-caret 1s step-end infinite;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .demo-tdot { animation:none; opacity:.6; }
+                .demo-caret { animation:none; opacity:0; }
+            }
 
             .chat-qr-chip {
                 display: inline-flex; align-items: center; padding: 5px 12px;
@@ -212,17 +338,20 @@
             <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between py-3">
                     <a href="{{ url('/') }}" class="flex items-center group">
-                        <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" style="height:140px;width:auto;" class="opacity-90 group-hover:opacity-100 transition">
+                        <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME — menú digital con QR e IA"
+                             width="210" height="140" fetchpriority="high" decoding="async"
+                             style="height:140px;width:auto;" class="opacity-90 group-hover:opacity-100 transition">
                     </a>
 
                     <nav class="flex items-center gap-2 sm:gap-3">
                         <a href="#como-funciona" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Cómo funciona</a>
                         <a href="#beneficios" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Beneficios</a>
-                        <a href="#" data-open-contact class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Ayuda</a>
+                        <a href="#preguntas-frecuentes" class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Preguntas</a>
+                        <button type="button" data-open-contact class="hidden sm:inline-flex text-sm text-white/70 hover:text-white transition px-3 py-2 rounded-lg">Ayuda</button>
                         <a href="{{ route('login') }}" class="inline-flex text-sm text-white/80 hover:text-white transition px-3 py-2.5 rounded-lg">Entrar</a>
-                        <a href="#" data-open-contact class="inline-flex text-sm font-semibold text-black bg-[var(--accent)] hover:bg-[color:var(--accent2)] transition px-4 py-2.5 rounded-xl shadow-sm shadow-amber-500/20">
+                        <button type="button" data-open-contact class="inline-flex text-sm font-semibold text-black bg-[var(--accent)] hover:bg-[color:var(--accent2)] transition px-4 py-2.5 rounded-xl shadow-sm shadow-amber-500/20">
                             Quiero sumarme
-                        </a>
+                        </button>
                     </nav>
                 </div>
             </div>
@@ -242,29 +371,52 @@
                     <div class="grid lg:grid-cols-12 gap-10 items-center">
                         <div class="lg:col-span-6">
                             <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight">
-                                Tu menú en el celular, con IA que responde por vos.
+                                Menú digital con QR y un mozo virtual que atiende 24/7.
                             </h1>
 
                             <p class="mt-5 text-base sm:text-lg text-[color:var(--muted)] max-w-xl">
-                                Tus clientes escanean un QR, ven el menú y preguntan al instante. El bot responde con contexto del menú y permite armar un pre-pedido para el mozo.
+                                Tus clientes escanean el código QR de la mesa, ven tu carta digital y preguntan al instante.
+                                El asistente recomienda con los platos reales de tu menú, sugiere el maridaje y arma el
+                                pre-pedido para el mozo. Sin apps, sin login y sin reimprimir cartas.
                             </p>
 
                             <div class="mt-7 flex flex-col sm:flex-row gap-3">
-                                <a href="#" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition shadow-sm shadow-amber-500/20">
+                                <button type="button" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition shadow-sm shadow-amber-500/20">
                                     Quiero sumarme
-                                </a>
-                                <a href="#probar" class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
-                                    Probar con un slug
-                                </a>
+                                </button>
+                                @if($demoSlug)
+                                    <a href="{{ route('menu.public', $demoSlug) }}" class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
+                                        Ver un menú de verdad
+                                    </a>
+                                @else
+                                    <a href="#como-funciona" class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
+                                        Ver cómo funciona
+                                    </a>
+                                @endif
                             </div>
+
+                            {{-- Anclas rápidas de valor (narrativa de la propuesta comercial) --}}
+                            <dl class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-xl">
+                                @foreach ([
+                                    ['QR', 'Sin apps ni login'],
+                                    ['IA', 'Recomienda tu menú real'],
+                                    ['24/7', 'Atiende siempre'],
+                                    ['100%', 'Con tu marca'],
+                                ] as [$dato, $detalle])
+                                    <div>
+                                        <dt class="font-display text-2xl sm:text-3xl text-[var(--accent)]">{{ $dato }}</dt>
+                                        <dd class="mt-1 text-xs sm:text-sm text-[color:var(--muted)]">{{ $detalle }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
 
                         </div>
 
                         <div class="lg:col-span-6">
-                            <div class="relative mx-auto max-w-md">
+                            <div class="relative mx-auto" style="max-width:340px;">
                                 <div class="absolute -inset-6 bg-gradient-to-tr from-amber-500/15 via-orange-500/10 to-transparent blur-2xl"></div>
 
-                                <div class="relative rounded-[2.5rem] bg-black/30 ring-1 ring-white/10 p-5 shadow-2xl shadow-black/60">
+                                <div class="relative rounded-[2.5rem] bg-black/30 ring-1 ring-white/10 p-4 shadow-2xl shadow-black/60">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-2">
                                             <div class="h-2.5 w-2.5 rounded-full bg-red-500/70"></div>
@@ -275,7 +427,7 @@
                                     </div>
 
                                     {{-- Real-chat replica --}}
-                                    <div class="mt-4 rounded-[1.5rem] overflow-hidden" style="background:#000;display:flex;flex-direction:column;height:370px;">
+                                    <div class="mt-3 rounded-[1.5rem] overflow-hidden" style="background:#000;display:flex;flex-direction:column;height:620px;">
                                         {{-- App header --}}
                                         <div style="background:#000;padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
                                             <div style="display:flex;justify-content:center;margin-bottom:6px;">
@@ -295,12 +447,17 @@
                                             </div>
                                         </div>
                                         {{-- Messages area --}}
-                                        <div id="demo-chat-msgs" style="flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;min-height:0;"></div>
-                                        {{-- Input bar --}}
+                                        <div id="demo-chat-msgs" style="flex:1;overflow-y:auto;scroll-behavior:smooth;padding:10px 12px;display:flex;flex-direction:column;gap:10px;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;min-height:0;"></div>
+                                        {{-- Input bar (réplica de la barra real: mic ○ · píldora · enviar ○) --}}
                                         <div style="background:#000;border-top:1px solid rgba(255,255,255,0.08);padding:8px 10px;flex-shrink:0;">
-                                            <div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.18);">
-                                                <input type="text" placeholder="Escribe tu mensaje..." disabled style="flex:1;background:#1e293b;border:none;padding:9px 12px;color:#fff;font-size:12px;outline:none;font-family:inherit;">
-                                                <button type="button" disabled style="background:#3b82f6;border:none;padding:9px 14px;color:#fff;font-size:12px;font-weight:500;font-family:inherit;cursor:default;">Enviar</button>
+                                            <div style="display:flex;align-items:center;gap:6px;">
+                                                <div aria-hidden="true" style="width:32px;height:32px;flex:0 0 auto;border-radius:9999px;background:#06b6d4;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.35);">
+                                                    <svg viewBox="0 0 384 512" style="width:13px;height:13px;fill:#fff;"><path d="M192 352c53 0 96-43 96-96V96c0-53-43-96-96-96S96 43 96 96v160c0 53 43 96 96 96zm128-128v32c0 70.7-57.3 128-128 128S64 326.7 64 256v-32H32v32c0 83.8 63.2 152.9 144 161.3V480h-48v32h128v-32h-48v-62.7c80.8-8.4 144-77.5 144-161.3v-32h-32z"/></svg>
+                                                </div>
+                                                <div style="flex:1;min-width:0;border-radius:9999px;background:#1f1d1b;border:1px solid rgba(255,255,255,0.2);padding:8px 14px;color:rgba(255,255,255,.45);font-size:12px;font-family:inherit;">Escribe tu mensaje...</div>
+                                                <div aria-hidden="true" style="width:32px;height:32px;flex:0 0 auto;border-radius:9999px;background:#3b82f6;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.35);">
+                                                    <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;margin-left:1px;"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -320,41 +477,46 @@
                     <div>
                         <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Beneficios que se notan en el salón</h2>
                         <p class="mt-3 text-[color:var(--muted)] max-w-2xl">
-                            Menos ida y vuelta, más claridad. Tus clientes exploran el menú con tranquilidad y llegan al mozo con un resumen.
+                            No es un PDF con QR: es un mozo digital que recomienda, toma el pre-pedido
+                            y te muestra qué funciona y qué no.
                         </p>
                     </div>
                 </div>
 
                 <div class="mt-10 grid md:grid-cols-12 gap-4">
-                    <div class="md:col-span-5 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">QR</p>
-                        <h3 class="mt-3 font-display text-2xl">Acceso inmediato</h3>
-                        <p class="mt-3 text-sm text-[color:var(--muted)]">
-                            Un QR por comercio y listo. Experiencia móvil optimizada, sin apps.
-                        </p>
-                    </div>
-
                     <div class="md:col-span-7 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">IA contextual</p>
-                        <h3 class="mt-3 font-display text-2xl">Respuestas del menú, no genéricas</h3>
+                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Ticket promedio</p>
+                        <h3 class="mt-3 font-display text-2xl">Más ventas por mesa</h3>
                         <p class="mt-3 text-sm text-[color:var(--muted)]">
-                            El bot responde en base al contenido del menú procesado: platos, precios, categorías, tags y promos.
-                        </p>
-                    </div>
-
-                    <div class="md:col-span-7 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Pre-pedido</p>
-                        <h3 class="mt-3 font-display text-2xl">“Lo quiero” y total estimado</h3>
-                        <p class="mt-3 text-sm text-[color:var(--muted)]">
-                            El cliente arma un resumen para mostrar o copiar/compartir. Ideal para reducir dudas al momento de pedir.
+                            El asistente sugiere el maridaje, la guarnición o el postre en el momento justo.
+                            Sube el ticket promedio sin que nadie sienta presión de venta.
                         </p>
                     </div>
 
                     <div class="md:col-span-5 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
-                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Panel</p>
-                        <h3 class="mt-3 font-display text-2xl">Gestión simple</h3>
+                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Operación</p>
+                        <h3 class="mt-3 font-display text-2xl">Menos carga para el mozo</h3>
                         <p class="mt-3 text-sm text-[color:var(--muted)]">
-                            Subí menús, activá uno por comercio, personalizá y mirá métricas.
+                            El pre-pedido llega armado y ordenado: el mozo confirma y sirve.
+                            Menos idas y vueltas justo en las horas pico.
+                        </p>
+                    </div>
+
+                    <div class="md:col-span-5 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
+                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Identidad</p>
+                        <h3 class="mt-3 font-display text-2xl">Tu marca, no una plantilla</h3>
+                        <p class="mt-3 text-sm text-[color:var(--muted)]">
+                            Colores, logo y hasta el tono de voz del asistente se configuran por local.
+                            La experiencia se siente parte de tu negocio.
+                        </p>
+                    </div>
+
+                    <div class="md:col-span-7 rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
+                        <p class="text-xs font-semibold tracking-wide uppercase text-white/60">Datos</p>
+                        <h3 class="mt-3 font-display text-2xl">Decisiones con datos reales</h3>
+                        <p class="mt-3 text-sm text-[color:var(--muted)]">
+                            Vas a saber qué preguntan tus clientes, qué platos generan más interés y
+                            qué promo funciona, para ajustar la carta con criterio y no a ojo.
                         </p>
                     </div>
                 </div>
@@ -363,32 +525,62 @@
             <section id="como-funciona" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
                 <div class="rounded-[2.75rem] bg-white/3 ring-1 ring-white/10 p-8 sm:p-10">
                     <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Cómo funciona</h2>
-                    <div class="mt-8 grid md:grid-cols-3 gap-6">
+                    <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div class="rounded-3xl bg-black/20 ring-1 ring-white/10 p-6">
                             <p class="text-xs text-white/60 font-semibold tracking-wide uppercase">Paso 1</p>
-                            <p class="mt-3 font-semibold text-lg">Creás el comercio</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">Logo y datos básicos. Listo para cargar menús.</p>
+                            <p class="mt-3 font-semibold text-lg">Cargás tu local</p>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">Logo, colores y datos básicos. Listo en un par de minutos.</p>
                         </div>
                         <div class="rounded-3xl bg-black/20 ring-1 ring-white/10 p-6">
                             <p class="text-xs text-white/60 font-semibold tracking-wide uppercase">Paso 2</p>
                             <p class="mt-3 font-semibold text-lg">Subís el menú</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">PDF o imágenes. La IA extrae contenido para el chat.</p>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">PDF o foto de tu carta. La IA extrae platos, precios y categorías solita.</p>
                         </div>
                         <div class="rounded-3xl bg-black/20 ring-1 ring-white/10 p-6">
                             <p class="text-xs text-white/60 font-semibold tracking-wide uppercase">Paso 3</p>
-                            <p class="mt-3 font-semibold text-lg">Generás el QR</p>
-                            <p class="mt-2 text-sm text-[color:var(--muted)]">Los clientes escanean y ya están en el menú público.</p>
+                            <p class="mt-3 font-semibold text-lg">Ponés el QR en la mesa</p>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">El cliente escanea y ya está en tu menú. Sin apps ni registro.</p>
+                        </div>
+                        <div class="rounded-3xl bg-black/20 ring-1 ring-white/10 p-6">
+                            <p class="text-xs text-white/60 font-semibold tracking-wide uppercase">Paso 4</p>
+                            <p class="mt-3 font-semibold text-lg">Medís resultados</p>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">Qué preguntan, qué piden y qué promo funciona, con sugerencias para vender más.</p>
                         </div>
                     </div>
 
                     <div class="mt-10 flex flex-col sm:flex-row gap-3">
-                        <a href="#" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition shadow-sm shadow-amber-500/20">
+                        <button type="button" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition shadow-sm shadow-amber-500/20">
                             Quiero sumarme
-                        </a>
-                        <a href="#" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
+                        </button>
+                        <button type="button" data-open-contact class="inline-flex justify-center items-center rounded-2xl bg-white/5 hover:bg-white/8 text-white font-semibold px-6 py-3 transition ring-1 ring-white/12 hover:ring-white/20">
                             Ver ayuda
-                        </a>
+                        </button>
                     </div>
+                </div>
+            </section>
+
+            <!-- ── Casos de uso por rubro (long-tail SEO) ─────────── -->
+            <section id="casos-de-uso" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
+                <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Un menú digital para cada rubro</h2>
+                <p class="mt-3 text-[color:var(--muted)] max-w-2xl">
+                    La carta con QR se adapta a cómo trabaja tu local. Estos son los usos más comunes.
+                </p>
+
+                <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach ([
+                        ['🍽️', 'Restaurantes', 'Carta completa por categorías, con fotos de los platos y recomendaciones del asistente para subir el ticket promedio.'],
+                        ['🍺', 'Bares y cervecerías', 'Tu carta de tragos y cervezas siempre actualizada. El asistente sugiere el maridaje con la picada o la tabla.'],
+                        ['☕', 'Cafeterías y panaderías', 'Menú de desayunos y meriendas con opciones sin TACC, veganas o sin lactosa bien señalizadas.'],
+                        ['🍕', 'Pizzerías y rotiserías', 'Variedades, tamaños y promociones del día visibles al instante, sin reimprimir la carta.'],
+                        ['🚚', 'Food trucks', 'Un QR que funciona en cualquier lado. Cambiás el menú del día desde el celular en segundos.'],
+                        ['🍦', 'Heladerías y postres', 'Sabores y combinaciones del día, con las opciones sin azúcar destacadas para quien las busca.'],
+                    ] as [$emoji, $titulo, $texto])
+                        <div class="rounded-3xl bg-white/3 ring-1 ring-white/10 p-6">
+                            <span class="text-2xl" aria-hidden="true">{{ $emoji }}</span>
+                            <h3 class="mt-3 font-display text-xl">{{ $titulo }}</h3>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">{{ $texto }}</p>
+                        </div>
+                    @endforeach
                 </div>
             </section>
 
@@ -440,27 +632,101 @@
                                 @endforeach
                             </ul>
 
-                            <a href="#" data-open-contact
+                            <button type="button" data-open-contact
                                class="mt-2 inline-flex justify-center items-center rounded-2xl font-semibold px-5 py-2.5 text-sm transition
                                {{ $esPro ? 'bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black shadow shadow-amber-500/20' : 'bg-white/5 hover:bg-white/10 text-white ring-1 ring-white/15' }}">
                                 Quiero este plan
-                            </a>
+                            </button>
                         </div>
                     @endforeach
+                </div>
+
+                {{-- Comparativa. Las columnas salen de las features reales de cada plan,
+                     así que si agregás o quitás una en el panel, la tabla se actualiza sola. --}}
+                @php
+                    $etiquetas = [
+                        'analytics' => 'Analíticas',
+                        'excel' => 'Excel',
+                        'promociones' => 'Promociones',
+                        'intencion_ia' => 'Intención IA',
+                    ];
+                    $presentes = $planes->flatMap(fn ($p) => $p->features ?? [])->unique();
+                    $columnas = collect(array_keys($etiquetas))->filter(fn ($f) => $presentes->contains($f))
+                        ->merge($presentes->diff(array_keys($etiquetas)))->values();
+                @endphp
+
+                <div class="mt-12">
+                    <h3 class="font-display text-2xl tracking-tight">Comparación rápida</h3>
+                    <div class="mt-5 overflow-x-auto rounded-3xl ring-1 ring-white/10 bg-white/3">
+                        <table class="w-full text-sm min-w-[640px]">
+                            <thead>
+                                <tr class="text-left text-white/50">
+                                    <th class="font-semibold px-5 py-4">Plan</th>
+                                    <th class="font-semibold px-5 py-4">Precio</th>
+                                    <th class="font-semibold px-5 py-4">Consultas al asistente</th>
+                                    <th class="font-semibold px-5 py-4">Calidad de IA</th>
+                                    @foreach($columnas as $col)
+                                        <th class="font-semibold px-5 py-4 whitespace-nowrap">{{ $etiquetas[$col] ?? ucfirst(str_replace('_', ' ', $col)) }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($planes as $plan)
+                                    <tr class="border-t border-white/8 {{ $plan->key === 'pro' ? 'bg-[var(--accent)]/5' : '' }}">
+                                        <td class="px-5 py-4 font-semibold text-white whitespace-nowrap">{{ $plan->nombre }}</td>
+                                        <td class="px-5 py-4 text-white/80 whitespace-nowrap tabular-nums">
+                                            {{ $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.') : 'A consultar' }}
+                                        </td>
+                                        <td class="px-5 py-4 text-white/80 whitespace-nowrap tabular-nums">
+                                            {{ $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes, 0, ',', '.').' / mes' : 'Ilimitadas' }}
+                                        </td>
+                                        <td class="px-5 py-4 text-white/80 whitespace-nowrap">
+                                            {{ $plan->modelo_ia === 'gpt-4o' ? 'Avanzada' : 'Estándar' }}
+                                        </td>
+                                        @foreach($columnas as $col)
+                                            <td class="px-5 py-4">
+                                                @if(in_array($col, $plan->features ?? [], true))
+                                                    <span class="text-[var(--accent)] font-bold" title="Incluido">✓</span>
+                                                @else
+                                                    <span class="text-white/25" title="No incluido">—</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-3 text-xs text-white/45">
+                        Podés cambiar de plan en cualquier momento. Un local sin plan asignado queda en el plan inicial.
+                    </p>
                 </div>
             </section>
 
             <section id="probar" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
                 <div class="grid lg:grid-cols-12 gap-6 items-start">
                     <div class="lg:col-span-5">
-                        <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Probalo en tu comercio</h2>
+                        <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Probalo vos mismo</h2>
                         <p class="mt-3 text-[color:var(--muted)]">
-                            Si ya tenés un comercio creado, pegá el <span class="font-semibold text-white">slug</span> y abrí la vista pública.
+                            Abrí un menú real y hacele preguntas al asistente, igual que lo haría un cliente
+                            sentado en la mesa. No hace falta registrarse.
                         </p>
                     </div>
                     <div class="lg:col-span-7 rounded-[2.25rem] bg-white/3 ring-1 ring-white/10 p-6 sm:p-8">
+                        @if($demoSlug)
+                            <p class="text-sm font-semibold text-white/80">Menú de demostración</p>
+                            <p class="mt-2 text-sm text-[color:var(--muted)]">
+                                Escaneá con los ojos, no con la cámara: entrá y probá el chat con una carta real.
+                            </p>
+                            <a href="{{ route('menu.public', $demoSlug) }}"
+                               class="mt-4 inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition whitespace-nowrap">
+                                Abrir el menú de demostración
+                            </a>
+                            <div class="mt-6 pt-6 border-t border-white/10"></div>
+                        @endif
+
                         <label class="block text-sm font-semibold text-white/80" for="slug">
-                            Slug del comercio
+                            ¿Ya sos cliente? Entrá a tu menú
                         </label>
                         <div class="mt-3 flex flex-col sm:flex-row gap-3">
                             <input
@@ -473,15 +739,36 @@
                             <button
                                 id="openMenu"
                                 type="button"
-                                class="inline-flex justify-center items-center rounded-2xl bg-[var(--accent)] hover:bg-[color:var(--accent2)] text-black font-semibold px-6 py-3 transition whitespace-nowrap"
+                                class="inline-flex justify-center items-center rounded-2xl bg-white/8 hover:bg-white/12 ring-1 ring-white/15 text-white font-semibold px-6 py-3 transition whitespace-nowrap"
                             >
                                 Abrir menú
                             </button>
                         </div>
                         <p class="mt-3 text-xs text-white/50">
-                            Esto abre <code class="text-white/70">/menu/&lt;slug&gt;</code> en la misma pestaña.
+                            Es el nombre corto de tu local, el que aparece en la dirección de tu menú:
+                            <code class="text-white/70">servime.net/menu/tu-local</code>
                         </p>
                     </div>
+                </div>
+            </section>
+
+            <!-- ── Preguntas frecuentes (alimenta el schema FAQPage del <head>) ── -->
+            <section id="preguntas-frecuentes" class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-16">
+                <h2 class="font-display text-3xl sm:text-4xl tracking-tight">Preguntas frecuentes</h2>
+                <p class="mt-3 text-[color:var(--muted)] max-w-2xl">
+                    Lo que más nos consultan sobre la carta digital con QR y el asistente con IA.
+                </p>
+
+                <div class="mt-10 grid lg:grid-cols-2 gap-4">
+                    @foreach ($faqs as $faq)
+                        <details class="group rounded-3xl bg-white/3 ring-1 ring-white/10 p-6 open:bg-white/5 transition">
+                            <summary class="flex items-start justify-between gap-4 cursor-pointer list-none">
+                                <h3 class="font-display text-lg sm:text-xl">{{ $faq['q'] }}</h3>
+                                <span class="mt-1 shrink-0 text-[var(--accent)] transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                            </summary>
+                            <p class="mt-3 text-sm text-[color:var(--muted)]">{{ $faq['a'] }}</p>
+                        </details>
+                    @endforeach
                 </div>
             </section>
 
@@ -497,7 +784,9 @@
                     <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm">
                         <a class="text-white/70 hover:text-white transition" href="#beneficios">Beneficios</a>
                         <a class="text-white/70 hover:text-white transition" href="#como-funciona">Cómo funciona</a>
-                        <a class="text-white/70 hover:text-white transition" href="#" data-open-contact>Ayuda</a>
+                        <a class="text-white/70 hover:text-white transition" href="#casos-de-uso">Para tu rubro</a>
+                        <a class="text-white/70 hover:text-white transition" href="#preguntas-frecuentes">Preguntas frecuentes</a>
+                        <button type="button" class="text-white/70 hover:text-white transition" data-open-contact>Ayuda</button>
                         <a class="text-white/70 hover:text-white transition" href="{{ route('login') }}">Entrar</a>
                     </div>
                 </div>
@@ -555,7 +844,7 @@
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold">¿Querés ver una demo?</p>
-                    <p class="mt-0.5 text-xs text-white/60">Probá el menú con un slug real.</p>
+                    <p class="mt-0.5 text-xs text-white/60">Entrá a un menú real y probá el asistente.</p>
                 </div>
                 <button id="demo-toast-close" type="button" aria-label="Cerrar"
                         class="mt-0.5 text-white/40 hover:text-white/80 transition">
@@ -786,7 +1075,7 @@
                 },
                 {
                     label: 'Quiero una demo',
-                    reply: 'Podés probar la experiencia de tus clientes ahora mismo: andá a la sección **"Probalo en tu comercio"** acá abajo e ingresá el slug de un comercio existente.\n\nSi querés una demo personalizada con tu propio menú, contactanos directamente.'
+                    reply: 'Podés probar la experiencia de tus clientes ahora mismo: bajá hasta la sección **"Probalo vos mismo"** y abrí el menú de demostración.\n\nSi querés una demo personalizada con tu propio menú, contactanos directamente.'
                 },
                 {
                     label: 'Tengo un restaurante',
@@ -983,40 +1272,92 @@
 
                 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+                // Igual que en el producto real: el bot NO escribe precios ni listas.
+                // Solo nombra los platos y la app renderiza la tarjeta con foto, precio
+                // y el botón "Lo quiero" cuando termina de responder.
                 const CONVOS = [
                     {
-                        user: 'Somos 2 adultos y 2 niños, ¿qué nos recomendas para cenar?',
-                        bot:  '¡Para una noche en familia! 🍽️ A los adultos les recomiendo la **Milanesa napolitana** ($3.800) o el **Salmón grillado** ($4.200). Para los chicos, los **Nuggets con papas** ($2.100) son un clásico. ¿Armamos el pedido?',
+                        user: 'Somos cuatro, ¿qué nos recomendás para compartir?',
+                        bot:  '¡Para una mesa de cuatro! 🍽️ Les propongo la **Milanesa napolitana**, que rinde muchísimo, y una **Fugazza** para arrancar mientras esperan. ¿Armamos el pedido?',
+                        platos: [
+                            { nombre: 'Milanesa napolitana', precio: '$3.800', desc: 'Con jamón, salsa y muzzarella gratinada.', foto: 'milanesa-napolitana' },
+                            { nombre: 'Fugazza', precio: '$2.900', desc: 'Cebolla caramelizada y muzzarella.', foto: 'fugazza' },
+                        ],
                     },
                     {
-                        user: 'Queremos compartir el plato de los nenes',
-                        bot:  '¡Sin problema! Los **Nuggets con papas** vienen en porción generosa, alcanza bien para dos. Si tienen buen apetito podés pedir doble 😄 ¿Lo agrego al resumen?',
+                        user: '¿Tienen algo sin TACC?',
+                        bot:  '¡Sí! La **Ensalada verde** es sin TACC y bien fresca. Y si querés cerrar con algo dulce, el **Helado artesanal** también lo es. ¿Te sumo alguna?',
+                        platos: [
+                            { nombre: 'Ensalada verde', precio: '$1.800', desc: 'Rúcula, tomate cherry y parmesano.', foto: 'ensalada-verde' },
+                            { nombre: 'Helado artesanal', precio: '$2.400', desc: '', foto: 'helado-artesanal' },
+                        ],
                     },
                     {
-                        user: 'Un vino tinto y una ensalada verde, ¿está bien?',
-                        bot:  '¡Excelente combo! El **Malbec de la casa** ($2.500 la copa) y la **Ensalada verde** con rúcula y tomate cherry ($1.800) van perfecto juntos. ¿Los sumo al pre-pedido?',
+                        user: 'Un vino para acompañar la milanesa',
+                        bot:  'Va perfecto el **Malbec de la casa**: tiene cuerpo y equilibra la napolitana sin taparla. ¿Lo agrego al pedido?',
+                        platos: [
+                            { nombre: 'Malbec de la casa', precio: '$2.500', desc: 'Copa. Ideal para carnes y pastas.', foto: 'malbec-copa' },
+                        ],
                     },
                 ];
 
-                const BOT_AVATAR = `<div style="width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#60a5fa);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.5);"><span style="font-size:11px;">🤖</span></div>`;
+                // Fotos disponibles (las que existan en public/images/demo/)
+                const DEMO_FOTOS = {!! $demoFotosJson !!};
 
-                const BUBBLE_BOT   = 'background:linear-gradient(to right,#334155,rgba(51,65,85,0.8));border-radius:12px;padding:10px 13px;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-                const BUBBLE_USER  = 'background:linear-gradient(to right,#3b82f6,#60a5fa);border-radius:12px;padding:10px 13px;max-width:82%;color:#fff;font-size:12px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+                // Réplica de las tarjetas de plato del chat real
+                function platoCard(p) {
+                    const src = p.foto ? DEMO_FOTOS[p.foto] : null;
+                    const img = src
+                        ? `<img src="${src}" alt="${p.nombre}" width="600" height="340" loading="lazy" decoding="async"
+                               style="width:100%;height:150px;object-fit:cover;display:block;"
+                               onerror="this.style.display='none'">`
+                        : '';
+
+                    return `<div style="border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.25);box-shadow:0 2px 8px rgba(0,0,0,.35);">
+                        ${img}
+                        <div style="padding:9px 11px;">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                                <span style="font-weight:600;color:#fff;font-size:11.5px;line-height:1.3;">${p.nombre}</span>
+                                <span style="color:#3b82f6;font-weight:700;white-space:nowrap;font-size:11.5px;">${p.precio}</span>
+                            </div>
+                            ${p.desc ? `<p style="color:#cbd5e1;font-size:10.5px;margin:3px 0 0;line-height:1.45;">${p.desc}</p>` : ''}
+                            <span style="display:inline-block;margin-top:7px;padding:3px 10px;font-size:10.5px;border-radius:9999px;color:#fff;background:#3b82f6;border:1px solid rgba(255,255,255,.15);">Lo quiero</span>
+                        </div>
+                    </div>`;
+                }
+
+                // Réplica exacta del chat real: burbuja del bot en gris cálido con "cola"
+                // arriba a la izquierda, y la del cliente en el azul de marca con cola a la derecha.
+                const BUBBLE_BOT   = 'background:#37332e;border-radius:6px 20px 20px 20px;padding:11px 14px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 12px rgba(0,0,0,0.4);color:#fff;font-size:12px;line-height:1.55;';
+                const BUBBLE_USER  = 'background:#3b82f6;border-radius:20px 6px 20px 20px;padding:10px 13px;max-width:82%;color:#fff;font-size:12px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
                 const ANIM_LEFT    = reduced ? '' : 'animation:demo-slide-left .4s ease-out;';
                 const ANIM_RIGHT   = reduced ? '' : 'animation:demo-slide-right .4s ease-out;';
 
                 function fmt(t) { return t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); }
+
+                // Al escribir token a token el corte puede caer dentro de un **negrita**.
+                // Descartamos los asteriscos sueltos del final y cerramos la negrita abierta,
+                // así nunca se ven los marcadores crudos mientras se escribe.
+                function fmtPartial(t) {
+                    t = t.replace(/\*+$/, '');
+                    if (((t.match(/\*\*/g) || []).length) % 2 === 1) {
+                        t += '**';
+                    }
+
+                    return fmt(t);
+                }
                 function schedule(fn, ms) { return setTimeout(fn, reduced ? Math.min(ms, 80) : ms); }
 
+                // Indicador compacto de 3 puntos, igual al del menú real (sin texto)
                 function showTyping() {
-                    const el = document.createElement('div');
-                    el.id = 'demo-typing';
-                    el.style.cssText = BUBBLE_BOT + ANIM_LEFT;
+                    const row = document.createElement('div');
+                    row.id = 'demo-typing';
+                    row.style.cssText = 'display:flex;' + ANIM_LEFT;
                     const dots = reduced
-                        ? `<span style="color:#60a5fa;font-size:14px;letter-spacing:2px;">…</span>`
+                        ? `<span style="color:#cbd5e1;font-size:14px;letter-spacing:2px;">…</span>`
                         : `<span class="demo-tdot"></span><span class="demo-tdot"></span><span class="demo-tdot"></span>`;
-                    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${BOT_AVATAR}<div style="display:flex;align-items:center;gap:6px;"><div style="display:flex;gap:3px;">${dots}</div><span style="color:#cbd5e1;font-size:11px;font-weight:500;">Escribiendo...</span></div></div>`;
-                    area.appendChild(el);
+                    row.innerHTML = `<div style="${BUBBLE_BOT}display:inline-flex;align-items:center;gap:5px;padding:12px 14px;">${dots}</div>`;
+                    area.appendChild(row);
                 }
 
                 function runConvo(idx) {
@@ -1045,13 +1386,57 @@
                         }
                     }
 
+                    // La respuesta se escribe token a token, igual que el streaming real (SSE).
                     function showBotMsg() {
                         document.getElementById('demo-typing')?.remove();
                         const el = document.createElement('div');
                         el.style.cssText = BUBBLE_BOT + ANIM_LEFT;
-                        el.innerHTML = `<div style="display:flex;align-items:flex-start;gap:8px;">${BOT_AVATAR}<div style="flex:1;color:#fff;font-size:12px;line-height:1.5;">${fmt(bot)}</div></div>`;
+                        const txt = document.createElement('span');
+                        const caret = document.createElement('span');
+                        caret.className = 'demo-caret';
+                        el.appendChild(txt);
+                        el.appendChild(caret);
                         area.appendChild(el);
-                        schedule(fadeOut, 3600);
+
+                        // Las tarjetas de plato llegan al final, como el evento "done" del stream real
+                        function showPlatos() {
+                            const platos = CONVOS[idx % CONVOS.length].platos || [];
+                            if (! platos.length) {
+                                schedule(fadeOut, 3200);
+
+                                return;
+                            }
+                            const wrap = document.createElement('div');
+                            wrap.style.cssText = 'margin-top:9px;display:flex;flex-direction:column;gap:8px;' + ANIM_LEFT;
+                            wrap.innerHTML = platos.map(platoCard).join('')
+                                + `<span style="align-self:flex-start;display:inline-flex;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid rgba(59,130,246,.4);color:#3b82f6;font-size:10.5px;">Ver más opciones ↓</span>`;
+                            el.appendChild(wrap);
+                            area.scrollTop = area.scrollHeight;
+                            schedule(fadeOut, 3400);
+                        }
+
+                        if (reduced) {
+                            txt.innerHTML = fmt(bot);
+                            caret.remove();
+                            showPlatos();
+
+                            return;
+                        }
+
+                        // Trozos de 1 a 3 caracteres: imita el ritmo irregular de los tokens
+                        let n = 0;
+                        (function stream() {
+                            if (n >= bot.length) {
+                                caret.remove();
+                                setTimeout(showPlatos, 420);
+
+                                return;
+                            }
+                            n = Math.min(bot.length, n + 1 + Math.floor(Math.random() * 3));
+                            txt.innerHTML = fmtPartial(bot.slice(0, n));
+                            area.scrollTop = area.scrollHeight;
+                            setTimeout(stream, 16 + Math.random() * 26);
+                        })();
                     }
 
                     function fadeOut() {
