@@ -16,7 +16,7 @@
     "Agregado": "Aggiunto",
     "Mostrar accesos": "Mostra scorciatoie",
     "Ocultar accesos": "Nascondi scorciatoie",
-    "Mostrar\/ocultar accesos": "Mostra\/nascondi scorciatoie",
+    "Mostrar/ocultar accesos": "Mostra/nascondi scorciatoie",
     "Escuchando...": "In ascolto...",
     "¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?": "Ciao! Sono il tuo assistente virtuale. Posso aiutarti con il nostro menu. Cosa ti va di mangiare?",
     "algunos platos no tienen precio confirmado": "alcuni piatti non hanno un prezzo confermato",
@@ -28,5 +28,9 @@
     "Para compartir": "Da condividere",
     "Algo para tomar": "Qualcosa da bere",
     "Idioma": "Lingua",
-    "Por el momento el asistente no está disponible. Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!": "L'assistente non è disponibile in questo momento. Puoi comunque vedere il menu completo in questa pagina. Grazie per la pazienza!"
+    "Por el momento el asistente no está disponible. Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!": "L'assistente non è disponibile in questo momento. Puoi comunque vedere il menu completo in questa pagina. Grazie per la pazienza!",
+    "✓ Agregado": "✓ Aggiunto",
+    "No hay ítems agregados.": "Nessun articolo aggiunto.",
+    "Total estimado:": "Totale stimato:",
+    "¿Vaciar?": "Svuotare?"
 }

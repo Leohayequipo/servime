@@ -633,18 +633,20 @@
                 <div class="side-panel-grid">
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
-                            <button onclick="mostrarPromociones('{{ $categoria['nombre'] }}'); hideCategories();"
+                            {{-- Se MUESTRA el nombre traducido pero se ENVÍA el original:
+                                 el modo categoría del prompt lo busca tal cual está en el menú. --}}
+                            <button onclick="mostrarPromociones(@js($categoria['nombre'])); hideCategories();"
                                     class="promo-button cat-chip-promo">
-                                {{ $categoria['nombre'] }}
+                                {{ $categoria['nombre_visible'] ?? $categoria['nombre'] }}
                             </button>
                         @else
                             {{-- Sin emoji: el mapa de iconos de Comercio::getIconForCategory()
                                  no cubre la mayoría de las categorías reales (adicionales,
                                  empanadas, hamburguesas, papas, gaseosas...) y todas caían
                                  al 🍽️ genérico, repetido 6 veces. Tipografía sola es más limpio. --}}
-                            <button onclick="askQuestion('{{ $categoria['nombre'] }}', 'categoria', '{{ $categoria['nombre'] }}'); hideCategories();"
+                            <button onclick="askQuestion(@js($categoria['nombre']), 'categoria', @js($categoria['nombre'])); hideCategories();"
                                     class="cat-chip">
-                                {{ $categoria['nombre'] }}
+                                {{ $categoria['nombre_visible'] ?? $categoria['nombre'] }}
                             </button>
                         @endif
                     @endforeach
@@ -686,6 +688,11 @@
                 'total' => __('Total'),
                 'vacio' => __('Tu pedido está vacío'),
                 'sin_precio' => __('algunos platos no tienen precio confirmado'),
+                'agregado_ok' => __('✓ Agregado'),
+                'sin_items' => __('No hay ítems agregados.'),
+                'total_estimado' => __('Total estimado:'),
+                'vaciar' => __('Vaciar'),
+                'vaciar_confirmar' => __('¿Vaciar?'),
             ];
         @endphp
         const T = @json($t);
@@ -1335,10 +1342,10 @@
                 if(it.priceCents==null) anyNoPrecio=true;
                 return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid rgba(255,255,255,0.08); padding:8px; border-radius:10px;"><div style=\"color:#fff; font-size:14px;\">${it.nombre}${it.priceText?` — ${it.priceText}`:''}</div><div style=\"display:flex; align-items:center; gap:6px;\"><button class=\"wdec\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">-</button><span style=\"min-width:22px; text-align:center; color:#cbd5e1;\">${it.qty}</span><button class=\"winc\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">+</button><button class=\"wdel\" data-idx=\"${idx}\" style=\"margin-left:6px; padding:4px 8px; border-radius:6px; background:#221111; color:#ffb4b4; border:1px solid rgba(255,255,255,0.12);\">Quitar</button></div></div>`;
               }).join('')
-              : '<div style="color:#94a3b8; font-size:13px;">No hay ítems agregados.</div>';
+              : `<div style="color:var(--text-dim); font-size:13px;">${T.sin_items}</div>`;
             const totalCents=w.reduce((s,it)=>s+((it.priceCents||0)*it.qty),0);
             const fmtTotal=(totalCents/100).toLocaleString("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:2,maximumFractionDigits:2});
-            let totalHtml = `<div style=\"margin-top:14px; color:#fff; font-size:1.12em;\"><strong>Total estimado:</strong> ${fmtTotal}</div>`;
+            let totalHtml = `<div style=\"margin-top:14px; color:#fff; font-size:1.12em;\"><strong>${T.total_estimado}</strong> ${fmtTotal}</div>`;
             if(anyNoPrecio) totalHtml += `<div style=\"margin-top:2px; color:#bdbdbd; font-size:12px;\">algunos platos no tienen precio confirmado</div>`;
             list.innerHTML = htmlItems + totalHtml;
             // binds
@@ -1491,12 +1498,12 @@
         function resetWishClear() {
             wishClearArmed = false;
             if (wishClearTimer) clearTimeout(wishClearTimer);
-            if (wishClearBtn) { wishClearBtn.textContent = 'Vaciar'; wishClearBtn.classList.remove('armed'); }
+            if (wishClearBtn) { wishClearBtn.textContent = T.vaciar; wishClearBtn.classList.remove('armed'); }
         }
         wishClearBtn?.addEventListener('click', () => {
             if (!wishClearArmed) {
                 wishClearArmed = true;
-                wishClearBtn.textContent = '¿Vaciar?';
+                wishClearBtn.textContent = T.vaciar_confirmar;
                 wishClearBtn.classList.add('armed');
                 wishClearTimer = setTimeout(resetWishClear, 3000);
                 return;
@@ -1581,7 +1588,7 @@
 
                 // Feedback visual: pop y QUEDA en verde con "✓ Agregado"
                 t.dataset.added = '1';
-                t.textContent = '✓ Agregado';
+                t.textContent = T.agregado_ok;
                 t.classList.add('added');
                 t.style.transform = 'scale(1.12)';
                 setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);

@@ -16,7 +16,7 @@
     "Agregado": "Added",
     "Mostrar accesos": "Show shortcuts",
     "Ocultar accesos": "Hide shortcuts",
-    "Mostrar\/ocultar accesos": "Show\/hide shortcuts",
+    "Mostrar/ocultar accesos": "Show/hide shortcuts",
     "Escuchando...": "Listening...",
     "¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?": "Hi! I'm your virtual assistant. I can help you with our menu. What are you in the mood for?",
     "algunos platos no tienen precio confirmado": "some dishes don't have a confirmed price",
@@ -28,5 +28,9 @@
     "Para compartir": "For sharing",
     "Algo para tomar": "Something to drink",
     "Idioma": "Language",
-    "Por el momento el asistente no está disponible. Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!": "The assistant is unavailable right now. You can still browse the full menu on this page. Thanks for your patience!"
+    "Por el momento el asistente no está disponible. Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!": "The assistant is unavailable right now. You can still browse the full menu on this page. Thanks for your patience!",
+    "✓ Agregado": "✓ Added",
+    "No hay ítems agregados.": "No items added yet.",
+    "Total estimado:": "Estimated total:",
+    "¿Vaciar?": "Clear it?"
 }
