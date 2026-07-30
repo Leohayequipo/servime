@@ -26,8 +26,6 @@
             @endif
 
             {{-- Credenciales iniciales, solo al crear el usuario.
-                 Se muestran UNA vez: la contraseña se guarda hasheada, así que si se
-                 cierra esta pantalla no hay forma de volver a verla, solo de generar otra.
                  Va acá y no en users/show porque showUser() redirige a esta vista. --}}
             @if(session('credenciales'))
                 @php $cred = session('credenciales'); @endphp
@@ -37,7 +35,7 @@
                         <div class="min-w-0 flex-1">
                             <h2 class="text-amber-200 font-semibold">Credenciales de acceso</h2>
                             <p class="text-amber-200/80 text-sm mt-0.5">
-                                Anotalas y pasáselas ahora: es la única vez que se muestra la contraseña.
+                                La contraseña inicial es la misma para todas las cuentas nuevas. Pedile que la cambie apenas entre.
                             </p>
 
                             <dl class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -50,7 +48,7 @@
                             </dl>
 
                             <p class="text-amber-200/70 text-xs mt-3">
-                                Puede entrar con el usuario o con el email. También le llegó un mail para elegir su propia contraseña.
+                                Puede entrar con el usuario o con el email. También le llegó un mail para elegir su propia contraseña, que es la forma recomendada.
                             </p>
                         </div>
                     </div>

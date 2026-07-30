@@ -87,21 +87,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Contraseña inicial legible, para que el admin se la pueda pasar por teléfono.
+     * Contraseña con la que se crean las cuentas nuevas.
      *
-     * Se evitan los caracteres que se confunden al dictar o al copiar a mano
-     * (O/0, I/l/1) y se mezclan mayúscula, minúscula y dígitos para que pase
-     * cualquier política razonable.
+     * ⚠️ Es la MISMA para todas y es pública en el código. Se eligió así para poder
+     * darle el acceso a alguien por teléfono sin depender del mail de bienvenida.
+     * El costo es que, mientras no la cambien, cualquiera que adivine el usuario
+     * (se deriva del email) entra a esa cuenta.
      */
+    public const PASSWORD_INICIAL = 'admin';
+
+    /** Contraseña inicial para una cuenta recién creada. */
     public static function generarPasswordInicial(): string
     {
-        $consonantes = 'bcdfghjkmnpqrstvwxyz';
-        $vocales = 'aeuy';
-
-        $silaba = fn () => $consonantes[random_int(0, strlen($consonantes) - 1)]
-            .$vocales[random_int(0, strlen($vocales) - 1)];
-
-        return ucfirst($silaba().$silaba()).'-'.$silaba().$silaba().'-'.random_int(23, 99);
+        return self::PASSWORD_INICIAL;
     }
 
     /**
