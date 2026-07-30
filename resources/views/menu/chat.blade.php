@@ -401,22 +401,22 @@
             display: none; position: fixed; left: 16px; right: 16px; bottom: 148px; z-index: 60;
         }
         .wish-panel-inner {
-            background: #0b0b0b; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
-            box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 12px; max-width: 520px; margin: 0 auto;
+            background: var(--surface); border: 1px solid var(--line-2); border-radius: 16px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.55); padding: 14px; max-width: 520px; margin: 0 auto;
         }
         .wish-header {
             display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;
             flex-wrap: wrap;
         }
-        .wish-header h4 { font-size: 14px; font-weight: 700; color: #fff; margin: 0; }
+        .wish-header h4 { font-size: 14px; font-weight: 700; color: var(--text); margin: 0; }
         .wish-header-buttons { display: flex; gap: 8px; }
         .wish-btn {
-            padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
+            padding: 6px 10px; border-radius: 9999px; border: 1px solid var(--line-2);
             font-size: 12px; cursor: pointer;
         }
-        .wish-btn-clear { background: #221111; color: #ffb4b4; margin-right: 6px; }
-        .wish-btn-clear.armed { background: #7f1d1d; color: #fff; border-color: rgba(255,255,255,.35); }
-        .wish-btn-close { background: #141414; color: #fff; }
+        .wish-btn-clear { background: var(--surface-2); color: #C98B86; margin-right: 6px; }
+        .wish-btn-clear.armed { background: #7A2E2E; color: #fff; border-color: rgba(255,255,255,.3); }
+        .wish-btn-close { background: var(--surface-2); color: var(--text); }
         .wish-list {
             display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto;
         }
@@ -693,6 +693,7 @@
                 'total_estimado' => __('Total estimado:'),
                 'vaciar' => __('Vaciar'),
                 'vaciar_confirmar' => __('¿Vaciar?'),
+                'quitar' => __('Quitar'),
             ];
         @endphp
         const T = @json($t);
@@ -1340,7 +1341,7 @@
             const htmlItems = w.length
               ? w.map((it,idx)=>{
                 if(it.priceCents==null) anyNoPrecio=true;
-                return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid rgba(255,255,255,0.08); padding:8px; border-radius:10px;"><div style=\"color:#fff; font-size:14px;\">${it.nombre}${it.priceText?` — ${it.priceText}`:''}</div><div style=\"display:flex; align-items:center; gap:6px;\"><button class=\"wdec\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">-</button><span style=\"min-width:22px; text-align:center; color:#cbd5e1;\">${it.qty}</span><button class=\"winc\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:#141414; color:#fff; border:1px solid rgba(255,255,255,0.12);\">+</button><button class=\"wdel\" data-idx=\"${idx}\" style=\"margin-left:6px; padding:4px 8px; border-radius:6px; background:#221111; color:#ffb4b4; border:1px solid rgba(255,255,255,0.12);\">Quitar</button></div></div>`;
+                return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid rgba(255,255,255,0.08); padding:8px; border-radius:10px;"><div style=\"color:var(--text); font-size:14px;\">${it.nombre}${it.priceText?` — ${it.priceText}`:''}</div><div style=\"display:flex; align-items:center; gap:6px;\"><button class=\"wdec\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:var(--surface-2); color:var(--text); border:1px solid var(--line-2);\">-</button><span style=\"min-width:22px; text-align:center; color:var(--text-dim);\">${it.qty}</span><button class=\"winc\" data-idx=\"${idx}\" style=\"width:28px; height:28px; border-radius:6px; background:var(--surface-2); color:var(--text); border:1px solid var(--line-2);\">+</button><button class=\"wdel\" data-idx=\"${idx}\" style=\"margin-left:6px; padding:4px 8px; border-radius:6px; background:var(--surface-2); color:var(--text-dim); border:1px solid var(--line-2);\">${T.quitar}</button></div></div>`;
               }).join('')
               : `<div style="color:var(--text-dim); font-size:13px;">${T.sin_items}</div>`;
             const totalCents=w.reduce((s,it)=>s+((it.priceCents||0)*it.qty),0);
