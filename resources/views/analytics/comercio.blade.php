@@ -511,7 +511,10 @@
                                         <div class="min-w-0 flex-1">
                                             {{-- El mensaje es lo que se lee: va primero y en el color principal --}}
                                             <p class="text-sm text-text-primary truncate">{{ $thread['titulo'] ?: '(sin mensaje)' }}</p>
-                                            <p class="text-xs text-text-secondary mt-0.5">
+                                            @if($thread['respuesta'])
+                                                <p class="text-xs text-text-secondary/80 truncate mt-0.5">{{ \Illuminate\Support\Str::limit($thread['respuesta'], 110) }}</p>
+                                            @endif
+                                            <p class="text-xs text-text-secondary mt-1">
                                                 {{ $thread['inicio']->format('d/m H:i') }}@if($thread['total'] > 1) &middot; {{ $thread['total'] }} mensajes @endif
                                             </p>
                                         </div>

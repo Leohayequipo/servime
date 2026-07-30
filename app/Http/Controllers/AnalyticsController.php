@@ -114,6 +114,14 @@ class AnalyticsController extends Controller
                 // El primer mensaje escrito por el cliente resume mejor el hilo que el
                 // primero a secas, que puede ser un tap de categoría.
                 'titulo' => optional($msgs->firstWhere('origen', 'escrito') ?? $msgs->first())->user_message,
+                // Un adelanto de la respuesta: sin esto cada fila era una sola línea de
+                // texto y una fecha, y el "historial de conversaciones" no mostraba
+                // ninguna conversación hasta abrir el hilo.
+                // Se sacan los asteriscos de Markdown: el chat los renderiza en negrita,
+                // pero acá se mostraban crudos ("**Tiramisú**").
+                'respuesta' => $this->sinMarkdown(
+                    optional($msgs->firstWhere('origen', 'escrito') ?? $msgs->first())->bot_response
+                ),
             ])
             ->sortByDesc('fin')
             ->take(25)
@@ -461,6 +469,17 @@ class AnalyticsController extends Controller
         ];
 
         return in_array($norm, $saludos, true);
+    }
+
+    /**
+     * Quita el Markdown básico de una respuesta del bot para mostrarla como texto plano.
+     */
+    private function sinMarkdown(?string $texto): string
+    {
+        $limpio = preg_replace('/\*{1,3}([^*]+)\*{1,3}/u', '$1', (string) $texto);
+        $limpio = preg_replace('/[#>`_]+/u', '', (string) $limpio);
+
+        return trim(preg_replace('/\s+/u', ' ', (string) $limpio));
     }
 
     /**
