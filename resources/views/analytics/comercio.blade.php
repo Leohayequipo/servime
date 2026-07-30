@@ -472,39 +472,55 @@
                  los hilos donde el asistente no encontró nada del menú. --}}
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                 <div class="p-6 historial">
-                    @php $sinResolver = collect($threads)->where('sin_resolver', true)->count(); @endphp
-                    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                    <div class="flex flex-wrap items-baseline justify-between gap-3 mb-3">
                         <h3 class="text-lg font-medium text-text-primary flex items-center gap-2">
                             <x-icono name="messages" class="w-4 h-4 flex-none opacity-60" />
                             Historial de conversaciones
                         </h3>
-                        @if($sinResolver > 0)
-                            {{-- Filtro sin JS: el :has() del contenedor oculta los hilos resueltos --}}
+
+                        {{-- Busqueda del lado del servidor: la lista se corta en 25 hilos, asi
+                             que filtrar en el navegador solo habria buscado dentro de esos 25.
+                             Es un GET para que el resultado quede en la URL y se pueda compartir. --}}
+                        <form method="GET" action="{{ route('analytics.comercio', $comercio) }}"
+                              class="flex flex-wrap items-center gap-2">
+                            <div class="relative">
+                                <x-icono name="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+                                <input type="search" name="q" value="{{ $q }}"
+                                       placeholder="Buscar en las conversaciones..."
+                                       class="w-64 max-w-full bg-primary-dark border border-accent-gray rounded-full pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent-blue">
+                            </div>
+
                             <label class="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
-                                <input type="checkbox" id="soloSinResolver" class="peer sr-only">
-                                <span class="px-2.5 py-1 rounded-full border border-accent-gray text-text-secondary peer-checked:border-amber-500 peer-checked:text-amber-500 transition-colors">
-                                    Ver solo los {{ $sinResolver }} sin resolver
+                                <input type="checkbox" name="sin_resolver" value="1" class="peer sr-only"
+                                       @checked($soloSinResolver) onchange="this.form.submit()">
+                                <span class="px-2.5 py-1.5 rounded-full border border-accent-gray text-text-secondary peer-checked:border-amber-500 peer-checked:text-amber-500 transition-colors">
+                                    Solo sin resolver
                                 </span>
                             </label>
-                        @endif
+
+                            @if($q !== '' || $soloSinResolver)
+                                <a href="{{ route('analytics.comercio', $comercio) }}"
+                                   class="text-xs text-text-secondary hover:text-text-primary underline">Limpiar</a>
+                            @endif
+                        </form>
                     </div>
 
                     @if($threads->count() > 0)
-                        <p class="text-xs text-text-secondary mb-4">Últimos {{ $threads->count() }} hilos, agrupados por sesión</p>
-
-                        {{-- El filtro alterna una clase por JS en vez de usar :has(), que en
-                             navegadores viejos falla en silencio: el boton se marcaba y no
-                             pasaba nada. Asi degrada a "no filtra" solo si no hay JS. --}}
-                        <style>.historial.solo-alerta .hilo-ok { display: none; }</style>
-                        <script>
-                            document.getElementById('soloSinResolver')?.addEventListener('change', function () {
-                                this.closest('.historial').classList.toggle('solo-alerta', this.checked);
-                            });
-                        </script>
+                        <p class="text-xs text-text-secondary mb-4">
+                            @if($q !== '' || $soloSinResolver)
+                                {{ $threadsTotal }} {{ $threadsTotal === 1 ? 'hilo coincide' : 'hilos coinciden' }}
+                                @if($threadsTotal > $threads->count()) &middot; se muestran los {{ $threads->count() }} más recientes @endif
+                            @else
+                                {{-- Se avisa que la lista esta recortada: antes decia "ultimos 25"
+                                     sin aclarar que habia 74, asi que no se podia saber que faltaban. --}}
+                                {{ $threadsTotal }} hilos en los últimos 30 días
+                                @if($threadsTotal > $threads->count()) &middot; se muestran los {{ $threads->count() }} más recientes, buscá para ver el resto @endif
+                            @endif
+                        </p>
 
                         <div class="space-y-2">
                             @foreach($threads as $thread)
-                                <details class="group rounded-xl border border-accent-gray/50 hover:border-accent-gray transition-colors {{ $thread['sin_resolver'] ? 'hilo-alerta' : 'hilo-ok' }}">
+                                <details class="group rounded-xl border border-accent-gray/50 hover:border-accent-gray transition-colors">
                                     <summary class="flex items-start gap-3 cursor-pointer px-4 py-3 select-none list-none">
                                         <x-icono name="chevron" class="w-4 h-4 flex-none mt-0.5 text-text-secondary transition-transform group-open:rotate-90" />
 
@@ -556,9 +572,15 @@
                         </div>
                     @else
                         <div class="text-center py-10">
-                            <x-icono name="messages" class="mx-auto w-10 h-10 text-text-secondary opacity-40" />
-                            <p class="mt-3 text-sm text-text-primary">Todavía no hay conversaciones</p>
-                            <p class="mt-1 text-sm text-text-secondary">Cuando alguien use el chat del menú, los hilos aparecen acá.</p>
+                            <x-icono name="{{ $q !== '' || $soloSinResolver ? 'search' : 'messages' }}" class="mx-auto w-10 h-10 text-text-secondary opacity-40" />
+                            @if($q !== '' || $soloSinResolver)
+                                <p class="mt-3 text-sm text-text-primary">Ningún hilo coincide con la búsqueda</p>
+                                <p class="mt-1 text-sm text-text-secondary">Probá con otra palabra, o mirá que la conversación sea de los últimos 30 días.</p>
+                                <a href="{{ route('analytics.comercio', $comercio) }}" class="mt-3 inline-block text-sm text-accent-blue underline">Ver todas</a>
+                            @else
+                                <p class="mt-3 text-sm text-text-primary">Todavía no hay conversaciones</p>
+                                <p class="mt-1 text-sm text-text-secondary">Cuando alguien use el chat del menú, los hilos aparecen acá.</p>
+                            @endif
                         </div>
                     @endif
                 </div>

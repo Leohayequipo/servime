@@ -80,7 +80,7 @@ class AnalyticsController extends Controller
     /**
      * Analytics específicos de un comercio
      */
-    public function comercio(Comercio $comercio)
+    public function comercio(Request $request, Comercio $comercio)
     {
         if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
             abort(403);
@@ -92,9 +92,29 @@ class AnalyticsController extends Controller
 
         $comercioId = $comercio->id;
 
-        // Historial agrupado por hilo (session_id), últimos 25 hilos
-        $threads = ChatConversation::forComercio($comercioId)
-            ->recent(30)
+        // Historial agrupado por hilo (session_id).
+        //
+        // La busqueda va del lado del SERVIDOR y sobre todo el periodo: la lista se corta
+        // en 25 hilos, asi que un filtro en el navegador solo habria buscado dentro de
+        // esos 25 y no serviria para encontrar una conversacion mas vieja.
+        $q = trim((string) $request->query('q', ''));
+        $soloSinResolver = $request->boolean('sin_resolver');
+
+        $base = ChatConversation::forComercio($comercioId)->recent(30);
+
+        if ($q !== '') {
+            // Se buscan las SESIONES que tengan algun mensaje que coincida, y despues se
+            // traen todos los mensajes de esas sesiones: si no, el hilo aparecia cortado.
+            $sesiones = (clone $base)
+                ->where(fn ($w) => $w->where('user_message', 'like', '%'.$q.'%')
+                    ->orWhere('bot_response', 'like', '%'.$q.'%'))
+                ->distinct()
+                ->pluck('session_id');
+
+            $base = (clone $base)->whereIn('session_id', $sesiones);
+        }
+
+        $threads = $base
             ->orderBy('created_at')
             ->get()
             ->groupBy('session_id')
@@ -123,9 +143,12 @@ class AnalyticsController extends Controller
                     optional($msgs->firstWhere('origen', 'escrito') ?? $msgs->first())->bot_response
                 ),
             ])
-            ->sortByDesc('fin')
-            ->take(25)
-            ->values();
+            ->when($soloSinResolver, fn ($c) => $c->where('sin_resolver', true))
+            ->sortByDesc('fin');
+
+        // Cuantos hay en total, para avisar cuando la lista quedo recortada
+        $threadsTotal = $threads->count();
+        $threads = $threads->take(25)->values();
 
         $stats = [
             'total_conversations' => ChatConversation::forComercio($comercioId)->count(),
@@ -173,6 +196,9 @@ class AnalyticsController extends Controller
         return view('analytics.comercio', compact(
             'comercio',
             'threads',
+            'threadsTotal',
+            'q',
+            'soloSinResolver',
             'stats',
             'frequentQuestions',
             'dailyStats',
