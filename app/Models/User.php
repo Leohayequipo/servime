@@ -89,17 +89,23 @@ class User extends Authenticatable
     /**
      * Contraseña con la que se crean las cuentas nuevas.
      *
-     * ⚠️ Es la MISMA para todas y es pública en el código. Se eligió así para poder
-     * darle el acceso a alguien por teléfono sin depender del mail de bienvenida.
-     * El costo es que, mientras no la cambien, cualquiera que adivine el usuario
-     * (se deriva del email) entra a esa cuenta.
+     * Se configura con AUTH_PASSWORD_INICIAL en el .env (por defecto "admin"). Es un
+     * método y no una constante porque las constantes no pueden leer configuración.
+     *
+     * ⚠️ Es la MISMA para todas las cuentas. Se eligió así para poder darle el acceso
+     * a alguien por teléfono sin depender del mail de bienvenida. El costo es que,
+     * mientras no la cambien, cualquiera que adivine el usuario (se deriva del email)
+     * entra a esa cuenta.
      */
-    public const PASSWORD_INICIAL = 'admin';
+    public static function passwordInicial(): string
+    {
+        return (string) config('auth.password_inicial', 'admin');
+    }
 
-    /** Contraseña inicial para una cuenta recién creada. */
+    /** Alias histórico de passwordInicial(). */
     public static function generarPasswordInicial(): string
     {
-        return self::PASSWORD_INICIAL;
+        return static::passwordInicial();
     }
 
     /**

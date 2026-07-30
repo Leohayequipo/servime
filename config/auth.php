@@ -90,6 +90,23 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Contraseña inicial de las cuentas nuevas
+    |--------------------------------------------------------------------------
+    |
+    | Con la que se crea un usuario desde el panel de administración, para poder
+    | darle el acceso por teléfono sin depender del mail de bienvenida. Es la misma
+    | para todas las cuentas, así que conviene que la cambien apenas ingresan.
+    |
+    | Se lee con config('auth.password_inicial') y NUNCA con env() fuera de este
+    | archivo: con la config cacheada en producción, env() devuelve null.
+    | Si se cambia en el .env de producción hay que correr `php artisan config:cache`.
+    |
+    */
+
+    'password_inicial' => env('AUTH_PASSWORD_INICIAL', 'admin'),
+
     'passwords' => [
         // "Olvidé mi contraseña": el pedido lo hace la propia persona en el momento,
         // así que una hora sobra y una ventana corta es lo correcto.
