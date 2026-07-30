@@ -85,6 +85,52 @@ class AnalyticsInsightsService
     }
 
     /**
+     * Consultas donde el bot NO pudo recomendar ningún plato: lo que le piden al comercio
+     * y no tiene, o no está en la carta.
+     *
+     * El dato sale del marcador [[PLATOS: ...]] que el modelo declara en cada respuesta
+     * (guardado en `platos_sugeridos`), así que funciona igual en cualquier idioma: no
+     * depende de buscar frases como "no está disponible".
+     *
+     * Solo mira mensajes ESCRITOS por el cliente y con el contador ya cargado
+     * (las filas viejas tienen NULL = no sabemos, y no cuentan).
+     *
+     * @return array<int, array{consulta:string, veces:int}>
+     */
+    public function demandaInsatisfecha($comercioId, int $limit = 10): array
+    {
+        $faltantes = ChatConversation::forComercio($comercioId)
+            ->recent(30)
+            ->whereNotNull('falta')
+            ->pluck('falta')
+            ->filter();
+
+        // Se agrupa por concepto normalizado ("sin tacc" agrupa "Sin TACC" y "sin tacc")
+        // pero se muestra la forma más frecuente.
+        $conteo = [];
+        $formas = [];
+        foreach ($faltantes as $f) {
+            $texto = trim((string) $f);
+            if (mb_strlen($texto) < 2) {
+                continue;
+            }
+            $clave = $this->normalizar($texto);
+            $conteo[$clave] = ($conteo[$clave] ?? 0) + 1;
+            $formas[$clave][$texto] = ($formas[$clave][$texto] ?? 0) + 1;
+        }
+
+        arsort($conteo);
+
+        $salida = [];
+        foreach (array_slice($conteo, 0, $limit, true) as $clave => $veces) {
+            arsort($formas[$clave]);
+            $salida[] = ['consulta' => (string) array_key_first($formas[$clave]), 'veces' => $veces];
+        }
+
+        return $salida;
+    }
+
+    /**
      * Sugerencias accionables a partir de la intención + métricas de comportamiento.
      */
     public function suggestions($comercioId, array $metrics, array $intents): array
@@ -144,6 +190,8 @@ class AnalyticsInsightsService
             'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
         ]);
 
-        return (string) preg_replace('/[^a-z0-9 ]+/', ' ', $texto);
+        $texto = (string) preg_replace('/[^a-z0-9 ]+/', ' ', $texto);
+
+        return trim((string) preg_replace('/\s+/', ' ', $texto));
     }
 }

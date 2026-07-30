@@ -134,6 +134,8 @@ class AnalyticsController extends Controller
         $insights = new AnalyticsInsightsService;
         $intents = $insights->intents($comercioId);
         $suggestions = $insights->suggestions($comercioId, $metrics, $intents);
+        // Consultas donde el bot no encontró nada: lo que le piden y no tiene
+        $demandaInsatisfecha = $insights->demandaInsatisfecha($comercioId);
 
         // Última clasificación con IA (para el botón Premium)
         $ultimaClasificacion = IntentClassificationRun::where('comercio_id', $comercioId)->latest()->first();
@@ -148,6 +150,7 @@ class AnalyticsController extends Controller
             'topWords',
             'intents',
             'suggestions',
+            'demandaInsatisfecha',
             'ultimaClasificacion'
         ));
     }

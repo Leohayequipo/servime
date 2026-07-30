@@ -13,6 +13,8 @@ class ChatConversation extends Model
         'user_message',
         'origen',
         'bot_response',
+        'platos_sugeridos',
+        'falta',
         'used_openai',
         'intent',
         'intent_source',

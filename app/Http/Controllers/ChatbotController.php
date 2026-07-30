@@ -69,11 +69,13 @@ class ChatbotController extends Controller
             // Contabilizar el consumo de IA del mes (para la cuota del plan)
             $comercio->registrarUsoIA();
 
-            // Log de la conversación (usar session_id obtenido anteriormente)
-            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta);
-
-            // Platos del menú mencionados en la respuesta (datos exactos del JSON: foto/precio/botón)
+            // Platos del menú recomendados (datos exactos del JSON: foto/precio/botón).
+            // Se calcula ANTES del log para poder guardar cuántos fueron: cero significa
+            // que el bot no encontró nada, y eso alimenta la demanda insatisfecha.
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $response);
+
+            // Log de la conversación (usar session_id obtenido anteriormente)
+            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
 
             return response()->json([
                 'response' => $response,
@@ -216,7 +218,7 @@ class ChatbotController extends Controller
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $full);
             $emit(['type' => 'done', 'platos' => $platos]);
 
-            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta);
+            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
         };
 
         return response()->stream($callback, 200, [
@@ -257,7 +259,7 @@ class ChatbotController extends Controller
     /**
      * Log de conversación en la base de datos
      */
-    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null): void
+    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null, ?int $platosSugeridos = null, ?string $falta = null): void
     {
         try {
             // Si no se pasó session_id, obtenerlo
@@ -272,6 +274,10 @@ class ChatbotController extends Controller
                 // 'categoria'/'ver_mas' = lo armó la interfaz al tocar un atajo, no lo
                 // tipeó el cliente. Los widgets que analizan texto lo excluyen.
                 'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas'], true) ? $modoRespuesta : 'escrito',
+                // 0 = el bot no pudo recomendar nada: candidato a demanda insatisfecha
+                'platos_sugeridos' => $platosSugeridos,
+                // Lo que pidió y el menú no tiene (lo declara el modelo)
+                'falta' => $falta,
                 'bot_response' => $response,
                 'used_openai' => $usedOpenAI,
                 'response_time_ms' => $responseTime,

@@ -37,6 +37,9 @@ class ChatbotService
      */
     private array $platosDeclarados = [];
 
+    /** Lo que el cliente pidió y el menú no tiene, declarado por el modelo en [[FALTA: ...]]. */
+    private ?string $faltaDeclarada = null;
+
     public function __construct()
     {
         $this->openaiApiKey = config('services.openai.api_key');
@@ -54,6 +57,7 @@ class ChatbotService
             $this->scopeRespuesta = $scopeRespuesta;
             $this->ultimoMensaje = $message;
             $this->platosDeclarados = [];
+            $this->faltaDeclarada = null;
 
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
@@ -80,6 +84,7 @@ class ChatbotService
             // no se le muestra al cliente ni se guarda en el historial.
             $sep = $this->separarMarcador($response);
             $this->platosDeclarados = $sep['nombres'];
+            $this->faltaDeclarada = $sep['falta'];
 
             return $sep['texto'];
 
@@ -174,24 +179,37 @@ class ChatbotService
      * perdía tarjetas cuando parafraseaba el nombre y las inventaba cuando nombraba un
      * plato al pasar). Nunca llega al cliente.
      *
-     * @return array{texto:string, nombres:array<int, string>}
+     * También saca "[[FALTA: sushi]]", con lo que el cliente pidió y el menú no tiene.
+     * Eso alimenta la métrica de demanda insatisfecha del panel, y va declarado por el
+     * modelo en vez de inferido de "no recomendó nada": el prompt le pide ofrecer
+     * alternativas, así que igual termina recomendando algo y el conteo de platos no
+     * sirve como señal (medido: detectaba 1 de cada 3 casos).
+     *
+     * @return array{texto:string, nombres:array<int, string>, falta:?string}
      */
     private function separarMarcador(string $respuesta): array
     {
         // El cierre "]]" es opcional: si max_tokens cortó la respuesta a mitad del
         // marcador, igual queremos limpiarlo y aprovechar los nombres que llegaron.
-        if (! preg_match('/\[\[\s*PLATOS\s*:(.*?)(?:\]\]|$)/is', $respuesta, $m)) {
-            return ['texto' => trim($respuesta), 'nombres' => []];
+        $nombres = [];
+        if (preg_match('/\[\[\s*PLATOS\s*:(.*?)(?:\]\]|$)/is', $respuesta, $m)) {
+            $nombres = array_values(array_filter(
+                array_map('trim', explode('|', $m[1])),
+                fn ($n) => $n !== ''
+            ));
         }
 
-        $nombres = array_values(array_filter(
-            array_map('trim', explode('|', $m[1])),
-            fn ($n) => $n !== ''
-        ));
+        $falta = null;
+        if (preg_match('/\[\[\s*FALTA\s*:(.*?)(?:\]\]|$)/is', $respuesta, $f)) {
+            $falta = trim($f[1]);
+            $falta = $falta !== '' ? mb_substr($falta, 0, 60) : null;
+        }
 
-        $texto = trim(preg_replace('/\[\[\s*PLATOS\s*:.*$/is', '', $respuesta));
+        // Se corta desde el PRIMER marcador en adelante: así no se filtra ninguno,
+        // ni siquiera si el modelo manda FALTA sin PLATOS.
+        $texto = trim(preg_replace('/\[\[\s*(?:PLATOS|FALTA)\s*:.*$/is', '', $respuesta));
 
-        return ['texto' => $texto, 'nombres' => $nombres];
+        return ['texto' => $texto, 'nombres' => $nombres, 'falta' => $falta];
     }
 
     /**
@@ -232,6 +250,15 @@ class ChatbotService
         }
 
         return $platos;
+    }
+
+    /**
+     * Lo que el cliente pidió y el menú no tiene, si el modelo lo declaró.
+     * Lo consume el controller para guardarlo y alimentar el panel de analytics.
+     */
+    public function faltanteDeclarado(): ?string
+    {
+        return $this->faltaDeclarada;
     }
 
     /**
@@ -941,6 +968,12 @@ Y en la ÚLTIMA LÍNEA, cerrá SIEMPRE con este marcador, que el cliente NO ve:
 - Listá SOLO los platos que estás recomendando de verdad, en el orden en que los recomendás. NO incluyas lo que el cliente ya tiene en el pedido, ni platos que nombraste al pasar o para descartar, ni sabores de ejemplo.
 - Si no estás recomendando ningún plato (un saludo, una pregunta de horarios), cerrá con [[PLATOS: ]] vacío.
 - El marcador es la ÚNICA lista: no repitas los platos como lista con guiones dentro de la prosa, ni cierres con un resumen tipo \"te sugiero: - X - Y\". En la prosa van dentro de las frases y nada más.
+
+Y SI el cliente pidió algo que el menú NO tiene, agregá en la línea siguiente un segundo marcador (tampoco lo ve el cliente):
+[[FALTA: lo que pidió y no está]]
+- Poné SOLO de qué se trata, en 1 a 3 palabras y en el idioma del menú: \"sushi\", \"sin TACC\", \"delivery\", \"opciones veganas\". No la frase completa del cliente.
+- Va IGUAL aunque le hayas ofrecido alternativas: sirve para que el local sepa qué le están pidiendo y no tiene.
+- Si el menú sí tenía lo que pidió, NO pongas este marcador.
 - Ese marcador se convierte en las tarjetas con foto, precio y botón \"Lo quiero\". Si te lo olvidás, el cliente no puede pedir nada.
 
 RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú):";
@@ -1017,6 +1050,7 @@ RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú
         $this->scopeRespuesta = $scopeRespuesta;
         $this->ultimoMensaje = $message;
         $this->platosDeclarados = [];
+        $this->faltaDeclarada = null;
 
         $contexto = $this->trimContext($this->buildMenuContext($comercio), 48000);
         $conversationHistory = $sessionId ? $this->getConversationHistory($comercio, $sessionId) : [];
@@ -1036,6 +1070,7 @@ RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú
 
         $sep = $this->separarMarcador($completa);
         $this->platosDeclarados = $sep['nombres'];
+        $this->faltaDeclarada = $sep['falta'];
 
         return $sep['texto'];
     }

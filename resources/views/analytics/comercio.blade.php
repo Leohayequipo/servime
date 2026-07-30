@@ -319,6 +319,28 @@
                     @endif
                 </div>
 
+                {{-- Demanda insatisfecha: lo que los clientes pidieron y el menú no tiene.
+                     Lo declara el asistente en cada respuesta, ya normalizado a 1-3 palabras,
+                     así "tenés sushi?", "hay sushi?" y "tienen sushi" cuentan juntas.
+                     Cada línea es una decisión concreta, a diferencia de la nube de palabras
+                     de al lado, que describe la demanda pero no señala huecos. --}}
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-1">🕳️ Te lo pidieron y no lo tenés</h3>
+                    <p class="text-text-secondary text-sm mb-4">Lo que los clientes buscaron y no está en tu menú. Puede ser algo para sumar a la carta, o algo que sí tenés pero está mal cargado (sin descripción o sin etiqueta).</p>
+                    @if(count($demandaInsatisfecha) > 0)
+                        <ul class="space-y-2">
+                            @foreach($demandaInsatisfecha as $item)
+                                <li class="flex items-center justify-between gap-3 bg-accent-gray/20 rounded-xl px-3 py-2">
+                                    <span class="text-text-primary text-sm">{{ $item['consulta'] }}</span>
+                                    <span class="text-text-secondary text-xs whitespace-nowrap">{{ $item['veces'] }}{{ $item['veces'] === 1 ? ' vez' : ' veces' }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="text-text-secondary text-center py-4">Todo lo que preguntaron encontró respuesta en tu menú. 👌</p>
+                    @endif
+                </div>
+
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-lg font-medium text-text-primary mb-4">🕒 Actividad por hora y día</h3>
                     @php $dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; $hmMax = $metrics['heatmapMax']; @endphp
