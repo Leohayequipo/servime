@@ -50,6 +50,14 @@ class MenuTranslatorService
         '- Dejá sin traducir las marcas y los nombres de platos típicos sin equivalente (empanada, dulce de leche, fernet).',
     ];
 
+    /** @var list<string> Reglas para traducir un texto que escribió el comerciante. */
+    private const INSTRUCCION_TEXTO = [
+        'Es un texto que escribió el dueño de un restaurante para sus clientes (por ejemplo el saludo de bienvenida del chat).',
+        '- Conservá el TONO tal cual: si es informal, informal; si es formal, formal. No lo hagas más neutro ni más largo.',
+        '- Mantené los emojis, los signos de exclamación y el largo aproximado.',
+        '- NO traduzcas el nombre del local, ni marcas, ni nombres de platos.',
+    ];
+
     /**
      * Devuelve [nombre original => nombre traducido] para las categorías dadas.
      *
@@ -80,16 +88,38 @@ class MenuTranslatorService
     }
 
     /**
-     * Traduce una lista de textos del menú con caché.
+     * Traduce un texto que escribió el comerciante (p. ej. su mensaje de bienvenida).
+     *
+     * A diferencia de las categorías y las descripciones, esto NO es contenido del menú,
+     * así que la clave de caché no lleva la versión del menú: se invalida sola cuando el
+     * comerciante edita el texto, porque el propio texto entra en la clave.
+     *
+     * Devuelve el original si no se pudo traducir.
+     */
+    public function texto(Comercio $comercio, string $texto, ?string $locale = null): string
+    {
+        $texto = trim($texto);
+        if ($texto === '') {
+            return $texto;
+        }
+
+        $t = $this->traducir($comercio, [$texto], 'txt', self::INSTRUCCION_TEXTO, $locale, false);
+
+        return $t[$texto] ?? $texto;
+    }
+
+    /**
+     * Traduce una lista de textos con caché.
      *
      * Se traduce TODO el conjunto de una vez (no solo lo que se muestra en el momento)
-     * para que haya una única entrada de caché por comercio+idioma+versión del menú: el
-     * primer visitante paga la llamada y de ahí en adelante todos van instantáneo.
+     * para que haya una única entrada de caché por comercio+idioma+versión: el primer
+     * visitante paga la llamada y de ahí en adelante todos van instantáneo.
      *
      * @param  array<int, string>  $textos
+     * @param  bool  $porVersionDelMenu  sumar la versión del menú a la clave (contenido del menú)
      * @return array<string, string>
      */
-    private function traducir(Comercio $comercio, array $textos, string $tipo, array $instruccion, ?string $locale): array
+    private function traducir(Comercio $comercio, array $textos, string $tipo, array $instruccion, ?string $locale, bool $porVersionDelMenu = true): array
     {
         $locale = $locale ?: app()->getLocale();
         $textos = array_values(array_unique(array_filter(array_map('trim', $textos))));
@@ -99,9 +129,9 @@ class MenuTranslatorService
             return $this->identidad($textos);
         }
 
-        $version = $comercio->menus()
-            ->where('procesado', true)
-            ->max('updated_at') ?? 'sin-menu';
+        $version = $porVersionDelMenu
+            ? ($comercio->menus()->where('procesado', true)->max('updated_at') ?? 'sin-menu')
+            : '';
 
         $clave = 'menu-trad:'.$tipo.':'.$comercio->id.':'.$locale.':'.md5($version.'|'.implode('|', $textos));
 

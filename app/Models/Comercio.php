@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MenuTranslatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -419,10 +420,13 @@ class Comercio extends Model
      * Mensaje de bienvenida del chat, traducido al idioma del cliente cuando corresponde.
      *
      * La mayoría de los comercios tiene guardado el texto por defecto sin haberlo tocado
-     * (igual que pasaba con los colores). Para esos devolvemos la versión traducida, que
-     * es la señal más fuerte de que el chat habla el idioma del turista. Si el comerciante
-     * escribió su propio mensaje, se respeta tal cual: traducirlo automáticamente le
-     * cambiaría el tono que eligió.
+     * (igual que pasaba con los colores). Para esos alcanza con la traducción del archivo
+     * de idioma, que es gratis e instantánea.
+     *
+     * Si el comerciante escribió SU propio mensaje, se traduce con IA y queda cacheado,
+     * con instrucciones de conservarle el tono. Antes se devolvía tal cual, así que un
+     * local con bienvenida personalizada le mostraba español a un turista: justo lo
+     * contrario de la señal que el mensaje de bienvenida tiene que dar.
      */
     public function mensajeBienvenida(): string
     {
@@ -432,7 +436,7 @@ class Comercio extends Model
             return __(self::BIENVENIDA_POR_DEFECTO);
         }
 
-        return $propio;
+        return app(MenuTranslatorService::class)->texto($this, $propio);
     }
 
     /** Clave del acento actualmente elegido, para marcar el swatch activo en el panel. */
