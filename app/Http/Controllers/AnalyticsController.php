@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
+    /** Periodos ofrecidos en el historial, en dias. 0 = todo el historial. */
+    public const PERIODOS = [7, 30, 90, 365, 0];
+
+    /** Cuantos hilos mostrar por vez. */
+    public const CANTIDADES = [25, 50, 100];
+
     /**
      * Dashboard principal de analytics
      */
@@ -100,19 +106,26 @@ class AnalyticsController extends Controller
         $q = trim((string) $request->query('q', ''));
         $soloSinResolver = $request->boolean('sin_resolver');
 
-        // Sin busqueda, el historial acompana al resto del panel: ultimos 30 dias.
-        // Buscando, se mira TODO el historial, porque quien busca va atras de una
-        // conversacion puntual y no tiene por que saber de que fecha era.
+        // Periodo y cantidad EXPLICITOS, en vez de un tope fijo escondido: antes la lista
+        // mostraba 25 hilos de 79 sin decirlo, y para ver algo mas viejo habia que
+        // adivinar una palabra para buscar. Se validan contra una lista blanca para que
+        // nadie pida "todo, 100000" por la URL.
+        $periodo = (int) $request->query('periodo', 30);   // dias; 0 = todo el historial
+        $periodo = in_array($periodo, self::PERIODOS, true) ? $periodo : 30;
+
+        $cantidad = (int) $request->query('cantidad', 25);
+        $cantidad = in_array($cantidad, self::CANTIDADES, true) ? $cantidad : 25;
+
         $base = ChatConversation::forComercio($comercioId);
-        if ($q === '') {
-            $base = $base->recent(30);
+        if ($periodo > 0) {
+            $base = $base->where('created_at', '>=', now()->subDays($periodo));
         }
 
         if ($q !== '') {
             // Se buscan las SESIONES que tengan algun mensaje que coincida y despues se
             // traen todos sus mensajes: si no, el hilo aparecia cortado. El tope de 200
             // sesiones evita cargar en memoria un historial entero si el termino es muy
-            // comun; igual solo se muestran 25.
+            // comun; igual solo se muestran las que entren en $cantidad.
             $sesiones = (clone $base)
                 ->where(fn ($w) => $w->where('user_message', 'like', '%'.$q.'%')
                     ->orWhere('bot_response', 'like', '%'.$q.'%'))
@@ -158,7 +171,7 @@ class AnalyticsController extends Controller
 
         // Cuantos hay en total, para avisar cuando la lista quedo recortada
         $threadsTotal = $threads->count();
-        $threads = $threads->take(25)->values();
+        $threads = $threads->take($cantidad)->values();
 
         $stats = [
             'total_conversations' => ChatConversation::forComercio($comercioId)->count(),
@@ -209,6 +222,8 @@ class AnalyticsController extends Controller
             'threadsTotal',
             'q',
             'soloSinResolver',
+            'periodo',
+            'cantidad',
             'stats',
             'frequentQuestions',
             'dailyStats',

@@ -472,24 +472,33 @@
                  los hilos donde el asistente no encontró nada del menú. --}}
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                 <div class="p-6 historial">
-                    <div class="flex flex-wrap items-baseline justify-between gap-3 mb-3">
+                    @php
+                        $etiquetasPeriodo = [7 => '7 días', 30 => '30 días', 90 => '3 meses', 365 => '1 año', 0 => 'Todo'];
+                        // Frase aparte de la etiqueta del pill: 'últimos 1 año' no se dice.
+                        $fraseP = [7 => 'últimos 7 días', 30 => 'últimos 30 días', 90 => 'últimos 3 meses', 365 => 'último año', 0 => 'todo el historial'];
+                        // Cada pill conserva el resto de los filtros: cambiar el periodo no
+                        // deberia borrar la busqueda ni la cantidad elegida.
+                        $conFiltro = fn (array $extra) => request()->fullUrlWithQuery($extra);
+                    @endphp
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                         <h3 class="text-lg font-medium text-text-primary flex items-center gap-2">
                             <x-icono name="messages" class="w-4 h-4 flex-none opacity-60" />
                             Historial de conversaciones
                         </h3>
 
-                        {{-- Busqueda del lado del servidor: la lista se corta en 25 hilos, asi
-                             que filtrar en el navegador solo habria buscado dentro de esos 25.
-                             Es un GET para que el resultado quede en la URL y se pueda compartir. --}}
+                        {{-- Busqueda del lado del servidor. Es un GET para que el resultado
+                             quede en la URL y se pueda compartir o guardar. --}}
                         <form method="GET" action="{{ route('analytics.comercio', $comercio) }}"
                               class="flex flex-wrap items-center gap-2">
+                            <input type="hidden" name="periodo" value="{{ $periodo }}">
+                            <input type="hidden" name="cantidad" value="{{ $cantidad }}">
                             <div class="relative">
                                 <x-icono name="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
                                 <input type="search" name="q" value="{{ $q }}"
-                                       placeholder="Buscar en las conversaciones..."
-                                       class="w-64 max-w-full bg-primary-dark border border-accent-gray rounded-full pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent-blue">
+                                       placeholder="Buscar..."
+                                       class="w-52 max-w-full bg-primary-dark border border-accent-gray rounded-full pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent-blue">
                             </div>
-
                             <label class="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
                                 <input type="checkbox" name="sin_resolver" value="1" class="peer sr-only"
                                        @checked($soloSinResolver) onchange="this.form.submit()">
@@ -497,25 +506,49 @@
                                     Solo sin resolver
                                 </span>
                             </label>
-
-                            @if($q !== '' || $soloSinResolver)
-                                <a href="{{ route('analytics.comercio', $comercio) }}"
-                                   class="text-xs text-text-secondary hover:text-text-primary underline">Limpiar</a>
-                            @endif
                         </form>
+                    </div>
+
+                    {{-- Periodo y cantidad como enlaces: sin JS, y cada estado queda en la URL.
+                         Antes la lista mostraba 25 hilos de 79 sin decirlo, y para ver algo mas
+                         viejo habia que adivinar una palabra para buscar. --}}
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-text-secondary mr-1">Período</span>
+                            @foreach($etiquetasPeriodo as $dias => $etiqueta)
+                                <a href="{{ $conFiltro(['periodo' => $dias]) }}"
+                                   class="px-2.5 py-1 rounded-full text-xs border transition-colors
+                                          {{ $periodo === $dias
+                                              ? 'border-accent-blue text-accent-blue'
+                                              : 'border-accent-gray text-text-secondary hover:text-text-primary' }}">{{ $etiqueta }}</a>
+                            @endforeach
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-text-secondary mr-1">Mostrar</span>
+                            @foreach(\App\Http\Controllers\AnalyticsController::CANTIDADES as $n)
+                                <a href="{{ $conFiltro(['cantidad' => $n]) }}"
+                                   class="px-2.5 py-1 rounded-full text-xs border transition-colors
+                                          {{ $cantidad === $n
+                                              ? 'border-accent-blue text-accent-blue'
+                                              : 'border-accent-gray text-text-secondary hover:text-text-primary' }}">{{ $n }}</a>
+                            @endforeach
+                        </div>
+
+                        @if($q !== '' || $soloSinResolver || $periodo !== 30 || $cantidad !== 25)
+                            <a href="{{ route('analytics.comercio', $comercio) }}"
+                               class="text-xs text-text-secondary hover:text-text-primary underline">Restablecer</a>
+                        @endif
                     </div>
 
                     @if($threads->count() > 0)
                         <p class="text-xs text-text-secondary mb-4">
-                            @if($q !== '' || $soloSinResolver)
-                                {{ $threadsTotal }} {{ $threadsTotal === 1 ? 'hilo coincide' : 'hilos coinciden' }}
-                                @if($q !== '') en todo el historial @endif
-                                @if($threadsTotal > $threads->count()) &middot; se muestran los {{ $threads->count() }} más recientes @endif
-                            @else
-                                {{-- Se avisa que la lista esta recortada: antes decia "ultimos 25"
-                                     sin aclarar que habia 74, asi que no se podia saber que faltaban. --}}
-                                {{ $threadsTotal }} hilos en los últimos 30 días
-                                @if($threadsTotal > $threads->count()) &middot; se muestran los {{ $threads->count() }} más recientes, buscá para ver el resto @endif
+                            {{ $threadsTotal }} {{ $threadsTotal === 1 ? 'hilo' : 'hilos' }}
+                            @if($q !== '') que coinciden con &ldquo;{{ $q }}&rdquo; @endif
+                            @if($soloSinResolver) sin resolver @endif
+                            &middot; {{ $fraseP[$periodo] }}
+                            @if($threadsTotal > $threads->count())
+                                &middot; se muestran {{ $threads->count() }}
                             @endif
                         </p>
 
@@ -576,7 +609,7 @@
                             <x-icono name="{{ $q !== '' || $soloSinResolver ? 'search' : 'messages' }}" class="mx-auto w-10 h-10 text-text-secondary opacity-40" />
                             @if($q !== '' || $soloSinResolver)
                                 <p class="mt-3 text-sm text-text-primary">Ningún hilo coincide con la búsqueda</p>
-                                <p class="mt-1 text-sm text-text-secondary">Se buscó en todo el historial. Probá con otra palabra.</p>
+                                <p class="mt-1 text-sm text-text-secondary">Probá con otra palabra o ampliá el período.</p>
                                 <a href="{{ route('analytics.comercio', $comercio) }}" class="mt-3 inline-block text-sm text-accent-blue underline">Ver todas</a>
                             @else
                                 <p class="mt-3 text-sm text-text-primary">Todavía no hay conversaciones</p>
