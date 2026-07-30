@@ -460,48 +460,90 @@
                 </div>
             </div>
 
-            <!-- Historial de Conversaciones -->
+            {{-- Historial de conversaciones.
+
+                 Antes cada fila mostraba fecha + IP en blanco negrita y el mensaje del
+                 cliente en gris chico abajo: la jerarquía al revés, porque lo único que
+                 se quiere leer es qué preguntaron. Además repetía "anónimo" y un badge
+                 azul "1 msj" en las 25 filas, sin aportar nada.
+
+                 Ahora manda el mensaje, y los badges aparecen SOLO cuando dicen algo:
+                 cantidad si hay más de uno, idioma si no es español, y un aviso ámbar en
+                 los hilos donde el asistente no encontró nada del menú. --}}
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                <div class="p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-6 flex items-center gap-2">
-                        <x-icono name="messages" class="w-4 h-4 flex-none opacity-60" />
-                        Historial de Conversaciones
-                    </h3>
-                    
+                <div class="p-6 historial">
+                    @php $sinResolver = collect($threads)->where('sin_resolver', true)->count(); @endphp
+                    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                        <h3 class="text-lg font-medium text-text-primary flex items-center gap-2">
+                            <x-icono name="messages" class="w-4 h-4 flex-none opacity-60" />
+                            Historial de conversaciones
+                        </h3>
+                        @if($sinResolver > 0)
+                            {{-- Filtro sin JS: el :has() del contenedor oculta los hilos resueltos --}}
+                            <label class="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
+                                <input type="checkbox" id="soloSinResolver" class="peer sr-only">
+                                <span class="px-2.5 py-1 rounded-full border border-accent-gray text-text-secondary peer-checked:border-amber-500 peer-checked:text-amber-500 transition-colors">
+                                    Ver solo los {{ $sinResolver }} sin resolver
+                                </span>
+                            </label>
+                        @endif
+                    </div>
+
                     @if($threads->count() > 0)
-                        <p class="text-xs text-text-secondary mb-4">Últimos {{ $threads->count() }} hilos (agrupados por sesión)</p>
-                        <div class="space-y-3">
+                        <p class="text-xs text-text-secondary mb-4">Últimos {{ $threads->count() }} hilos, agrupados por sesión</p>
+
+                        {{-- El filtro alterna una clase por JS en vez de usar :has(), que en
+                             navegadores viejos falla en silencio: el boton se marcaba y no
+                             pasaba nada. Asi degrada a "no filtra" solo si no hay JS. --}}
+                        <style>.historial.solo-alerta .hilo-ok { display: none; }</style>
+                        <script>
+                            document.getElementById('soloSinResolver')?.addEventListener('change', function () {
+                                this.closest('.historial').classList.toggle('solo-alerta', this.checked);
+                            });
+                        </script>
+
+                        <div class="space-y-2">
                             @foreach($threads as $thread)
-                                <details class="border border-accent-gray/50 rounded-lg group">
-                                    <summary class="flex items-center justify-between cursor-pointer px-4 py-3 select-none">
-                                        <div class="flex items-center gap-3 min-w-0">
-                                            <span class="text-text-secondary group-open:rotate-90 transition-transform flex-shrink-0">▶</span>
-                                            <div class="min-w-0">
-                                                <p class="text-sm font-medium text-text-primary">
-                                                    {{ $thread['inicio']->format('d/m H:i') }}
-                                                    <span class="text-text-secondary font-normal">· {{ $thread['ip'] ?? 'anónimo' }}</span>
-                                                </p>
-                                                <p class="text-xs text-text-secondary truncate">
-                                                    {{ $thread['mensajes']->first()->user_message }}
-                                                </p>
-                                            </div>
+                                <details class="group rounded-xl border border-accent-gray/50 hover:border-accent-gray transition-colors {{ $thread['sin_resolver'] ? 'hilo-alerta' : 'hilo-ok' }}">
+                                    <summary class="flex items-start gap-3 cursor-pointer px-4 py-3 select-none list-none">
+                                        <x-icono name="chevron" class="w-4 h-4 flex-none mt-0.5 text-text-secondary transition-transform group-open:rotate-90" />
+
+                                        <div class="min-w-0 flex-1">
+                                            {{-- El mensaje es lo que se lee: va primero y en el color principal --}}
+                                            <p class="text-sm text-text-primary truncate">{{ $thread['titulo'] ?: '(sin mensaje)' }}</p>
+                                            <p class="text-xs text-text-secondary mt-0.5">
+                                                {{ $thread['inicio']->format('d/m H:i') }}@if($thread['total'] > 1) &middot; {{ $thread['total'] }} mensajes @endif
+                                            </p>
                                         </div>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex-shrink-0 ml-3">
-                                            {{ $thread['total'] }} msj
-                                        </span>
+
+                                        <div class="flex-none flex items-center gap-1.5">
+                                            @foreach($thread['idiomas'] as $idioma)
+                                                <span class="text-[10px] font-semibold uppercase tracking-wide text-text-secondary border border-accent-gray rounded px-1 py-0.5">{{ $idioma }}</span>
+                                            @endforeach
+                                            @if($thread['sin_resolver'])
+                                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-500 border border-amber-500/40 rounded-full px-2 py-0.5">
+                                                    <x-icono name="alert" class="w-3 h-3 flex-none" />
+                                                    {{ $thread['falta'] ? implode(', ', array_slice($thread['falta'], 0, 2)) : 'sin resultado' }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     </summary>
-                                    <div class="px-4 pb-4 space-y-3 border-t border-accent-gray/40 pt-3">
+
+                                    <div class="px-4 pb-4 pt-1 space-y-3 border-t border-accent-gray/30">
                                         @foreach($thread['mensajes'] as $m)
-                                            <div class="flex items-start gap-2">
-                                                <span class="text-xs text-text-secondary w-10 flex-shrink-0 pt-1">{{ $m->created_at->format('H:i') }}</span>
-                                                <div class="flex-1 space-y-1">
-                                                    <p class="text-sm text-text-primary">🧑 {{ $m->user_message }}</p>
-                                                    <p class="text-sm text-text-secondary">
-                                                        {{ $m->used_openai ? '🤖' : '🔧' }} {{ $m->bot_response }}
-                                                        @if($m->response_time_ms)
-                                                            <span class="text-xs text-text-secondary">· {{ $m->response_time_ms }}ms</span>
-                                                        @endif
-                                                    </p>
+                                            <div class="pt-2">
+                                                {{-- Burbujas como en el chat real, en vez de emoji --}}
+                                                <div class="flex justify-end">
+                                                    <p class="text-sm text-text-primary bg-accent-gray/40 rounded-2xl rounded-tr-md px-3 py-2 max-w-[85%]">{{ $m->user_message }}</p>
+                                                </div>
+                                                <div class="flex justify-start mt-1.5">
+                                                    <div class="max-w-[85%]">
+                                                        <p class="text-sm text-text-secondary bg-accent-gray/20 rounded-2xl rounded-tl-md px-3 py-2">{{ $m->bot_response }}</p>
+                                                        <p class="text-[11px] text-text-secondary/70 mt-1">
+                                                            {{ $m->created_at->format('H:i') }}@if($m->response_time_ms) &middot; {{ number_format($m->response_time_ms / 1000, 1, ',', '.') }} s @endif
+                                                            @unless($m->used_openai) &middot; <span class="text-amber-500">respuesta de respaldo</span> @endunless
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         @endforeach
@@ -510,14 +552,10 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-text-primary">No hay conversaciones</h3>
-                            <p class="mt-1 text-sm text-text-secondary">
-                                Aún no se han registrado conversaciones para este comercio.
-                            </p>
+                        <div class="text-center py-10">
+                            <x-icono name="messages" class="mx-auto w-10 h-10 text-text-secondary opacity-40" />
+                            <p class="mt-3 text-sm text-text-primary">Todavía no hay conversaciones</p>
+                            <p class="mt-1 text-sm text-text-secondary">Cuando alguien use el chat del menú, los hilos aparecen acá.</p>
                         </div>
                     @endif
                 </div>

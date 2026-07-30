@@ -105,6 +105,15 @@ class AnalyticsController extends Controller
                 'inicio' => $msgs->min('created_at'),
                 'fin' => $msgs->max('created_at'),
                 'mensajes' => $msgs->values(),
+                // Lo que hace útil el historial: poder distinguir de un vistazo los hilos
+                // que hay que revisar (el asistente no encontró nada) de los que salieron
+                // bien, y en qué idioma se atendió.
+                'sin_resolver' => $msgs->contains(fn ($m) => $m->platos_sugeridos === 0 || $m->falta),
+                'falta' => $msgs->pluck('falta')->filter()->unique()->values()->all(),
+                'idiomas' => $msgs->pluck('idioma')->filter()->unique()->reject(fn ($i) => $i === 'es')->values()->all(),
+                // El primer mensaje escrito por el cliente resume mejor el hilo que el
+                // primero a secas, que puede ser un tap de categoría.
+                'titulo' => optional($msgs->firstWhere('origen', 'escrito') ?? $msgs->first())->user_message,
             ])
             ->sortByDesc('fin')
             ->take(25)

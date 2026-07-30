@@ -35,6 +35,7 @@
         'heart' => '<path d="M12 20.3s-7.3-4.5-7.3-9.4A4.2 4.2 0 0 1 12 8.2a4.2 4.2 0 0 1 7.3 2.7c0 4.9-7.3 9.4-7.3 9.4Z"/>',
 
         // Acciones
+        'chevron' => '<path d="M9 5l7 7-7 7"/>',
         'download' => '<path d="M12 3.5v11"/><path d="M8 10.5l4 4 4-4"/><path d="M4 19.5h16"/>',
 
         // Conversación
