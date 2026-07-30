@@ -47,6 +47,19 @@
                         </div>
 
                         <div>
+                            <label for="username" class="block text-sm font-medium text-text-secondary mb-2">
+                                Nombre de usuario <span class="text-text-secondary font-normal">(opcional)</span>
+                            </label>
+                            <x-text-input id="username" class="input-field w-full" type="text" name="username"
+                                          value="{{ old('username') }}" autocapitalize="none"
+                                          placeholder="se genera solo a partir del email" />
+                            <p class="text-xs text-text-secondary mt-1">
+                                Si lo dejás vacío se arma con la parte de adelante del email. Sirve para entrar sin escribir el email completo.
+                            </p>
+                            <x-input-error :messages="$errors->get('username')" class="mt-1" />
+                        </div>
+
+                        <div>
                             <label for="whatsapp" class="block text-sm font-medium text-text-secondary mb-2">WhatsApp</label>
                             <x-text-input id="whatsapp" class="input-field w-full" type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+54 9 11 1234-5678" />
                             <x-input-error :messages="$errors->get('whatsapp')" class="mt-1" />

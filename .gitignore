@@ -22,3 +22,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Configuración local de Claude Code: permisos por máquina, no del repo.
+# Los permisos compartidos por el equipo van en .claude/settings.json (sin .local).
+.claude/settings.local.json

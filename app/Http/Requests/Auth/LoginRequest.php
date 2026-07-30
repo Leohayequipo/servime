@@ -26,10 +26,25 @@ class LoginRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Se acepta email O nombre de usuario en el mismo campo, así que no se puede
+        // validar como email. El campo sigue llamándose 'email' para no tocar el resto
+        // del scaffolding de Breeze (vista, errores, throttle key).
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ];
+    }
+
+    /**
+     * Credenciales a probar: si lo tipeado tiene forma de email se busca por email, y
+     * si no, por nombre de usuario.
+     */
+    protected function credenciales(): array
+    {
+        $ingresado = trim((string) $this->input('email'));
+        $campo = filter_var($ingresado, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        return [$campo => $ingresado, 'password' => $this->input('password')];
     }
 
     /**
@@ -41,7 +56,7 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        if (! Auth::attempt($this->credenciales(), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

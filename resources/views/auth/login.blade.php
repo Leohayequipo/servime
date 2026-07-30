@@ -105,20 +105,23 @@
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
-                <!-- Email Field -->
+                {{-- Acepta email o nombre de usuario. El type pasa de "email" a "text"
+                     porque con type=email el navegador rechaza "juan.perez" antes de
+                     que el formulario llegue al servidor. --}}
                 <div class="mb-6">
                     <label for="email" class="block text-sm font-medium text-text-secondary mb-2">
-                        Email
+                        Email o usuario
                     </label>
-                    <input id="email" 
-                           type="email" 
-                           name="email" 
-                           value="{{ old('email') }}" 
-                           required 
-                           autofocus 
+                    <input id="email"
+                           type="text"
+                           name="email"
+                           value="{{ old('email') }}"
+                           required
+                           autofocus
+                           autocapitalize="none"
                            autocomplete="username"
                            class="input-field w-full"
-                           placeholder="tu@email.com">
+                           placeholder="tu@email.com o tu.usuario">
                     @error('email')
                         <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
                     @enderror

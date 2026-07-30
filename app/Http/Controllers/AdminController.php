@@ -57,15 +57,26 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'username' => 'nullable|string|max:50|alpha_dash|unique:users,username',
             'whatsapp' => 'nullable|string|max:20',
             'role' => 'required|in:super_admin,user',
         ]);
 
+        // Usuario y contraseña iniciales.
+        //
+        // Antes se guardaba una clave aleatoria de 32 caracteres, inservible, y la cuenta
+        // dependía del mail de bienvenida para poder usarse. Ahora se genera una legible
+        // y se le muestra al admin una sola vez, así puede entregarla en el momento sin
+        // depender de que el mail llegue.
+        $username = $validated['username'] ?: User::generarUsername($validated['email'], $validated['name']);
+        $passwordInicial = User::generarPasswordInicial();
+
         $user = User::create([
             'name' => $validated['name'],
+            'username' => $username,
             'email' => $validated['email'],
             'whatsapp' => $validated['whatsapp'],
-            'password' => bcrypt(\Illuminate\Support\Str::random(32)),
+            'password' => bcrypt($passwordInicial),
             'role' => $validated['role'],
             'email_verified_at' => now(),
         ]);
@@ -79,8 +90,18 @@ class AdminController extends Controller
             Log::error('Error enviando email de bienvenida: '.$e->getMessage());
         }
 
-        return redirect()->route('admin.users.show', $user)
-            ->with('success', 'Usuario creado exitosamente.');
+        // Las credenciales van por flash y se muestran UNA vez: la contraseña queda
+        // hasheada en la base, así que después no hay forma de volver a mostrarla.
+        //
+        // Se redirige a `edit` y no a `show` a propósito: showUser() hace otro redirect
+        // a edit, y el flash no sobrevive esa segunda vuelta.
+        return redirect()->route('admin.users.edit', $user)
+            ->with('success', 'Usuario creado exitosamente.')
+            ->with('credenciales', [
+                'usuario' => $user->username,
+                'email' => $user->email,
+                'password' => $passwordInicial,
+            ]);
     }
 
     /**
