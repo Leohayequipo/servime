@@ -493,14 +493,14 @@
                 {{-- Selector de idioma. Sin banderas a propósito: una bandera es un país,
                      no un idioma (¿español es España o Argentina?). Van los nombres en su
                      propio idioma. Solo aparece si hay más de uno disponible. --}}
-                @if(count(\App\Http\Middleware\SetLocale::SOPORTADOS) > 1)
+                @if(count(\App\Http\Middleware\SetLocale::IDIOMAS) > 1)
                     <div class="relative flex-none">
                         <button type="button" id="langBtn" class="lang-btn" aria-haspopup="true" aria-expanded="false"
                                 title="{{ __('Idioma') }}">{{ strtoupper(app()->getLocale()) }}
                             <span aria-hidden="true">⌄</span>
                         </button>
                         <div id="langMenu" class="lang-menu" role="menu">
-                            @foreach(['es' => 'Español', 'en' => 'English', 'pt' => 'Português'] as $code => $nombre)
+                            @foreach(\App\Http\Middleware\SetLocale::IDIOMAS as $code => $nombre)
                                 <a role="menuitem" href="{{ request()->fullUrlWithQuery(['lang' => $code]) }}"
                                    class="lang-item @if(app()->getLocale() === $code) is-active @endif"
                                    lang="{{ $code }}">{{ $nombre }}</a>

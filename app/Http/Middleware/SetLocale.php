@@ -16,12 +16,33 @@ use Symfony\Component\HttpFoundation\Response;
 class SetLocale
 {
     /**
-     * Idiomas con textos de interfaz traducidos.
+     * Idiomas ofrecidos, con su nombre EN SU PROPIO IDIOMA para el selector.
      *
-     * El CHAT no está limitado a esta lista: el modelo responde en cualquier idioma
-     * (ver ChatbotService::idiomaRespuesta). Esto es solo para los textos de la app.
+     * Esta es la única lista que hay que tocar para agregar o quitar un idioma: de acá
+     * salen la detección por Accept-Language, el selector del header y la validación de
+     * ?lang=. Para sumar uno hacen falta dos cosas: la entrada acá y su lang/<code>.json
+     * (más la frase de ANCLAJES de abajo, que es lo que hace que el bot no se vuelva
+     * al español).
+     *
+     * El orden es el que se muestra en el selector.
      */
-    public const SOPORTADOS = ['es', 'en', 'pt'];
+    public const IDIOMAS = [
+        'es' => 'Español',
+        'en' => 'English',
+        'pt' => 'Português',
+        'it' => 'Italiano',
+    ];
+
+    /**
+     * Códigos soportados. Método y no constante porque se derivan de IDIOMAS, y PHP no
+     * permite llamar funciones en una expresión constante.
+     *
+     * @return array<int, string>
+     */
+    public static function codigos(): array
+    {
+        return array_keys(self::IDIOMAS);
+    }
 
     /** Nombre del idioma en español, para instruir al modelo en el prompt. */
     public const NOMBRES = [
@@ -80,7 +101,7 @@ class SetLocale
 
         // 3. Navegador. getPreferredLanguage devuelve el primero soportado según los
         //    q-values del header, así que respeta el orden real de preferencia.
-        $delNavegador = $request->getPreferredLanguage(self::SOPORTADOS);
+        $delNavegador = $request->getPreferredLanguage(self::codigos());
         if (is_string($delNavegador) && $this->esValido($delNavegador)) {
             return $this->normalizar($delNavegador);
         }
@@ -96,6 +117,6 @@ class SetLocale
 
     private function esValido(string $locale): bool
     {
-        return in_array($this->normalizar($locale), self::SOPORTADOS, true);
+        return in_array($this->normalizar($locale), self::codigos(), true);
     }
 }
