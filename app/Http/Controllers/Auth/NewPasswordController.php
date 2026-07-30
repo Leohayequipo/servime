@@ -34,12 +34,16 @@ class NewPasswordController extends Controller
             'token' => ['required'],
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            // Qué broker valida el token. El del mail de bienvenida dura 7 días; el de
+            // "olvidé mi contraseña", una hora. Lista blanca para que nadie se dé más
+            // vencimiento del que le corresponde poniéndolo a mano en la URL.
+            'broker' => ['nullable', 'in:bienvenida'],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset(
+        $status = Password::broker($request->input('broker') ?: null)->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user) use ($request) {
                 $user->forceFill([

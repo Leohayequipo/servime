@@ -83,8 +83,15 @@ class AdminController extends Controller
 
         // Enviar email de bienvenida con link para establecer contraseña
         try {
-            $resetToken = Password::createToken($user);
-            $resetUrl = route('password.reset', ['token' => $resetToken, 'email' => $user->email]);
+            // Broker 'bienvenida': el link dura 7 días en vez de 1 hora. El comerciante
+            // no está esperando este mail y lo puede abrir al otro día; con el broker
+            // por defecto le llegaba vencido y tenía que pedir otro.
+            $resetToken = Password::broker('bienvenida')->createToken($user);
+            $resetUrl = route('password.reset', [
+                'token' => $resetToken,
+                'email' => $user->email,
+                'broker' => 'bienvenida',
+            ]);
             Mail::to($user->email)->queue(new WelcomeEmail($user, $resetUrl));
         } catch (\Exception $e) {
             Log::error('Error enviando email de bienvenida: '.$e->getMessage());

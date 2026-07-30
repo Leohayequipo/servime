@@ -91,10 +91,26 @@ return [
     */
 
     'passwords' => [
+        // "Olvidé mi contraseña": el pedido lo hace la propia persona en el momento,
+        // así que una hora sobra y una ventana corta es lo correcto.
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // Mail de bienvenida al crear una cuenta. Es un caso distinto: el comerciante
+        // no está esperando el mail y puede abrirlo al otro día. Con los 60 minutos del
+        // broker de arriba el link llegaba muerto y había que pedir otro.
+        //
+        // Tabla PROPIA, no la de arriba: el vencimiento lo aplica el broker que valida,
+        // así que compartiendo tabla alcanzaba con agregarle "?broker=bienvenida" a la
+        // URL de un link de recuperación vencido para revivirlo una semana.
+        'bienvenida' => [
+            'provider' => 'users',
+            'table' => 'password_reset_tokens_bienvenida',
+            'expire' => 60 * 24 * 7,   // 7 días
             'throttle' => 60,
         ],
     ],

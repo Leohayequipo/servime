@@ -112,6 +112,12 @@
                 <!-- Token -->
                 <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
+                {{-- Viaja desde el link del mail: le dice al backend con qué vencimiento
+                     validar el token (bienvenida = 7 días, el resto = 1 hora). --}}
+                @if($request->query('broker'))
+                    <input type="hidden" name="broker" value="{{ $request->query('broker') }}">
+                @endif
+
                 <!-- Email -->
                 <div class="mb-6">
                     <label for="email" class="block text-sm font-medium text-text-secondary mb-2">Email</label>
