@@ -12,6 +12,7 @@ class ChatConversation extends Model
         'session_id',
         'user_message',
         'origen',
+        'idioma',
         'bot_response',
         'platos_sugeridos',
         'falta',

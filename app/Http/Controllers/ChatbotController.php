@@ -274,6 +274,9 @@ class ChatbotController extends Controller
                 // 'categoria'/'ver_mas' = lo armó la interfaz al tocar un atajo, no lo
                 // tipeó el cliente. Los widgets que analizan texto lo excluyen.
                 'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas'], true) ? $modoRespuesta : 'escrito',
+                // Idioma en el que se atendió: explica por qué la misma pregunta aparece
+                // en varias formas, y le dice al comercio cuántos clientes no hablan español.
+                'idioma' => app()->getLocale(),
                 // 0 = el bot no pudo recomendar nada: candidato a demanda insatisfecha
                 'platos_sugeridos' => $platosSugeridos,
                 // Lo que pidió y el menú no tiene (lo declara el modelo)

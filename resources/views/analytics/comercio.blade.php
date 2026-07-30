@@ -380,23 +380,42 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-text-primary mb-4">❓ Preguntas Más Frecuentes</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-1">❓ Preguntas más frecuentes</h3>
+                        <p class="text-text-secondary text-sm mb-4">Lo que los clientes escribieron, y si el asistente pudo recomendarles algo del menú.</p>
                         @if($frequentQuestions->count() > 0)
-                            <div class="space-y-3">
+                            @php $qMax = $frequentQuestions->max('frequency') ?: 1; @endphp
+                            <div class="space-y-2.5">
                                 @foreach($frequentQuestions as $question)
-                                    <div class="border-l-4 border-blue-500 pl-4 py-2">
-                                        <p class="text-sm text-text-primary font-medium">
-                                            "{{ $question->user_message }}"
-                                        </p>
-                                        <p class="text-xs text-text-secondary">
-                                            {{ $question->frequency }} {{ $question->frequency > 1 ? 'veces' : 'vez' }}
-                                        </p>
+                                    <div>
+                                        <div class="flex items-baseline justify-between gap-3 mb-1">
+                                            <div class="min-w-0 flex items-center gap-2">
+                                                <span class="text-sm text-text-primary truncate">{{ $question->user_message }}</span>
+                                                {{-- Idiomas en que llegó la misma pregunta: explica por qué
+                                                     "quiero una pizza" y "I want a pizza" cuentan separadas. --}}
+                                                @foreach($question->idiomas as $idioma)
+                                                    @if($idioma !== 'es')
+                                                        <span class="flex-none text-[10px] font-semibold uppercase tracking-wide text-text-secondary border border-accent-gray rounded px-1">{{ $idioma }}</span>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                            <span class="flex-none text-xs text-text-secondary">{{ $question->frequency }}{{ $question->frequency > 1 ? ' veces' : ' vez' }}</span>
+                                        </div>
+                                        {{-- La barra hace comparable de un vistazo lo que antes era una
+                                             lista de números sueltos. Verde = el asistente resolvió;
+                                             ámbar = no encontró nada del menú para ofrecer. --}}
+                                        <div class="h-1.5 bg-accent-gray/40 rounded overflow-hidden">
+                                            <div class="h-1.5 rounded {{ $question->resuelta === false ? 'bg-amber-500' : 'bg-blue-500' }}"
+                                                 style="width: {{ round($question->frequency / $qMax * 100) }}%"></div>
+                                        </div>
+                                        @if($question->resuelta === false)
+                                            <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">El asistente no encontró nada del menú para ofrecer</p>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>
                         @else
                             <p class="text-text-secondary text-center py-4">
-                                No hay preguntas frecuentes registradas
+                                Todavía nadie escribió una pregunta.
                             </p>
                         @endif
                     </div>

@@ -371,32 +371,69 @@ class AnalyticsController extends Controller
     {
         // escritas(): sin los mensajes que arma la interfaz al tocar un atajo, que son
         // idénticos entre sí y quedaban como la "pregunta más frecuente".
-        $mensajes = ChatConversation::forComercio($comercioId)
+        $convs = ChatConversation::forComercio($comercioId)
             ->recent(30)
             ->escritas()
-            ->pluck('user_message')
-            ->filter();
+            ->get(['user_message', 'idioma', 'platos_sugeridos', 'falta']);
 
         // Agrupa por texto normalizado (así "¿Tienen postres?" y "tienen postres"
         // cuentan juntos), pero guarda la forma original para mostrarla.
         $conteo = [];
         $formas = [];
-        foreach ($mensajes as $msg) {
-            $key = $this->normalizarFrase((string) $msg);
-            if ($key === '') {
+        $idiomas = [];
+        $resueltas = [];  // cuántas veces el bot logró recomendar algo
+        $conDato = [];    // cuántas tienen el contador cargado (filas viejas no lo tienen)
+
+        foreach ($convs as $c) {
+            $key = $this->normalizarFrase((string) $c->user_message);
+            // Los saludos no son preguntas: ocupaban lugar sin decir nada.
+            if ($key === '' || $this->esSaludo($key)) {
                 continue;
             }
-            $original = trim((string) $msg);
+            $original = trim((string) $c->user_message);
             $conteo[$key] = ($conteo[$key] ?? 0) + 1;
             $formas[$key][$original] = ($formas[$key][$original] ?? 0) + 1;
+
+            if ($c->idioma) {
+                $idiomas[$key][$c->idioma] = true;
+            }
+            if ($c->platos_sugeridos !== null) {
+                $conDato[$key] = ($conDato[$key] ?? 0) + 1;
+                if ($c->platos_sugeridos > 0) {
+                    $resueltas[$key] = ($resueltas[$key] ?? 0) + 1;
+                }
+            }
         }
 
         arsort($conteo);
 
-        return collect($conteo)->take($limit)->map(fn ($freq, $key) => (object) [
-            'user_message' => $this->formaMasComun($formas[$key]),
-            'frequency' => $freq,
-        ])->values();
+        return collect($conteo)->take($limit)->map(function ($freq, $key) use ($formas, $idiomas, $resueltas, $conDato) {
+            $total = $conDato[$key] ?? 0;
+            $ok = $resueltas[$key] ?? 0;
+
+            return (object) [
+                'user_message' => $this->formaMasComun($formas[$key]),
+                'frequency' => $freq,
+                // null = no hay dato (conversaciones anteriores a la columna)
+                'resuelta' => $total > 0 ? $ok / $total >= 0.5 : null,
+                'idiomas' => array_keys($idiomas[$key] ?? []),
+            ];
+        })->values();
+    }
+
+    /**
+     * ¿La frase es solo un saludo o una despedida? No es una pregunta frecuente.
+     * Recibe el texto YA normalizado por normalizarFrase().
+     */
+    private function esSaludo(string $norm): bool
+    {
+        static $saludos = [
+            'hola', 'holaa', 'holaaa', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noches',
+            'hey', 'hi', 'hello', 'ola', 'oi', 'ciao', 'como estas', 'que tal', 'test', 'prueba',
+            'gracias', 'muchas gracias', 'ok', 'oka', 'listo', 'chau', 'adios', 'bye', 'obrigado',
+        ];
+
+        return in_array($norm, $saludos, true);
     }
 
     /**
