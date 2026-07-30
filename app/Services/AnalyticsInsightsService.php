@@ -39,8 +39,11 @@ class AnalyticsInsightsService
      */
     public function intents($comercioId): array
     {
+        // Solo lo que tipeó el cliente: los atajos de la interfaz mandan un texto armado
+        // que no representa una intención propia y sesgaba el conteo.
         $convs = ChatConversation::forComercio($comercioId)
             ->recent(30)
+            ->escritas()
             ->get(['user_message', 'intent']);
 
         $counts = array_fill_keys(self::categorias(), 0);

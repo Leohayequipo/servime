@@ -53,7 +53,7 @@ class ChatbotController extends Controller
                 $limitResponse = 'Por el momento el asistente no está disponible. '
                     .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
                 $responseTime = round((microtime(true) - $startTime) * 1000);
-                $this->logConversation($comercio, $message, $limitResponse, false, $responseTime, $request, $sessionId);
+                $this->logConversation($comercio, $message, $limitResponse, false, $responseTime, $request, $sessionId, $modoRespuesta);
 
                 return response()->json([
                     'response' => $limitResponse,
@@ -70,7 +70,7 @@ class ChatbotController extends Controller
             $comercio->registrarUsoIA();
 
             // Log de la conversación (usar session_id obtenido anteriormente)
-            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId);
+            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta);
 
             // Platos del menú mencionados en la respuesta (datos exactos del JSON: foto/precio/botón)
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $response);
@@ -109,7 +109,7 @@ class ChatbotController extends Controller
 
                 // Log de la conversación con fallback (generar session_id si no existe)
                 $sessionId = $this->getSessionId($request, $comercio);
-                $this->logConversation($comercio, $message ?? '', $fallbackResponse, false, $responseTime, $request, $sessionId);
+                $this->logConversation($comercio, $message ?? '', $fallbackResponse, false, $responseTime, $request, $sessionId, $modoRespuesta ?? null);
 
                 return response()->json([
                     'response' => $fallbackResponse,
@@ -184,7 +184,7 @@ class ChatbotController extends Controller
                     .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
                 $emit(['type' => 'delta', 'content' => $limit]);
                 $emit(['type' => 'done', 'platos' => []]);
-                $this->logConversation($comercio, $message, $limit, false, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId);
+                $this->logConversation($comercio, $message, $limit, false, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta);
 
                 return;
             }
@@ -216,7 +216,7 @@ class ChatbotController extends Controller
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $full);
             $emit(['type' => 'done', 'platos' => $platos]);
 
-            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId);
+            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta);
         };
 
         return response()->stream($callback, 200, [
@@ -257,7 +257,7 @@ class ChatbotController extends Controller
     /**
      * Log de conversación en la base de datos
      */
-    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null): void
+    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null): void
     {
         try {
             // Si no se pasó session_id, obtenerlo
@@ -269,6 +269,9 @@ class ChatbotController extends Controller
                 'comercio_id' => $comercio->id,
                 'session_id' => $sessionId,
                 'user_message' => $message,
+                // 'categoria'/'ver_mas' = lo armó la interfaz al tocar un atajo, no lo
+                // tipeó el cliente. Los widgets que analizan texto lo excluyen.
+                'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas'], true) ? $modoRespuesta : 'escrito',
                 'bot_response' => $response,
                 'used_openai' => $usedOpenAI,
                 'response_time_ms' => $responseTime,

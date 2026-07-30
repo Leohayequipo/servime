@@ -644,7 +644,7 @@
                                  no cubre la mayoría de las categorías reales (adicionales,
                                  empanadas, hamburguesas, papas, gaseosas...) y todas caían
                                  al 🍽️ genérico, repetido 6 veces. Tipografía sola es más limpio. --}}
-                            <button onclick="askQuestion(@js($categoria['nombre']), 'categoria', @js($categoria['nombre'])); hideCategories();"
+                            <button onclick="askQuestion(@js($categoria['nombre']), 'categoria', @js($categoria['nombre']), @js($categoria['nombre_visible'] ?? $categoria['nombre'])); hideCategories();"
                                     class="cat-chip">
                                 {{ $categoria['nombre_visible'] ?? $categoria['nombre'] }}
                             </button>
@@ -878,7 +878,7 @@
         }
 
         // Enviar mensaje (con streaming: la respuesta se escribe token a token)
-        async function sendMessage(message, tipo, scope, esReconsulta) {
+        async function sendMessage(message, tipo, scope, esReconsulta, etiqueta) {
             if (isLoading) return;
 
             // Las sugerencias de arranque son solo para la pantalla vacía
@@ -902,7 +902,9 @@
             sendButton.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>`;
             sendButton.disabled = true;
 
-            addMessage(message, 'user');
+            // La burbuja muestra `etiqueta` cuando el mensaje lo armó la interfaz: el texto
+            // que se le manda al bot es largo y está en español, y al cliente le aparecía así.
+            addMessage(etiqueta || message, 'user');
             showTypingIndicator();
 
             let wrapper = null, textEl = null, full = '', started = false, finalized = false;
@@ -1530,8 +1532,8 @@
             });
         })();
 
-        function askQuestion(question, tipo, scope) {
-            sendMessage(question, tipo, scope);
+        function askQuestion(question, tipo, scope, etiqueta) {
+            sendMessage(question, tipo, scope, false, etiqueta);
             hideCategories();
             hideTags();
         }
@@ -1556,15 +1558,15 @@
         function verMasOpciones() {
             // Si venías mirando una categoría, listá TODA esa categoría
             if (lastCategoria) {
-                sendMessage('Mostrame TODAS las opciones de la categoría ' + lastCategoria + ', sin limitarte a unas pocas.', 'categoria', lastCategoria, true);
+                sendMessage('Mostrame TODAS las opciones de la categoría ' + lastCategoria + ', sin limitarte a unas pocas.', 'categoria', lastCategoria, true, T.ver_mas);
                 return;
             }
             // Si fue una consulta escrita, listá solo lo que coincide con ESA consulta
             if (lastQuery) {
-                sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', 'ver_mas', lastQuery, true);
+                sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', 'ver_mas', lastQuery, true, T.ver_mas);
                 return;
             }
-            sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', null, null, true);
+            sendMessage('Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.', null, null, true, T.ver_mas);
         }
 
         // Delegación de eventos para botones "Lo quiero"

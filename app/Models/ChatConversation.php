@@ -11,6 +11,7 @@ class ChatConversation extends Model
         'comercio_id',
         'session_id',
         'user_message',
+        'origen',
         'bot_response',
         'used_openai',
         'intent',
@@ -66,5 +67,19 @@ class ChatConversation extends Model
     public function scopeRecent($query, $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    /**
+     * Solo lo que TIPEÓ el cliente, sin los mensajes que arma la interfaz al tocar
+     * "Ver más opciones" o un chip de categoría.
+     *
+     * Usalo en todo lo que analice el TEXTO del mensaje (palabras, preguntas frecuentes,
+     * intención): esos mensajes sintéticos son idénticos entre sí y dominan cualquier
+     * conteo. Para métricas de volumen (total de consultas, tiempo de respuesta) NO hay
+     * que filtrar: son interacciones reales del cliente.
+     */
+    public function scopeEscritas($query)
+    {
+        return $query->where('origen', 'escrito');
     }
 }

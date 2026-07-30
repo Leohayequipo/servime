@@ -263,7 +263,7 @@ class AnalyticsController extends Controller
      */
     private function getTopWords($comercioId, int $limit = 18)
     {
-        $mensajes = ChatConversation::forComercio($comercioId)->recent(30)->pluck('user_message');
+        $mensajes = ChatConversation::forComercio($comercioId)->recent(30)->escritas()->pluck('user_message');
 
         // Cada término se agrupa por su raíz (clave) pero se muestra la forma real
         // más frecuente, para no mostrar palabras cortadas (gratis, país, etc.).
@@ -358,8 +358,11 @@ class AnalyticsController extends Controller
      */
     private function getFrequentQuestions($comercioId, $limit = 10)
     {
+        // escritas(): sin los mensajes que arma la interfaz al tocar un atajo, que son
+        // idénticos entre sí y quedaban como la "pregunta más frecuente".
         $mensajes = ChatConversation::forComercio($comercioId)
             ->recent(30)
+            ->escritas()
             ->pluck('user_message')
             ->filter();
 
