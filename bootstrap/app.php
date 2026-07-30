@@ -13,6 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\VerifyCsrfToken::class,
+            // Idioma del cliente: ?lang= → sesión → Accept-Language → español
+            \App\Http\Middleware\SetLocale::class,
         ]);
 
         // Endpoints públicos sin CSRF (se llaman por API/sendBeacon, sin token)

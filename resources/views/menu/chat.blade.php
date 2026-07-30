@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="{{ app()->getLocale() }}" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,6 +107,40 @@
         .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; padding-bottom: 96px; }
         .input-fixed { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #000000; border-top: 1px solid rgba(255,255,255,0.1); }
         .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* Sugerencias de arranque */
+        .chip-sugerencia {
+            padding: 8px 13px; border-radius: 9999px; font-size: 13px; cursor: pointer;
+            background: var(--surface-2); color: var(--text-dim);
+            border: 1px solid var(--line-2);
+            transition: color .18s ease, border-color .18s ease;
+        }
+        .chip-sugerencia:hover { color: var(--text); border-color: rgba(255,255,255,.22); }
+        .chip-sugerencia:active { transform: scale(.96); }
+
+        /* Selector de idioma */
+        .lang-btn {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 5px 9px; border-radius: 9999px; cursor: pointer;
+            background: var(--surface-2); border: 1px solid var(--line-2);
+            color: var(--text-dim); font-size: 12px; font-weight: 600; letter-spacing: .3px;
+            transition: color .18s ease, border-color .18s ease;
+        }
+        .lang-btn:hover { color: var(--text); border-color: rgba(255,255,255,.22); }
+        .lang-menu {
+            position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+            min-width: 132px; padding: 5px; border-radius: 12px;
+            background: var(--surface); border: 1px solid var(--line-2);
+            box-shadow: 0 12px 30px rgba(0,0,0,.5);
+            display: none;
+        }
+        .lang-menu.open { display: block; }
+        .lang-item {
+            display: block; padding: 8px 10px; border-radius: 8px;
+            color: var(--text-dim); font-size: 13px; text-decoration: none;
+            transition: background .15s ease, color .15s ease;
+        }
+        .lang-item:hover { background: var(--surface-2); color: var(--text); }
+        .lang-item.is-active { color: var(--accent-soft); font-weight: 600; }
         .chips-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
         
         /* El resplandor neón azul se fue: la elevación ahora se sugiere con sombras
@@ -451,10 +485,29 @@
                         <span class="text-white text-lg font-bold">{{ strtoupper(mb_substr($comercio->nombre ?? 'M', 0, 1)) }}</span>
                     </div>
                 @endif
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                     <h1 class="text-text-primary font-semibold text-lg leading-tight truncate">{{ $comercio->nombre }}</h1>
                     <p class="text-text-secondary text-sm leading-tight truncate" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</p>
                 </div>
+
+                {{-- Selector de idioma. Sin banderas a propósito: una bandera es un país,
+                     no un idioma (¿español es España o Argentina?). Van los nombres en su
+                     propio idioma. Solo aparece si hay más de uno disponible. --}}
+                @if(count(\App\Http\Middleware\SetLocale::SOPORTADOS) > 1)
+                    <div class="relative flex-none">
+                        <button type="button" id="langBtn" class="lang-btn" aria-haspopup="true" aria-expanded="false"
+                                title="{{ __('Idioma') }}">{{ strtoupper(app()->getLocale()) }}
+                            <span aria-hidden="true">⌄</span>
+                        </button>
+                        <div id="langMenu" class="lang-menu" role="menu">
+                            @foreach(['es' => 'Español', 'en' => 'English', 'pt' => 'Português'] as $code => $nombre)
+                                <a role="menuitem" href="{{ request()->fullUrlWithQuery(['lang' => $code]) }}"
+                                   class="lang-item @if(app()->getLocale() === $code) is-active @endif"
+                                   lang="{{ $code }}">{{ $nombre }}</a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -462,9 +515,24 @@
                 <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-fade-in">
                     <div class="flex items-start">
                         <div class="flex-1">
-                            <p class="text-text-primary text-[15px] leading-normal" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+                            <p class="text-text-primary text-[15px] leading-normal" id="preview-welcome-message">{{ $comercio->mensajeBienvenida() }}</p>
                         </div>
                     </div>
+                </div>
+
+                {{-- Sugerencias de arranque. Cumplen dos funciones: llenan el vacío que
+                     quedaba abajo de la bienvenida, y al estar en el idioma del cliente
+                     son la señal de que puede escribir en su idioma (mejor que un cartel
+                     que diga "hablamos inglés"). Se ocultan al primer mensaje. --}}
+                <div id="sugerencias" class="chips pt-1">
+                    @foreach([
+                        __('¿Qué me recomendás?'),
+                        __('Algo dulce'),
+                        __('Para compartir'),
+                        __('Algo para tomar'),
+                    ] as $sugerencia)
+                        <button type="button" class="chip-sugerencia" onclick="askQuestion(@js($sugerencia))">{{ $sugerencia }}</button>
+                    @endforeach
                 </div>
                 
             </div>
@@ -474,7 +542,7 @@
         <div class="input-fixed">
             <div class="max-w-md mx-auto flex items-center gap-2">
                 <button id="micButton"
-                        title="Hablar con el asistente"
+                        title="{{ __('Hablar con el asistente') }}"
                         style="display:none"
                         class="mic-button">
                     {{-- El SVG va directo en el botón: envuelto en un <span> inline quedaba
@@ -487,13 +555,13 @@
                      enterkeyhint="send" hace que el teclado mobile muestre "Enviar". --}}
                 <input type="text"
                        id="messageInput"
-                       placeholder="Escribe tu mensaje..."
+                       placeholder="{{ __('Escribe tu mensaje...') }}"
                        autocomplete="off"
                        autocapitalize="sentences"
                        spellcheck="false"
                        enterkeyhint="send"
                        class="flex-1 min-w-0 border border-accent-gray px-4 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none chat-input-bar">
-                <button id="sendButton" title="Enviar" class="send-btn bg-accent-blue text-white transition-all duration-200 hover:opacity-90 shadow-lg flex-none">
+                <button id="sendButton" title="{{ __('Enviar') }}" class="send-btn bg-accent-blue text-white transition-all duration-200 hover:opacity-90 shadow-lg flex-none">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
                 </button>
             </div>
@@ -505,7 +573,7 @@
 
     <!-- FAB Categorías + Tags + Pre‑pedido -->
     @if($comercio->pedido_habilitado || !empty($categorias) || !empty($tags))
-        <button id="fabTab" class="fab-tab" type="button" title="Mostrar/ocultar accesos" aria-label="Mostrar accesos">
+        <button id="fabTab" class="fab-tab" type="button" title="{{ __('Mostrar/ocultar accesos') }}" aria-label="{{ __('Mostrar accesos') }}">
             <span id="fabTabDot" class="fab-tab-dot"></span>
             <span class="fab-tab-chevron">‹</span>
         </button>
@@ -513,27 +581,27 @@
     <div class="fab-container">
         @if($comercio->pedido_habilitado)
             <div class="fab-item">
-                <button id="fabWish" title="Resumen para el mozo" class="fab-btn fab-btn-wish">
+                <button id="fabWish" title="{{ __('Resumen para el mozo') }}" class="fab-btn fab-btn-wish">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v14.5a.5.5 0 0 1-.77.42L16 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L11 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L6 19.2l-1.23.95A.5.5 0 0 1 4 19.73V6a2 2 0 0 1 2-2Zm1 4v2h8V8H8Zm0 4v2h8v-2H8Z"/></svg>
                     <span class="fab-badge" id="wishBadge"></span>
                 </button>
-                <span class="fab-label">Pedido</span>
+                <span class="fab-label">{{ __('Pedido') }}</span>
             </div>
         @endif
         @if(!empty($categorias))
             <div class="fab-item">
-                <button id="fabCategories" title="Categorías del menú" class="fab-btn fab-btn-categories fab-categories-animated">
+                <button id="fabCategories" title="{{ __('Categorías del menú') }}" class="fab-btn fab-btn-categories fab-categories-animated">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4v4H4V5Zm6 1h10v2H10V6ZM4 11h4v4H4v-4Zm6 1h10v2H10v-2Zm-6 5h4v4H4v-4Zm6 1h10v2H10v-2Z"/></svg>
                 </button>
-                <span class="fab-label">Categorías</span>
+                <span class="fab-label">{{ __('Categorías') }}</span>
             </div>
         @endif
         @if(!empty($tags))
             <div class="fab-item">
-                <button id="fabTags" title="Filtrar por tags" class="fab-btn fab-btn-tags">
+                <button id="fabTags" title="{{ __('Filtrar por tags') }}" class="fab-btn fab-btn-tags">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3H20a1 1 0 0 1 1 1v9.4a1 1 0 0 1-.29.7l-7.6 7.6a1 1 0 0 1-1.42 0l-8.4-8.4a1 1 0 0 1 0-1.41l7.6-7.6A1 1 0 0 1 10.6 3Zm5.9 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>
                 </button>
-                <span class="fab-label">Filtros</span>
+                <span class="fab-label">{{ __('Filtros') }}</span>
             </div>
         @endif
     </div>
@@ -543,10 +611,10 @@
         <div id="wishPanel" class="wish-panel">
             <div class="wish-panel-inner">
                 <div class="wish-header">
-                    <h4>Resumen para el mozo</h4>
+                    <h4>{{ __('Resumen para el mozo') }}</h4>
                     <div class="wish-header-buttons">
-                        <button id="wishClear" class="wish-btn wish-btn-clear">Vaciar</button>
-                        <button id="wishClose" class="wish-btn wish-btn-close">Cerrar</button>
+                        <button id="wishClear" class="wish-btn wish-btn-clear">{{ __('Vaciar') }}</button>
+                        <button id="wishClose" class="wish-btn wish-btn-close">{{ __('Cerrar') }}</button>
                     </div>
                 </div>
                 <div id="wishList" class="wish-list"></div>
@@ -559,7 +627,7 @@
         <div id="categoriesPanel" class="side-panel">
             <div class="side-panel-inner">
                 <div class="side-panel-header">
-                    <h4 class="side-panel-title">Categorías</h4>
+                    <h4 class="side-panel-title">{{ __('Categorías') }}</h4>
                     <button id="closeCategories" class="side-panel-close">×</button>
                 </div>
                 <div class="side-panel-grid">
@@ -590,7 +658,7 @@
         <div id="tagsPanel" class="side-panel">
             <div class="side-panel-inner amber-border">
                 <div class="side-panel-header">
-                    <h4 class="side-panel-title">Filtrar por Tags</h4>
+                    <h4 class="side-panel-title">{{ __('Filtrar por Tags') }}</h4>
                     <button id="closeTags" class="side-panel-close">×</button>
                 </div>
                 <div class="side-panel-grid">
@@ -607,6 +675,21 @@
     @endif
 
     <script>
+        @php
+            // Textos de interfaz que necesita el JS (el resto van con __() en el Blade)
+            $t = [
+                'lo_quiero' => __('Lo quiero'),
+                'agregado' => __('Agregado'),
+                'ver_mas' => __('Ver más opciones'),
+                'escuchando' => __('Escuchando...'),
+                'escribi' => __('Escribe tu mensaje...'),
+                'total' => __('Total'),
+                'vacio' => __('Tu pedido está vacío'),
+                'sin_precio' => __('algunos platos no tienen precio confirmado'),
+            ];
+        @endphp
+        const T = @json($t);
+
         let isLoading = false;
         // Contexto para el botón "Ver más opciones" (para no volcar el menú completo)
         let lastCategoria = null;   // última categoría tocada
@@ -644,13 +727,13 @@
                     recognition.onstart = function() {
                         isListening = true;
                         micButton.style.background = '#ef4444';
-                        messageInput.placeholder = 'Escuchando...';
+                        messageInput.placeholder = T.escuchando;
                     };
                     
                     recognition.onresult = function(event) {
                         const transcript = event.results[0][0].transcript;
                         messageInput.value = transcript;
-                        messageInput.placeholder = 'Escribe tu mensaje...';
+                        messageInput.placeholder = T.escribi;
                         // Opcional: enviar automáticamente o permitir editar
                         // sendMessage(transcript);
                     };
@@ -658,7 +741,7 @@
                     recognition.onerror = function(event) {
                         isListening = false;
                         micButton.style.background = 'var(--surface-2)';
-                        messageInput.placeholder = 'Escribe tu mensaje...';
+                        messageInput.placeholder = T.escribi;
                         
                         if (event.error === 'not-allowed' || event.error === 'denied') {
                             // Usuario rechazó el permiso
@@ -683,7 +766,7 @@
                     recognition.onend = function() {
                         isListening = false;
                         micButton.style.background = 'var(--surface-2)';
-                        messageInput.placeholder = 'Escribe tu mensaje...';
+                        messageInput.placeholder = T.escribi;
                     };
                     
                     // Solicitar permiso la primera vez que se presiona el botón
@@ -789,6 +872,9 @@
         // Enviar mensaje (con streaming: la respuesta se escribe token a token)
         async function sendMessage(message, tipo, scope, esReconsulta) {
             if (isLoading) return;
+
+            // Las sugerencias de arranque son solo para la pantalla vacía
+            document.getElementById('sugerencias')?.remove();
 
             // Recordar contexto para "Ver más opciones" (la reconsulta 'ver_mas' NO pisa el estado)
             if (tipo === 'categoria') {
@@ -916,7 +1002,7 @@
             const extra = wrapper.querySelector('[data-bot-extra]');
             if (extra) {
                 const verMas = (permitirVerMas && platos && platos.length >= 1 && platos.length <= 6)
-                    ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>'
+                    ? `<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">${T.ver_mas} ↓</button>`
                     : '';
                 extra.innerHTML = renderPlatoCards(platos) + verMas;
             }
@@ -1106,7 +1192,7 @@
                 const precio = escHtml(p.precio||'');
                 const desc = escHtml(p.descripcion||'');
                 const img = p.imagen ? `<img src="${escHtml(p.imagen)}" alt="${nombre}" class="w-full h-40 object-cover" onerror="this.style.display='none'">` : '';
-                const btn = pedidosHabilitados ? `<button class="btn-lo-quiero" data-nombre="${nombre}" data-price="${precio}" style="margin-top:10px;font-size:15px">Lo quiero</button>` : '';
+                const btn = pedidosHabilitados ? `<button class="btn-lo-quiero" data-nombre="${nombre}" data-price="${precio}" style="margin-top:10px;font-size:15px">${T.lo_quiero}</button>` : '';
                 return `<div class="rounded-2xl overflow-hidden border border-white/10 bg-black/25 shadow-md">
                     ${img}
                     <div class="p-3.5">
@@ -1144,7 +1230,7 @@
                             <div class="flex-1 min-w-0">
                                 <div class="text-text-primary text-[15px] leading-normal">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
-                                ${(permitirVerMas && platos && platos.length >= 1 && platos.length <= 6) ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>' : ''}
+                                ${(permitirVerMas && platos && platos.length >= 1 && platos.length <= 6) ? `<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">${T.ver_mas} ↓</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1419,6 +1505,23 @@
             clearWish();
         });
         
+        // Selector de idioma
+        (function () {
+            const btn = document.getElementById('langBtn');
+            const menu = document.getElementById('langMenu');
+            if (!btn || !menu) return;
+
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const abierto = menu.classList.toggle('open');
+                btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+            });
+            document.addEventListener('click', () => {
+                menu.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        })();
+
         function askQuestion(question, tipo, scope) {
             sendMessage(question, tipo, scope);
             hideCategories();
@@ -1467,7 +1570,7 @@
                 if (t.dataset.added) {
                     removeWishByName(nombre);
                     delete t.dataset.added;
-                    t.textContent = 'Lo quiero';
+                    t.textContent = T.lo_quiero;
                     t.classList.remove('added');
                     t.style.transform = 'scale(.95)';
                     setTimeout(() => { t.style.transform = 'scale(1)'; }, 150);

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\SetLocale;
 use App\Models\Cart;
 use App\Models\ChatConversation;
 use App\Models\Comercio;
@@ -700,10 +701,12 @@ class ChatbotService
             $lineas[] = 'Hablá en un tono '.$tonos[$c['tono']].'.';
         }
 
+        // El trato solo aplica cuando se responde EN ESPAÑOL: si el cliente escribe en
+        // inglés o portugués, forzar el voseo lo arrastraría de vuelta al español.
         $tratos = [
-            'voseo' => 'Tratá al cliente de "vos" (voseo argentino).',
-            'tuteo' => 'Tratá al cliente de "tú".',
-            'neutro' => 'Usá un trato neutral (ni vos ni tú marcado).',
+            'voseo' => 'Cuando respondas en español, tratá al cliente de "vos" (voseo argentino).',
+            'tuteo' => 'Cuando respondas en español, tratá al cliente de "tú".',
+            'neutro' => 'Cuando respondas en español, usá un trato neutral (ni vos ni tú marcado).',
         ];
         if (! empty($c['trato']) && isset($tratos[$c['trato']])) {
             $lineas[] = $tratos[$c['trato']];
@@ -820,6 +823,13 @@ SOLO INFORMACIÓN REAL DEL MENÚ — NO INVENTES NADA:
 - Al buscar por tag compará por SIGNIFICADO, no por formato: \"sin tacc\" también matchea SIN_TACC, sin gluten, gluten free, celíaco. Cada menú usa sus propias etiquetas, así que adaptate a las que ves. Devolvé TODOS los platos del menú que coincidan.
 - Si ningún plato tiene el tag que piden, decí claramente que no tenés esa información en el menú y que conviene confirmarlo con el restaurante. NO adivines.
 
+IDIOMA (IMPORTANTE):
+- Más abajo, junto a la pregunta, se te indica EN QUÉ IDIOMA responder. Respetalo siempre y no le avises al cliente que cambiaste de idioma: simplemente escribí en el suyo.
+- ⚠️ EXCEPCIÓN QUE NO SE NEGOCIA: los NOMBRES DE LOS PLATOS van SIEMPRE tal como figuran en el menú, en su idioma original, aunque estés escribiendo en otro idioma. El cliente tiene que poder pedirle ese plato al mozo, que no habla su idioma. Traducí la descripción, nunca el nombre.
+  Ejemplo en inglés: \"The Milanesa napolitana is a classic here — breaded beef with ham, tomato and melted cheese.\" (el nombre queda en español, la explicación va en inglés).
+- Las categorías sí podés nombrarlas en el idioma del cliente (\"POSTRES\" → \"desserts\").
+- Los tags de alergias y dietas (sin TACC, vegano, sin lactosa) mencionalos con el término del menú y, si hace falta, aclarás entre paréntesis. Nunca cambies su significado: es información de salud.
+
 CÓMO ESCRIBIR:
 - Sos entusiasta y gourmet: destacá sabores y texturas, pero de platos REALES. Escribí en prosa natural, cálida y breve, no como catálogo ni con listas de guiones.
 - Recomendá POCOS platos (2 o 3) bien elegidos. Si piden \"ver más\", \"todas las opciones\" o el menú completo, ahí SÍ listá todas las que coincidan con su consulta, sin límite.
@@ -833,6 +843,25 @@ CÓMO ESCRIBIR:
 INFORMACIÓN DEL RESTAURANTE Y MENÚ:
 {$contexto}
 {$indicaciones}";
+    }
+
+    /**
+     * Idioma en el que tiene que responder el bot, en español para el prompt.
+     *
+     * Se resuelve por código y se le dice al modelo de forma EXPLÍCITA, en vez de
+     * confiar en que lo infiera: como todo el prompt está escrito en español, el
+     * modelo tiende a responder en español aunque el cliente escriba en otro idioma.
+     * Medido: inferir solo funcionaba 1 de cada 4 veces.
+     */
+    private function idiomaRespuesta(): string
+    {
+        return SetLocale::NOMBRES[app()->getLocale()] ?? 'español';
+    }
+
+    /** Frase de refuerzo escrita en el idioma destino (ver SetLocale::ANCLAJES). */
+    private function anclajeIdioma(): string
+    {
+        return SetLocale::ANCLAJES[app()->getLocale()] ?? SetLocale::ANCLAJES['es'];
     }
 
     /**
@@ -859,10 +888,17 @@ INFORMACIÓN DEL RESTAURANTE Y MENÚ:
                 ."- PROHIBIDA la venta cruzada con otras categorías. Sin límite de cantidad: mostrá TODAS las que coincidan.\n";
         }
 
+        $idioma = $this->idiomaRespuesta();
+        $anclaje = $this->anclajeIdioma();
+
         return "{$carrito}
+⚠️ IDIOMA DE LA RESPUESTA: {$idioma}. {$anclaje}
+Los nombres de los platos son la ÚNICA excepción: van tal cual figuran en el menú, sin traducir, porque el cliente se los tiene que poder pedir al mozo.
+
 PREGUNTA DEL CLIENTE: {$message}
 
 ANTES DE ENVIAR, VERIFICÁ:
+0. IDIOMA: ¿está tu respuesta ENTERA en {$idioma}? {$anclaje} Si redactaste en otro idioma por costumbre, REESCRIBILA COMPLETA. Los nombres de los platos quedan en el idioma del menú.
 1. Todos los platos que nombraste están en el menú provisto, escritos con su nombre EXACTO.
 2. Si fue pedido ESPECÍFICO (caso a): ¿se te coló algo de otro tipo? Si pidió dulce y nombraste un salado (o al revés), o pidió bebida y nombraste comida, borralo y reescribí.
 3. Si fue pedido ABIERTO o de GRUPO (caso b): ¿la propuesta está completa (algo principal o para compartir, una bebida y un postre, salvo que la promo ya traiga bebida)?
@@ -873,6 +909,7 @@ Primero escribí tu respuesta en prosa, natural, como le hablarías al cliente. 
 Y en la ÚLTIMA LÍNEA, cerrá SIEMPRE con este marcador, que el cliente NO ve:
 [[PLATOS: Nombre exacto del menú | Otro nombre exacto del menú]]
 - Copiá cada nombre EXACTAMENTE como figura en el menú, con su tamaño o variante y hasta el último detalle (si el menú dice \"Coca Cola 354 ml\", va \"Coca Cola 354 ml\", no \"Coca Cola\"; si dice \"Muzzarella (Grande)\", va así y no \"Pizza Muzzarella grande\").
+- El marcador va SIEMPRE en el idioma original del menú, incluso si le estás respondiendo en inglés o portugués. NUNCA traduzcas los nombres acá: si los traducís, el plato no se encuentra en el menú y el cliente se queda sin poder pedirlo.
 - Listá SOLO los platos que estás recomendando de verdad, en el orden en que los recomendás. NO incluyas lo que el cliente ya tiene en el pedido, ni platos que nombraste al pasar o para descartar, ni sabores de ejemplo.
 - Si no estás recomendando ningún plato (un saludo, una pregunta de horarios), cerrá con [[PLATOS: ]] vacío.
 - El marcador es la ÚNICA lista: no repitas los platos como lista con guiones dentro de la prosa, ni cierres con un resumen tipo \"te sugiero: - X - Y\". En la prosa van dentro de las frases y nada más.

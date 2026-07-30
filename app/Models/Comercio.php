@@ -412,6 +412,29 @@ class Comercio extends Model
         'dorado' => ['nombre' => 'Dorado', 'color' => '#C9A227'],
     ];
 
+    /** Texto sembrado por defecto como mensaje de bienvenida del chat. */
+    public const BIENVENIDA_POR_DEFECTO = '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?';
+
+    /**
+     * Mensaje de bienvenida del chat, traducido al idioma del cliente cuando corresponde.
+     *
+     * La mayoría de los comercios tiene guardado el texto por defecto sin haberlo tocado
+     * (igual que pasaba con los colores). Para esos devolvemos la versión traducida, que
+     * es la señal más fuerte de que el chat habla el idioma del turista. Si el comerciante
+     * escribió su propio mensaje, se respeta tal cual: traducirlo automáticamente le
+     * cambiaría el tono que eligió.
+     */
+    public function mensajeBienvenida(): string
+    {
+        $propio = trim((string) $this->welcome_message);
+
+        if ($propio === '' || $propio === self::BIENVENIDA_POR_DEFECTO) {
+            return __(self::BIENVENIDA_POR_DEFECTO);
+        }
+
+        return $propio;
+    }
+
     /** Clave del acento actualmente elegido, para marcar el swatch activo en el panel. */
     public function acentoActual(): ?string
     {
