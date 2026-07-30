@@ -21,6 +21,7 @@
 
         // Estados y avisos
         'idea' => '<path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8V17h7.6v-2.7A6.5 6.5 0 0 0 12 2.5Z"/>',
+        'check' => '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.3l2.4 2.4 4.6-4.9"/>',
         'alert' => '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.3v.4"/>',
 
         // Comportamiento

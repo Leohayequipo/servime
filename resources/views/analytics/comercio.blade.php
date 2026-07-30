@@ -77,20 +77,29 @@
                     </div>
                 </div>
 
-                <!-- Uso de IA -->
+                {{-- Antes era "Con IA", que daba el mismo número que el total salvo cuando
+                     algo fallaba: repetía un dato y no avisaba nada. Ahora cuenta lo que el
+                     asistente NO pudo responder: arranca en 0 y solo crece si hay problema. --}}
+                @php $sinResp = $stats['sin_responder']; @endphp
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                    </svg>
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center {{ $sinResp > 0 ? 'bg-amber-100 dark:bg-amber-900/50' : 'bg-accent-gray/40' }}">
+                                    <x-icono :name="$sinResp > 0 ? 'alert' : 'check'"
+                                             class="w-5 h-5 {{ $sinResp > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-text-secondary' }}" />
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Con IA</p>
-                                <p class="text-2xl font-bold text-text-primary">{{ $stats['openai_usage'] }}</p>
+                                <p class="text-sm font-medium text-text-secondary">Sin responder</p>
+                                <p class="text-2xl font-bold text-text-primary">{{ $sinResp }}</p>
+                                @if($stats['total_conversations'] > 0)
+                                    <p class="text-xs text-text-secondary">
+                                        {{ $sinResp > 0
+                                            ? round($sinResp / $stats['total_conversations'] * 100).'% de las consultas'
+                                            : 'respondió todas' }}
+                                    </p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -110,7 +119,10 @@
                             <div class="ml-4">
                                 <p class="text-sm font-medium text-text-secondary">Tiempo Promedio</p>
                                 <p class="text-2xl font-bold text-text-primary">
-                                    {{ $stats['avg_response_time'] ? round($stats['avg_response_time']) . 'ms' : 'N/A' }}
+                                    {{-- "4162ms" es jerga: se muestra en segundos --}}
+                                    {{ $stats['avg_response_time']
+                                        ? number_format($stats['avg_response_time'] / 1000, 1, ',', '.').' s'
+                                        : '—' }}
                                 </p>
                             </div>
                         </div>

@@ -114,7 +114,12 @@ class AnalyticsController extends Controller
             'total_conversations' => ChatConversation::forComercio($comercioId)->count(),
             'conversations_today' => ChatConversation::forComercio($comercioId)
                 ->whereDate('created_at', today())->count(),
-            'openai_usage' => ChatConversation::forComercio($comercioId)->usedOpenAI()->count(),
+            // Se cuentan las que el asistente NO pudo responder, no las que sí.
+            // "Con IA" era igual al total salvo cuando algo fallaba, así que la tarjeta
+            // repetía un número y no avisaba nada. Esto arranca en 0 y solo crece cuando
+            // hay un problema, que es cuando el comerciante tiene que mirar.
+            'sin_responder' => ChatConversation::forComercio($comercioId)
+                ->where('used_openai', false)->count(),
             'avg_response_time' => ChatConversation::forComercio($comercioId)
                 ->whereNotNull('response_time_ms')
                 ->avg('response_time_ms'),
