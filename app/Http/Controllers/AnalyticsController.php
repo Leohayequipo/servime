@@ -125,6 +125,14 @@ class AnalyticsController extends Controller
                 ->avg('response_time_ms'),
         ];
 
+        // Un número solo no dice nada: "159 consultas" ¿contra qué? Se agrega la
+        // comparación con los 30 días anteriores y la serie diaria para el sparkline.
+        $stats['ultimos_30'] = ChatConversation::forComercio($comercioId)->recent(30)->count();
+        $stats['previos_30'] = ChatConversation::forComercio($comercioId)
+            ->whereBetween('created_at', [now()->subDays(60), now()->subDays(30)])
+            ->count();
+        $stats['serie'] = $this->serieDiaria($comercioId, 14);
+
         // Preguntas más frecuentes
         $frequentQuestions = $this->getFrequentQuestions($comercioId);
 
@@ -478,6 +486,30 @@ class AnalyticsController extends Controller
     /**
      * Obtener estadísticas diarias
      */
+    /**
+     * Consultas por día de los últimos N días, incluyendo los días en cero.
+     *
+     * Se rellenan los huecos porque el sparkline necesita un punto por día: si se
+     * saltearan los días sin actividad, la curva mentiría sobre el ritmo real.
+     *
+     * @return array<int, int>
+     */
+    private function serieDiaria($comercioId, int $dias = 14): array
+    {
+        $porDia = ChatConversation::forComercio($comercioId)
+            ->where('created_at', '>=', now()->subDays($dias)->startOfDay())
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $serie = [];
+        for ($i = $dias - 1; $i >= 0; $i--) {
+            $serie[] = (int) ($porDia[now()->subDays($i)->toDateString()] ?? 0);
+        }
+
+        return $serie;
+    }
+
     private function getDailyStats($comercioId, $days = 7)
     {
         return ChatConversation::forComercio($comercioId)

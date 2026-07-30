@@ -37,97 +37,42 @@
                 </div>
             @endif
 
-            <!-- Estadísticas del Comercio -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- Total Conversaciones -->
-                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Total Conversaciones</p>
-                                <p class="text-2xl font-bold text-text-primary">{{ $stats['total_conversations'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {{-- Tarjetas de métrica. Ver components/stat.blade.php: el color aparece solo
+                 cuando comunica algo, y el número va acompañado de su variación y su
+                 tendencia para que se pueda interpretar. --}}
+            @php
+                $prev = $stats['previos_30'];
+                $delta = $prev > 0 ? (int) round(($stats['ultimos_30'] - $prev) / $prev * 100) : null;
+                $sinResp = $stats['sin_responder'];
+                $pctSinResp = $stats['total_conversations'] > 0
+                    ? round($sinResp / $stats['total_conversations'] * 100)
+                    : 0;
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {{-- El valor son los últimos 30 días, no el total histórico: todo el panel
+                     está acotado a ese período (lo dice el subtítulo), así que un total de
+                     siempre acá era inconsistente. El histórico va como nota. --}}
+                <x-stat label="Consultas"
+                        :value="number_format($stats['ultimos_30'], 0, ',', '.')"
+                        :nota="$stats['total_conversations'] > $stats['ultimos_30']
+                            ? number_format($stats['total_conversations'], 0, ',', '.').' desde el inicio'
+                            : 'en los últimos 30 días'"
+                        :delta="$delta"
+                        :serie="$stats['serie']" />
 
-                <!-- Conversaciones Hoy -->
-                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Conversaciones Hoy</p>
-                                <p class="text-2xl font-bold text-text-primary">{{ $stats['conversations_today'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <x-stat label="Hoy"
+                        :value="$stats['conversations_today']"
+                        nota="consultas del día" />
 
-                {{-- Antes era "Con IA", que daba el mismo número que el total salvo cuando
-                     algo fallaba: repetía un dato y no avisaba nada. Ahora cuenta lo que el
-                     asistente NO pudo responder: arranca en 0 y solo crece si hay problema. --}}
-                @php $sinResp = $stats['sin_responder']; @endphp
-                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center {{ $sinResp > 0 ? 'bg-amber-100 dark:bg-amber-900/50' : 'bg-accent-gray/40' }}">
-                                    <x-icono :name="$sinResp > 0 ? 'alert' : 'check'"
-                                             class="w-5 h-5 {{ $sinResp > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-text-secondary' }}" />
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Sin responder</p>
-                                <p class="text-2xl font-bold text-text-primary">{{ $sinResp }}</p>
-                                @if($stats['total_conversations'] > 0)
-                                    <p class="text-xs text-text-secondary">
-                                        {{ $sinResp > 0
-                                            ? round($sinResp / $stats['total_conversations'] * 100).'% de las consultas'
-                                            : 'respondió todas' }}
-                                    </p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <x-stat label="Sin responder"
+                        :value="$sinResp"
+                        :nota="$sinResp > 0 ? $pctSinResp.'% de las consultas' : 'respondió todas'"
+                        :tono="$sinResp > 0 ? 'alerta' : 'neutro'" />
 
-                <!-- Tiempo Promedio -->
-                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-text-secondary">Tiempo Promedio</p>
-                                <p class="text-2xl font-bold text-text-primary">
-                                    {{-- "4162ms" es jerga: se muestra en segundos --}}
-                                    {{ $stats['avg_response_time']
-                                        ? number_format($stats['avg_response_time'] / 1000, 1, ',', '.').' s'
-                                        : '—' }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <x-stat label="Tiempo de respuesta"
+                        :value="$stats['avg_response_time'] ? number_format($stats['avg_response_time'] / 1000, 1, ',', '.').' s' : '—'"
+                        :nota="$stats['avg_response_time'] && $stats['avg_response_time'] > 6000 ? 'más lento de lo deseable' : 'promedio'"
+                        :tono="$stats['avg_response_time'] && $stats['avg_response_time'] > 6000 ? 'alerta' : 'neutro'" />
             </div>
 
             <!-- Sugerencias accionables -->
