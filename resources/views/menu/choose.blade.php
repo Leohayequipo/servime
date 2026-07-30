@@ -420,11 +420,15 @@
                     </span>
                 </a>
 
-                <!-- Chips generados a partir del menú real del comercio (pre-cargan la pregunta en el chat) -->
+                {{-- Chips generados a partir del menú real del comercio (pre-cargan la pregunta
+                     en el chat). data-track-choice: sin esto, quien entraba al chat por un chip
+                     no contaba como que había elegido, y el embudo del panel daba ~1% de
+                     elección. Eso disparaba siempre la sugerencia "muchos entran pero pocos
+                     eligen", apuntando a arreglar una pantalla que en realidad funcionaba. --}}
                 @if(!empty($chips))
                     <div class="chips-row fu d6">
                         @foreach($chips as $chip)
-                            <a class="chip" href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">{{ $chip['emoji'] }} {{ $chip['label'] }}</a>
+                            <a class="chip" data-track-choice="ia" href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">{{ $chip['emoji'] }} {{ $chip['label'] }}</a>
                         @endforeach
                     </div>
                 @endif

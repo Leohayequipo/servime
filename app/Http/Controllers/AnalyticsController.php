@@ -195,9 +195,17 @@ class AnalyticsController extends Controller
             ->groupBy(fn ($e) => $e->data['nombre'] ?? '—')
             ->map->count()->sortDesc()->take(8);
 
-        // Embudo por sesiones únicas: visita -> elige -> muestra interés
+        // Embudo por sesiones únicas: visita -> ve la elección -> elige -> muestra interés.
+        //
+        // 'vieron_eleccion' es un paso propio porque solo quien PASÓ por esa pantalla puede
+        // elegir: si alguien entra directo a /chat o /classic (un QR que apunta ahí, un
+        // favorito, un link compartido) contaba en 'visitas' y nunca podía elegir, así que
+        // el ratio de elección salía por el piso. Medido en local: 2% contra los 20% reales.
         $funnel = [
             'visitas' => $events->where('event', 'page_view')->pluck('session_id')->unique()->count(),
+            'vieron_eleccion' => $events->where('event', 'page_view')
+                ->filter(fn ($e) => ($e->data['view'] ?? null) === 'choose')
+                ->pluck('session_id')->unique()->count(),
             'eligieron' => $choices->pluck('session_id')->unique()->count(),
             'interesados' => $events->where('event', 'dish_want')->pluck('session_id')->unique()->count(),
         ];

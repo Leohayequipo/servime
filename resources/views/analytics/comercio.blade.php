@@ -206,8 +206,18 @@
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-lg font-medium text-text-primary mb-4">🛒 Embudo de interés</h3>
                     @php
-                        $fv = $metrics['funnel']['visitas']; $fe = $metrics['funnel']['eligieron']; $fi = $metrics['funnel']['interesados'];
-                        $pasos = [['Visitaron el menú', $fv, 'bg-blue-500'], ['Eligieron una opción', $fe, 'bg-amber-500'], ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500']];
+                        $fv = $metrics['funnel']['visitas'];
+                        $fc = $metrics['funnel']['vieron_eleccion'] ?? 0;
+                        $fe = $metrics['funnel']['eligieron']; $fi = $metrics['funnel']['interesados'];
+                        // "Pasaron por la pantalla inicial" es un paso propio: quien entra
+                        // directo al chat o al clásico no la ve, y sin ese paso el salto a
+                        // "eligieron" parecía una caída enorme que no existía.
+                        $pasos = [
+                            ['Visitaron el menú', $fv, 'bg-blue-500'],
+                            ['Pasaron por la pantalla inicial', $fc, 'bg-indigo-500'],
+                            ['Eligieron una opción', $fe, 'bg-amber-500'],
+                            ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500'],
+                        ];
                     @endphp
                     @if($fv > 0)
                         <div class="space-y-3">

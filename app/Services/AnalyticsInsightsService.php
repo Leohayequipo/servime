@@ -169,10 +169,15 @@ class AnalyticsInsightsService
             }
         }
 
-        // Embudo: entran pero no eligen
+        // Embudo: ven la pantalla de elección pero no eligen.
+        //
+        // El ratio va contra 'vieron_eleccion', no contra 'visitas': quien entra directo al
+        // chat nunca ve esa pantalla, así que no puede elegir y no corresponde contarlo.
+        // Antes se dividía por el total de visitas y el aviso salía casi siempre.
         $f = $metrics['funnel'];
-        if ($f['visitas'] >= 10 && $f['eligieron'] / max(1, $f['visitas']) < 0.5) {
-            $sug[] = ['icon' => '🔻', 'text' => 'Muchos entran al menú pero pocos eligen una opción. Revisá la pantalla inicial (IA vs clásico).'];
+        $vieron = $f['vieron_eleccion'] ?? 0;
+        if ($vieron >= 10 && $f['eligieron'] / max(1, $vieron) < 0.5) {
+            $sug[] = ['icon' => '🔻', 'text' => 'De cada 10 que ven la pantalla inicial, menos de 5 eligen cómo ver el menú. Revisá que se entienda qué hacer ahí.'];
         }
 
         // Promos con clicks pero sin interés en pedir
