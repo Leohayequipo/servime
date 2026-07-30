@@ -99,7 +99,9 @@ class User extends Authenticatable
      */
     public static function passwordInicial(): string
     {
-        return (string) config('auth.password_inicial', 'admin');
+        // Sin default acá a propósito: el valor por defecto vive en config/auth.php.
+        // Duplicarlo hacía que los dos se desincronizaran al cambiar uno solo.
+        return (string) config('auth.password_inicial');
     }
 
     /** Alias histórico de passwordInicial(). */

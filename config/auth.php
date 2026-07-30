@@ -105,7 +105,7 @@ return [
     |
     */
 
-    'password_inicial' => env('AUTH_PASSWORD_INICIAL', 'admin'),
+    'password_inicial' => env('AUTH_PASSWORD_INICIAL', 'servime2026'),
 
     'passwords' => [
         // "Olvidé mi contraseña": el pedido lo hace la propia persona en el momento,
