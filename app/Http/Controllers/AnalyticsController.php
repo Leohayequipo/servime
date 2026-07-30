@@ -100,18 +100,28 @@ class AnalyticsController extends Controller
         $q = trim((string) $request->query('q', ''));
         $soloSinResolver = $request->boolean('sin_resolver');
 
-        $base = ChatConversation::forComercio($comercioId)->recent(30);
+        // Sin busqueda, el historial acompana al resto del panel: ultimos 30 dias.
+        // Buscando, se mira TODO el historial, porque quien busca va atras de una
+        // conversacion puntual y no tiene por que saber de que fecha era.
+        $base = ChatConversation::forComercio($comercioId);
+        if ($q === '') {
+            $base = $base->recent(30);
+        }
 
         if ($q !== '') {
-            // Se buscan las SESIONES que tengan algun mensaje que coincida, y despues se
-            // traen todos los mensajes de esas sesiones: si no, el hilo aparecia cortado.
+            // Se buscan las SESIONES que tengan algun mensaje que coincida y despues se
+            // traen todos sus mensajes: si no, el hilo aparecia cortado. El tope de 200
+            // sesiones evita cargar en memoria un historial entero si el termino es muy
+            // comun; igual solo se muestran 25.
             $sesiones = (clone $base)
                 ->where(fn ($w) => $w->where('user_message', 'like', '%'.$q.'%')
                     ->orWhere('bot_response', 'like', '%'.$q.'%'))
+                ->orderByDesc('created_at')
                 ->distinct()
+                ->take(200)
                 ->pluck('session_id');
 
-            $base = (clone $base)->whereIn('session_id', $sesiones);
+            $base = ChatConversation::forComercio($comercioId)->whereIn('session_id', $sesiones);
         }
 
         $threads = $base

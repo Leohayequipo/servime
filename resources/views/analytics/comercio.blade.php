@@ -509,6 +509,7 @@
                         <p class="text-xs text-text-secondary mb-4">
                             @if($q !== '' || $soloSinResolver)
                                 {{ $threadsTotal }} {{ $threadsTotal === 1 ? 'hilo coincide' : 'hilos coinciden' }}
+                                @if($q !== '') en todo el historial @endif
                                 @if($threadsTotal > $threads->count()) &middot; se muestran los {{ $threads->count() }} más recientes @endif
                             @else
                                 {{-- Se avisa que la lista esta recortada: antes decia "ultimos 25"
@@ -575,7 +576,7 @@
                             <x-icono name="{{ $q !== '' || $soloSinResolver ? 'search' : 'messages' }}" class="mx-auto w-10 h-10 text-text-secondary opacity-40" />
                             @if($q !== '' || $soloSinResolver)
                                 <p class="mt-3 text-sm text-text-primary">Ningún hilo coincide con la búsqueda</p>
-                                <p class="mt-1 text-sm text-text-secondary">Probá con otra palabra, o mirá que la conversación sea de los últimos 30 días.</p>
+                                <p class="mt-1 text-sm text-text-secondary">Se buscó en todo el historial. Probá con otra palabra.</p>
                                 <a href="{{ route('analytics.comercio', $comercio) }}" class="mt-3 inline-block text-sm text-accent-blue underline">Ver todas</a>
                             @else
                                 <p class="mt-3 text-sm text-text-primary">Todavía no hay conversaciones</p>
