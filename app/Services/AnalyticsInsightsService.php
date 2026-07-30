@@ -151,7 +151,7 @@ class AnalyticsInsightsService
         ];
         foreach ($mensajes as $intent => $texto) {
             if (($counts[$intent] ?? 0) >= $umbral) {
-                $sug[] = ['icon' => '💡', 'text' => $texto];
+                $sug[] = ['icon' => 'idea', 'text' => $texto];
             }
         }
 
@@ -161,11 +161,11 @@ class AnalyticsInsightsService
             $tot = (clone $base)->count();
             $fb = (clone $base)->where('used_openai', false)->count();
             if ($tot > 0 && $fb / $tot >= 0.25) {
-                $sug[] = ['icon' => '⚠️', 'text' => 'El asistente no pudo responder el '.round($fb / $tot * 100).'% de las consultas. Revisá que el menú y los datos del comercio estén completos.'];
+                $sug[] = ['icon' => 'alert', 'text' => 'El asistente no pudo responder el '.round($fb / $tot * 100).'% de las consultas. Revisá que el menú y los datos del comercio estén completos.'];
             }
             $avg = (clone $base)->whereNotNull('response_time_ms')->avg('response_time_ms');
             if ($avg && $avg > 6000) {
-                $sug[] = ['icon' => '🐢', 'text' => 'El tiempo de respuesta del asistente es alto ('.round($avg / 1000, 1).'s).'];
+                $sug[] = ['icon' => 'clock', 'text' => 'El tiempo de respuesta del asistente es alto ('.round($avg / 1000, 1).'s).'];
             }
         }
 
@@ -177,12 +177,12 @@ class AnalyticsInsightsService
         $f = $metrics['funnel'];
         $vieron = $f['vieron_eleccion'] ?? 0;
         if ($vieron >= 10 && $f['eligieron'] / max(1, $vieron) < 0.5) {
-            $sug[] = ['icon' => '🔻', 'text' => 'De cada 10 que ven la pantalla inicial, menos de 5 eligen cómo ver el menú. Revisá que se entienda qué hacer ahí.'];
+            $sug[] = ['icon' => 'funnel', 'text' => 'De cada 10 que ven la pantalla inicial, menos de 5 eligen cómo ver el menú. Revisá que se entienda qué hacer ahí.'];
         }
 
         // Promos con clicks pero sin interés en pedir
         if ($metrics['topPromos']->isNotEmpty() && $f['interesados'] === 0) {
-            $sug[] = ['icon' => '🔥', 'text' => 'Tus promos reciben clicks pero nadie llegó a "Lo quiero". Quizás la oferta o el precio no terminan de cerrar.'];
+            $sug[] = ['icon' => 'flame', 'text' => 'Tus promos reciben clicks pero nadie llegó a "Lo quiero". Quizás la oferta o el precio no terminan de cerrar.'];
         }
 
         return $sug;

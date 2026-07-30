@@ -185,9 +185,14 @@ class AnalyticsController extends Controller
             'classic' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'classic')->count(),
         ];
 
-        // Promos más clickeadas
+        // Promos más clickeadas.
+        //
+        // La etiqueta se limpia de emoji porque el evento guarda el textContent del botón,
+        // y los chips de promo tenían un 🔥 adelante. Sin limpiarlo, los clicks anteriores
+        // ("🔥 Promociones del Día") y los nuevos ("Promociones del Día") aparecían como
+        // dos promos distintas, y encima con un emoji suelto en el panel.
         $topPromos = $events->where('event', 'promo_click')
-            ->groupBy(fn ($e) => $e->data['promo'] ?? '—')
+            ->groupBy(fn ($e) => $this->sinEmoji($e->data['promo'] ?? '') ?: '—')
             ->map->count()->sortDesc()->take(6);
 
         // Platos más deseados ("Lo quiero")
@@ -434,6 +439,20 @@ class AnalyticsController extends Controller
         ];
 
         return in_array($norm, $saludos, true);
+    }
+
+    /**
+     * Saca emoji y símbolos de una etiqueta guardada en tracking_events.
+     *
+     * Los eventos guardan el textContent del botón, así que arrastran los emoji que la
+     * interfaz tenía en ese momento. Limpiarlos al mostrar agrupa el histórico con lo
+     * nuevo y evita que el panel muestre emoji sueltos.
+     */
+    private function sinEmoji(string $texto): string
+    {
+        $limpio = preg_replace('/[\x{1F000}-\x{1FAFF}\x{2190}-\x{2BFF}\x{FE0F}\x{200D}]/u', '', $texto);
+
+        return trim(preg_replace('/\s+/', ' ', (string) $limpio));
     }
 
     /**

@@ -11,8 +11,9 @@
                              class="w-10 h-10 rounded-full object-cover">
                     @endif
                     <div>
-                        <h2 class="font-semibold text-xl text-text-primary leading-tight">
-                            📊 Analytics · {{ $comercio->nombre }}
+                        <h2 class="font-semibold text-xl text-text-primary leading-tight flex items-center gap-2">
+                            <x-icono name="chart" class="w-5 h-5 flex-none opacity-60" />
+                            Analytics · {{ $comercio->nombre }}
                         </h2>
                         <p class="text-sm text-text-secondary">Comportamiento de los últimos 30 días</p>
                     </div>
@@ -23,8 +24,9 @@
                         ← Dashboard
                     </a>
                     <a href="{{ route('analytics.export', $comercio) }}"
-                       class="bg-accent-green hover:opacity-90 text-gray-900 font-semibold py-2 px-4 rounded-lg">
-                        📥 Exportar
+                       class="bg-accent-green hover:opacity-90 text-gray-900 font-semibold py-2 px-4 rounded-lg inline-flex items-center gap-2">
+                        <x-icono name="download" class="w-4 h-4 flex-none" />
+                        Exportar
                     </a>
                 </div>
             </div>
@@ -119,11 +121,14 @@
             <!-- Sugerencias accionables -->
             @if(count($suggestions) > 0)
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 shadow-sm sm:rounded-lg p-6 mb-8">
-                    <h3 class="text-lg font-medium text-amber-900 dark:text-amber-200 mb-4">✨ Sugerencias para tu negocio</h3>
+                    <h3 class="text-lg font-medium text-amber-900 dark:text-amber-200 mb-4 flex items-center gap-2">
+                        <x-icono name="idea" class="w-4 h-4 flex-none opacity-60" />
+                        Sugerencias para tu negocio
+                    </h3>
                     <ul class="space-y-2.5">
                         @foreach($suggestions as $s)
                             <li class="flex items-start gap-3 text-sm text-amber-900 dark:text-amber-100">
-                                <span class="flex-shrink-0">{{ $s['icon'] }}</span>
+                                <x-icono :name="$s['icon']" class="w-4 h-4 flex-none mt-0.5 opacity-70" />
                                 <span>{{ $s['text'] }}</span>
                             </li>
                         @endforeach
@@ -135,7 +140,10 @@
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-8">
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                     <div>
-                        <h3 class="text-lg font-medium text-text-primary mb-1">🎯 ¿Para qué consultan?</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                            <x-icono name="target" class="w-4 h-4 flex-none opacity-60" />
+                            ¿Para qué consultan?
+                        </h3>
                         <p class="text-xs text-text-secondary">
                             Intención en {{ $intents['total'] }} mensajes (últimos 30 días)
                             @if($intents['ia'] > 0)
@@ -188,7 +196,10 @@
                     $clPct = $totalChoice ? 100 - $iaPct : 0;
                 @endphp
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🤖 ¿IA o menú clásico?</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="split" class="w-4 h-4 flex-none opacity-60" />
+                        ¿IA o menú clásico?
+                    </h3>
                     @if($totalChoice > 0)
                         <div class="flex h-5 rounded-full overflow-hidden mb-4">
                             <div class="bg-amber-500" style="width: {{ $iaPct }}%"></div>
@@ -204,7 +215,10 @@
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🛒 Embudo de interés</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="funnel" class="w-4 h-4 flex-none opacity-60" />
+                        Embudo de interés
+                    </h3>
                     @php
                         $fv = $metrics['funnel']['visitas'];
                         $fc = $metrics['funnel']['vieron_eleccion'] ?? 0;
@@ -241,7 +255,10 @@
             <!-- Dispositivo · Visitantes · Tiempo de sesión -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-sm font-medium text-text-secondary mb-3">📱 Dispositivos</h3>
+                    <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
+                        <x-icono name="phone" class="w-4 h-4 flex-none opacity-60" />
+                        Dispositivos
+                    </h3>
                     @php $dv = $metrics['devices']; $dvTotal = array_sum($dv) ?: 1; @endphp
                     @foreach(['movil' => 'Móvil', 'desktop' => 'Escritorio', 'tablet' => 'Tablet'] as $k => $label)
                         <div class="mb-2">
@@ -256,7 +273,10 @@
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-sm font-medium text-text-secondary mb-3">🔁 Visitantes que vuelven</h3>
+                    <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
+                        <x-icono name="return" class="w-4 h-4 flex-none opacity-60" />
+                        Visitantes que vuelven
+                    </h3>
                     @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
                     <p class="text-sm text-text-secondary mt-1">
@@ -266,7 +286,10 @@
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-sm font-medium text-text-secondary mb-3">⏱️ Tiempo promedio en el menú</h3>
+                    <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
+                        <x-icono name="clock" class="w-4 h-4 flex-none opacity-60" />
+                        Tiempo promedio en el menú
+                    </h3>
                     @php $sec = $metrics['sessionAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ $dur }}</p>
                     <p class="text-sm text-text-secondary mt-1">por sesión</p>
@@ -276,7 +299,10 @@
             <!-- Promos y platos top -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🔥 Promos más clickeadas</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="flame" class="w-4 h-4 flex-none opacity-60" />
+                        Promos más clickeadas
+                    </h3>
                     @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
                     @forelse($metrics['topPromos'] as $promo => $count)
                         <div class="mb-3">
@@ -293,7 +319,10 @@
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🍽️ Platos más deseados</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="heart" class="w-4 h-4 flex-none opacity-60" />
+                        Platos más deseados
+                    </h3>
                     @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
                     @forelse($metrics['topDishes'] as $dish => $count)
                         <div class="mb-3">
@@ -313,7 +342,10 @@
             <!-- Top palabras + Heatmap -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🔤 Palabras más buscadas</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="search" class="w-4 h-4 flex-none opacity-60" />
+                        Palabras más buscadas
+                    </h3>
                     @php $wordMax = $topWords->max() ?: 1; @endphp
                     @if($topWords->count() > 0)
                         <div class="flex flex-wrap gap-2">
@@ -335,7 +367,10 @@
                      Cada línea es una decisión concreta, a diferencia de la nube de palabras
                      de al lado, que describe la demanda pero no señala huecos. --}}
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-1">🕳️ Te lo pidieron y no lo tenés</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                        <x-icono name="alert" class="w-4 h-4 flex-none opacity-60" />
+                        Te lo pidieron y no lo tenés
+                    </h3>
                     <p class="text-text-secondary text-sm mb-4">Lo que los clientes buscaron y no está en tu menú. Puede ser algo para sumar a la carta, o algo que sí tenés pero está mal cargado (sin descripción o sin etiqueta).</p>
                     @if(count($demandaInsatisfecha) > 0)
                         <ul class="space-y-2">
@@ -352,7 +387,10 @@
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4">🕒 Actividad por hora y día</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                        <x-icono name="grid" class="w-4 h-4 flex-none opacity-60" />
+                        Actividad por hora y día
+                    </h3>
                     @php $dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; $hmMax = $metrics['heatmapMax']; @endphp
                     @if($hmMax > 0)
                         <div class="space-y-1">
@@ -380,7 +418,10 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-text-primary mb-1">❓ Preguntas más frecuentes</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                            <x-icono name="help" class="w-4 h-4 flex-none opacity-60" />
+                            Preguntas más frecuentes
+                        </h3>
                         <p class="text-text-secondary text-sm mb-4">Lo que los clientes escribieron, y si el asistente pudo recomendarles algo del menú.</p>
                         @if($frequentQuestions->count() > 0)
                             @php $qMax = $frequentQuestions->max('frequency') ?: 1; @endphp
@@ -424,7 +465,10 @@
                 <!-- Estadísticas Diarias -->
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                     <div class="p-6">
-                        <h3 class="text-lg font-medium text-text-primary mb-4">📈 Actividad de los Últimos 7 Días</h3>
+                        <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                            <x-icono name="chart" class="w-4 h-4 flex-none opacity-60" />
+                            Actividad de los Últimos 7 Días
+                        </h3>
                         @if($dailyStats->count() > 0)
                             <div class="space-y-3">
                                 @foreach($dailyStats as $day)
@@ -462,7 +506,10 @@
             <!-- Historial de Conversaciones -->
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
                 <div class="p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-6">💬 Historial de Conversaciones</h3>
+                    <h3 class="text-lg font-medium text-text-primary mb-6 flex items-center gap-2">
+                        <x-icono name="messages" class="w-4 h-4 flex-none opacity-60" />
+                        Historial de Conversaciones
+                    </h3>
                     
                     @if($threads->count() > 0)
                         <p class="text-xs text-text-secondary mb-4">Últimos {{ $threads->count() }} hilos (agrupados por sesión)</p>
