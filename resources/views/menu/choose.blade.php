@@ -48,11 +48,28 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
 
+        /* Misma paleta que el chat y el menú clásico: neutros cálidos fijos + UN acento.
+           El fondo era #07080c (un negro frío) y no coincidía con las otras dos vistas. */
+        :root {
+            --bg:        #0F0D0C;
+            --surface:   #1A1614;
+            --surface-2: #241F1B;
+            --text:      #F5F2EF;
+            --text-dim:  #A39A93;
+            --accent: {{ $comercio->colorAcento() }};
+            --accent-soft: #E0A458;
+            --accent-soft: color-mix(in srgb, var(--accent) 55%, #FFF3E2);
+        }
+
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background: #07080c;
-            color: #fff;
+            background: var(--bg);
+            color: var(--text);
             overflow-x: hidden;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .orb { animation: none !important; }
         }
 
         /* ── Orbs ── */
@@ -65,19 +82,19 @@
         }
         .orb-1 {
             width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 65%);
+            background: radial-gradient(circle, color-mix(in srgb, var(--accent) 15%, transparent) 0%, transparent 65%);
             top: -200px; left: -200px;
             animation: drift-a 14s ease-in-out infinite;
         }
         .orb-2 {
             width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 65%);
+            background: radial-gradient(circle, rgba(200,127,53,0.07) 0%, transparent 65%);
             bottom: -80px; right: -80px;
             animation: drift-b 17s ease-in-out infinite;
         }
         .orb-3 {
             width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(245,158,11,0.05) 0%, transparent 65%);
+            background: radial-gradient(circle, color-mix(in srgb, var(--accent) 5%, transparent) 0%, transparent 65%);
             top: 50%; left: 35%;
             animation: drift-c 20s ease-in-out infinite;
         }
@@ -138,19 +155,19 @@
         .logo-ring {
             position: absolute; inset: -10px;
             border-radius: 50%;
-            border: 1.5px solid rgba(245,158,11,0.35);
+            border: 1.5px solid color-mix(in srgb, var(--accent) 35%, transparent);
             animation: ring-pulse 3s ease-in-out infinite;
         }
         .logo-ring-2 {
             position: absolute; inset: -20px;
             border-radius: 50%;
-            border: 1px solid rgba(245,158,11,0.15);
+            border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
             animation: ring-pulse 3s ease-in-out infinite 0.9s;
         }
         .logo-glow {
             position: absolute; inset: -30px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
+            background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 70%);
             animation: ring-pulse 3s ease-in-out infinite 0.4s;
         }
 
@@ -181,7 +198,7 @@
             font-size: 11px;
             letter-spacing: 0.12em;
             font-weight: 600;
-            color: #374151;
+            color: #5C534C;
             text-transform: uppercase;
             margin-bottom: 14px;
         }
@@ -195,7 +212,7 @@
             display: inline-block;
             width: 7px; height: 7px;
             border-radius: 50%;
-            background: #22c55e;
+            background: var(--accent);
             animation: dot-pulse 2.2s ease-in-out infinite;
             flex-shrink: 0;
         }
@@ -207,18 +224,18 @@
             align-items: center;
             gap: 8px;
             font-size: 11px;
-            color: #1f2937;
+            color: #3A322C;
         }
         .footer-dot {
             width: 4px; height: 4px;
             border-radius: 50%;
-            background: #1f2937;
+            background: #3A322C;
         }
 
         /* ── Barra IA (buscador/chat) ── */
         @keyframes bar-glow {
-            0%, 100% { box-shadow: 0 0 0 1.5px rgba(245,158,11,0.5), 0 0 16px rgba(245,158,11,0.10); }
-            50%      { box-shadow: 0 0 0 1.5px rgba(245,158,11,0.95), 0 0 34px rgba(245,158,11,0.42); }
+            0%, 100% { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 16px color-mix(in srgb, var(--accent) 10%, transparent); }
+            50%      { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 95%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 42%, transparent); }
         }
         .ai-bar {
             display: flex;
@@ -228,7 +245,7 @@
             padding: 11px 13px;
             border-radius: 20px;
             background: rgba(255,255,255,0.035);
-            border: 1.5px solid rgba(245,158,11,0.6);
+            border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
             backdrop-filter: blur(10px);
             text-decoration: none;
             animation: bar-glow 1.2s ease-in-out infinite;
@@ -241,9 +258,9 @@
             flex-shrink: 0;
             width: 46px; height: 46px;
             border-radius: 13px;
-            background: #f59e0b;
+            background: var(--accent);
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 6px 16px rgba(245,158,11,0.35);
+            box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
         }
         .ai-bar-text {
             flex: 1;
@@ -251,21 +268,21 @@
             text-align: center;
             font-size: 15px;
             font-weight: 500;
-            color: #e5e7eb;
+            color: #F5F2EF;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         @keyframes caret-blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         .ai-caret {
-            color: #f59e0b;
+            color: var(--accent);
             font-weight: 400;
             margin-left: 1px;
             animation: caret-blink 0.85s step-end infinite;
         }
         .ai-bar-arrow {
             flex-shrink: 0;
-            color: #f59e0b;
+            color: var(--accent);
             display: flex; align-items: center;
         }
 
@@ -285,7 +302,7 @@
             border-radius: 999px;
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.09);
-            color: #d1d5db;
+            color: #D6CFC8;
             font-size: 13px;
             font-weight: 500;
             text-decoration: none;
@@ -293,20 +310,20 @@
             transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
         }
         .chip:hover {
-            border-color: rgba(245,158,11,0.4);
-            background: rgba(245,158,11,0.08);
+            border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
             transform: translateY(-1px);
         }
 
         /* ── Link discreto al menú clásico ── */
         .classic-link {
             font-size: 13px;
-            color: #6b7280;
+            color: #8A817A;
             text-decoration: underline;
             text-underline-offset: 3px;
             transition: color 0.2s ease;
         }
-        .classic-link:hover { color: #9ca3af; }
+        .classic-link:hover { color: #A39A93; }
     </style>
 </head>
 <body>
@@ -330,16 +347,16 @@
                             <img src="{{ asset('storage/' . $comercio->logo_url) }}"
                                  alt="{{ $comercio->nombre }}"
                                  style="width:80px;height:80px;border-radius:50%;object-fit:cover;
-                                        border:2px solid rgba(245,158,11,0.3);
-                                        box-shadow:0 0 32px rgba(245,158,11,0.18);
+                                        border:2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+                                        box-shadow:0 0 32px color-mix(in srgb, var(--accent) 18%, transparent);
                                         display:block; position:relative; z-index:1;">
                         @else
                             <div style="width:80px;height:80px;border-radius:50%;
-                                        background:linear-gradient(135deg,rgba(245,158,11,0.22),rgba(245,158,11,0.06));
-                                        border:2px solid rgba(245,158,11,0.3);
+                                        background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 22%, transparent),color-mix(in srgb, var(--accent) 6%, transparent));
+                                        border:2px solid color-mix(in srgb, var(--accent) 30%, transparent);
                                         display:flex;align-items:center;justify-content:center;
-                                        font-size:30px;font-weight:700;color:#f59e0b;
-                                        box-shadow:0 0 32px rgba(245,158,11,0.15);
+                                        font-size:30px;font-weight:700;color:var(--accent);
+                                        box-shadow:0 0 32px color-mix(in srgb, var(--accent) 15%, transparent);
                                         position:relative;z-index:1;">
                                 {{ strtoupper(substr($comercio->nombre, 0, 1)) }}
                             </div>
@@ -350,9 +367,9 @@
                 <!-- Pill -->
                 <div class="fu d1" style="margin-bottom:12px;">
                     <span style="font-size:10px;letter-spacing:0.14em;font-weight:700;
-                                 background:rgba(245,158,11,0.1);color:#f59e0b;
+                                 background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);
                                  padding:4px 14px;border-radius:999px;
-                                 border:1px solid rgba(245,158,11,0.2);">
+                                 border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);">
                         MENÚ DIGITAL
                     </span>
                 </div>
@@ -367,10 +384,10 @@
 
                 <!-- Meta -->
                 <div class="fu d3" style="display:flex;align-items:center;justify-content:center;
-                                          gap:10px;font-size:12.5px;color:#374151;">
+                                          gap:10px;font-size:12.5px;color:#5C534C;">
                     @if(!empty($comercio->ciudad))
                         <span>{{ $comercio->ciudad }}</span>
-                        <span style="color:#1f2937;">·</span>
+                        <span style="color:#3A322C;">·</span>
                     @endif
                     <span style="display:flex;align-items:center;gap:6px;">
                         <span class="dot-open"></span>

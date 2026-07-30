@@ -595,152 +595,77 @@
                             <h3 class="text-xl font-semibold text-text-primary">Vista Previa</h3>
                         </div>
                         
-                        <!-- Selector de Temas (Swatches) -->
+                        {{-- Selector de acento. Antes eran 8 temas que seteaban 4 colores cada
+                             uno (y en los oscuros `primary` era un casi-negro, no un acento).
+                             Ahora es UN color: el resto de la interfaz son neutros cálidos
+                             fijos, así cualquier elección queda bien. Ver Comercio::ACENTOS. --}}
                         <div class="mb-6">
+                            <p class="text-center text-text-secondary text-xs mb-3">Color de tu marca</p>
                             <div class="flex items-center justify-center gap-3 flex-wrap">
-                                <!-- Profesional - Azul profesional -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #3B82F6 !important; border: none !important;"
-                                        data-theme="professional"
-                                        title="Profesional">
-                                </button>
-                                
-                                <!-- Natural - Verde natural -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #10B981 !important; border: none !important;"
-                                        data-theme="natural"
-                                        title="Natural">
-                                </button>
-                                
-                                <!-- Elegante - Púrpura elegante -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #8B5CF6 !important; border: none !important;"
-                                        data-theme="elegant"
-                                        title="Elegante">
-                                </button>
-                                
-                                <!-- Energético - Naranja energético -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #F97316 !important; border: none !important;"
-                                        data-theme="energetic"
-                                        title="Energético">
-                                </button>
-                                
-                                <!-- Noche Azul - Cyan brillante -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #06B6D4 !important; border: none !important;"
-                                        data-theme="midnight-blue"
-                                        title="Noche Azul">
-                                </button>
-                                
-                                <!-- Oro Oscuro - Dorado -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #FBBF24 !important; border: none !important;"
-                                        data-theme="dark-gold"
-                                        title="Oro Oscuro">
-                                </button>
-                                
-                                <!-- Púrpura Profundo - Púrpura claro -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #A78BFA !important; border: none !important;"
-                                        data-theme="deep-purple"
-                                        title="Púrpura Profundo">
-                                </button>
-                                
-                                <!-- Obsidiana - Turquesa -->
-                                <button type="button" 
-                                        class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark" 
-                                        style="background-color: #14B8A6 !important; border: none !important;"
-                                        data-theme="obsidian"
-                                        title="Obsidiana">
-                                </button>
+                                @foreach(\App\Models\Comercio::ACENTOS as $key => $acento)
+                                    <button type="button"
+                                            class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark"
+                                            style="background-color: {{ $acento['color'] }} !important; border: none !important;"
+                                            data-theme="{{ $key }}"
+                                            data-color="{{ $acento['color'] }}"
+                                            title="{{ $acento['nombre'] }}">
+                                    </button>
+                                @endforeach
                                     </div>
                         </div>
                         
                         <!-- Preview realista del chatbot móvil -->
-                        <div class="border border-accent-gray rounded-2xl p-6 max-w-sm mx-auto min-h-[500px] flex flex-col bg-primary-dark">
-                            <!-- Header del comercio -->
-                            <div class="mb-4">
-                                <!-- Logo centrado -->
-                                <div class="flex justify-center mb-3">
-                                @if($comercio->logo_url)
-                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                         alt="{{ $comercio->nombre }}" 
-                                             class="w-16 h-16 rounded-full object-cover shadow-2xl">
-                                @else
-                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                             class="w-16 h-16 rounded-full object-cover shadow-2xl">
-                                @endif
-                                </div>
-                                <!-- Nombre del comercio centrado -->
-                                <div class="text-center">
-                                    <h4 class="text-text-primary font-semibold text-base leading-tight mb-1">{{ $comercio->nombre }}</h4>
-                                    <p class="text-text-secondary text-sm">Menú Digital</p>
+                        {{-- Previa del chat REAL. Antes mostraba el diseño viejo (banner con
+                             degradado, logo duplicado, "Menú Digital") y le mentía al comerciante
+                             sobre lo que ve su cliente. Usa la misma paleta que menu/chat.blade.php:
+                             neutros cálidos fijos + el acento elegido. --}}
+                        <div id="chatPreview" class="rounded-2xl p-4 max-w-sm mx-auto min-h-[440px] flex flex-col"
+                             style="background:#0F0D0C; border:1px solid rgba(255,255,255,.08);">
+                            {{-- Header: una fila, sin logo duplicado --}}
+                            <div class="flex items-center gap-2.5 mb-3">
+                                <img src="{{ $comercio->logo_url ? asset('storage/'.$comercio->logo_url) : asset('images/logo_empresa_default.png') }}"
+                                     alt="{{ $comercio->nombre }}" class="w-9 h-9 rounded-full object-cover flex-none">
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-sm leading-tight truncate" style="color:#F5F2EF;">{{ $comercio->nombre }}</p>
+                                    <p class="text-xs leading-tight truncate" id="preview-chatbot-name" style="color:#A39A93;">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</p>
                                 </div>
                             </div>
-                            
-                            <!-- Chatbot header -->
-                            <div id="preview-chatbot-header" class="bg-accent-blue/20 border border-accent-blue/30 rounded-xl p-3 mb-4">
-                                <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
-                                        <span class="text-white text-xs">🤖</span>
+
+                            <div class="space-y-2.5 flex-grow">
+                                <div class="rounded-2xl rounded-tl-md px-3 py-2.5" style="background:#1A1614;">
+                                    <p class="text-xs leading-normal" id="preview-welcome-message" style="color:#F5F2EF;">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual.' }}</p>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <div class="preview-accent-bg rounded-2xl rounded-tr-md px-3 py-2 max-w-[80%]">
+                                        <p class="text-xs text-white">algo dulce</p>
                                     </div>
-                                    <span class="text-white font-medium text-sm" id="preview-chatbot-name">
-                                        {{ $comercio->chatbot_name ?? 'Asistente IA' }}
-                                    </span>
+                                </div>
+
+                                <div class="rounded-2xl rounded-tl-md px-3 py-2.5" style="background:#1A1614;">
+                                    <p class="text-xs leading-normal mb-2" style="color:#F5F2EF;">Te recomiendo el Flan casero, un clásico que nunca falla.</p>
+                                    {{-- Tarjeta de plato, igual que en el chat --}}
+                                    <div class="rounded-xl px-3 py-2.5" style="background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1);">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <span class="font-semibold text-xs" style="color:#F5F2EF;">Flan casero</span>
+                                            <span class="preview-accent-text font-bold text-xs whitespace-nowrap">$5.500</span>
+                                        </div>
+                                        <button type="button" class="preview-accent-bg mt-2 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">Lo quiero</button>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <!-- Mensajes de ejemplo -->
-                            <div class="space-y-3 mb-4 flex-grow">
-                                <div class="bg-secondary-dark rounded-lg p-3">
-                                    <p class="text-text-secondary text-xs" id="preview-welcome-message">
-                                        {{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual...' }}
-                                    </p>
-                                </div>
-                                <div class="flex justify-end">
-                                    <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
-                                        <p class="text-white text-xs">¿Qué platos tienen?</p>
-                                    </div>
-                                </div>
-                                <div class="bg-secondary-dark rounded-lg p-3">
-                                    <p class="text-text-secondary text-xs">Tenemos una variedad de platos deliciosos...</p>
-                                </div>
-                                <!-- Mensajes adicionales para llenar espacio -->
-                                <div class="flex justify-end">
-                                    <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
-                                        <p class="text-white text-xs">¿Cuáles son los precios?</p>
-                                    </div>
-                                </div>
-                                <div class="bg-secondary-dark rounded-lg p-3">
-                                    <p class="text-text-secondary text-xs">Los precios van desde $50 hasta $115, dependiendo del plato...</p>
-                                </div>
-                                <div class="flex justify-end">
-                                    <div class="bg-accent-blue rounded-lg p-3 max-w-xs">
-                                        <p class="text-white text-xs">¿Tienen opciones vegetarianas?</p>
-                                    </div>
-                                </div>
-                                <div class="bg-secondary-dark rounded-lg p-3">
-                                    <p class="text-text-secondary text-xs">Sí, tenemos varias opciones vegetarianas disponibles...</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Input del chat -->
-                            <div class="flex mt-auto">
-                                <input type="text" 
-                                       placeholder="Escribe tu mensaje..." 
-                                       class="flex-1 bg-secondary-dark border border-accent-gray rounded-l-lg px-3 py-2 text-text-primary text-xs placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
-                                <button class="bg-accent-blue hover:opacity-80 px-3 py-2 rounded-r-lg text-black text-xs font-medium transition-opacity duration-200">
-                                    Enviar
-                                </button>
+
+                            {{-- Barra de input: micrófono neutro + enviar con el acento --}}
+                            <div class="flex items-center gap-2 mt-3">
+                                <span class="w-8 h-8 rounded-full flex-none flex items-center justify-center"
+                                      style="background:#241F1B; border:1px solid rgba(255,255,255,.12); color:#A39A93;">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h-2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z"/></svg>
+                                </span>
+                                <div class="flex-1 rounded-full px-3 py-2 text-xs"
+                                     style="background:#241F1B; border:1px solid rgba(255,255,255,.12); color:#A39A93;">Escribe tu mensaje...</div>
+                                <span class="preview-accent-bg w-8 h-8 rounded-full flex-none flex items-center justify-center">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="#fff"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1324,87 +1249,30 @@
                 });
             }
             
-            // Aplicar tema predefinido
+            // Aplicar acento elegido. Antes seteaba 4 colores por tema; ahora solo el
+            // color de marca: el resto de la interfaz son neutros cálidos fijos.
+            const ACENTOS = @json(collect(\App\Models\Comercio::ACENTOS)->map->color);
+
             function applyTheme(theme) {
-                const themes = {
-                    professional: {
-                        primary: '#3B82F6',
-                        secondary: '#6B7280', 
-                        accent: '#10B981',
-                        background: '#FFFFFF'
-                    },
-                    natural: {
-                        primary: '#10B981',
-                        secondary: '#84CC16',
-                        accent: '#F59E0B', 
-                        background: '#F9FAFB'
-                    },
-                    elegant: {
-                        primary: '#8B5CF6',
-                        secondary: '#A78BFA',
-                        accent: '#EC4899',
-                        background: '#FAFAFA'
-                    },
-                    energetic: {
-                        primary: '#F97316',
-                        secondary: '#EF4444',
-                        accent: '#F59E0B',
-                        background: '#FFFBEB'
-                    },
-                    'midnight-blue': {
-                        primary: '#1E293B',
-                        secondary: '#334155',
-                        accent: '#06B6D4',
-                        background: '#0F172A'
-                    },
-                    'dark-gold': {
-                        primary: '#1C1917',
-                        secondary: '#292524',
-                        accent: '#FBBF24',
-                        background: '#0C0A09'
-                    },
-                    'deep-purple': {
-                        primary: '#1E1B4B',
-                        secondary: '#312E81',
-                        accent: '#A78BFA',
-                        background: '#0F0D2B'
-                    },
-                    obsidian: {
-                        primary: '#111827',
-                        secondary: '#1F2937',
-                        accent: '#14B8A6',
-                        background: '#030712'
-                    }
-                };
-                
-                const selectedTheme = themes[theme];
-                if (selectedTheme) {
-                    document.getElementById('primary_color').value = selectedTheme.primary;
-                    document.getElementById('secondary_color').value = selectedTheme.secondary;
-                    document.getElementById('accent_color').value = selectedTheme.accent;
-                    document.getElementById('background_color').value = selectedTheme.background;
-                    
-                    updatePreview();
-                    // Actualizar el estado activo del swatch
-                    updateActiveSwatch(theme);
-                    
-                    // Guardar automáticamente en la base de datos
-                    saveThemeColors(selectedTheme);
-                }
+                const color = ACENTOS[theme];
+                if (!color) return;
+
+                document.getElementById('primary_color').value = color;
+
+                updatePreview();
+                updateActiveSwatch(theme);
+                saveThemeColors({ primary: color });
             }
-            
+
             // Función para guardar los colores automáticamente
             async function saveThemeColors(colors) {
                 try {
                     const url = '{{ route("menus.update.theme.colors", $comercio) }}';
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                     
-                    // Crear FormData en lugar de JSON
+                    // Solo el color de marca: los otros tres ya no se usan en el menú
                     const formData = new FormData();
                     formData.append('primary_color', colors.primary);
-                    formData.append('secondary_color', colors.secondary);
-                    formData.append('accent_color', colors.accent);
-                    formData.append('background_color', colors.background);
                     formData.append('_token', token);
                     
                     const response = await fetch(url, {
@@ -1507,19 +1375,19 @@
             
             // Actualizar vista previa
             function updatePreview() {
-                const primaryColor = document.getElementById('primary_color').value;
-                const chatbotName = document.getElementById('chatbot_name').value;
-                const welcomeMessage = document.getElementById('welcome_message').value;
-                
-                // Actualizar color del header del chatbot en la vista previa
-                const chatbotHeader = document.getElementById('preview-chatbot-header');
-                if (chatbotHeader) {
-                    chatbotHeader.style.background = `linear-gradient(to right, ${primaryColor}, #0099CC)`;
-                }
-                
-                // Actualizar texto
-                document.getElementById('preview-chatbot-name').textContent = chatbotName;
-                document.getElementById('preview-welcome-message').textContent = welcomeMessage;
+                const acento = document.getElementById('primary_color').value;
+
+                // Un solo color en toda la previa: burbuja del cliente, precio,
+                // "Lo quiero" y enviar. Igual que en el chat real.
+                document.querySelectorAll('#chatPreview .preview-accent-bg')
+                    .forEach(el => el.style.background = acento);
+                document.querySelectorAll('#chatPreview .preview-accent-text')
+                    .forEach(el => el.style.color = acento);
+
+                const nombre = document.getElementById('chatbot_name');
+                const bienvenida = document.getElementById('welcome_message');
+                if (nombre) document.getElementById('preview-chatbot-name').textContent = nombre.value;
+                if (bienvenida) document.getElementById('preview-welcome-message').textContent = bienvenida.value;
             }
             
             // Función para actualizar el estado activo de los swatches
@@ -1552,21 +1420,12 @@
                 });
             });
             
-            // Inicializar el estado activo basado en el tema actual
+            // Marca el swatch del acento guardado. La clave la resuelve el modelo
+            // (Comercio::acentoActual) contra Comercio::ACENTOS, así no hay un mapa
+            // de colores duplicado acá que se desincronice.
             function initializeActiveTheme() {
-                const currentPrimary = document.getElementById('primary_color').value;
-                const themeMap = {
-                    '#3B82F6': 'professional',     // Azul
-                    '#10B981': 'natural',          // Verde
-                    '#8B5CF6': 'elegant',          // Púrpura
-                    '#F97316': 'energetic',        // Naranja
-                    '#1E293B': 'midnight-blue',    // Azul oscuro
-                    '#1C1917': 'dark-gold',        // Negro
-                    '#1E1B4B': 'deep-purple',      // Púrpura oscuro
-                    '#111827': 'obsidian'          // Negro
-                };
-                const activeTheme = themeMap[currentPrimary] || 'professional';
-                updateActiveSwatch(activeTheme);
+                updateActiveSwatch(@json($comercio->acentoActual() ?? 'ambar'));
+                updatePreview();
             }
             
             // Inicializar después de que se cargue el DOM

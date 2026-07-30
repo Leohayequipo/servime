@@ -2442,17 +2442,21 @@ class MenuController extends Controller
         }
 
         try {
+            // El menú digital usa UN solo color (el de marca). Los otros tres quedan
+            // aceptados como opcionales por compatibilidad, pero ya no se usan al pintar.
             $validated = $request->validate([
                 'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-                'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-                'accent_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-                'background_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             ]);
 
             $comercio->primary_color = $validated['primary_color'];
-            $comercio->secondary_color = $validated['secondary_color'];
-            $comercio->accent_color = $validated['accent_color'];
-            $comercio->background_color = $validated['background_color'];
+            foreach (['secondary_color', 'accent_color', 'background_color'] as $campo) {
+                if (! empty($validated[$campo])) {
+                    $comercio->$campo = $validated[$campo];
+                }
+            }
             $comercio->save();
 
             return response()->json([

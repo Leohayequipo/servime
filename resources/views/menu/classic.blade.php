@@ -13,29 +13,50 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Inter estaba declarada en el CSS pero nunca se cargaba (igual que en el chat) --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Estilos personalizados del comercio -->
     <style>
+        /* Misma paleta que el chat (menu/chat.blade.php): escala neutra cálida fija
+           + UN acento, el color de marca del comercio. Antes esta vista usaba los
+           4 colores configurables y quedaba con otra estética que el chat. */
         :root {
-            --primary-color: {{ $comercio->primary_color ?? '#1e293b' }};
-            --secondary-color: {{ $comercio->secondary_color ?? '#334155' }};
-            --accent-color: {{ $comercio->accent_color ?? '#06b6d4' }};
-            --background-color: {{ $comercio->background_color ?? '#0f172a' }};
-            --text-primary: #ffffff;
-            --text-secondary: #94a3b8;
+            --bg:        #0F0D0C;
+            --surface:   #1A1614;
+            --surface-2: #241F1B;
+            --line:      rgba(255,255,255,.07);
+            --line-2:    rgba(255,255,255,.12);
+            --text:      #F5F2EF;
+            --text-dim:  #A39A93;
+
+            --accent: {{ $comercio->colorAcento() }};
+            --accent-soft: #E0A458;
+            --accent-soft: color-mix(in srgb, var(--accent) 55%, #FFF3E2);
+
+            /* Compatibilidad con nombres usados más abajo en esta vista */
+            --primary-color: var(--accent);
+            --accent-color: var(--accent);
+            --secondary-color: var(--surface-2);
+            --background-color: var(--bg);
+            --text-primary: var(--text);
+            --text-secondary: var(--text-dim);
         }
-        
-        html, body { 
-            height: 100%; 
+
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
-            background: #000000;
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
         
         .menu-container {
@@ -50,7 +71,7 @@
             align-items: center;
             justify-content: center;
             padding: 2rem 1rem;
-            background: #000000;
+            background: var(--bg);
         }
         
         .menu-viewer {

@@ -389,6 +389,60 @@ class Comercio extends Model
         }
     }
 
+    /** Ámbar cálido: acento por defecto del menú digital. */
+    public const ACENTO_POR_DEFECTO = '#C87F35';
+
+    /**
+     * Acentos que ofrece el panel. UN color por tema: el resto de la interfaz son
+     * neutros cálidos fijos (ver la paleta en menu/chat.blade.php), así cualquier
+     * elección del comerciante queda bien.
+     *
+     * Antes eran 8 temas que seteaban 4 colores cada uno, con hues fríos de Tailwind
+     * que chocaban entre sí y con la comida. Y en los temas oscuros `primary_color`
+     * guardaba un casi-negro, no un acento.
+     *
+     * @var array<string, array{nombre:string, color:string}>
+     */
+    public const ACENTOS = [
+        'ambar' => ['nombre' => 'Ámbar', 'color' => '#C87F35'],
+        'cobre' => ['nombre' => 'Cobre', 'color' => '#B4653A'],
+        'terracota' => ['nombre' => 'Terracota', 'color' => '#A8541F'],
+        'oliva' => ['nombre' => 'Oliva', 'color' => '#7C8B4E'],
+        'vino' => ['nombre' => 'Vino', 'color' => '#8C3A46'],
+        'dorado' => ['nombre' => 'Dorado', 'color' => '#C9A227'],
+    ];
+
+    /** Clave del acento actualmente elegido, para marcar el swatch activo en el panel. */
+    public function acentoActual(): ?string
+    {
+        $color = strtoupper($this->colorAcento());
+
+        foreach (self::ACENTOS as $key => $a) {
+            if (strtoupper($a['color']) === $color) {
+                return $key;
+            }
+        }
+
+        return null; // color propio, fuera de la paleta ofrecida
+    }
+
+    /**
+     * Color de acento del menú: el único color de marca que se usa en la interfaz.
+     *
+     * Se respeta siempre lo que el comerciante eligió en el selector de temas. El ámbar
+     * solo entra cuando no hay nada guardado.
+     *
+     * OJO: no tratar '#3B82F6' como "sin elegir". Es el default de la migración, pero
+     * TAMBIÉN es el tema "Profesional" que ofrece el panel, así que pisarlo hacía que
+     * ese tema no tuviera efecto.
+     */
+    public function colorAcento(): string
+    {
+        $color = trim((string) $this->primary_color);
+
+        return $color === '' ? self::ACENTO_POR_DEFECTO : $color;
+    }
+
     /**
      * Obtener icono para una categoría
      */

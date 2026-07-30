@@ -12,23 +12,43 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
     <link rel="shortcut icon" href="{{ asset('images/servime_ia.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {{-- Inter estaba declarada en el CSS pero nunca se cargaba: terminaba renderizando
+         en la fuente por defecto del sistema. display=swap para que no bloquee el render. --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     
     <!-- Estilos personalizados del comercio -->
     <style>
+        /* ── Sistema de color ────────────────────────────────────────────────────
+           Escala neutra CÁLIDA fija (no configurable) + UN solo acento, que es el
+           color de marca del comercio. Antes había 4 colores configurables (primario,
+           secundario, acento, fondo) y salían combinaciones que chocaban: azul de
+           Tailwind + verde en el micrófono + naranja pulsante en las promos.
+           Ahora el acento se usa SOLO en la acción principal; el resto son neutros. */
         :root {
-            --primary-color: {{ $comercio->primary_color ?? '#1e293b' }};
-            --secondary-color: {{ $comercio->secondary_color ?? '#334155' }};
-            --accent-color: {{ $comercio->accent_color ?? '#06b6d4' }};
-            --background-color: {{ $comercio->background_color ?? '#0f172a' }};
-            --text-primary: #ffffff;
-            --text-secondary: #94a3b8;
-            --accent-blue: {{ $comercio->primary_color ?? '#3b82f6' }};
-            --accent-green: #10b981;
-            --accent-purple: #8b5cf6;
-            --accent-pink: #ec4899;
-            --secondary-dark: {{ $comercio->secondary_color ?? '#334155' }};
-            --accent-gray: #6b7280;
+            --bg:        #0F0D0C;   /* fondo: casi negro con tinte cálido, no negro puro */
+            --surface:   #1A1614;   /* burbuja del bot, tarjetas de plato */
+            --surface-2: #241F1B;   /* elevado: input, chips, micrófono */
+            --line:      rgba(255,255,255,.07);
+            --line-2:    rgba(255,255,255,.12);
+            --text:      #F5F2EF;
+            --text-dim:  #A39A93;
+
+            /* Acento único: el color de marca del comercio (ver Comercio::colorAcento) */
+            --accent: {{ $comercio->colorAcento() }};
+            /* Versión clara para texto sobre fondo oscuro (precios). El fallback
+               estático va primero: si el navegador no soporta color-mix, gana ese. */
+            --accent-soft: #E0A458;
+            --accent-soft: color-mix(in srgb, var(--accent) 55%, #FFF3E2);
+
+            /* Compatibilidad con nombres usados en el resto de la vista */
+            --primary-color: var(--accent);
+            --accent-color: var(--accent);
+            --text-primary: var(--text);
+            --text-secondary: var(--text-dim);
+            --accent-blue: var(--accent);
+            --accent-gray: rgba(255,255,255,.12);
         }
         
         /* Animaciones personalizadas */
@@ -61,24 +81,24 @@
         
         html, body { height: 100%; }
         body {
-            background: #000000;
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
             overscroll-behavior-y: contain;
         }
-        /* Mapeo de clases usadas en la vista previa del administrador */
-        .bg-background { background: #000000 !important; }
-        .bg-secondary-dark { background: var(--secondary-color) !important; }
-        /* Burbuja del bot: gris oscuro cálido neutro (estilo mockup), no el color de marca */
-        .chat-bubble-bot { background: #37332e; }
-        .bg-accent-blue { background: var(--accent-blue) !important; }
-        /* Tipografía exacta de la previa */
-        .text-text-primary { color: #ffffff !important; }
-        .text-text-secondary { color: #cbd5e1 !important; }
-        .placeholder-text-secondary::placeholder { color: #cbd5e1 !important; }
-        .border-accent-gray { border-color: rgba(255, 255, 255, 0.2) !important; }
-        .placeholder-text-secondary::placeholder { color: var(--text-secondary) !important; }
-        .focus\:ring-accent-blue:focus { box-shadow: 0 0 0 2px var(--accent-blue) !important; outline: none; }
+        .bg-background { background: var(--bg) !important; }
+        .bg-secondary-dark { background: var(--surface-2) !important; }
+        .chat-bubble-bot { background: var(--surface); }
+        .bg-accent-blue { background: var(--accent) !important; }
+        .text-text-primary { color: var(--text) !important; }
+        .text-text-secondary { color: var(--text-dim) !important; }
+        .placeholder-text-secondary::placeholder { color: var(--text-dim) !important; }
+        .border-accent-gray { border-color: var(--line-2) !important; }
+        .focus\:ring-accent-blue:focus { box-shadow: 0 0 0 2px var(--accent) !important; outline: none; }
+        /* Precio: el acento aclarado, para que se lea sobre el fondo oscuro
+           incluso si el comercio eligió un color de marca oscuro */
+        .text-accent-blue { color: var(--accent-soft) !important; }
         
         /* Fullscreen mobile app layout */
         .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -89,9 +109,9 @@
         .chips { display: flex; gap: 8px; flex-wrap: wrap; }
         .chips-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
         
-        .neon-glow {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-        }
+        /* El resplandor neón azul se fue: la elevación ahora se sugiere con sombras
+           suaves y bordes hairline, no con glows de color. */
+        .neon-glow { box-shadow: none; }
         
         .typing-indicator {
             animation: bounce 1.4s infinite ease-in-out both;
@@ -131,76 +151,35 @@
             font-size: 12px;
             border-radius: 9999px;
             color: #ffffff;
-            background: #3b82f6;
-            border: 1px solid rgba(255,255,255,0.15);
+            background: var(--accent);
+            border: 1px solid transparent;
+            font-weight: 600;
             cursor: pointer;
             transition: opacity .15s ease, transform .15s ease, background .2s ease;
         }
         .btn-lo-quiero:hover { opacity: .9; }
-        .btn-lo-quiero.added { background: #16a34a; border-color: rgba(255,255,255,0.35); }
+        /* Estado agregado: sin introducir un color nuevo (antes era verde). Se resuelve
+           con un neutro y el acento en el texto, que igual lee como confirmación. */
+        .btn-lo-quiero.added {
+            background: var(--surface-2);
+            border-color: var(--accent);
+            color: var(--accent-soft);
+        }
         #fabWish { transition: transform .2s ease; }
         
-        /* Animaciones para promociones */
-        @keyframes fire-pulse {
-            0%, 100% { 
-                transform: scale(1);
-                filter: brightness(1);
-            }
-            50% { 
-                transform: scale(1.15);
-                filter: brightness(1.3);
-            }
-        }
-        
-        @keyframes promo-glow {
-            0%, 100% {
-                box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3),
-                           0 0 10px rgba(255, 140, 0, 0.2);
-            }
-            50% {
-                box-shadow: 0 2px 12px rgba(255, 140, 0, 0.6),
-                           0 0 20px rgba(255, 140, 0, 0.5),
-                           0 0 30px rgba(255, 100, 0, 0.3);
-            }
-        }
-        
-        @keyframes promo-shimmer {
-            0% {
-                background-position: -100% 0;
-            }
-            100% {
-                background-position: 100% 0;
-            }
-        }
-        
-        .promo-fire-icon {
-            display: inline-block;
-            animation: fire-pulse 1.5s ease-in-out infinite;
-        }
-        
+        /* Promociones: antes eran un degradado naranja con resplandor pulsante, brillo
+           que barría y un emoji de fuego escalando en loop — tres animaciones infinitas
+           sobre un cuarto color. Ahora destacan por CONTRASTE: relleno de acento sólido
+           contra chips neutros. Es más sobrio y se distingue igual. */
+        .promo-fire-icon { display: none; }
+
         .promo-button {
             position: relative;
-            overflow: hidden;
-            animation: promo-glow 2s ease-in-out infinite;
-            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
         }
-        
-        .promo-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.3),
-                transparent
-            );
-            animation: promo-shimmer 3s ease-in-out infinite;
-        }
-        
+
         /* Animaciones para botón FAB de categorías */
         @keyframes fab-float {
             0%, 100% {
@@ -241,20 +220,17 @@
             }
         }
         
-        .fab-categories-animated {
-            animation: fab-combined 3s ease-in-out infinite;
-        }
-        
+        /* La animación infinita de este FAB se quitó: el movimiento perpetuo lee
+           amateur, no respeta prefers-reduced-motion y consume batería. Además
+           impedía que el botón llegara a estar "estable" para automatizaciones. */
         .fab-categories-animated:hover {
-            animation-play-state: paused;
-            transform: translateY(-4px) scale(1.08) !important;
-            box-shadow: 0 16px 32px rgba(0,0,0,0.5) !important;
+            transform: translateY(-3px);
         }
 
         /* FAB button base */
         .fab-btn {
             position: relative;
-            width: 56px; height: 56px; border: none; border-radius: 50%;
+            width: 48px; height: 48px; border: none; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: transform .2s, box-shadow .2s;
             box-shadow: 0 10px 24px rgba(0,0,0,0.35);
@@ -262,10 +238,12 @@
         .fab-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,.45); }
         /* Feedback inmediato al tocar (mobile): el botón "se hunde" al presionar */
         .fab-btn:active { transform: scale(.9); transition: transform .08s ease; box-shadow: 0 6px 14px rgba(0,0,0,.5); }
-        .fab-btn-wish       { background: #2563eb; }
-        .fab-btn-categories { background: var(--accent-color); }
-        .fab-btn-tags       { background: #ff8c00; }
-        .fab-btn span       { font-size: 22px; display: inline-block; }
+        /* Los tres FABs eran azul, verde y naranja. Ahora son neutros: el único que
+           lleva el acento es el del pedido, que es la acción con valor de negocio. */
+        .fab-btn-wish       { background: var(--accent); color: #fff; }
+        .fab-btn-categories { background: var(--surface-2); color: var(--text); border: 1px solid var(--line-2); }
+        .fab-btn-tags       { background: var(--surface-2); color: var(--text); border: 1px solid var(--line-2); }
+        .fab-btn svg        { width: 20px; height: 20px; fill: currentColor; }
 
         /* Cada fab: botón + etiqueta debajo */
         .fab-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -337,27 +315,37 @@
             .fab-tab.peek { animation: none; }
         }
 
-        /* Al ocultar los accesos, el chat gana ancho */
-        #chatMessages { transition: padding-right .35s ease; }
+        /* El padding derecho del chat se maneja acá (no con una clase de Tailwind) para
+           poder reservarlo según el estado del dock sin pelearse con la utilidad.
+           Con el dock ABIERTO se reserva el ancho de los botones + su etiqueta, así las
+           tarjetas de plato no quedan debajo. Al cerrarlo, el chat gana ese ancho. */
+        #chatMessages { transition: padding-right .35s ease; padding-right: 4.5rem; }
         body.fabs-collapsed #chatMessages { padding-right: 1rem; }
 
-        /* Mic button (circular) */
+        /* Micrófono: acción SECUNDARIA, así que va neutro. Antes era verde saturado y
+           competía con el botón de enviar, que es la acción principal. */
         .mic-button {
-            background: var(--accent-color); border: none;
+            background: var(--surface-2); border: 1px solid var(--line-2);
+            color: var(--text-dim);
             border-radius: 9999px; width: 46px; height: 46px; flex: 0 0 auto;
-            text-align: center; line-height: 46px; padding: 0;
-            cursor: pointer; transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,.35);
+            display: flex; align-items: center; justify-content: center; padding: 0;
+            cursor: pointer; transition: transform .15s ease, background .2s ease, color .2s ease;
         }
         .mic-button:active { transform: scale(.92); }
-        .mic-button span { font-size: 20px; }
+        .mic-button:hover { color: var(--text); }
+        .mic-button svg { width: 19px; height: 19px; display: block; fill: currentColor; }
 
-        /* Input bar (píldora cálida) */
+        /* Input bar: borde neutro en reposo. Antes tenía borde azul permanente y
+           parecía estar siempre enfocado (o en estado de error). */
         .chat-input-bar {
             border-radius: 9999px !important;
-            background: #1f1d1b !important;
+            background: var(--surface-2) !important;
+            border-color: var(--line-2) !important;
         }
-        .chat-input-bar:focus { box-shadow: 0 0 0 2px var(--accent-blue) !important; }
+        .chat-input-bar:focus {
+            border-color: var(--accent) !important;
+            box-shadow: none !important;
+        }
         /* Botón enviar (circular, estilo WhatsApp) */
         .send-btn {
             border-radius: 9999px; width: 46px; height: 46px; flex: 0 0 auto;
@@ -404,10 +392,10 @@
             display: none; position: fixed; right: 16px; bottom: 148px; z-index: 50; max-width: 320px;
         }
         .side-panel-inner {
-            background: #0b0b0b; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
-            box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 12px;
+            background: var(--surface); border: 1px solid var(--line-2); border-radius: 16px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.55); padding: 14px;
         }
-        .side-panel-inner.amber-border { border-color: rgba(255,140,0,.3); }
+        .side-panel-inner.amber-border { border-color: var(--line-2); }
         .side-panel-header {
             display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
         }
@@ -417,22 +405,34 @@
             cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;
             display: flex; align-items: center; justify-content: center;
         }
-        .side-panel-grid   { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow-y: auto; }
+        /* Grid de 2 columnas iguales: antes los chips se acomodaban por su largo de
+           texto y quedaban filas de 1 o 2 con huecos, que se leía como roto.
+           Y un degradado abajo indica que hay más para scrollear (antes se cortaba seco). */
+        .side-panel-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+            max-height: 300px; overflow-y: auto;
+            -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+                    mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+        }
 
-        .cat-chip-promo {
-            padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,140,0,.5);
-            color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
-            transition: all .2s; position: relative; z-index: 1;
+        .cat-chip, .cat-chip-promo {
+            padding: 11px 12px; border-radius: 12px; font-size: 13px; cursor: pointer;
+            text-align: left; line-height: 1.25;
+            transition: background .18s ease, border-color .18s ease;
         }
         .cat-chip {
-            padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
-            background: #141414; color: #fff; font-size: 13px; cursor: pointer; transition: background .2s;
+            border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text);
         }
+        .cat-chip:hover { background: #2E2823; border-color: rgba(255,255,255,.2); }
+        .cat-chip-promo { border: 1px solid transparent; grid-column: 1 / -1; }
+
         .tag-chip {
-            padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,140,0,.3);
-            background: rgba(255,140,0,.15); color: #ff8c00; font-size: 12px; font-weight: 500;
-            cursor: pointer; transition: all .2s;
+            padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line-2);
+            background: var(--surface-2); color: var(--text-dim);
+            font-size: 12px; font-weight: 500; cursor: pointer; text-align: left;
+            transition: color .18s ease, border-color .18s ease;
         }
+        .tag-chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
     </style>
 </head>
 <body class="bg-background">
@@ -440,45 +440,29 @@
         <!-- Área de conversación (el header va adentro para que scrollee con el contenido) -->
         <div id="chatScroll" class="chat-scroll">
         <!-- Header (ahora scrollea con el contenido, no queda fijo) -->
+        {{-- Una sola fila: logo + nombre + asistente. Antes eran dos bloques apilados con
+             el logo repetido, que se comían ~40% del viewport antes del primer mensaje. --}}
         <div class="app-header">
-            <div class="max-w-md mx-auto px-4">
-                <!-- Logo centrado -->
-                <div class="flex justify-center mb-3">
-                    @if(!empty($comercio->logo_url))
-                        <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="{{ $comercio->nombre }}" class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow">
-                    @else
-                        <div class="w-20 h-20 rounded-full object-cover shadow-2xl neon-glow flex items-center justify-center" style="background: linear-gradient(135deg, {{ $comercio->primary_color ?? '#3b82f6' }}, {{ $comercio->secondary_color ?? '#334155' }});">
-                            <span class="text-white text-3xl font-bold">{{ strtoupper(mb_substr($comercio->nombre ?? 'M', 0, 1)) }}</span>
-                        </div>
-                    @endif
-                </div>
-                <!-- Nombre del comercio centrado -->
-                <div class="text-center">
-                    <h4 class="text-text-primary font-semibold text-xl leading-tight mb-1">{{ $comercio->nombre }}</h4>
-                    <p class="text-text-secondary text-base">Menú Digital</p>
-                </div>
-            </div>
-            <div class="max-w-md mx-auto mt-3">
-                <div class="bg-gradient-to-r from-accent-blue to-blue-600 rounded-xl p-3 neon-glow" style="background: linear-gradient(to right, {{ $comercio->primary_color ?? '#3b82f6' }}, {{ $comercio->secondary_color ?? '#334155' }});">
-                    <div class="flex items-center">
-                        @if(!empty($comercio->logo_url))
-                            <img src="{{ asset('storage/'.$comercio->logo_url) }}" alt="" class="w-6 h-6 rounded-full object-cover mr-2">
-                        @else
-                            <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-2">
-                                <span class="text-white text-xs font-semibold">{{ strtoupper(mb_substr($comercio->chatbot_name ?? 'A', 0, 1)) }}</span>
-                            </div>
-                        @endif
-                        <span class="text-white font-medium text-base" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</span>
+            <div class="max-w-md mx-auto flex items-center gap-3">
+                @if(!empty($comercio->logo_url))
+                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="{{ $comercio->nombre }}" class="w-11 h-11 rounded-full object-cover flex-none">
+                @else
+                    <div class="w-11 h-11 rounded-full flex-none flex items-center justify-center" style="background: {{ $comercio->colorAcento() }};">
+                        <span class="text-white text-lg font-bold">{{ strtoupper(mb_substr($comercio->nombre ?? 'M', 0, 1)) }}</span>
                     </div>
+                @endif
+                <div class="min-w-0">
+                    <h1 class="text-text-primary font-semibold text-lg leading-tight truncate">{{ $comercio->nombre }}</h1>
+                    <p class="text-text-secondary text-sm leading-tight truncate" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</p>
                 </div>
             </div>
         </div>
 
-            <div id="chatMessages" class="max-w-md mx-auto space-y-4 pl-4 pr-16">
-                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-fade-in">
+            <div id="chatMessages" class="max-w-md mx-auto space-y-3 pl-4">
+                <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-fade-in">
                     <div class="flex items-start">
                         <div class="flex-1">
-                            <p class="text-text-primary text-base leading-relaxed" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
+                            <p class="text-text-primary text-[15px] leading-normal" id="preview-welcome-message">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</p>
                         </div>
                     </div>
                 </div>
@@ -493,11 +477,21 @@
                         title="Hablar con el asistente"
                         style="display:none"
                         class="mic-button">
-                    <span><i class="fas fa-microphone"></i></span>
+                    {{-- El SVG va directo en el botón: envuelto en un <span> inline quedaba
+                         desalineado por el baseline y el line-height del span. --}}
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h-2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z"/></svg>
                 </button>
+                {{-- autocomplete="off": sin esto el navegador ofrece el historial de lo que
+                     se escribió antes en este input, y al cliente le aparecía un desplegable
+                     con mensajes viejos (incluso de otra persona en un celular compartido).
+                     enterkeyhint="send" hace que el teclado mobile muestre "Enviar". --}}
                 <input type="text"
                        id="messageInput"
                        placeholder="Escribe tu mensaje..."
+                       autocomplete="off"
+                       autocapitalize="sentences"
+                       spellcheck="false"
+                       enterkeyhint="send"
                        class="flex-1 min-w-0 border border-accent-gray px-4 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none chat-input-bar">
                 <button id="sendButton" title="Enviar" class="send-btn bg-accent-blue text-white transition-all duration-200 hover:opacity-90 shadow-lg flex-none">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
@@ -520,7 +514,7 @@
         @if($comercio->pedido_habilitado)
             <div class="fab-item">
                 <button id="fabWish" title="Resumen para el mozo" class="fab-btn fab-btn-wish">
-                    <span>🧾</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v14.5a.5.5 0 0 1-.77.42L16 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L11 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L6 19.2l-1.23.95A.5.5 0 0 1 4 19.73V6a2 2 0 0 1 2-2Zm1 4v2h8V8H8Zm0 4v2h8v-2H8Z"/></svg>
                     <span class="fab-badge" id="wishBadge"></span>
                 </button>
                 <span class="fab-label">Pedido</span>
@@ -529,7 +523,7 @@
         @if(!empty($categorias))
             <div class="fab-item">
                 <button id="fabCategories" title="Categorías del menú" class="fab-btn fab-btn-categories fab-categories-animated">
-                    <span>📋</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4v4H4V5Zm6 1h10v2H10V6ZM4 11h4v4H4v-4Zm6 1h10v2H10v-2Zm-6 5h4v4H4v-4Zm6 1h10v2H10v-2Z"/></svg>
                 </button>
                 <span class="fab-label">Categorías</span>
             </div>
@@ -537,7 +531,7 @@
         @if(!empty($tags))
             <div class="fab-item">
                 <button id="fabTags" title="Filtrar por tags" class="fab-btn fab-btn-tags">
-                    <span>🏷️</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3H20a1 1 0 0 1 1 1v9.4a1 1 0 0 1-.29.7l-7.6 7.6a1 1 0 0 1-1.42 0l-8.4-8.4a1 1 0 0 1 0-1.41l7.6-7.6A1 1 0 0 1 10.6 3Zm5.9 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>
                 </button>
                 <span class="fab-label">Filtros</span>
             </div>
@@ -572,17 +566,17 @@
                     @foreach($categorias as $categoria)
                         @if(isset($categoria['es_promocion']) && $categoria['es_promocion'])
                             <button onclick="mostrarPromociones('{{ $categoria['nombre'] }}'); hideCategories();"
-                                    class="promo-button cat-chip-promo"
-                                    onmouseover="this.style.transform='scale(1.08)';"
-                                    onmouseout="this.style.transform='scale(1)';">
-                                <span class="promo-fire-icon">{{ $categoria['icon'] }}</span> {{ $categoria['nombre'] }}
+                                    class="promo-button cat-chip-promo">
+                                {{ $categoria['nombre'] }}
                             </button>
                         @else
+                            {{-- Sin emoji: el mapa de iconos de Comercio::getIconForCategory()
+                                 no cubre la mayoría de las categorías reales (adicionales,
+                                 empanadas, hamburguesas, papas, gaseosas...) y todas caían
+                                 al 🍽️ genérico, repetido 6 veces. Tipografía sola es más limpio. --}}
                             <button onclick="askQuestion('{{ $categoria['nombre'] }}', 'categoria', '{{ $categoria['nombre'] }}'); hideCategories();"
-                                    class="cat-chip"
-                                    onmouseover="this.style.background='#1f1f1f';"
-                                    onmouseout="this.style.background='#141414';">
-                                {{ $categoria['icon'] }} {{ $categoria['nombre'] }}
+                                    class="cat-chip">
+                                {{ $categoria['nombre'] }}
                             </button>
                         @endif
                     @endforeach
@@ -601,10 +595,9 @@
                 </div>
                 <div class="side-panel-grid">
                     @foreach($tags as $tag)
+                        {{-- El hover iba en atributos inline (y en touch no existe): ahora es CSS --}}
                         <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();"
-                                class="tag-chip"
-                                onmouseover="this.style.background='rgba(255,140,0,0.25)'; this.style.transform='scale(1.05)';"
-                                onmouseout="this.style.background='rgba(255,140,0,0.15)'; this.style.transform='scale(1)';">
+                                class="tag-chip">
                             {{ str_replace('_', ' ', $tag) }}
                         </button>
                     @endforeach
@@ -651,7 +644,6 @@
                     recognition.onstart = function() {
                         isListening = true;
                         micButton.style.background = '#ef4444';
-                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
                         messageInput.placeholder = 'Escuchando...';
                     };
                     
@@ -665,8 +657,7 @@
                     
                     recognition.onerror = function(event) {
                         isListening = false;
-                        micButton.style.background = 'var(--accent-color)';
-                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
+                        micButton.style.background = 'var(--surface-2)';
                         messageInput.placeholder = 'Escribe tu mensaje...';
                         
                         if (event.error === 'not-allowed' || event.error === 'denied') {
@@ -691,8 +682,7 @@
                     
                     recognition.onend = function() {
                         isListening = false;
-                        micButton.style.background = 'var(--accent-color)';
-                        micButton.querySelector('span').innerHTML = '<i class="fas fa-microphone"></i>';
+                        micButton.style.background = 'var(--surface-2)';
                         messageInput.placeholder = 'Escribe tu mensaje...';
                     };
                     
@@ -723,21 +713,21 @@
                         // Safari: usar solo localStorage como referencia
                         const savedPermission = localStorage.getItem(micPermissionKey);
                         if (savedPermission === 'granted') {
-                            micButton.style.display = 'block';
+                            micButton.style.display = 'flex';
                         } else {
                             // En Safari, mostrar botón y solicitar permiso al hacer clic
                             // (Safari solicita permiso automáticamente al llamar start())
-                            micButton.style.display = 'block';
+                            micButton.style.display = 'flex';
                         }
                     } else {
                         // Chrome, Edge, etc: usar permissions.query
                         navigator.permissions.query({ name: 'microphone' }).then(function(result) {
                             if (result.state === 'granted') {
-                                micButton.style.display = 'block';
+                                micButton.style.display = 'flex';
                                 localStorage.setItem(micPermissionKey, 'granted');
                             } else if (result.state === 'prompt') {
                                 // Mostrar botón pero solicitar permiso al hacer clic
-                                micButton.style.display = 'block';
+                                micButton.style.display = 'flex';
                             } else {
                                 // Permiso denegado
                                 localStorage.setItem(micRejectedKey, 'true');
@@ -748,10 +738,10 @@
                             // (algunos navegadores no soportan permissions.query)
                             const savedPermission = localStorage.getItem(micPermissionKey);
                             if (savedPermission === 'granted') {
-                                micButton.style.display = 'block';
+                                micButton.style.display = 'flex';
                             } else {
                                 // Mostrar botón para intentar solicitar permiso
-                                micButton.style.display = 'block';
+                                micButton.style.display = 'flex';
                             }
                         });
                     }
@@ -905,10 +895,10 @@
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             messageDiv.innerHTML = `
-                <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
+                <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-slide-in-left">
                     <div class="flex items-start">
                         <div class="flex-1 min-w-0">
-                            <div class="text-text-primary text-base leading-relaxed" data-bot-text style="white-space: pre-wrap;"></div>
+                            <div class="text-text-primary text-[15px] leading-normal" data-bot-text style="white-space: pre-wrap;"></div>
                             <div data-bot-extra></div>
                         </div>
                     </div>
@@ -1121,10 +1111,12 @@
                     ${img}
                     <div class="p-3.5">
                         <div class="flex items-start justify-between gap-2">
-                            <span class="font-semibold text-text-primary">${nombre}</span>
-                            ${precio ? `<span class="text-accent-blue font-bold whitespace-nowrap">${precio}</span>` : ''}
+                            {{-- flex-1 + min-w-0 para que el nombre largo baje de línea en vez de
+                                 quedar cortado por el precio ("Cheesecake frutos" sin "rojos") --}}
+                            <span class="font-semibold text-text-primary flex-1 min-w-0 break-words">${nombre}</span>
+                            ${precio ? `<span class="text-accent-blue font-bold whitespace-nowrap flex-none">${precio}</span>` : ''}
                         </div>
-                        ${desc ? `<p class="text-text-secondary text-sm mt-1 leading-relaxed">${desc}</p>` : ''}
+                        ${desc ? `<p class="text-text-secondary text-sm mt-1 leading-snug">${desc}</p>` : ''}
                         ${btn}
                     </div>
                 </div>`;
@@ -1142,15 +1134,15 @@
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end animate-slide-in-right">
-                        <div class="bg-accent-blue rounded-3xl rounded-tr-md px-4 py-3 max-w-xs text-white text-base shadow-lg transition-shadow duration-200 hover:shadow-xl" style="white-space: pre-wrap;">${parsedText}</div>
+                        <div class="bg-accent-blue rounded-2xl rounded-tr-md px-3.5 py-2.5 max-w-[80%] text-white text-[15px] leading-normal shadow-lg" style="white-space: pre-wrap;">${parsedText}</div>
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="chat-bubble-bot rounded-3xl rounded-tl-md px-5 py-4 shadow-lg border border-white/5 animate-slide-in-left">
+                    <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-slide-in-left">
                         <div class="flex items-start">
                             <div class="flex-1 min-w-0">
-                                <div class="text-text-primary text-base leading-relaxed">${parsedText}</div>
+                                <div class="text-text-primary text-[15px] leading-normal">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
                                 ${(permitirVerMas && platos && platos.length >= 1 && platos.length <= 6) ? '<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">Ver más opciones ↓</button>' : ''}
                             </div>
@@ -1276,7 +1268,7 @@
             typingDiv.id = 'typingIndicator';
             typingDiv.className = 'animate-slide-in-left';
             typingDiv.innerHTML = `
-                <div class="chat-bubble-bot rounded-3xl rounded-tl-md shadow-lg border border-white/5 typing-bubble">
+                <div class="chat-bubble-bot rounded-2xl rounded-tl-md shadow-lg border border-white/5 typing-bubble">
                     <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                 </div>
             `;
@@ -1535,8 +1527,12 @@
             }
         });
 
-        // Auto-focus
-        document.getElementById('messageInput').focus();
+        // Auto-focus SOLO en desktop. En mobile abría el teclado apenas se escanea el QR
+        // y tapaba media pantalla antes de que el cliente leyera la bienvenida.
+        // (hover:hover + pointer:fine) = puntero de mouse, no dedo.
+        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            document.getElementById('messageInput').focus();
+        }
     </script>
 
     @include('menu.partials.tracking', ['trackView' => 'chat'])
