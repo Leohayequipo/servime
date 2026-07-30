@@ -135,6 +135,34 @@ class ChatbotService
             }
         }
 
+        return $this->traducirDescripciones($comercio, $platos);
+    }
+
+    /**
+     * Traduce las descripciones de los platos al idioma del cliente (cacheado).
+     *
+     * Solo la DESCRIPCIÓN: el nombre queda en el idioma del menú porque el cliente se lo
+     * tiene que poder pedir al mozo, y porque es la clave con la que se resuelven las
+     * tarjetas contra el marcador [[PLATOS: ...]].
+     *
+     * @param  array<int, array>  $platos
+     * @return array<int, array>
+     */
+    private function traducirDescripciones(Comercio $comercio, array $platos): array
+    {
+        $descripciones = array_filter(array_column($platos, 'descripcion'));
+        if (empty($descripciones)) {
+            return $platos;
+        }
+
+        $traducciones = app(MenuTranslatorService::class)->descripciones($comercio, $descripciones);
+
+        foreach ($platos as &$plato) {
+            if ($plato['descripcion'] !== '') {
+                $plato['descripcion'] = $traducciones[$plato['descripcion']] ?? $plato['descripcion'];
+            }
+        }
+
         return $platos;
     }
 
