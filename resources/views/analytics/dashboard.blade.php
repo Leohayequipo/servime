@@ -173,22 +173,24 @@
                             <tbody class="divide-y divide-accent-gray/50">
                                 @forelse($comercios as $comercio)
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        {{-- Ancho acotado + truncate: una descripción larga no puede
+                                             ensanchar la columna y mandar el resto de la tabla al scroll. --}}
+                                        <td class="px-6 py-4">
                                             <div class="flex items-center">
                                                 @if($comercio->logo_url)
-                                                    <img class="h-4 w-4 rounded-full object-cover" 
-                                                         src="{{ asset('storage/' . $comercio->logo_url) }}" 
+                                                    <img class="h-4 w-4 rounded-full object-cover flex-shrink-0"
+                                                         src="{{ asset('storage/' . $comercio->logo_url) }}"
                                                          alt="{{ $comercio->nombre }}">
                                                 @else
-                                                    <div class="h-4 w-4 rounded-full bg-accent-gray flex items-center justify-center">
+                                                    <div class="h-4 w-4 rounded-full bg-accent-gray flex items-center justify-center flex-shrink-0">
                                                         <span class="text-text-primary text-xs font-medium">{{ substr($comercio->nombre, 0, 1) }}</span>
                                                     </div>
                                                 @endif
-                                                <div class="ml-3">
-                                                    <div class="text-sm font-medium text-text-primary">
+                                                <div class="ml-3 min-w-0 max-w-[240px] sm:max-w-[280px]">
+                                                    <div class="text-sm font-medium text-text-primary truncate" title="{{ $comercio->nombre }}">
                                                         {{ $comercio->nombre }}
                                                     </div>
-                                                    <div class="text-xs text-text-secondary">
+                                                    <div class="text-xs text-text-secondary truncate" title="{{ $comercio->descripcion }}">
                                                         {{ $comercio->descripcion ?? 'Sin descripción' }}
                                                     </div>
                                                 </div>
