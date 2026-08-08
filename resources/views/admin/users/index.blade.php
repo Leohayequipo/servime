@@ -97,7 +97,7 @@
                          fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                     </svg>
-                    <input id="search-users" type="text" placeholder="Buscar por nombre o email..."
+                    <input id="search-users" type="text" placeholder="Buscar por nombre, usuario o email..."
                            class="w-full bg-secondary-dark border border-accent-gray rounded-xl pl-9 pr-4 py-2.5
                                   text-sm text-text-primary placeholder-text-secondary
                                   focus:outline-none focus:ring-2 focus:ring-accent-blue/40 focus:border-accent-blue/60
@@ -126,14 +126,20 @@
                             @forelse($users as $user)
                                 <tr class="user-row border-b border-accent-gray/40 hover:bg-primary-dark transition-colors"
                                     data-name="{{ strtolower($user->name) }}"
-                                    data-email="{{ strtolower($user->email) }}">
+                                    data-email="{{ strtolower($user->email) }}"
+                                    data-username="{{ strtolower($user->username ?? '') }}">
                                     <td class="py-4 px-4">
                                         <a href="{{ route('comercios.index') }}?user_id={{ $user->id }}"
                                            class="flex items-center gap-3 group/name">
                                             <div class="w-9 h-9 bg-accent-blue/20 rounded-full flex items-center justify-center text-accent-blue font-semibold text-sm flex-shrink-0">
                                                 {{ strtoupper(substr($user->name, 0, 1)) }}
                                             </div>
-                                            <p class="font-medium text-text-primary group-hover/name:text-accent-blue transition-colors">{{ $user->name }}</p>
+                                            <div class="min-w-0">
+                                                <p class="font-medium text-text-primary group-hover/name:text-accent-blue transition-colors">{{ $user->name }}</p>
+                                                @if($user->username)
+                                                    <p class="text-xs font-mono text-text-secondary">{{ $user->username }}</p>
+                                                @endif
+                                            </div>
                                         </a>
                                     </td>
                                     <td class="py-4 px-4">
@@ -197,7 +203,8 @@
                     @forelse($users as $user)
                         <div class="user-row bg-primary-dark rounded-xl p-4 border border-accent-gray/40 hover:border-accent-blue/30 transition-colors"
                              data-name="{{ strtolower($user->name) }}"
-                             data-email="{{ strtolower($user->email) }}">
+                             data-email="{{ strtolower($user->email) }}"
+                             data-username="{{ strtolower($user->username ?? '') }}">
                             <a href="{{ route('comercios.index') }}?user_id={{ $user->id }}"
                                class="flex items-center gap-3 mb-3 group/name">
                                 <div class="w-10 h-10 bg-accent-blue/20 rounded-full flex items-center justify-center text-accent-blue font-semibold flex-shrink-0">
@@ -205,6 +212,9 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="font-semibold text-text-primary truncate group-hover/name:text-accent-blue transition-colors">{{ $user->name }}</p>
+                                    @if($user->username)
+                                        <p class="text-xs font-mono text-text-secondary truncate">{{ $user->username }}</p>
+                                    @endif
                                     <span class="inline-block mt-0.5 px-2 py-0.5 text-xs rounded-full font-medium
                                         {{ $user->role === 'super_admin'
                                             ? 'bg-accent-blue/20 text-accent-blue'
@@ -266,8 +276,9 @@
         const q = this.value.toLowerCase().trim();
         document.querySelectorAll('.user-row').forEach(row => {
             const match = !q ||
-                (row.dataset.name  || '').includes(q) ||
-                (row.dataset.email || '').includes(q);
+                (row.dataset.name     || '').includes(q) ||
+                (row.dataset.email    || '').includes(q) ||
+                (row.dataset.username || '').includes(q);
             row.style.display = match ? '' : 'none';
         });
     });

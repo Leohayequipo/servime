@@ -15,6 +15,14 @@ use Illuminate\Support\Facades\Password;
 class AdminController extends Controller
 {
     /**
+     * Caracteres válidos en un username.
+     *
+     * No alcanza con `alpha_dash`: los usernames autogenerados llevan punto
+     * (juan.perez), y esa regla los rechaza.
+     */
+    private const REGLA_USERNAME = 'regex:/^[A-Za-z0-9._-]+$/';
+
+    /**
      * Lista de todos los usuarios
      */
     public function users(Request $request)
@@ -57,7 +65,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'username' => 'nullable|string|max:50|alpha_dash|unique:users,username',
+            'username' => ['nullable', 'string', 'max:50', self::REGLA_USERNAME, 'unique:users,username'],
             'whatsapp' => 'nullable|string|max:20',
             'role' => 'required|in:super_admin,user',
         ]);
@@ -127,9 +135,14 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
+            'username' => ['nullable', 'string', 'max:50', self::REGLA_USERNAME, 'unique:users,username,'.$user->id],
             'whatsapp' => 'nullable|string|max:20',
             'role' => 'required|in:super_admin,user',
         ]);
+
+        // Si lo dejan vacío se regenera: la cuenta nunca puede quedar sin usuario,
+        // porque es una de las dos formas de entrar (usuario o email).
+        $validated['username'] = $validated['username'] ?: User::generarUsername($validated['email'], $validated['name']);
 
         $user->update($validated);
 
