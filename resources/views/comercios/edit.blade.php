@@ -74,6 +74,52 @@
                                     <x-input-error :messages="$errors->get('nombre')" class="mt-1" />
                                 </div>
 
+                                {{-- La URL pública, visible siempre: al renombrar cambia, y el
+                                     comerciante tiene que ver qué está tocando. Las URLs viejas
+                                     quedan como alias, así que los QR impresos siguen andando. --}}
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-text-secondary mb-2">
+                                        URL pública del menú
+                                    </label>
+
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-sm text-text-secondary whitespace-nowrap">{{ url('/menu') }}/</span>
+                                            <input type="text"
+                                                   id="slug"
+                                                   name="slug"
+                                                   value="{{ old('slug', $comercio->slug) }}"
+                                                   pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                                                   class="flex-1 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                        </div>
+                                        <p class="text-xs text-text-secondary mt-1">
+                                            Sólo minúsculas, números y guiones. Si la cambiás acá queda fija:
+                                            renombrar el comercio ya no la va a tocar.
+                                        </p>
+                                    @else
+                                        <p class="px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-secondary text-sm break-all">
+                                            {{ url('/menu/'.$comercio->slug) }}
+                                        </p>
+                                        <p class="text-xs text-text-secondary mt-1">
+                                            @if($comercio->slug_manual)
+                                                Esta dirección está fijada. Cambiar el nombre no la modifica.
+                                            @else
+                                                Si cambiás el nombre, esta dirección se actualiza. Los códigos QR
+                                                que ya imprimiste siguen funcionando.
+                                            @endif
+                                        </p>
+                                    @endif
+
+                                    @if($comercio->slugsAnteriores()->exists())
+                                        <p class="text-xs text-text-secondary mt-1">
+                                            {{ $comercio->slugsAnteriores()->count() }} dirección(es) anterior(es)
+                                            siguen redirigiendo acá.
+                                        </p>
+                                    @endif
+
+                                    <x-input-error :messages="$errors->get('slug')" class="mt-1" />
+                                </div>
+
                                 <!-- Dirección -->
                                 <div>
                                     <label for="direccion" class="block text-sm font-medium text-text-secondary mb-2">
@@ -113,6 +159,26 @@
                                     <x-input-error :messages="$errors->get('descripcion')" class="mt-1" />
                                 </div>
 
+                                {{-- Frase corta bajo el nombre en el menú público. Va aparte de
+                                     la descripción porque recortar un párrafo largo deja la
+                                     frase cortada al medio. --}}
+                                <div class="md:col-span-2">
+                                    <label for="tagline" class="block text-sm font-medium text-text-secondary mb-2">
+                                        Frase del menú
+                                    </label>
+                                    <input type="text"
+                                           id="tagline"
+                                           name="tagline"
+                                           maxlength="80"
+                                           value="{{ old('tagline', $comercio->tagline) }}"
+                                           placeholder="Ej: Experiencia, sabor e inteligencia en tu mesa."
+                                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <p class="text-xs text-text-secondary mt-1">
+                                        Aparece bajo el nombre en el menú público. Máx. 80 caracteres.
+                                    </p>
+                                    <x-input-error :messages="$errors->get('tagline')" class="mt-1" />
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -136,22 +202,187 @@
                                 @endif
                             </div>
                             
+                            {{-- onerror: si el archivo ya no está en disco, el <img> roto queda
+                                 peor que no mostrar nada. --}}
                             @if($comercio->logo_url)
-                                <div class="mb-4">
-                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo actual" class="w-16 h-16 object-cover rounded-lg border border-accent-gray mx-auto">
+                                <div class="mb-4" id="logoActual">
+                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}"
+                                         alt="Logo actual"
+                                         onerror="document.getElementById('logoActual').remove()"
+                                         class="w-16 h-16 object-cover rounded-lg border border-accent-gray mx-auto">
                                 </div>
                             @endif
-                            
+
+                            {{-- Vista previa de lo que se acaba de elegir, antes de guardar. --}}
+                            <div class="mb-4 hidden" id="logoPreviewWrap">
+                                <img id="logoPreview" alt="Logo nuevo"
+                                     class="w-16 h-16 object-cover rounded-lg border-2 border-accent-blue mx-auto">
+                                <p class="text-xs text-accent-blue text-center mt-1">Nuevo — se aplica al guardar</p>
+                            </div>
+
                             <div>
-                                <input type="file" 
-                                       id="logo" 
-                                       name="logo" 
+                                <input type="file"
+                                       id="logo"
+                                       name="logo"
                                        accept="image/*" 
                                        class="w-full px-2 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200">
                                 <p class="text-xs text-text-secondary mt-1">JPEG, PNG, JPG, GIF. Máx: 2MB</p>
                                 <x-input-error :messages="$errors->get('logo')" class="mt-1" />
                             </div>
                         </div>
+
+                        {{-- Portada: la foto de la que se deriva el tema del menú público.
+                             Va separada del logo a propósito: el logo es el isotipo y se
+                             recorta cuadrado, la portada es una foto del lugar y se usa entera.
+
+                             Feature de plan. El super admin siempre la ve, y un comercio que
+                             ya tiene portada la sigue viendo aunque haya bajado de plan, para
+                             poder borrarla. --}}
+                        @if(auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada() || $comercio->portada_url)
+                        <div class="metric-card">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center mr-2">
+                                        <span class="text-white text-xs">🏪</span>
+                                    </div>
+                                    <h3 class="text-sm font-semibold text-text-primary">Portada</h3>
+                                </div>
+                                @if($comercio->portada_url)
+                                    {{-- Marca el flag y manda el formulario completo: update() exige
+                                         nombre, colores y demás, así que un form suelto no pasaría
+                                         la validación. --}}
+                                    <button type="button"
+                                            onclick="showConfirmWithLoader('¿Eliminar la portada? El menú público vuelve al diseño estándar.', r => { if (r) { document.getElementById('delete_portada').value = '1'; this.closest('form').submit(); } }, 'Eliminando...');"
+                                            class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs font-medium transition-all duration-200">
+                                        🗑️
+                                    </button>
+                                @endif
+                            </div>
+
+                            {{-- Estado del procesado. Se consulta solo: antes decía
+                                 "recargá en unos segundos" para siempre, y si la cola estaba
+                                 caída el comerciante no tenía forma de enterarse. --}}
+                            <div class="mb-3 hidden" id="portadaProgreso">
+                                <div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-xs text-amber-300">Generando el tema…</p>
+                                        <span class="text-xs text-amber-400/70" id="portadaSegundos"></span>
+                                    </div>
+                                    <div class="h-1 w-full overflow-hidden rounded-full bg-amber-900/40">
+                                        <div class="progreso-barra h-full w-1/3 rounded-full bg-amber-400"></div>
+                                    </div>
+                                    <p class="mt-2 hidden text-xs text-amber-200" id="portadaDemora">
+                                        Está tardando más de lo normal.
+                                        <button type="button" id="portadaReintentar"
+                                                class="underline hover:text-white">Reintentar</button>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 hidden rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2"
+                                 id="portadaError">
+                                <p class="text-xs text-red-300">
+                                    No pudimos procesar esta imagen. Probá con otra foto.
+                                    <button type="button" id="portadaReintentar2"
+                                            class="underline hover:text-white">Reintentar</button>
+                                </p>
+                            </div>
+
+                            <style>
+                                /* Indeterminada a propósito: el procesado tarda distinto según
+                                   la imagen, así que un porcentaje sería inventado. */
+                                @keyframes progreso-idas {
+                                    0%   { transform: translateX(-100%); }
+                                    100% { transform: translateX(300%); }
+                                }
+                                .progreso-barra { animation: progreso-idas 1.4s ease-in-out infinite; }
+                                @media (prefers-reduced-motion: reduce) {
+                                    .progreso-barra { animation: none; width: 100%; opacity: .6; }
+                                }
+                            </style>
+
+                            @if($comercio->tienePortada())
+                                <div class="mb-3" id="portadaActual">
+                                    <img src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
+                                         alt="Portada actual"
+                                         onerror="document.getElementById('portadaActual').remove()"
+                                         class="w-full h-24 object-cover rounded-lg border border-accent-gray">
+                                </div>
+
+                                {{-- Aviso persistente: la subió igual, pero conviene que sepa
+                                     por qué se ve borrosa cada vez que entra acá. --}}
+                                @if($comercio->tema_derivado['baja_calidad'] ?? false)
+                                    <div class="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+                                        <p class="text-xs text-amber-300">
+                                            <strong>Calidad baja.</strong>
+                                            La imagen es de {{ $comercio->tema_derivado['ancho'] }}×{{ $comercio->tema_derivado['alto'] }}
+                                            y se recomienda 900×600 o más. Se ve borrosa en el menú.
+                                            Podés reemplazarla cuando quieras.
+                                        </p>
+                                    </div>
+                                @endif
+                                <div class="mb-3 flex items-center gap-2">
+                                    <span class="h-5 w-5 rounded border border-white/20"
+                                          style="background: {{ $comercio->tema_derivado['base'] }}"
+                                          title="Tono base: {{ $comercio->tema_derivado['base'] }}"></span>
+                                    <span class="h-5 w-5 rounded border border-white/20"
+                                          style="background: {{ $comercio->tema_derivado['acento_sugerido'] }}"
+                                          title="Acento sugerido: {{ $comercio->tema_derivado['acento_sugerido'] }}"></span>
+                                    <p class="text-xs text-text-secondary">Tono y acento detectados</p>
+                                </div>
+
+                                @if($comercio->tieneAcentoSugeridoDistinto())
+                                    {{-- Se propone, no se pisa: el color elegido en el selector de
+                                         temas manda, y el extraído suele traer la madera o la comida
+                                         en vez de la marca. --}}
+                                    <button type="button"
+                                            onclick="document.getElementById('primary_color').value='{{ $comercio->tema_derivado['acento_sugerido'] }}'; document.getElementById('primary_color').dispatchEvent(new Event('input'));"
+                                            class="w-full mb-3 px-2 py-1.5 rounded-lg border border-accent-gray text-xs text-text-primary hover:bg-white/5 transition-all duration-200">
+                                        Usar {{ $comercio->tema_derivado['acento_sugerido'] }} como acento
+                                    </button>
+                                @endif
+                            @endif
+
+                            <input type="hidden" name="delete_portada" id="delete_portada" value="0">
+
+                            @if(auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada())
+                                {{-- Vista previa + aviso de calidad. No bloquea: se puede
+                                     guardar igual y cambiarla después. --}}
+                                <div class="mb-3 hidden" id="portadaPreviewWrap">
+                                    <img id="portadaPreview" alt="Portada nueva"
+                                         class="w-full h-24 object-cover rounded-lg border-2 border-accent-blue">
+                                    <p class="text-xs text-accent-blue mt-1" id="portadaMedidas"></p>
+                                </div>
+
+                                <div class="mb-3 hidden rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2"
+                                     id="portadaAviso">
+                                    <p class="text-xs text-amber-300">
+                                        <strong>Calidad baja.</strong>
+                                        <span id="portadaAvisoDetalle"></span>
+                                        Se va a ver borrosa en el menú. Podés guardarla igual y cambiarla cuando quieras.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <input type="file"
+                                           id="portada"
+                                           name="portada"
+                                           accept="image/*"
+                                           class="w-full px-2 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-accent-blue file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200">
+                                    <p class="text-xs text-text-secondary mt-1">
+                                        Una foto <strong>del local o de un plato</strong> — de ahí salen el fondo
+                                        y los colores del menú. No subas el menú escaneado.
+                                        Recomendado: 900×600 o más.
+                                    </p>
+                                    <x-input-error :messages="$errors->get('portada')" class="mt-1" />
+                                </div>
+                            @else
+                                <p class="text-xs text-text-secondary">
+                                    Cambiar la portada requiere un plan que incluya personalización.
+                                </p>
+                            @endif
+                        </div>
+                        @endif
 
                         <!-- Contacto -->
                         <div class="metric-card">
@@ -219,11 +450,13 @@
                     </div>
                 </div>
 
-                <!-- Campos ocultos requeridos por el controlador -->
-                <input type="hidden" name="primary_color" value="{{ $comercio->primary_color ?? '#3B82F6' }}">
-                <input type="hidden" name="secondary_color" value="{{ $comercio->secondary_color ?? '#1E40AF' }}">
-                <input type="hidden" name="accent_color" value="{{ $comercio->accent_color ?? '#F59E0B' }}">
-                <input type="hidden" name="background_color" value="{{ $comercio->background_color ?? '#FFFFFF' }}">
+                {{-- Campos ocultos requeridos por el controlador.
+                     Los ids son necesarios: applyTheme() y el botón de acento sugerido
+                     los buscan por getElementById y sin ellos tiran error. --}}
+                <input type="hidden" id="primary_color" name="primary_color" value="{{ $comercio->primary_color ?? '#3B82F6' }}">
+                <input type="hidden" id="secondary_color" name="secondary_color" value="{{ $comercio->secondary_color ?? '#1E40AF' }}">
+                <input type="hidden" id="accent_color" name="accent_color" value="{{ $comercio->accent_color ?? '#F59E0B' }}">
+                <input type="hidden" id="background_color" name="background_color" value="{{ $comercio->background_color ?? '#FFFFFF' }}">
                 <input type="hidden" name="chatbot_name" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
                 <input type="hidden" name="welcome_message" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual.' }}">
                 <input type="hidden" name="menu_description" value="{{ $comercio->menu_description ?? '' }}">
@@ -264,6 +497,173 @@
             </div>
         </div>
     </div>
+
+    {{-- Vista previa de las imágenes elegidas, antes de guardar. El aviso de
+         calidad es informativo: nunca impide guardar. --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const MIN_ANCHO = {{ \App\Services\BrandThemeService::ANCHO_RECOMENDADO }};
+            const MIN_ALTO  = {{ \App\Services\BrandThemeService::ALTO_RECOMENDADO }};
+
+            /**
+             * Muestra el archivo elegido sin subirlo.
+             * onMedidas recibe el ancho/alto reales para poder avisar.
+             */
+            function vistaPrevia(inputId, imgId, wrapId, onMedidas) {
+                const input = document.getElementById(inputId);
+                const img = document.getElementById(imgId);
+                const wrap = document.getElementById(wrapId);
+                if (!input || !img || !wrap) return;
+
+                input.addEventListener('change', function () {
+                    const archivo = this.files && this.files[0];
+
+                    if (!archivo || !archivo.type.startsWith('image/')) {
+                        wrap.classList.add('hidden');
+                        if (onMedidas) onMedidas(null);
+                        return;
+                    }
+
+                    // Se libera la URL anterior para no acumular blobs si el
+                    // usuario prueba varias imágenes seguidas.
+                    if (img.dataset.blob) URL.revokeObjectURL(img.dataset.blob);
+
+                    const url = URL.createObjectURL(archivo);
+                    img.dataset.blob = url;
+                    img.src = url;
+                    wrap.classList.remove('hidden');
+
+                    if (onMedidas) {
+                        img.onload = () => onMedidas({
+                            ancho: img.naturalWidth,
+                            alto: img.naturalHeight,
+                            peso: archivo.size,
+                        });
+                    }
+                });
+            }
+
+            vistaPrevia('logo', 'logoPreview', 'logoPreviewWrap');
+
+            // ── Seguimiento del procesado de la portada ──────────────────
+            (function () {
+                const progreso = document.getElementById('portadaProgreso');
+                const errorBox = document.getElementById('portadaError');
+                if (!progreso || !errorBox) return;
+
+                const segundosTxt = document.getElementById('portadaSegundos');
+                const demora = document.getElementById('portadaDemora');
+                const URL_ESTADO = '{{ route('comercios.portada.estado', $comercio) }}';
+                const URL_REINTENTO = '{{ route('comercios.portada.reintentar', $comercio) }}';
+                const TOKEN = '{{ csrf_token() }}';
+
+                let desde = null;
+                let timer = null;
+
+                function mostrar(estado) {
+                    progreso.classList.toggle('hidden', estado !== 'procesando');
+                    errorBox.classList.toggle('hidden', estado !== 'error');
+                }
+
+                function tick() {
+                    if (!desde) return;
+                    const seg = Math.round((Date.now() - desde) / 1000);
+                    if (segundosTxt) segundosTxt.textContent = seg + 's';
+
+                    // A los 30s dejamos de prometer que ya viene: casi siempre
+                    // significa que la cola no está corriendo.
+                    if (seg >= 30 && demora) demora.classList.remove('hidden');
+                }
+
+                async function consultar() {
+                    try {
+                        const r = await fetch(URL_ESTADO, { headers: { 'Accept': 'application/json' } });
+                        if (!r.ok) return;
+
+                        const data = await r.json();
+
+                        if (data.estado === 'listo') {
+                            detener();
+                            window.location.reload();   // la tarjeta se arma en el server
+                            return;
+                        }
+
+                        if (data.estado === 'error') {
+                            detener();
+                            mostrar('error');
+                        }
+                    } catch (e) {
+                        // Sin conexión: se reintenta en el próximo ciclo.
+                    }
+                }
+
+                function arrancar() {
+                    if (timer) return;
+                    desde = Date.now();
+                    mostrar('procesando');
+                    if (demora) demora.classList.add('hidden');
+                    tick();
+                    timer = setInterval(function () { tick(); consultar(); }, 2000);
+                }
+
+                function detener() {
+                    clearInterval(timer);
+                    timer = null;
+                    progreso.classList.add('hidden');
+                }
+
+                async function reintentar() {
+                    detener();
+                    try {
+                        await fetch(URL_REINTENTO, {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': TOKEN, 'Accept': 'application/json' },
+                        });
+                        errorBox.classList.add('hidden');
+                        arrancar();
+                    } catch (e) {
+                        errorBox.classList.remove('hidden');
+                    }
+                }
+
+                document.getElementById('portadaReintentar')?.addEventListener('click', reintentar);
+                document.getElementById('portadaReintentar2')?.addEventListener('click', reintentar);
+
+                @if($comercio->portada_estado === 'procesando')
+                    arrancar();
+                @elseif($comercio->portada_estado === 'error')
+                    mostrar('error');
+                @endif
+            })();
+
+            const aviso = document.getElementById('portadaAviso');
+            const avisoDetalle = document.getElementById('portadaAvisoDetalle');
+            const medidasTxt = document.getElementById('portadaMedidas');
+
+            vistaPrevia('portada', 'portadaPreview', 'portadaPreviewWrap', function (m) {
+                if (!aviso) return;
+
+                if (!m) {
+                    aviso.classList.add('hidden');
+                    return;
+                }
+
+                if (medidasTxt) {
+                    medidasTxt.textContent =
+                        m.ancho + '×' + m.alto + ' · ' + (m.peso / 1024 / 1024).toFixed(1) + ' MB';
+                }
+
+                if (m.ancho < MIN_ANCHO || m.alto < MIN_ALTO) {
+                    avisoDetalle.textContent =
+                        'La imagen es de ' + m.ancho + '×' + m.alto +
+                        ' y se recomienda ' + MIN_ANCHO + '×' + MIN_ALTO + ' o más.';
+                    aviso.classList.remove('hidden');
+                } else {
+                    aviso.classList.add('hidden');
+                }
+            });
+        });
+    </script>
 
     <!-- JavaScript para vista previa en tiempo real -->
     <script>

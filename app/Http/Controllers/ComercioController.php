@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateBrandThemeJob;
 use App\Models\Comercio;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\BrandThemeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -100,13 +102,13 @@ class ComercioController extends Controller
             $comercio->user_id = auth()->id();
         }
         $comercio->nombre = $validated['nombre'];
-        $comercio->slug = Str::slug($validated['nombre']);
+        $comercio->slug = Comercio::generarSlugUnico($validated['nombre']);
         $comercio->descripcion = $validated['descripcion'];
         $comercio->direccion = $validated['direccion'];
         $comercio->horario = $validated['horario'];
 
         // Asignar plan: el elegido por admin, o Pro por defecto
-        if ($user->isSuperAdmin() && !empty($validated['plan_id'])) {
+        if ($user->isSuperAdmin() && ! empty($validated['plan_id'])) {
             $comercio->plan_id = $validated['plan_id'];
         } else {
             $planPro = Plan::where('key', 'pro')->first();
@@ -171,10 +173,30 @@ class ComercioController extends Controller
         $validated = $request->validate([
             // Información básica del comercio
             'nombre' => 'required|string|max:255',
+
+            // URL pública. Sólo la aplica el super admin (ver update()); si la
+            // manda un usuario común, se ignora.
+            'slug' => 'nullable|string|max:255|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+
             'descripcion' => 'nullable|string',
+            'tagline' => 'nullable|string|max:80',
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+
+            // Portada: la foto que representa al comercio y de la que se
+            // deriva el tema del menú público. NO pasa por saveSquareLogo():
+            // ese recorte a 512x512 es para isotipos, no para fotos.
+            //
+            // Sin mínimo de dimensiones a propósito: una foto chica se procesa
+            // igual y sale borrosa, pero rechazarla dejaba al comercio sin
+            // portada. Se acepta y se le avisa (tema_derivado.baja_calidad).
+            //
+            // El máximo sí es duro, y no es por el peso: GD descomprime a
+            // bitmap, así que la memoria es ancho × alto × 4 bytes. Un JPEG de
+            // 1 MB en 8000×6000 son 192 MB en RAM y tumba el proceso con un
+            // fatal error inatrapable. 8000×8000 = 64 MP es el techo.
+            'portada' => 'nullable|image|max:8192|dimensions:max_width=8000,max_height=8000',
 
             // Configuración de personalización
             'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -193,28 +215,51 @@ class ComercioController extends Controller
             'pedido_habilitado' => 'nullable|boolean',
         ]);
 
-        // Actualizar información básica
         $comercio->nombre = $validated['nombre'];
-        $comercio->slug = Str::slug($validated['nombre']);
-        $comercio->descripcion = $validated['descripcion'];
-        $comercio->direccion = $validated['direccion'];
-        $comercio->horario = $validated['horario'];
+
+        // ── URL pública ──────────────────────────────────────────────────
+        // El slug está impreso en los QR de las mesas, así que cambiarlo sin
+        // más rompía todo en silencio. Ahora cada slug anterior queda como
+        // alias y sigue resolviendo, con lo cual el cambio es seguro:
+        //
+        //   - El admin la puede fijar a mano, y eso la deja "manual".
+        //   - Renombrar la actualiza sola, salvo que sea manual: si el admin
+        //     eligió una URL a propósito, un renombrado no se la pisa.
+        if ($user->isSuperAdmin() && filled($validated['slug'] ?? null)) {
+            if (! $comercio->cambiarSlug($validated['slug'], manual: true)) {
+                return back()->withInput()->withErrors([
+                    'slug' => 'Esa URL ya la usa otro comercio (o la usó antes).',
+                ]);
+            }
+        } elseif (blank($comercio->slug)) {
+            $comercio->slug = Comercio::generarSlugUnico($validated['nombre'], $comercio->id);
+        } elseif (! $comercio->slug_manual) {
+            $comercio->cambiarSlug(Comercio::generarSlugUnico($validated['nombre'], $comercio->id));
+        }
+
+        // Los campos `nullable` pueden no venir en el request: leerlos directo
+        // tira "Undefined array key" y devuelve un 500. El formulario los manda
+        // siempre, pero cualquier request parcial (AJAX, integración) rompía.
+        $comercio->descripcion = $validated['descripcion'] ?? null;
+        $comercio->tagline = $validated['tagline'] ?? null;
+        $comercio->direccion = $validated['direccion'] ?? null;
+        $comercio->horario = $validated['horario'] ?? null;
 
         // Actualizar configuración de personalización
         $comercio->primary_color = $validated['primary_color'];
         $comercio->secondary_color = $validated['secondary_color'];
         $comercio->accent_color = $validated['accent_color'];
         $comercio->background_color = $validated['background_color'];
-        $comercio->welcome_message = $validated['welcome_message'];
-        $comercio->menu_description = $validated['menu_description'];
-        $comercio->contact_info = $validated['contact_info'];
+        $comercio->welcome_message = $validated['welcome_message'] ?? null;
+        $comercio->menu_description = $validated['menu_description'] ?? null;
+        $comercio->contact_info = $validated['contact_info'] ?? null;
         $comercio->chatbot_name = $validated['chatbot_name'];
         $comercio->show_contact_info = $validated['show_contact_info'] ?? false;
         $comercio->enable_ai_responses = $validated['enable_ai_responses'] ?? false;
         $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
-        $comercio->page_title = $validated['page_title'];
-        $comercio->page_description = $validated['page_description'];
-        $comercio->favicon_url = $validated['favicon_url'];
+        $comercio->page_title = $validated['page_title'] ?? null;
+        $comercio->page_description = $validated['page_description'] ?? null;
+        $comercio->favicon_url = $validated['favicon_url'] ?? null;
 
         // Manejar eliminación de logo
         if ($request->has('delete_logo') && $request->delete_logo == '1') {
@@ -228,7 +273,29 @@ class ComercioController extends Controller
             $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512, $comercio->id);
         }
 
+        // Manejar eliminación de portada. No se bloquea por plan: si un comercio
+        // baja de plan tiene que poder sacar su portada igual.
+        if ($request->boolean('delete_portada')) {
+            $this->limpiarPortada($comercio);
+        }
+        // Manejar subida de nueva portada.
+        elseif ($request->hasFile('portada')) {
+            // Gating inline, no por middleware: update() hace muchas otras cosas
+            // que no dependen del plan, así que no se puede cortar la ruta entera.
+            // Mismo criterio que analytics en AnalyticsController.
+            if (! $user->isSuperAdmin() && ! $comercio->puedePersonalizarPortada()) {
+                abort(403, 'La portada personalizada no está disponible en el plan actual del comercio.');
+            }
+
+            $this->guardarPortada($comercio, $request->file('portada'));
+        }
+
         $comercio->save();
+
+        // Después del save() para que la portada_url ya esté persistida.
+        if ($comercio->portada_estado === 'procesando') {
+            $this->generarTemaDePortada($comercio);
+        }
 
         // Si es una petición AJAX, devolver JSON
         if ($request->ajax()) {
@@ -469,6 +536,119 @@ class ComercioController extends Controller
     /**
      * Eliminar logo de forma segura (tanto de storage como de public_html)
      */
+    /**
+     * Genera el tema: en el momento si la foto es de tamaño normal, en la cola
+     * si es enorme.
+     *
+     * La cola es la pieza más frágil de la infraestructura (worker por cron en
+     * el server), así que cuanto menos dependa de ella el caso común, mejor.
+     * Una foto de celular estándar se resuelve en ~3 s y el comerciante ve su
+     * portada al guardar, sin barras ni esperas. Las gigantes sí van a la
+     * cola: tardan de más para un request y ahí la espera se justifica.
+     */
+    private function generarTemaDePortada(Comercio $comercio): void
+    {
+        $temas = app(BrandThemeService::class);
+        $ruta = \Storage::disk('public')->path($comercio->portada_url);
+
+        if (! $temas->puedeProcesarInline($ruta)) {
+            GenerateBrandThemeJob::dispatch($comercio);
+
+            return;
+        }
+
+        try {
+            $comercio->update($temas->generar($comercio, $ruta) + ['portada_estado' => 'listo']);
+        } catch (\Throwable $e) {
+            \Log::error('Fallo al generar el tema en caliente: '.$e->getMessage(), [
+                'comercio_id' => $comercio->id,
+            ]);
+
+            // Puede haber sido algo puntual del request (memoria ya ocupada por
+            // otra cosa). En la cola arranca con el proceso limpio; si vuelve a
+            // fallar, el job deja el estado en 'error' y el panel lo muestra.
+            GenerateBrandThemeJob::dispatch($comercio);
+        }
+    }
+
+    /**
+     * Estado del procesado de la portada, para que el panel lo consulte solo.
+     *
+     * Sin esto el comerciante veía "generando…" indefinidamente: si la cola
+     * estaba caída, no había ninguna señal de que algo andaba mal.
+     */
+    public function portadaEstado(Comercio $comercio)
+    {
+        $this->autorizarComercio($comercio);
+
+        return response()->json([
+            'estado' => $comercio->portada_estado,
+            'listo' => $comercio->tienePortada(),
+            'baja_calidad' => (bool) ($comercio->tema_derivado['baja_calidad'] ?? false),
+        ]);
+    }
+
+    /** Vuelve a encolar la generación del tema. */
+    public function portadaReintentar(Comercio $comercio)
+    {
+        $this->autorizarComercio($comercio);
+
+        if (blank($comercio->portada_url)) {
+            return response()->json(['ok' => false, 'motivo' => 'sin_portada'], 422);
+        }
+
+        $comercio->update(['portada_estado' => 'procesando']);
+        GenerateBrandThemeJob::dispatch($comercio);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Super admin con cualquiera; el resto, sólo con lo suyo. */
+    private function autorizarComercio(Comercio $comercio): void
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            abort(403, 'No tienes permiso para acceder a este comercio.');
+        }
+    }
+
+    /**
+     * Guarda la portada tal cual la subieron y deja el comercio "procesando".
+     *
+     * A diferencia del logo, acá no se recorta ni se cuadra nada: el recorte
+     * lo decide después BrandThemeService, que necesita la imagen entera para
+     * medir el promedio y sacar el hero en 16:11.
+     */
+    private function guardarPortada(Comercio $comercio, \Illuminate\Http\UploadedFile $file): void
+    {
+        $this->createComercioDirectories($comercio->id);
+        $this->borrarDerivadosPortada($comercio);
+
+        $comercio->portada_url = $file->store("comercios/{$comercio->id}/portada", 'public');
+        $comercio->portada_estado = 'procesando';
+    }
+
+    /** Borra la portada y todo lo derivado de ella. */
+    private function limpiarPortada(Comercio $comercio): void
+    {
+        $this->borrarDerivadosPortada($comercio);
+        $this->deleteLogoSafely($comercio->portada_url);
+
+        $comercio->portada_url = null;
+        $comercio->tema_derivado = null;
+        $comercio->portada_estado = 'vacio';
+    }
+
+    /** Borra sólo los archivos generados, no el original. */
+    private function borrarDerivadosPortada(Comercio $comercio): void
+    {
+        foreach (['portada_fondo_url', 'portada_hero_url', 'portada_thumb_url'] as $campo) {
+            $this->deleteLogoSafely($comercio->{$campo});
+            $comercio->{$campo} = null;
+        }
+    }
+
     private function deleteLogoSafely(?string $logoUrl): void
     {
         if (empty($logoUrl)) {

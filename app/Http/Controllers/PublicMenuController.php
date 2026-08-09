@@ -14,7 +14,12 @@ class PublicMenuController extends Controller
     {
         $chips = $comercio->getChipsSugeridos();
 
-        return view('menu.choose', compact('comercio', 'chips'));
+        // Con portada procesada se sirve el diseño derivado de su propia foto;
+        // sin ella, el diseño anterior. Así ningún comercio queda roto por no
+        // haber subido nada todavía.
+        $vista = $comercio->tienePortada() ? 'menu.portada' : 'menu.choose';
+
+        return view($vista, compact('comercio', 'chips'));
     }
 
     /**

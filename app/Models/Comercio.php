@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\MenuTranslatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Comercio extends Model
 {
@@ -14,7 +15,14 @@ class Comercio extends Model
         'nombre',
         'slug',
         'descripcion',
+        'tagline',
         'logo_url',
+        'portada_url',
+        'portada_fondo_url',
+        'portada_hero_url',
+        'portada_thumb_url',
+        'tema_derivado',
+        'portada_estado',
         'user_id',
         'plan_id',
         'primary_color',
@@ -42,12 +50,182 @@ class Comercio extends Model
         return 'slug';
     }
 
+    /** Slugs que este comercio tuvo antes; siguen resolviendo a su menú. */
+    public function slugsAnteriores()
+    {
+        return $this->hasMany(ComercioSlug::class);
+    }
+
+    /**
+     * Resuelve el comercio también por sus slugs viejos.
+     *
+     * Así un QR impreso antes de un renombrado sigue llevando al menú en vez
+     * de dar 404. Va acá y no en cada ruta porque hay 41 rutas con
+     * {comercio:slug} y todas se benefician igual.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $campo = $field ?? $this->getRouteKeyName();
+
+        if ($encontrado = $this->where($campo, $value)->first()) {
+            return $encontrado;
+        }
+
+        if ($campo === 'slug') {
+            return static::whereHas('slugsAnteriores', fn ($q) => $q->where('slug', $value))->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Slug único a partir del nombre.
+     *
+     * Dos comercios pueden llamarse igual y ser distintos ("La Esquina" en dos
+     * barrios), así que un nombre repetido no se rechaza: se le agrega sufijo.
+     * Antes esto no existía y el nombre repetido reventaba contra el índice
+     * comercios_slug_unique con un 500.
+     *
+     * También se saltean los slugs históricos: reutilizar uno haría que un QR
+     * viejo terminara en el menú de otro comercio.
+     */
+    public static function generarSlugUnico(string $nombre, ?int $ignorarId = null): string
+    {
+        $base = Str::slug($nombre) ?: 'comercio';
+        $slug = $base;
+        $n = 1;
+
+        while (static::slugOcupado($slug, $ignorarId)) {
+            $slug = $base.'-'.(++$n);
+        }
+
+        return $slug;
+    }
+
+    /** ¿Este slug lo está usando otro comercio, ahora o en el pasado? */
+    public static function slugOcupado(string $slug, ?int $ignorarId = null): bool
+    {
+        $enUso = static::where('slug', $slug)
+            ->when($ignorarId, fn ($q) => $q->where('id', '!=', $ignorarId))
+            ->exists();
+
+        $historico = ComercioSlug::where('slug', $slug)
+            ->when($ignorarId, fn ($q) => $q->where('comercio_id', '!=', $ignorarId))
+            ->exists();
+
+        return $enUso || $historico;
+    }
+
+    /**
+     * Cambia el slug archivando el anterior como alias.
+     *
+     * Devuelve false si el slug pedido ya lo ocupa otro comercio.
+     */
+    public function cambiarSlug(string $nuevo, bool $manual = false): bool
+    {
+        $nuevo = Str::slug($nuevo) ?: 'comercio';
+
+        if ($nuevo === $this->slug) {
+            $this->slug_manual = $manual || $this->slug_manual;
+
+            return true;
+        }
+
+        if (static::slugOcupado($nuevo, $this->id)) {
+            return false;
+        }
+
+        if (filled($this->slug)) {
+            // firstOrCreate: si el comercio vuelve a un slug que ya tuvo, el
+            // alias podría existir de un cambio anterior.
+            ComercioSlug::firstOrCreate(
+                ['slug' => $this->slug],
+                ['comercio_id' => $this->id, 'created_at' => now()]
+            );
+        }
+
+        // Si el nuevo slug estaba archivado como alias propio, se libera: ahora
+        // es el vigente y no tiene sentido que además redirija.
+        $this->slugsAnteriores()->where('slug', $nuevo)->delete();
+
+        $this->slug = $nuevo;
+        $this->slug_manual = $manual || $this->slug_manual;
+
+        return true;
+    }
+
     protected $casts = [
         'show_contact_info' => 'boolean',
         'enable_ai_responses' => 'boolean',
         'pedido_habilitado' => 'boolean',
         'chatbot_config' => 'array',
+        'tema_derivado' => 'array',
+        'slug_manual' => 'boolean',
     ];
+
+    /**
+     * Frase corta para el menú público.
+     *
+     * Si no hay tagline se cae a la descripción, pero SÓLO si entra entera:
+     * recortar un párrafo largo deja la frase cortada al medio, que se ve peor
+     * que no mostrar nada.
+     */
+    public function taglinePublico(): ?string
+    {
+        if (filled($this->tagline)) {
+            return $this->tagline;
+        }
+
+        $desc = trim(strip_tags((string) $this->descripcion));
+
+        return mb_strlen($desc) > 0 && mb_strlen($desc) <= 80 ? $desc : null;
+    }
+
+    /** ¿Puede este comercio personalizar la portada del menú público? */
+    public function puedePersonalizarPortada(): bool
+    {
+        return $this->tieneFeature('customizacion');
+    }
+
+    /** ¿Hay una portada procesada y lista para pintar el menú público? */
+    public function tienePortada(): bool
+    {
+        return $this->portada_estado === 'listo'
+            && ! empty($this->portada_hero_url)
+            && ! empty($this->tema_derivado['base']);
+    }
+
+    /**
+     * Tema derivado de la portada, con valores por defecto.
+     *
+     * Devuelve siempre un array usable: si el comercio no tiene portada, la
+     * vista pública igual puede pedir claves sin chequear nada.
+     */
+    public function tema(): array
+    {
+        $t = $this->tema_derivado ?? [];
+
+        return [
+            'base' => $t['base'] ?? '#1A1614',
+            'velo' => $t['velo'] ?? [],
+            'superficies' => $t['superficies'] ?? [],
+            'acento' => $this->colorAcento(),
+            'acento_sugerido' => $t['acento_sugerido'] ?? null,
+        ];
+    }
+
+    /**
+     * ¿El acento sugerido por la portada difiere del que está aplicado?
+     *
+     * Sirve para ofrecerlo en el panel sin pisarlo: el color elegido por el
+     * comerciante manda, esto es sólo una propuesta.
+     */
+    public function tieneAcentoSugeridoDistinto(): bool
+    {
+        $sugerido = $this->tema_derivado['acento_sugerido'] ?? null;
+
+        return $sugerido !== null && strcasecmp($sugerido, $this->colorAcento()) !== 0;
+    }
 
     public function user()
     {

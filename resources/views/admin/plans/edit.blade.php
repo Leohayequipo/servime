@@ -96,6 +96,10 @@
                             <input type="checkbox" name="features[]" value="intencion_ia" @checked(in_array('intencion_ia', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
                             Clasificación de intención con IA (analytics)
                         </label>
+                        <label class="flex items-center gap-3 text-text-primary text-sm">
+                            <input type="checkbox" name="features[]" value="customizacion" @checked(in_array('customizacion', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                            Portada personalizada del menú
+                        </label>
                     </div>
                 </div>
 

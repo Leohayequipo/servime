@@ -106,7 +106,7 @@ class PlanController extends Controller
             'modelo_ia' => ['required', 'string', 'max:50'],
             'max_tokens_chat' => ['required', 'integer', 'min:50', 'max:4000'],
             'features' => ['nullable', 'array'],
-            'features.*' => ['string', Rule::in(['analytics', 'excel', 'promociones', 'intencion_ia'])],
+            'features.*' => ['string', Rule::in(['analytics', 'excel', 'promociones', 'intencion_ia', 'customizacion'])],
             'orden' => ['nullable', 'integer', 'min:0'],
             'activo' => ['nullable', 'boolean'],
         ]);

@@ -103,6 +103,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/comercios/{comercio:slug}', [ComercioController::class, 'update'])->name('comercios.update');
     Route::delete('/comercios/{comercio:slug}', [ComercioController::class, 'destroy'])->name('comercios.destroy');
 
+    // Estado del procesado de la portada: el panel lo consulta mientras genera.
+    Route::get('/comercios/{comercio:slug}/portada/estado', [ComercioController::class, 'portadaEstado'])->name('comercios.portada.estado');
+    Route::post('/comercios/{comercio:slug}/portada/reintentar', [ComercioController::class, 'portadaReintentar'])->name('comercios.portada.reintentar')->middleware('throttle:10,1');
+
     // Rutas de Menús (usando slug para comercio)
     Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
     Route::get('/comercios/{comercio:slug}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
