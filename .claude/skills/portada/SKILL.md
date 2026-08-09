@@ -104,6 +104,31 @@ acento. Si tomara el color de marca, un comercio con acento rojo tendría un pun
 que está abierto. (El `choose.blade.php` viejo todavía tiene ese bug: `background: var(--accent)`
 con la animación en verde hardcodeado.)
 
+## Abierto / cerrado
+
+`Comercio::estaAbierto()` sale de **`horarios`** (json, migración `2026_08_09_120000`):
+`{ "1": [["11:00","20:00"]], ... }` — clave = día ISO (1 = lunes), lista de turnos por día,
+lista vacía o ausente = cerrado.
+
+**Devuelve `null` cuando no hay horarios cargados, y la vista no muestra la píldora.** No es lo
+mismo "cerrado" que "no sé": antes era un `ABIERTO AHORA` fijo que mentía a cualquier hora.
+
+- **Cruza medianoche**: si el cierre es ≤ la apertura, el turno sigue al día siguiente. Por eso
+  `estaAbierto()` mira **hoy y ayer** — a la 1 AM del martes sigue corriendo el turno del lunes.
+- **Turnos partidos**: hasta 2 por día (mediodía y noche).
+- `proximaApertura()` devuelve `"11:00"` (mismo día) o `"Lunes 11:00"` (otro día).
+
+El campo viejo **`horario` (texto libre) se mantiene** y es sólo para mostrar. No se parsea: los
+datos reales tenían de todo — `"de 19 a 2AM"`, `"12  a 23"`, letras Unicode de Instagram, emojis.
+Un parser que acierte el 80% le dice al 20% restante que el local está abierto cuando está
+cerrado, que es peor que no decir nada.
+
+En el panel, `armarHorarios()` **descarta los turnos incompletos** en vez de rechazar el
+formulario: quien cargó sólo la apertura no tiene por qué perder el resto de los cambios.
+
+> Pendiente: el chatbot todavía deflecta las preguntas de horario
+> (`ChatbotController:252`) aunque el dato ya exista.
+
 ## Seguimiento del procesado
 
 `GET /comercios/{slug}/portada/estado` y `POST .../portada/reintentar` (throttle 10,1), las dos

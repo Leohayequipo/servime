@@ -182,6 +182,13 @@ class ComercioController extends Controller
             'tagline' => 'nullable|string|max:80',
             'direccion' => 'nullable|string|max:255',
             'horario' => 'nullable|string|max:255',
+
+            // Horarios estructurados: 7 días (ISO), hasta 2 turnos cada uno.
+            // El campo `horario` de arriba sigue siendo el texto que se muestra.
+            'horarios' => 'nullable|array',
+            'horarios.*.*.desde' => 'nullable|date_format:H:i',
+            'horarios.*.*.hasta' => 'nullable|date_format:H:i',
+
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
 
             // Portada: la foto que representa al comercio y de la que se
@@ -244,6 +251,7 @@ class ComercioController extends Controller
         $comercio->tagline = $validated['tagline'] ?? null;
         $comercio->direccion = $validated['direccion'] ?? null;
         $comercio->horario = $validated['horario'] ?? null;
+        $comercio->horarios = $this->armarHorarios($validated['horarios'] ?? null);
 
         // Actualizar configuración de personalización
         $comercio->primary_color = $validated['primary_color'];
@@ -536,6 +544,44 @@ class ComercioController extends Controller
     /**
      * Eliminar logo de forma segura (tanto de storage como de public_html)
      */
+    /**
+     * Arma el JSON de horarios a partir del formulario.
+     *
+     * Descarta los turnos incompletos (uno de los dos campos vacío) en vez de
+     * rechazar el formulario: alguien que puso sólo la apertura y guardó no
+     * tiene por qué perder el resto de los cambios.
+     *
+     * Devuelve null si no quedó ningún turno, para que `estaAbierto()` sepa
+     * que no hay dato y la pantalla pública no afirme nada.
+     */
+    private function armarHorarios(?array $crudo): ?array
+    {
+        if (! $crudo) {
+            return null;
+        }
+
+        $limpio = [];
+
+        foreach (array_keys(Comercio::DIAS) as $dia) {
+            $turnos = [];
+
+            foreach ($crudo[$dia] ?? [] as $turno) {
+                $desde = $turno['desde'] ?? null;
+                $hasta = $turno['hasta'] ?? null;
+
+                if (filled($desde) && filled($hasta)) {
+                    $turnos[] = [$desde, $hasta];
+                }
+            }
+
+            if ($turnos) {
+                $limpio[(string) $dia] = $turnos;
+            }
+        }
+
+        return $limpio ?: null;
+    }
+
     /**
      * Genera el tema: en el momento si la foto es de tamaño normal, en la cola
      * si es enorme.

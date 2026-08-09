@@ -154,6 +154,11 @@
         .dot { width: 6px; height: 6px; border-radius: 50%; background: #7EC48A;
                animation: glow 2.4s ease-in-out infinite; }
 
+        /* Cerrado: sin latido y en gris. El pulso verde sugiere actividad y
+           acá justamente no la hay. */
+        .pill-estado.cerrado { color: rgba(239,228,210,.72); }
+        .pill-estado.cerrado .dot { background: #9A8F84; animation: none; }
+
         /* ── Identidad ── */
         .identidad { text-align: center; margin-bottom: 18px; }
         .eyebrow { font-size: 9.5px; letter-spacing: .34em; color: var(--acento); margin-bottom: 8px; }
@@ -250,7 +255,22 @@
         <img src="{{ asset('storage/'.$comercio->portada_hero_url) }}"
              alt="{{ $comercio->nombre }}"
              fetchpriority="high" decoding="async">
-        <span class="pill-estado"><span class="dot"></span>ABIERTO AHORA</span>
+        {{-- Sólo se muestra si el comercio cargó horarios. Si no sabemos, no
+             decimos nada: antes esto era un "ABIERTO AHORA" fijo que mentía
+             a cualquier hora. --}}
+        @php $abierto = $comercio->estaAbierto(); @endphp
+        @if($abierto !== null)
+            <span class="pill-estado {{ $abierto ? '' : 'cerrado' }}">
+                <span class="dot"></span>
+                @if($abierto)
+                    ABIERTO AHORA
+                @elseif($proxima = $comercio->proximaApertura())
+                    CERRADO · ABRE {{ mb_strtoupper($proxima) }}
+                @else
+                    CERRADO
+                @endif
+            </span>
+        @endif
     </div>
 
     <div class="identidad an d2">

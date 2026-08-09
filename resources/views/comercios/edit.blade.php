@@ -144,7 +144,67 @@
                                            value="{{ old('horario', $comercio->horario) }}"
                                            placeholder="Ej: Lunes a Viernes 9:00 - 18:00"
                                            class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <p class="text-xs text-text-secondary mt-1">Texto libre, como querés que se lea.</p>
                                     <x-input-error :messages="$errors->get('horario')" class="mt-1" />
+                                </div>
+
+                                {{-- Horarios reales. Van aparte del texto libre porque de acá
+                                     sale el "abierto / cerrado" del menú público, y el texto de
+                                     arriba es impredecible (emojis, "de 19 a 2AM", etc.).
+                                     Sin cargar nada, el menú no muestra estado — no inventa. --}}
+                                <div class="md:col-span-2">
+                                    @php $hs = old('horarios', $comercio->horarios ?? []); @endphp
+
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-sm font-medium text-text-secondary">
+                                            ¿Cuándo abren? <span class="text-text-secondary/60 font-normal">(opcional)</span>
+                                        </label>
+                                        <button type="button" id="horariosLimpiarTodo"
+                                                class="text-xs text-text-secondary hover:text-red-400 underline transition-colors duration-200">
+                                            Limpiar todo
+                                        </button>
+                                    </div>
+
+                                    <div id="horariosGrilla" class="rounded-lg border border-accent-gray bg-secondary-dark/40 p-3 space-y-2">
+                                        @foreach(\App\Models\Comercio::DIAS as $nro => $nombreDia)
+                                            @php
+                                                $turnos = $hs[$nro] ?? $hs[(string) $nro] ?? [];
+                                                $t1 = $turnos[0] ?? [null, null];
+                                                $t2 = $turnos[1] ?? [null, null];
+                                                $v = fn ($t, $i) => is_array($t) ? ($t[$i] ?? '') : '';
+                                            @endphp
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="w-20 shrink-0 text-xs text-text-secondary">{{ $nombreDia }}</span>
+
+                                                <input type="time" name="horarios[{{ $nro }}][0][desde]" value="{{ $v($t1, 0) }}"
+                                                       class="px-2 py-1 bg-primary-dark border border-accent-gray rounded text-text-primary text-xs">
+                                                <span class="text-text-secondary text-xs">a</span>
+                                                <input type="time" name="horarios[{{ $nro }}][0][hasta]" value="{{ $v($t1, 1) }}"
+                                                       class="px-2 py-1 bg-primary-dark border border-accent-gray rounded text-text-primary text-xs">
+
+                                                <span class="text-text-secondary/50 text-xs ml-2">y</span>
+                                                <input type="time" name="horarios[{{ $nro }}][1][desde]" value="{{ $v($t2, 0) }}"
+                                                       class="px-2 py-1 bg-primary-dark border border-accent-gray rounded text-text-primary text-xs">
+                                                <span class="text-text-secondary text-xs">a</span>
+                                                <input type="time" name="horarios[{{ $nro }}][1][hasta]" value="{{ $v($t2, 1) }}"
+                                                       class="px-2 py-1 bg-primary-dark border border-accent-gray rounded text-text-primary text-xs">
+
+                                                {{-- Vacía la fila = ese día queda cerrado. --}}
+                                                <button type="button" data-limpiar-dia
+                                                        title="Marcar {{ $nombreDia }} como cerrado"
+                                                        class="ml-auto px-2 py-1 rounded text-text-secondary hover:text-red-400 hover:bg-red-500/10 text-xs transition-colors duration-200">
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <p class="text-xs text-text-secondary mt-1">
+                                        Un día vacío = cerrado. El segundo par es para cortar al mediodía.
+                                        Si cierran pasada la medianoche, poné la hora igual (ej. 19:00 a 02:00).
+                                        Con esto el menú muestra si están abiertos; sin esto no muestra nada.
+                                    </p>
+                                    <x-input-error :messages="$errors->get('horarios')" class="mt-1" />
                                 </div>
 
                                 <!-- Descripción -->
@@ -544,6 +604,29 @@
             }
 
             vistaPrevia('logo', 'logoPreview', 'logoPreviewWrap');
+
+            // ── Limpiar horarios ─────────────────────────────────────────
+            // Vaciar los campos alcanza: armarHorarios() descarta los turnos
+            // incompletos, así que un día sin horas queda como cerrado.
+            (function () {
+                const grilla = document.getElementById('horariosGrilla');
+                if (!grilla) return;
+
+                function vaciar(contenedor) {
+                    contenedor.querySelectorAll('input[type="time"]').forEach(i => { i.value = ''; });
+                }
+
+                grilla.addEventListener('click', function (e) {
+                    const boton = e.target.closest('[data-limpiar-dia]');
+                    if (boton) vaciar(boton.parentElement);
+                });
+
+                document.getElementById('horariosLimpiarTodo')?.addEventListener('click', function () {
+                    showConfirm('¿Borrar todos los horarios? El menú público va a dejar de mostrar si están abiertos.', function (ok) {
+                        if (ok) vaciar(grilla);
+                    });
+                });
+            })();
 
             // ── Seguimiento del procesado de la portada ──────────────────
             (function () {

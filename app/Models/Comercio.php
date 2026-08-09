@@ -16,6 +16,7 @@ class Comercio extends Model
         'slug',
         'descripcion',
         'tagline',
+        'horarios',
         'logo_url',
         'portada_url',
         'portada_fondo_url',
@@ -160,8 +161,86 @@ class Comercio extends Model
         'pedido_habilitado' => 'boolean',
         'chatbot_config' => 'array',
         'tema_derivado' => 'array',
+        'horarios' => 'array',
         'slug_manual' => 'boolean',
     ];
+
+    /** Nombres de los días, indexados por día ISO (1 = lunes). */
+    public const DIAS = [
+        1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves',
+        5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo',
+    ];
+
+    /**
+     * ¿Está abierto ahora?
+     *
+     * Devuelve `null` cuando el comercio no cargó horarios. Es importante que
+     * sea null y no false: la pantalla pública no muestra nada en vez de
+     * afirmar algo que no sabe. Antes decía "ABIERTO AHORA" siempre, fijo.
+     */
+    public function estaAbierto(?\Carbon\Carbon $ahora = null): ?bool
+    {
+        $horarios = $this->horarios;
+
+        if (blank($horarios)) {
+            return null;
+        }
+
+        $ahora ??= now();
+
+        // Se miran hoy y ayer: un turno que cierra pasada la medianoche
+        // ("de 19 a 2AM") sigue vigente de madrugada, pero pertenece al día
+        // anterior.
+        foreach ([0, 1] as $diasAtras) {
+            $dia = $ahora->copy()->subDays($diasAtras);
+
+            foreach ($horarios[(string) $dia->dayOfWeekIso] ?? [] as $turno) {
+                [$desde, $hasta] = $turno;
+
+                $inicio = $dia->copy()->setTimeFromTimeString($desde);
+                $fin = $dia->copy()->setTimeFromTimeString($hasta);
+
+                if ($fin->lessThanOrEqualTo($inicio)) {
+                    $fin->addDay();
+                }
+
+                if ($ahora->betweenIncluded($inicio, $fin)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Cuándo vuelve a abrir, para no dejar al cliente sólo con un "cerrado".
+     * Devuelve algo como "19:00" o "Lunes 08:00", o null si no hay horarios.
+     */
+    public function proximaApertura(?\Carbon\Carbon $ahora = null): ?string
+    {
+        if (blank($this->horarios)) {
+            return null;
+        }
+
+        $ahora ??= now();
+
+        for ($i = 0; $i <= 7; $i++) {
+            $dia = $ahora->copy()->addDays($i);
+
+            foreach ($this->horarios[(string) $dia->dayOfWeekIso] ?? [] as [$desde, $hasta]) {
+                $inicio = $dia->copy()->setTimeFromTimeString($desde);
+
+                if ($inicio->greaterThan($ahora)) {
+                    return $i === 0
+                        ? $inicio->format('H:i')
+                        : self::DIAS[$inicio->dayOfWeekIso].' '.$inicio->format('H:i');
+                }
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Frase corta para el menú público.
