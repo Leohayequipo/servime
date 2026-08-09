@@ -14,7 +14,7 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
   **propia migración** (no en el seeder, porque `DatabaseSeeder` no corre en producción).
   Campos: `key` (estable: basico/pro/premium), `nombre` (marketinero, editable), `descripcion`,
   `precio` (informativo, no hay cobro online), `mensajes_ia_mes` (**null = ilimitado**),
-  `modelo_ia`, `max_tokens_chat`, `features` (JSON: `analytics`, `excel`, `promociones`), `orden`, `activo`.
+  `modelo_ia`, `max_tokens_chat`, `features` (JSON: `analytics`, `excel`, `promociones`, `customizacion`), `orden`, `activo`.
 - **`comercios`** (migración `..._120100_add_plan_to_comercios_table`): `plan_id` (FK nullOnDelete),
   `ia_mensajes_periodo` (`YYYY-MM`), `ia_mensajes_usados` (int). Los comercios existentes se migran a Básico.
 - **Modelos:** `App\Models\Plan`, helpers en `App\Models\Comercio`.
@@ -25,7 +25,7 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 |---------|---------|-----------------|--------------|--------------------------------|
 | Básico  | basico  | 500             | gpt-4o-mini  | —                              |
 | Pro     | pro     | 5000            | gpt-4o-mini  | analytics, excel, promociones  |
-| Premium | premium | null (ilimitado)| gpt-4o       | analytics, excel, promociones  |
+| Premium | premium | null (ilimitado)| gpt-4o       | analytics, excel, promociones, customizacion |
 
 ## Helpers en `Comercio` (fuente de verdad de la lógica)
 
@@ -48,6 +48,10 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
   - `excel` y `promociones` → vía **middleware `plan.feature:<feature>`** (`App\Http\Middleware\EnsurePlanFeature`,
     alias en `bootstrap/app.php`) aplicado a las rutas de export/import y de promos en `routes/web.php`.
     Además se ocultan los botones en `resources/views/menus/create.blade.php`.
+  - `customizacion` (portada del menú público) → inline en `ComercioController::update()`, porque
+    `update()` hace muchas otras cosas que no dependen del plan y no se puede cortar la ruta
+    entera. **Borrar la portada nunca se bloquea**: si un comercio baja de plan tiene que poder
+    sacarla igual. Ver la skill `portada`.
 - **Dashboard**: `DashboardController` pasa `$comerciosSinCuotaIA`; la vista muestra un aviso amarillo
   cuando un comercio llegó al límite.
 
