@@ -78,6 +78,20 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   `App\Services\AnalyticsInsightsService` (`intents()` usa el `intent` guardado si existe,
   si no rule-based por keywords con word-boundary, **una categoría por mensaje**;
   `suggestions()` arma tips según intención + métricas).
+- **Sugerencias que no tiran fruta (hecho).** `suggestions()` se rige por tres reglas, y
+  conviene respetarlas al sumar una nueva:
+  1. **Cada sugerencia dice su número.** "Varios clientes preguntan por delivery" se ignora;
+     "6 personas preguntaron por envíos" se lee y el comercio juzga solo si le importa.
+  2. **Con poco volumen no se habla** (`MIN_MENSAJES = 12`, `MIN_VISITAS = 15`, umbral de
+     intención `max(4, 15%)`). El umbral viejo era 3 menciones: afirmaba "hay demanda de X"
+     con tres consultas en un mes, que es ruido.
+  3. **Ordenadas por lo que valen y cortadas en `MAX_SUGERENCIAS = 5`.** Primero lo que le
+     piden y no tiene (la única que puede terminar en un plato nuevo en la carta, y que antes
+     ni existía), después los problemas, al final la información que falta en el menú.
+
+  Por eso `demandaInsatisfecha()` se calcula **antes** en el controller y se pasa como
+  parámetro: es la primera sugerencia y así no se consulta dos veces.
+  Cubierto por `tests/Feature/SugerenciasTest.php`.
 - **Intención con IA (hecha, solo Premium):** feature `intencion_ia`. Botón "Reclasificar con IA"
   en `analytics.comercio` (ruta `analytics.reclassify`, middleware `plan.feature:intencion_ia`)
   → encola `ClassifyIntentsJob` → `App\Services\IntentClassifierService::classifyPending()`:
@@ -134,19 +148,34 @@ Los números son de la base local de Azopardo, medidos al auditar el panel contr
    probado, mueve 18 segundos y rescata una sola visita, porque el que chatea igual toca cosas.
    Para que vuelva: evento de salida (`pagehide`/`visibilitychange` con `sendBeacon`, el mismo
    mecanismo de `smTrack`) **y** mostrar la mediana, no el promedio.
-3. **La sugerencia del embudo no dice el número real.** El texto es fijo ("menos de 5 de cada
-   10") y sale igual sea 4,9 o 0,2. La métrica **sí es correcta** (de 19 visitas que vieron la
-   pantalla inicial y no eligieron, 17 se fueron sin ver el menú), pero conviene decir "17 de
-   32 personas" y nombrar la pantalla como la ve el cliente.
-4. **Falta el widget de categorías del chat.** El dato ya está: los taps de categoría se
+3. **Sugerencias con IA (idea aprobada, para más adelante).** Las reglas de `suggestions()`
+   solo ven las métricas; no ven **el menú**. Una IA sí puede cruzarlos y decir lo que ninguna
+   regla puede: *"te preguntaron 5 veces por opciones sin TACC y tenés 3 platos que lo son
+   pero sin etiquetar"*. La infraestructura ya está (`IntentClassifierService`, `gpt-4o-mini`,
+   job + registro de corridas, feature de plan).
+
+   **La guarda que no hay que perder: la IA redacta y prioriza, no calcula.** Los números los
+   sigue sacando PHP y se le pasan ya resueltos; si la dejamos contar, va a inventar cifras y
+   platos que no existen — y una sugerencia con un número falso es peor que ninguna. Guardar
+   el resultado como los `intents` (no generar en cada carga del panel) y mantener el piso de
+   volumen: con 6 consultas en el mes no hay nada que sugerir, ni con reglas ni con IA.
+4. **`demandaInsatisfecha()` no singulariza.** Agrupa sin acentos y en minúsculas, pero
+   "colita de rana" y "colita de ranas" salen como dos líneas distintas (visto en datos
+   reales). `getTopWords()` ya resuelve esto con `singularizar()`; falta aplicarlo también
+   acá, palabra por palabra sobre la clave normalizada.
+5. **Falta el widget de categorías del chat.** El dato ya está: los taps de categoría se
    guardan con `origen = 'categoria'` y el mensaje dice cuál. Es trabajo de panel, no de
    tracking.
-5. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
+6. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
    sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
    recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
    (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
-6. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
+7. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
    usados" ya da el insumo para decidir cuáles dejar.
+
+> Dato para dimensionar el pendiente 3: hoy **27 de 42** mensajes caen en la categoría
+> "Otras" del rule-based. Las palabras clave no alcanzan para lo que la gente pregunta de
+> verdad, y eso también castiga a las sugerencias, que se apoyan en esa clasificación.
 
 ## Tests
 

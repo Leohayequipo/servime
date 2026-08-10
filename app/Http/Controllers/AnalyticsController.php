@@ -225,9 +225,11 @@ class AnalyticsController extends Controller
         // Intención de las consultas + sugerencias accionables
         $insights = new AnalyticsInsightsService;
         $intents = $insights->intents($comercioId);
-        $suggestions = $insights->suggestions($comercioId, $metrics, $intents);
-        // Consultas donde el bot no encontró nada: lo que le piden y no tiene
+        // Consultas donde el bot no encontró nada: lo que le piden y no tiene. Se calcula
+        // antes porque es la primera sugerencia (la única que puede terminar en un plato
+        // nuevo en la carta), así no se consulta dos veces.
         $demandaInsatisfecha = $insights->demandaInsatisfecha($comercioId);
+        $suggestions = $insights->suggestions($comercioId, $metrics, $intents, $demandaInsatisfecha);
 
         // Última clasificación con IA (para el botón Premium)
         $ultimaClasificacion = IntentClassificationRun::where('comercio_id', $comercioId)->latest()->first();

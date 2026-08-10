@@ -135,61 +135,92 @@ class AnalyticsInsightsService
         return $salida;
     }
 
+    /** No se afirma nada con menos de esto: por debajo, dos o tres consultas son casualidad. */
+    private const MIN_MENSAJES = 12;
+
+    /** Ídem para lo que sale de los eventos del menú. */
+    private const MIN_VISITAS = 15;
+
+    /** Cuántas sugerencias se muestran: una lista larga no se lee y todo pesa lo mismo. */
+    private const MAX_SUGERENCIAS = 5;
+
     /**
      * Sugerencias accionables a partir de la intención + métricas de comportamiento.
+     *
+     * Tres reglas que se ganaron a los golpes:
+     *
+     * 1. **Cada sugerencia dice su número.** "Varios clientes preguntan por delivery" se
+     *    ignora; "6 personas preguntaron por delivery" se lee. Y si el número está, el
+     *    comercio puede juzgar solo si le importa.
+     * 2. **Con poco volumen no se habla.** El umbral viejo (3 menciones) afirmaba "hay
+     *    demanda de X" con tres consultas en un mes, que es ruido.
+     * 3. **Se ordenan por lo que valen y se cortan.** Primero la plata (lo que piden y no
+     *    tenés), después los problemas, al final las mejoras de información.
+     *
+     * @param  array<int, array{consulta:string, veces:int}>  $demanda  de demandaInsatisfecha()
      */
-    public function suggestions($comercioId, array $metrics, array $intents): array
+    public function suggestions($comercioId, array $metrics, array $intents, array $demanda = []): array
     {
         $sug = [];
         $total = $intents['total'];
         $counts = $intents['counts'];
-        $umbral = max(3, (int) ceil($total * 0.15));
+        $f = $metrics['funnel'];
 
-        // Intenciones con demanda -> aclarar esa info en el menú
-        $mensajes = [
-            'Envío / Delivery' => 'Varios clientes preguntan por envíos/delivery. Aclará si hacés y la zona de reparto.',
-            'Horario' => 'Te consultan seguido por el horario. Conviene tenerlo bien visible.',
-            'Medios de pago' => 'Hay consultas por medios de pago. Aclará qué aceptás (tarjeta, efectivo, transferencia).',
-            'Reservas' => 'Te preguntan por reservas/mesas. Mostrá cómo reservar.',
-            'Ubicación' => 'Consultan por la ubicación. Sumá dirección y cómo llegar.',
-            'Dieta / Restricciones' => 'Hay demanda de opciones aptas (sin TACC, vegano, etc.). Destacalas en el menú.',
-        ];
-        foreach ($mensajes as $intent => $texto) {
-            if (($counts[$intent] ?? 0) >= $umbral) {
-                $sug[] = ['icon' => 'idea', 'text' => $texto];
-            }
+        // 1. Lo que le piden y no tiene: es la única sugerencia que puede terminar en un
+        // plato nuevo en la carta, así que va primera. Solo las que se repiten.
+        foreach (array_slice(array_filter($demanda, fn ($d) => $d['veces'] >= 2), 0, 2) as $d) {
+            $sug[] = ['icon' => 'alert', 'text' => $d['veces'].' clientes preguntaron por "'.$d['consulta'].'" y el asistente no encontró nada. Si lo tenés, cargalo bien en el menú; si no, quizás valga la pena sumarlo.'];
         }
 
-        // Calidad del asistente (últimos 30 días)
-        if ($total >= 8) {
+        // 2. El asistente no pudo responder: se pierde la consulta de un cliente real.
+        if ($total >= self::MIN_MENSAJES) {
             $base = ChatConversation::forComercio($comercioId)->recent(30);
             $tot = (clone $base)->count();
             $fb = (clone $base)->where('used_openai', false)->count();
             if ($tot > 0 && $fb / $tot >= 0.25) {
-                $sug[] = ['icon' => 'alert', 'text' => 'El asistente no pudo responder el '.round($fb / $tot * 100).'% de las consultas. Revisá que el menú y los datos del comercio estén completos.'];
+                $sug[] = ['icon' => 'alert', 'text' => 'El asistente no pudo responderle a '.$fb.' de '.$tot.' consultas. Suele ser que se agotó la cuota de tu plan: escribinos.'];
             }
             // El tiempo de respuesta no va acá: es infraestructura nuestra (modelo, red,
             // largo de la respuesta), el comercio no puede hacer nada con ese dato y no
             // sugería ninguna acción. Queda como nota para el super admin en el panel.
         }
 
-        // Embudo: ven la pantalla de elección pero no eligen.
+        // 3. Entran y se van de la primera pantalla.
         //
         // El ratio va contra 'vieron_eleccion', no contra 'visitas': quien entra directo al
         // chat nunca ve esa pantalla, así que no puede elegir y no corresponde contarlo.
         // Antes se dividía por el total de visitas y el aviso salía casi siempre.
-        $f = $metrics['funnel'];
         $vieron = $f['vieron_eleccion'] ?? 0;
-        if ($vieron >= 10 && $f['eligieron'] / max(1, $vieron) < 0.5) {
-            $sug[] = ['icon' => 'funnel', 'text' => 'De cada 10 que ven la pantalla inicial, menos de 5 eligen cómo ver el menú. Revisá que se entienda qué hacer ahí.'];
+        $seFueron = $vieron - $f['eligieron'];
+        if ($vieron >= self::MIN_VISITAS && $f['eligieron'] / max(1, $vieron) < 0.5) {
+            $sug[] = ['icon' => 'funnel', 'text' => $seFueron.' de las '.$vieron.' personas que abrieron tu menú se fueron de la primera pantalla sin elegir cómo verlo. Revisá que se entienda qué tienen que tocar ahí.'];
         }
 
-        // Promos con clicks pero sin interés en pedir
+        // 4. Promos que se miran y no enganchan.
         if ($metrics['topPromos']->isNotEmpty() && $f['interesados'] === 0) {
-            $sug[] = ['icon' => 'flame', 'text' => 'Tus promos reciben clicks pero nadie llegó a "Lo quiero". Quizás la oferta o el precio no terminan de cerrar.'];
+            $sug[] = ['icon' => 'flame', 'text' => 'Tus promos recibieron '.$metrics['topPromos']->sum().' clicks pero nadie llegó a tocar "Lo quiero". Quizás la oferta o el precio no terminan de cerrar.'];
         }
 
-        return $sug;
+        // 5. Información que les falta y te la vienen a preguntar al chat.
+        $mensajes = [
+            'Envío / Delivery' => 'preguntaron por envíos. Aclará en el menú si hacés delivery y hasta dónde llegás.',
+            'Horario' => 'preguntaron por el horario. Cargalo en tu perfil así el menú lo muestra siempre.',
+            'Medios de pago' => 'preguntaron cómo se paga. Aclará si tomás tarjeta, transferencia o solo efectivo.',
+            'Reservas' => 'preguntaron por reservas. Sumá al menú cómo reservar una mesa.',
+            'Ubicación' => 'preguntaron dónde estás. Sumá la dirección y cómo llegar.',
+            'Dieta / Restricciones' => 'preguntaron por opciones aptas (sin TACC, vegano). Etiquetá esos platos para que el asistente los encuentre.',
+        ];
+        if ($total >= self::MIN_MENSAJES) {
+            $umbral = max(4, (int) ceil($total * 0.15));
+            foreach ($mensajes as $intent => $texto) {
+                $n = $counts[$intent] ?? 0;
+                if ($n >= $umbral) {
+                    $sug[] = ['icon' => 'idea', 'text' => $n.' personas '.$texto];
+                }
+            }
+        }
+
+        return array_slice($sug, 0, self::MAX_SUGERENCIAS);
     }
 
     private function normalizar(string $texto): string
