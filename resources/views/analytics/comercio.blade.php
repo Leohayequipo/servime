@@ -171,10 +171,12 @@
                     $clPct = $totalChoice ? 100 - $iaPct : 0;
                 @endphp
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                         <x-icono name="split" class="w-4 h-4 flex-none opacity-60" />
                         ¿IA o menú clásico?
+                        <x-ayuda titulo="¿IA o menú clásico?" texto="Qué elige la gente al llegar: preguntarle al asistente o ver el menú de toda la vida. Se cuenta una vez por visita y vale la primera elección, así que quien va y vuelve entre los dos no inclina la balanza. Si alguien probó los dos, se avisa aparte. Tené en cuenta que la pantalla inicial no los ofrece parejos: el asistente está en un botón grande y con atajos, y el menú completo en un link más abajo." />
                     </h3>
+                    <p class="text-text-secondary text-sm mb-4">Con qué entra cada visita.</p>
                     @if($totalChoice > 0)
                         <div class="flex h-5 rounded-full overflow-hidden mb-4">
                             <div class="bg-amber-500" style="width: {{ $iaPct }}%"></div>
@@ -184,6 +186,11 @@
                             <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
                             <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
                         </div>
+                        @if(($metrics['menuChoice']['ambos'] ?? 0) > 0)
+                            <p class="text-xs text-text-secondary mt-3">
+                                {{ $metrics['menuChoice']['ambos'] }} {{ $metrics['menuChoice']['ambos'] === 1 ? 'visita probó' : 'visitas probaron' }} las dos formas.
+                            </p>
+                        @endif
                     @else
                         <p class="text-text-secondary text-center py-4">Sin datos de elección todavía.</p>
                     @endif
@@ -290,8 +297,8 @@
                 </div>
             @endif
 
-            <!-- Dispositivo · Visitantes · Tiempo de sesión · Micrófono -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Dispositivo · Visitantes · Micrófono -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="phone" class="w-4 h-4 flex-none opacity-60" />
@@ -323,15 +330,13 @@
                     <p class="text-xs text-text-secondary mt-1">{{ $vs['nuevos'] }} nuevos</p>
                 </div>
 
-                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
-                    <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
-                        <x-icono name="clock" class="w-4 h-4 flex-none opacity-60" />
-                        Tiempo promedio en el menú
-                    </h3>
-                    @php $sec = $metrics['visitaAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
-                    <p class="text-4xl font-bold text-text-primary">{{ $dur }}</p>
-                    <p class="text-sm text-text-secondary mt-1">por visita ({{ $metrics['totalVisitas'] }} en total)</p>
-                </div>
+                {{-- Acá iba "Tiempo promedio en el menú". Se sacó porque el número no
+                     significaba nada: la duración es el rato entre el primer evento y el
+                     último, y no hay evento al salir, así que la última pantalla nunca se
+                     cuenta y la visita de un solo evento mide 0 s. Medido en local: mediana
+                     6 s contra un promedio de 7 minutos — el promedio no le pasaba a casi
+                     ninguna visita real. Vuelve cuando haya un evento de salida
+                     (pagehide/visibilitychange con sendBeacon) y se muestre la mediana. --}}
 
                 {{-- El dictado por voz termina en el input y se manda como texto, así que sin
                      su propio evento no había forma de saber si alguien usa el micrófono. --}}

@@ -275,12 +275,7 @@ class AnalyticsController extends Controller
             ->recent(30)
             ->get(['event', 'data', 'session_id', 'user_agent', 'created_at']);
 
-        // Elección IA vs Clásico
         $choices = $events->where('event', 'menu_choice');
-        $menuChoice = [
-            'ia' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'ia')->count(),
-            'classic' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'classic')->count(),
-        ];
 
         // Por dónde entran: el botón grande, un chip sugerido (y cuál) o el menú completo.
         // Va en clicks y no en visitas a propósito: la pregunta acá no es cuánta gente
@@ -317,6 +312,31 @@ class AnalyticsController extends Controller
         // Cuántas visitas contienen al menos un evento que cumpla la condición.
         $visitasCon = fn (callable $cumple) => $visitas->filter(fn ($evs) => $evs->contains($cumple))->count();
 
+        // Elección IA vs Clásico: por VISITA y con la PRIMERA elección de cada una.
+        //
+        // Antes se contaban clicks y el widget mostraba 25 contra 6 al lado de un embudo
+        // que decía 13: los dos números hablaban de lo mismo y no cerraban. Una sola visita
+        // llegó a elegir 11 veces (ir y volver entre el chat y el menú), así que el ratio
+        // lo decidía la persona más indecisa, no la mayoría.
+        //
+        // Se toma la primera y no todas para que cada visita valga uno y la suma cierre con
+        // el escalón "eligieron una opción" del embudo. Quien probó las dos se cuenta aparte
+        // en 'ambos': que alguien empiece con la IA y termine en el menú completo es un dato
+        // en sí mismo, pero no puede sumar de los dos lados.
+        $primeras = $visitas
+            ->map(fn ($evs) => $evs->first(fn ($e) => $e->event === 'menu_choice' && in_array($e->data['choice'] ?? null, ['ia', 'classic'], true)))
+            ->filter();
+
+        $menuChoice = [
+            'ia' => $primeras->filter(fn ($e) => $e->data['choice'] === 'ia')->count(),
+            'classic' => $primeras->filter(fn ($e) => $e->data['choice'] === 'classic')->count(),
+            'ambos' => $visitas->filter(function ($evs) {
+                $modos = $evs->where('event', 'menu_choice')->map(fn ($e) => $e->data['choice'] ?? null)->unique();
+
+                return $modos->contains('ia') && $modos->contains('classic');
+            })->count(),
+        ];
+
         // Embudo por visita: visita -> ve la elección -> elige -> muestra interés.
         //
         // 'vieron_eleccion' es un paso propio porque solo quien PASÓ por esa pantalla puede
@@ -348,11 +368,12 @@ class AnalyticsController extends Controller
             $heatmapMax = max($heatmapMax, $heatmap[$dow][$hour]);
         }
 
-        // Duración: por visita, no por visitante (ver GAP_VISITA_MINUTOS)
-        $duraciones = $visitas->map(
-            fn ($evs) => $evs->max('created_at')->getTimestamp() - $evs->min('created_at')->getTimestamp()
-        );
-        $visitaAvgSeconds = $duraciones->isNotEmpty() ? (int) round($duraciones->avg()) : 0;
+        // Acá se calculaba la duración promedio por visita. Se sacó junto con su tarjeta: la
+        // duración es el rato entre el primer evento y el último, y como no hay evento al
+        // salir, la última pantalla nunca se cuenta y la visita de un solo evento mide 0 s.
+        // Medido en local: mediana 6 s contra un promedio de 7 minutos, o sea el promedio no
+        // le pasaba a casi ninguna visita. Para que vuelva hace falta primero el evento de
+        // salida (pagehide/visibilitychange con sendBeacon) y mostrar la mediana.
 
         // Por visitante: dispositivo y recurrencia (recurrente = volvió al menos una vez)
         $devices = ['movil' => 0, 'desktop' => 0, 'tablet' => 0];
@@ -366,8 +387,8 @@ class AnalyticsController extends Controller
         $totalVisitas = $visitas->count();
 
         return compact('menuChoice', 'entradas', 'topChips', 'topPromos', 'topDishes', 'funnel',
-            'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'visitaAvgSeconds',
-            'totalVisitantes', 'totalVisitas');
+            'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'totalVisitantes',
+            'totalVisitas');
     }
 
     /**

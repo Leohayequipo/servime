@@ -145,8 +145,8 @@ class AnalyticsTrackingTest extends TestCase
         $this->assertSame(1, $metrics['visitors']['recurrentes']);
         $this->assertSame(1, $metrics['visitors']['nuevos']);
 
-        // Promedio por visita: (5min + 2min + 0) / 3 = 140s. Sin el corte daban 10 días.
-        $this->assertSame(140, $metrics['visitaAvgSeconds']);
+        // El corte por inactividad lo fija totalVisitas = 3: sin él, los eventos de este
+        // visitante (separados por 10 días) caerían todos en una sola visita.
 
         // El embudo también cuenta visitas: 3 con page_view, 2 que vieron la pantalla inicial
         $this->assertSame(3, $metrics['funnel']['visitas']);
@@ -271,6 +271,35 @@ class AnalyticsTrackingTest extends TestCase
         $this->assertSame(1, $metrics['funnel']['armaron_pedido']);
         $this->assertSame(1, $metrics['vozVisitas']);
         $this->assertSame(3, $metrics['totalVisitas']);
+    }
+
+    public function test_ia_vs_clasico_cuenta_visitas_y_no_clicks(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        // Un indeciso que va y vuelve cinco veces dentro de la misma visita: vale su
+        // primera elección (ia) y no puede inclinar el ratio él solo.
+        foreach ([0, 1, 2, 3, 4] as $i) {
+            $this->evento($comercio, 'v1', 'menu_choice', $ahora->copy()->addMinutes($i),
+                ['choice' => $i % 2 === 0 ? 'ia' : 'classic']);
+        }
+        // Dos visitas que eligieron el clásico y nada más.
+        $this->evento($comercio, 'v2', 'menu_choice', $ahora, ['choice' => 'classic']);
+        $this->evento($comercio, 'v3', 'menu_choice', $ahora, ['choice' => 'classic']);
+
+        $metrics = $this->actingAs($admin)
+            ->get(route('analytics.comercio', $comercio))->assertOk()
+            ->viewData('metrics');
+
+        $this->assertSame(1, $metrics['menuChoice']['ia']);
+        $this->assertSame(2, $metrics['menuChoice']['classic']);
+        // Cada visita vale una, así que la suma cierra con el escalón del embudo.
+        $this->assertSame(3, $metrics['funnel']['eligieron']);
+        $this->assertSame(1, $metrics['menuChoice']['ambos']);
     }
 
     public function test_el_endpoint_acepta_los_eventos_nuevos(): void

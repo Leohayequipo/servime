@@ -18,15 +18,26 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
 
 - **Endpoint:** `POST /api/track/{comercio:slug}` (`TrackingController@store`, ruta `track`),
   `throttle:120,1`, sin auth, **excluido de CSRF** (`VerifyCsrfToken::$except` → `api/track/*`).
-- **Whitelist de eventos** (`TrackingController::ALLOWED_EVENTS`): `page_view` (data.view: choose|chat|classic),
-  `menu_choice` (data.choice: ia|classic), `promo_click` (data.promo), `dish_want` (data.nombre, data.price).
-  Eventos fuera de la lista se ignoran silenciosamente (204).
+- **Whitelist de eventos** (`TrackingController::ALLOWED_EVENTS`), los de fuera se ignoran
+  silenciosamente (204):
+
+  | Evento | data | Se dispara en |
+  |---|---|---|
+  | `page_view` | `view: choose\|chat\|classic` | al cargar cada vista |
+  | `menu_choice` | `choice: ia\|classic`, `desde: cta\|chip\|completo`, `label` | `[data-track-choice]` |
+  | `promo_click` | `promo` | `.cat-chip-promo` |
+  | `dish_want` | `nombre`, `price` | `.btn-lo-quiero` |
+  | `order_summary` | `items` | abrir el "Resumen para el mozo" (`#fabWish`) |
+  | `mic_start` | — | `recognition.onstart` del dictado por voz |
+
 - **Frontend:** partial `resources/views/menu/partials/tracking.blade.php`, incluido en
-  `menu/choose|chat|classic` con `['trackView' => '...']`. Define `window.smTrack(event, data)`
-  (usa `navigator.sendBeacon`), dispara `page_view` al cargar y delega clicks:
-  `[data-track-choice]` (cards de choose) → menu_choice; `.cat-chip-promo` → promo_click;
-  `.btn-lo-quiero` → dish_want. Reusa el `session_id` del chat (`servime_chat_session_{id}`),
-  así los eventos correlacionan con las conversaciones.
+  `menu/portada|choose|chat|classic` con `['trackView' => '...']`. Define `window.smTrack(event, data)`
+  (usa `navigator.sendBeacon`), dispara `page_view` al cargar y delega los clicks de la tabla.
+  Reusa el `session_id` del chat (`servime_chat_session_{id}`), así los eventos correlacionan
+  con las conversaciones.
+- **`order_summary` va solo al ABRIR** el panel (es un toggle): si se mandara también al cerrar,
+  el indeciso valdría el doble. Y `mic_start` existe porque el dictado termina en el input y se
+  manda como texto: sin evento propio es indistinguible de escribir.
 
 ## Panel (`AnalyticsController`, rutas `analytics.*`, gateadas por feature `analytics`)
 
@@ -79,7 +90,7 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
 - **Métricas extra (hechas, sin IA):** dispositivo (móvil/desktop/tablet desde `user_agent`),
   visitantes que vuelven (visitante con ≥2 visitas) y tiempo promedio **por visita**.
   Calculadas en `getEventMetrics()` desde `tracking_events`. Claves que van a la vista:
-  `funnel` (por visita), `visitaAvgSeconds`, `totalVisitas`, `devices`/`visitors`/`totalVisitantes`
+  `funnel` (por visita), `totalVisitas`, `devices`/`visitors`/`totalVisitantes`
   (por visitante).
 - **Qué mira el comercio y qué miramos nosotros (decidido, hecho a medias).** Las métricas de
   infraestructura no van en el panel del comercio: no puede hacer nada con ellas y las
@@ -89,34 +100,61 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   En su lugar entró **Personas** (`totalVisitantes`). Toda tarjeta lleva su período en la nota.
   Las que no se explican solas llevan un `?` (prop `ayuda` de `x-stat` → helper `showInfo`;
   ojo: SweetAlert2 no respeta saltos de línea en `text`, un párrafo por ayuda).
-- **Pendiente — los chips de la portada cuentan como texto escrito.** El chip lleva a
-  `/chat?q=...` y el front lo dispara sin `tipo`, así que se guarda con `origen = 'escrito'`
-  (medido: 15% de los mensajes). Infla palabras top, preguntas frecuentes e intención. Falta un
-  `origen = 'chip'`, y para eso hay que separar "de dónde vino el mensaje" de "cómo responde el
-  modelo": hoy el campo `tipo` hace las dos cosas. Detalle en la skill `portada`.
-- **Pendiente — "¿IA o menú clásico?" cuenta clicks, no personas.** `menuChoice` suma eventos
-  mientras el embudo de al lado suma visitas, así que los dos widgets se contradicen en pantalla
-  (medido: 25/6 por evento contra 11/5 por visita; una sola visita eligió 11 veces y 3 visitas
-  eligieron los dos modos, sumando de ambos lados). Pasarlo a visitas, como el resto.
-- **Pendiente — el tiempo promedio por visita mezcla rebotes.** La duración es `max - min` de
-  los eventos, así que una visita de un solo evento mide 0 s: 16 de 37 visitas caen ahí y
-  arrastran el promedio (7m26s con ellas, 13m06s sin ellas). Decidir si se excluyen o si se
-  usa la mediana — con 37 visitas, una pestaña olvidada de 85 minutos mueve la media.
-- **Pendiente — la sugerencia del embudo no dice el número real.** El texto es fijo ("menos de
-  5 de cada 10") y sale igual sea 4,9 o 0,2. Verificado que la métrica **sí es correcta** (de
-  19 visitas que vieron la pantalla inicial y no eligieron, 17 se fueron sin ver el menú), pero
-  conviene decir "17 de 32 personas" y nombrar la pantalla como la ve el cliente.
-- **Pendiente — reconocer al que vuelve en iPhone:** Safari (ITP) borra el localStorage a los
-  **7 días** sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
-  recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
-  (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
+- **Unidad de medida: por visita salvo que la pregunta sea otra (hecho).** El embudo,
+  `menuChoice` y el micrófono cuentan **visitas**; "¿Por dónde entran?" y "Atajos más usados"
+  cuentan **clicks a propósito** (ahí la pregunta es qué botón se usa, no cuánta gente entró) y
+  lo dicen en su ayuda. `menuChoice` toma la **primera** elección de cada visita, no todas: así
+  cada visita vale uno y la suma cierra exacto con el escalón "eligieron" del embudo. Antes
+  contaba clicks y mostraba 25/6 al lado de un embudo que decía 13 — una sola visita había
+  elegido 11 veces. Quien probó los dos modos va aparte en `menuChoice['ambos']` (nota al pie
+  del widget), porque no puede sumar de ambos lados.
+- **El embudo cierra en `order_summary` (hecho).** "Lo quiero" es un click sobre un plato
+  suelto; abrir el pedido para revisarlo es lo más cerca de una venta que podemos medir. El
+  escalón **exige `items > 0`**: el panel se puede abrir vacío y sin esa condición el último
+  escalón salía más grande que el anterior, que en un embudo no puede pasar.
 - **Rate limiting (hecho):** las rutas públicas ya no cuentan por IP sino por dispositivo
   (limitadores `chat-ia`, `carrito` y `tracking` en `AppServiceProvider`), así que un local
   lleno no se come el cupo entre todos y deja de perder eventos por 429. Ver CLAUDE.md.
   Verificado que **no hay Cloudflare** adelante: `$request->ip()` es la IP real del cliente.
 
+## Pendientes
+
+Los números son de la base local de Azopardo, medidos al auditar el panel contra la base.
+
+1. **Los chips de la portada cuentan como texto escrito.** El chip lleva a `/chat?q=...` y el
+   front lo dispara sin `tipo`, así que se guarda con `origen = 'escrito'` (15% de los
+   mensajes). Infla palabras top, preguntas frecuentes e intención. Falta un `origen = 'chip'`,
+   y para eso hay que separar "de dónde vino el mensaje" de "cómo responde el modelo": hoy el
+   campo `tipo` hace las dos cosas y tocarlo cambia el prompt. Detalle en la skill `portada`.
+2. **No se puede medir cuánto se queda la gente, y por eso se sacó la tarjeta.** La duración
+   era `max - min` de los eventos, pero **no hay evento al salir**: el rato entre la última
+   acción y el cierre de la pestaña se pierde siempre, y la visita de un solo evento mide 0 s.
+   Medido: mediana **6 s** contra un promedio de **7 minutos** — el promedio no le pasaba a
+   casi ninguna visita. Se descartó cruzarlo con `chat_conversations` (mismo `session_id`):
+   probado, mueve 18 segundos y rescata una sola visita, porque el que chatea igual toca cosas.
+   Para que vuelva: evento de salida (`pagehide`/`visibilitychange` con `sendBeacon`, el mismo
+   mecanismo de `smTrack`) **y** mostrar la mediana, no el promedio.
+3. **La sugerencia del embudo no dice el número real.** El texto es fijo ("menos de 5 de cada
+   10") y sale igual sea 4,9 o 0,2. La métrica **sí es correcta** (de 19 visitas que vieron la
+   pantalla inicial y no eligieron, 17 se fueron sin ver el menú), pero conviene decir "17 de
+   32 personas" y nombrar la pantalla como la ve el cliente.
+4. **Falta el widget de categorías del chat.** El dato ya está: los taps de categoría se
+   guardan con `origen = 'categoria'` y el mensaje dice cuál. Es trabajo de panel, no de
+   tracking.
+5. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
+   sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
+   recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
+   (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
+6. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
+   usados" ya da el insumo para decidir cuáles dejar.
+
 ## Tests
 
 `tests/Feature/AnalyticsTrackingTest.php`: endpoint (evento válido, whitelist, validación),
-panel (binding por slug, scope, gating por feature, aislamiento entre comercios) y visitas
-(corte por inactividad, recurrencia, promedio por visita, eventos sin `session_id`).
+panel (binding por slug, scope, gating por feature, aislamiento entre comercios), visitas
+(corte por inactividad, recurrencia, promedio por visita, eventos sin `session_id`) y las
+unidades de medida: el desglose de `desde`/`label`, que el embudo exige `items > 0` para
+cerrar, el micrófono por visita y que un indeciso con 5 clicks vale **una** elección.
+
+`tests/Feature/DemandaInsatisfechaTest.php`: "Te lo pidieron y no lo tenés" solo cuenta lo que
+el cliente **tipeó** — el "Ver más" reenvía la consulta y duplicaba el faltante.
