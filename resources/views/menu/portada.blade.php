@@ -138,11 +138,18 @@
             animation: drift 26s ease-in-out infinite alternate;
             will-change: transform;
         }
+        /* Velo mínimo: la foto es lo que el comercio quiere mostrar y el velo
+           anterior le comía el último 18% hasta disolverla en el fondo.
+           Queda sólo lo que cumple una función:
+             - arriba, un oscurecido corto para que se lea la píldora de estado
+               sobre cualquier foto (una con cielo blanco la haría desaparecer);
+             - abajo, una insinuación en el último 12% que no llega a tapar. */
         .hero::after {
             content: ''; position: absolute; inset: 0; pointer-events: none;
             background: linear-gradient(180deg,
-                rgba(0,0,0,.28) 0%, rgba(0,0,0,0) 34%,
-                color-mix(in srgb, var(--base) 58%, transparent) 82%, var(--base) 100%);
+                rgba(0,0,0,.24) 0%, rgba(0,0,0,0) 30%,
+                color-mix(in srgb, var(--base) 0%, transparent) 88%,
+                color-mix(in srgb, var(--base) 72%, transparent) 100%);
         }
         .pill-estado {
             position: absolute; top: 13px; right: 13px; z-index: 2;
