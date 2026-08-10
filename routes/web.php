@@ -211,16 +211,19 @@ Route::post('/api/visit-confirm', function (\Illuminate\Http\Request $request) {
 Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
 Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');
 Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
-Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chat.api');
+// Chat con IA. Los límites 'chat-ia'/'tracking'/'carrito' van por dispositivo y no por IP:
+// todos los clientes de un local salen por el mismo wifi (ver AppServiceProvider).
+Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])
+    ->middleware('throttle:chat-ia')->name('chat.api');
 Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
-    ->middleware('throttle:20,1')->name('chat.stream');
+    ->middleware('throttle:chat-ia')->name('chat.stream');
 
 // Tracking de eventos del menú público (sin auth, por sesión)
 Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
-    ->middleware('throttle:120,1')->name('track');
+    ->middleware('throttle:tracking')->name('track');
 
 // API ligera para carrito (por sesión, sin auth)
-Route::prefix('api/cart')->middleware('throttle:60,1')->group(function () {
+Route::prefix('api/cart')->middleware('throttle:carrito')->group(function () {
     Route::post('/show', [App\Http\Controllers\CartController::class, 'show'])->name('api.cart.show');
     Route::post('/incr', [App\Http\Controllers\CartController::class, 'incr'])->name('api.cart.incr');
     Route::post('/remove', [App\Http\Controllers\CartController::class, 'remove'])->name('api.cart.remove');

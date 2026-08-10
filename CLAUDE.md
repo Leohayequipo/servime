@@ -62,8 +62,17 @@ npm run dev   /   npm run build
 
 ## Seguridad / convenciones ya establecidas
 
-- Rate limiting en endpoints calientes: chat IA `throttle:20,1`, carrito `60,1`,
-  crear menú `5,1`, landing-chat `20,1`.
+- **Rate limiting.** Las rutas públicas del menú usan limitadores con nombre definidos en
+  `AppServiceProvider::configurarRateLimiters()`: `chat-ia` (20/min por dispositivo + 60/min
+  por IP), `carrito` (60 + 300) y `tracking` (120 + 600). Van **por dispositivo** (el
+  `session_id` del front, por header `X-Session-ID` o por body) porque todos los clientes de
+  un local salen por el mismo wifi y con el throttle por IP se comían el cupo entre todos.
+  El segundo límite por IP no sobra: el `session_id` lo elige el cliente y se puede rotar.
+  Al sumar una ruta pública nueva, usar estos limitadores y no `throttle:N,1`.
+  Resto: crear menú `5,1`, landing-chat `20,1` (esas sí son por IP, y está bien).
+- **No hay proxy adelante** (verificado: Hostinger/LiteSpeed directo, sin Cloudflare), así que
+  `$request->ip()` es la IP real del cliente. No configurar `trustProxies`: haría que la IP
+  se pueda falsear por header y con eso se saltearían los límites del chat, que cuesta plata.
 - Rutas públicas resuelven comercio por `slug` (binding `{comercio:slug}`), no por id.
 - Servir logos valida path-traversal con `realpath` + prefijo permitido (ver `web.php`).
 - Menús con SoftDeletes; índices en `menus`; FK en `carts`.
