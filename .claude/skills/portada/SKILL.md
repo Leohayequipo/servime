@@ -177,6 +177,36 @@ El slug es `/menu/{slug}` y **está impreso en los QR de las mesas**.
 Sirve el menú directamente (200), **no redirige con 301**. Las vistas emiten `<link rel=canonical>`
 apuntando a la URL actual.
 
+## Dependencias
+
+Declaradas en `composer.json` como **`ext-gd`** y **`ext-exif`**. No estaban antes: sin
+declararlas, un server sin GD pasa el `composer install` sin decir nada y la feature revienta
+recién cuando un comercio sube una foto, con un error críptico en el log. `ext-exif` es la que
+endereza las fotos verticales de celular (el código tiene guarda, pero sin ella salen acostadas).
+
+Todo el procesado es **GD pelado**. Dos cosas para no perder tiempo redescubriéndolas:
+
+- **`intervention/image` está en las dependencias pero no se usa en ningún lado** del proyecto.
+  Se dejó "por las dudas". Envuelve GD igual, y las dos cosas raras que hace este servicio —la
+  pirámide de desenfoque y el conteo de colores píxel por píxel— no las resuelve mejor.
+- **Imagick no está instalado** (aparece la advertencia `Unable to load dynamic library 'imagick'`
+  en cada comando). Tiene desenfoque gaussiano de radio configurable y lee HEIC; si algún día
+  se instala, la pirámide de `desenfocar()` se puede reemplazar por una sola llamada.
+
+**HEIC** (formato por defecto de iPhone) **no se puede abrir con GD**: va a llegar y hoy termina
+en `portada_estado = 'error'` con un mensaje genérico.
+
 ## Tests
 
-`tests/Feature/ComercioSlugTest.php` (7) y `tests/Feature/PortadaTest.php` (5).
+| Archivo | Qué fija |
+|---|---|
+| `tests/Feature/PortadaTest.php` (6) | estado consultable sólo por el dueño, reintento encola, **mover el punto focal NO encola nada** |
+| `tests/Feature/HorariosTest.php` (6) | sin horarios devuelve `null`, cruce de medianoche, turno partido, próxima apertura |
+| `tests/Feature/ComercioSlugTest.php` (7) | nombre repetido no rompe, renombrar archiva el slug, la URL vieja sigue entrando |
+
+## Pendientes conocidos
+
+- El **chatbot no usa los horarios** aunque el dato ya exista (`ChatbotController:252` deflecta).
+- **No hay aviso de cola frenada**: si el worker está caído, se descubre a mano.
+- El **cron del worker en producción no está en el repo**, vive sólo en el hPanel de Hostinger.
+- `store()` no maneja portada: se configura después de crear, desde editar (decisión, no olvido).
