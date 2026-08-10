@@ -5,6 +5,7 @@
     'delta' => null,     // variación % contra el período anterior (int, puede ser negativo)
     'serie' => null,     // array<int> para el sparkline
     'tono' => 'neutro',  // neutro | alerta | ok
+    'ayuda' => null,     // explica CÓMO se mide el dato (abre un modal al tocar el "?")
 ])
 
 {{--
@@ -40,7 +41,12 @@
 
 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-5 flex flex-col">
     <div class="flex items-start justify-between gap-2">
-        <p class="text-xs font-medium uppercase tracking-wide text-text-secondary">{{ $label }}</p>
+        <p class="text-xs font-medium uppercase tracking-wide text-text-secondary flex items-center gap-1.5">
+            {{ $label }}
+            @if($ayuda)
+                <x-ayuda :texto="$ayuda" :titulo="$label" />
+            @endif
+        </p>
         @if($delta !== null)
             {{-- La variación se colorea por dirección, no por gusto: es el único color
                  que aporta información en la tarjeta. --}}

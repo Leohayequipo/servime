@@ -168,10 +168,9 @@ class AnalyticsInsightsService
             if ($tot > 0 && $fb / $tot >= 0.25) {
                 $sug[] = ['icon' => 'alert', 'text' => 'El asistente no pudo responder el '.round($fb / $tot * 100).'% de las consultas. Revisá que el menú y los datos del comercio estén completos.'];
             }
-            $avg = (clone $base)->whereNotNull('response_time_ms')->avg('response_time_ms');
-            if ($avg && $avg > 6000) {
-                $sug[] = ['icon' => 'clock', 'text' => 'El tiempo de respuesta del asistente es alto ('.round($avg / 1000, 1).'s).'];
-            }
+            // El tiempo de respuesta no va acá: es infraestructura nuestra (modelo, red,
+            // largo de la respuesta), el comercio no puede hacer nada con ese dato y no
+            // sugería ninguna acción. Queda como nota para el super admin en el panel.
         }
 
         // Embudo: ven la pantalla de elección pero no eligen.

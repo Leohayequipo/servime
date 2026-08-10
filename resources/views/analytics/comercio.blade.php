@@ -44,8 +44,10 @@
                 $prev = $stats['previos_30'];
                 $delta = $prev > 0 ? (int) round(($stats['ultimos_30'] - $prev) / $prev * 100) : null;
                 $sinResp = $stats['sin_responder'];
-                $pctSinResp = $stats['total_conversations'] > 0
-                    ? round($sinResp / $stats['total_conversations'] * 100)
+                // Contra las consultas del mismo período que el contador, no contra el
+                // histórico: si no, el porcentaje se diluía y no coincidía con el número.
+                $pctSinResp = $stats['ultimos_30'] > 0
+                    ? round($sinResp / $stats['ultimos_30'] * 100)
                     : 0;
             @endphp
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -55,25 +57,41 @@
                 <x-stat label="Consultas"
                         :value="number_format($stats['ultimos_30'], 0, ',', '.')"
                         :nota="$stats['total_conversations'] > $stats['ultimos_30']
-                            ? number_format($stats['total_conversations'], 0, ',', '.').' desde el inicio'
+                            ? 'últimos 30 días · '.number_format($stats['total_conversations'], 0, ',', '.').' desde el inicio'
                             : 'en los últimos 30 días'"
                         :delta="$delta"
                         :serie="$stats['serie']" />
 
+                {{-- Personas, no mensajes: "54 consultas" no distingue 50 clientes de 3
+                     indecisos. Va al lado de Consultas porque el par es el que se lee. --}}
+                <x-stat label="Personas"
+                        :value="$metrics['totalVisitantes']"
+                        nota="usaron tu menú · últimos 30 días"
+                        ayuda="Cuántos clientes distintos abrieron tu menú en los últimos 30 días, sin importar cuántas veces lo hayan mirado. «Consultas» cuenta mensajes; esto cuenta personas: 54 consultas pueden ser de 50 clientes o de 3 indecisos. Se identifica por dispositivo, así que quien entra desde el celular y después desde la computadora cuenta como dos, y si borra los datos del navegador vuelve a contar como alguien nuevo." />
+
+                {{-- El período va en cada nota y no solo en el encabezado: "respondió
+                     todas" sin decir de cuándo no se puede interpretar. --}}
+                <x-stat label="Sin responder"
+                        :value="$sinResp"
+                        :nota="($sinResp > 0 ? $pctSinResp.'% de las consultas' : 'respondió todas').' · últimos 30 días'"
+                        :tono="$sinResp > 0 ? 'alerta' : 'neutro'"
+                        ayuda="Las veces que un cliente escribió y el asistente no pudo contestarle, y le respondió un mensaje de disculpas. Pasa por dos motivos: se agotó la cuota mensual de mensajes de tu plan, o el servicio tuvo una falla puntual. En cero está todo bien; si el número sube, escribinos, porque puede que te convenga ampliar el plan." />
+
                 <x-stat label="Hoy"
                         :value="$stats['conversations_today']"
                         nota="consultas del día" />
-
-                <x-stat label="Sin responder"
-                        :value="$sinResp"
-                        :nota="$sinResp > 0 ? $pctSinResp.'% de las consultas' : 'respondió todas'"
-                        :tono="$sinResp > 0 ? 'alerta' : 'neutro'" />
-
-                <x-stat label="Tiempo de respuesta"
-                        :value="$stats['avg_response_time'] ? number_format($stats['avg_response_time'] / 1000, 1, ',', '.').' s' : '—'"
-                        :nota="$stats['avg_response_time'] && $stats['avg_response_time'] > 6000 ? 'más lento de lo deseable' : 'promedio'"
-                        :tono="$stats['avg_response_time'] && $stats['avg_response_time'] > 6000 ? 'alerta' : 'neutro'" />
             </div>
+
+            {{-- El tiempo de respuesta es infraestructura nuestra: el comercio no controla
+                 el modelo ni la red, así que ocupaba un cuarto de la fila para señalarle en
+                 ámbar un defecto que no puede arreglar. Queda como nota para el admin. --}}
+            @if(auth()->user()->isSuperAdmin() && $stats['avg_response_time'])
+                <p class="-mt-6 mb-8 text-xs text-text-secondary">
+                    Tiempo de respuesta del asistente:
+                    <b class="{{ $stats['avg_response_time'] > 6000 ? 'text-amber-500' : '' }}">{{ number_format($stats['avg_response_time'] / 1000, 1, ',', '.') }} s</b>
+                    promedio · últimos 30 días · solo visible para admins
+                </p>
+            @endif
 
             <!-- Sugerencias accionables -->
             @if(count($suggestions) > 0)
@@ -175,6 +193,7 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="funnel" class="w-4 h-4 flex-none opacity-60" />
                         Embudo de interés
+                        <x-ayuda titulo="Embudo de interés" texto="Muestra hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú y menos todavía tocan «Lo quiero». Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques: si alguien vuelve otro día es una visita nueva, pero si toca cinco veces seguidas sigue siendo una." />
                     </h3>
                     @php
                         $fv = $metrics['funnel']['visitas'];
@@ -208,6 +227,66 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Por dónde entran. El asistente tiene varias puertas (el botón grande y los
+                 chips sugeridos) y el menú completo una sola: sin este desglose, todas se
+                 mezclaban en el "IA vs clásico" de arriba y no se sabía si los chips servían.
+                 Se cuentan clicks, no personas: la pregunta es qué puerta se usa. --}}
+            @php
+                $en = $metrics['entradas'];
+                $enTotal = array_sum($en);
+                // Se nombran con el texto que el cliente ve en la portada, no con el
+                // nombre interno: el comercio reconoce sus botones por lo que dicen.
+                $puertas = [
+                    ['«Preguntame lo que quieras»', $en['cta'], 'bg-amber-500'],
+                    ['Atajos sugeridos', $en['chip'], 'bg-indigo-500'],
+                    ['«Quiero ver el menú completo»', $en['completo'], 'bg-gray-400 dark:bg-gray-600'],
+                ];
+            @endphp
+            @if($enTotal > 0)
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                        <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                            <x-icono name="split" class="w-4 h-4 flex-none opacity-60" />
+                            ¿Por dónde entran?
+                            <x-ayuda titulo="¿Por dónde entran?" texto="En la pantalla inicial hay tres caminos: el botón grande del asistente, los atajos sugeridos (que también abren el asistente, pero con la pregunta ya escrita) y el link al menú completo de toda la vida. Esto te dice cuál usan. Ojo al comparar: el asistente tiene dos puertas y el menú completo una sola, así que es esperable que junte más. Se cuentan toques, no personas: acá lo que importa es qué botón se usa." />
+                        </h3>
+                        <p class="text-text-secondary text-sm mb-4">Qué toca el cliente en la pantalla inicial.</p>
+                        @foreach($puertas as [$label, $val, $color])
+                            <div class="mb-3">
+                                <div class="flex justify-between text-sm text-text-secondary mb-1">
+                                    <span>{{ $label }}</span><b>{{ $val }} ({{ round($val / $enTotal * 100) }}%)</b>
+                                </div>
+                                <div class="h-2 bg-accent-gray/40 rounded">
+                                    <div class="h-2 {{ $color }} rounded" style="width: {{ round($val / $enTotal * 100) }}%"></div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                        <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                            <x-icono name="target" class="w-4 h-4 flex-none opacity-60" />
+                            Atajos más usados
+                            <x-ayuda titulo="Atajos más usados" texto="Los atajos son los botones chicos de la pantalla inicial («¿Qué me recomendás?», «Ver promos», «Sin TACC»). Al tocarlos, el cliente entra al asistente con esa pregunta ya hecha. Hoy se arman solos a partir de tu menú: si tenés una categoría de promociones aparece el de promos, si tenés platos sin TACC aparece ese. Este ranking te dice cuál engancha y cuál no le interesa a nadie." />
+                        </h3>
+                        <p class="text-text-secondary text-sm mb-4">Los botones sugeridos de la portada. El que nadie toca conviene cambiarlo.</p>
+                        @php $chipMax = $metrics['topChips']->max() ?: 1; @endphp
+                        @forelse($metrics['topChips'] as $chip => $count)
+                            <div class="mb-3">
+                                <div class="flex justify-between text-sm text-text-secondary mb-1">
+                                    <span class="truncate">{{ $chip }}</span><b>{{ $count }}</b>
+                                </div>
+                                <div class="h-2 bg-accent-gray/40 rounded">
+                                    <div class="h-2 bg-indigo-500 rounded" style="width: {{ round($count / $chipMax * 100) }}%"></div>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-text-secondary text-center py-4">Todavía nadie tocó un atajo.</p>
+                        @endforelse
+                    </div>
+                </div>
+            @endif
 
             <!-- Dispositivo · Visitantes · Tiempo de sesión -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

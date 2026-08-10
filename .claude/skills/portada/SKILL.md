@@ -117,6 +117,31 @@ comercio sin portada.
 
 `menu/portada.blade.php` no tiene un solo color escrito: todo sale de `tema_derivado`.
 
+## Los chips de la portada
+
+Los tres botones de abajo del hero (✨ ¿Qué me recomendás? · 🔥 Ver promos · 🌾 Sin TACC) los
+arma **`Comercio::getChipsSugeridos($max = 3)`** a partir del **menú real**, y los pasa a las dos
+vistas desde `PublicMenuController::choose()`. No hay nada hardcodeado por comercio ni
+configurable: la lista de candidatos se arma en este orden y se cortan los 3 primeros.
+
+| # | Paso | Cuándo entra |
+|---|---|---|
+| 1 | ✨ Recomendación | siempre |
+| 2 | 🔥 Ver promos | hay una categoría con `es_promocion` |
+| 3 | Tags dietéticos | el tag normalizado es **exactamente** `SIN_TACC`, `VEGANO`, `VEGETARIANO`, `SIN_LACTOSA` o `SIN_AZUCAR` |
+| 4 | Categorías del menú | una por categoría, en el orden del menú |
+| 5 | 🍽️ ¿Qué tienen? | fallback |
+
+Cada chip no filtra: **manda una pregunta al chat** (`/chat?q=...`), y el front la dispara como
+un mensaje normal.
+
+Dos cosas medidas en Azopardo (26 candidatos, 22 de ellos categorías):
+
+- **Las categorías nunca entran** si el comercio tiene promos y un tag: los 3 lugares se llenan
+  con los pasos 1–3. Y si entraran, ganaría la primera del PDF, no la más pedida.
+- **El match de tags es exacto y se pierde lo obvio**: un menú con `veg` y `veggie` no dispara
+  🥗 Vegetarianas, porque la regla busca `VEGETARIANO`.
+
 **Ojo con `.dot-open`**: el punto de "abierto ahora" va en verde **por semántica**, no con el
 acento. Si tomara el color de marca, un comercio con acento rojo tendría un punto rojo diciendo
 que está abierto. (El `choose.blade.php` viejo todavía tiene ese bug: `background: var(--accent)`
@@ -206,6 +231,19 @@ en `portada_estado = 'error'` con un mensaje genérico.
 
 ## Pendientes conocidos
 
+- **Pantalla para elegir los chips de la portada** (idea aprobada, sin implementar). Hoy son
+  100% automáticos y el comercio no controla ni cuáles de sus categorías aparecen. La forma
+  pensada: un campo json `chips_portada` en `comercios` + un bloque en editar comercio para
+  marcar hasta 3 de los sugeridos, con `getChipsSugeridos()` como fallback si no eligió nada.
+  Sin decidir: si se permiten chips escritos a mano (riesgo: prometer algo que el menú no tiene)
+  y si es feature de plan. Resuelve de raíz los dos defectos de la regla automática.
+- **Los chips ensucian las estadísticas de texto.** El chip lleva a `/chat?q=...` y
+  `chat.blade.php` lo dispara con `sendMessage(preQ)` sin `tipo`, así que la conversación se
+  guarda con `origen = 'escrito'`, como si el cliente lo hubiera tipeado. Medido: 8 de 54
+  mensajes (15%) en Azopardo. Infla palabras top, preguntas frecuentes e intención — el mismo
+  problema que ya se arregló para `categoria` y `ver_mas`. Falta un `origen = 'chip'`, y para
+  eso hay que **separar "de dónde vino el mensaje" de "cómo tiene que responder el modelo"**:
+  hoy el campo `tipo` hace las dos cosas y tocarlo cambia el prompt. Ver la skill `estadisticas`.
 - El **chatbot no usa los horarios** aunque el dato ya exista (`ChatbotController:252` deflecta).
 - **No hay aviso de cola frenada**: si el worker está caído, se descubre a mano.
 - El **cron del worker en producción no está en el repo**, vive sólo en el hPanel de Hostinger.

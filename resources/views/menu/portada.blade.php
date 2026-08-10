@@ -300,7 +300,7 @@
         @endif
     </div>
 
-    <a class="cta an d3" href="{{ route('menu.chat', $comercio) }}" data-track-choice="ia">
+    <a class="cta an d3" href="{{ route('menu.chat', $comercio) }}" data-track-choice="ia" data-track-desde="cta">
         <span class="cta-ico">
             <svg width="25" height="25" viewBox="0 0 24 24" fill="none"
                  stroke="color-mix(in srgb, {{ $acento }} 82%, #000)" stroke-width="1.2"
@@ -322,11 +322,12 @@
     </a>
 
     {{-- data-track-choice: sin esto, quien entra al chat por un chip no cuenta
-         como que eligió, y el embudo del panel da ~1% de elección. --}}
+         como que eligió, y el embudo del panel da ~1% de elección.
+         data-track-desde/label: para saber qué chip usan y cuál conviene cambiar. --}}
     @if(!empty($chips))
         <div class="grid an d4">
             @foreach($chips as $chip)
-                <a class="card" data-track-choice="ia"
+                <a class="card" data-track-choice="ia" data-track-desde="chip" data-track-label="{{ $chip['label'] }}"
                    href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">
                     <span class="card-ico">{{ $chip['emoji'] }}</span>
                     <h3>{{ $chip['label'] }}</h3>
@@ -335,7 +336,7 @@
         </div>
     @endif
 
-    <a class="completo an d5" href="{{ route('menu.classic', $comercio) }}" data-track-choice="classic">
+    <a class="completo an d5" href="{{ route('menu.classic', $comercio) }}" data-track-choice="classic" data-track-desde="completo">
         <img src="{{ asset('storage/'.$comercio->portada_thumb_url) }}" alt="">
         <div>
             <h3>Quiero ver el menú completo</h3>

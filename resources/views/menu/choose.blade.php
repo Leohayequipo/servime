@@ -403,7 +403,7 @@
             <div style="width:100%;" class="fu d5">
 
                 <!-- Barra tipo buscador/chat: lleva al chat con IA -->
-                <a href="{{ route('menu.chat', $comercio) }}" class="ai-bar" data-track-choice="ia">
+                <a href="{{ route('menu.chat', $comercio) }}" class="ai-bar" data-track-choice="ia" data-track-desde="cta">
                     <span class="ai-bar-icon">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(26,15,0,0.9)">
                             <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z"/>
@@ -428,14 +428,14 @@
                 @if(!empty($chips))
                     <div class="chips-row fu d6">
                         @foreach($chips as $chip)
-                            <a class="chip" data-track-choice="ia" href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">{{ $chip['emoji'] }} {{ $chip['label'] }}</a>
+                            <a class="chip" data-track-choice="ia" data-track-desde="chip" data-track-label="{{ $chip['label'] }}" href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">{{ $chip['emoji'] }} {{ $chip['label'] }}</a>
                         @endforeach
                     </div>
                 @endif
 
                 <!-- Link discreto al menú tradicional -->
                 <div class="fu d6" style="text-align:center;margin-top:2px;">
-                    <a href="{{ route('menu.classic', $comercio) }}" class="classic-link" data-track-choice="classic">Prefiero ver el menú completo</a>
+                    <a href="{{ route('menu.classic', $comercio) }}" class="classic-link" data-track-choice="classic" data-track-desde="completo">Prefiero ver el menú completo</a>
                 </div>
 
             </div>

@@ -81,6 +81,31 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   Calculadas en `getEventMetrics()` desde `tracking_events`. Claves que van a la vista:
   `funnel` (por visita), `visitaAvgSeconds`, `totalVisitas`, `devices`/`visitors`/`totalVisitantes`
   (por visitante).
+- **Qué mira el comercio y qué miramos nosotros (decidido, hecho a medias).** Las métricas de
+  infraestructura no van en el panel del comercio: no puede hacer nada con ellas y las
+  mostrábamos en ámbar como si fueran culpa suya. El **tiempo de respuesta** salió de la fila de
+  tarjetas (queda como nota al pie visible solo a super admin) y de `suggestions()`. **Sin
+  responder se queda**, porque avisa cuando se agota la cuota del plan, que sí es accionable.
+  En su lugar entró **Personas** (`totalVisitantes`). Toda tarjeta lleva su período en la nota.
+  Las que no se explican solas llevan un `?` (prop `ayuda` de `x-stat` → helper `showInfo`;
+  ojo: SweetAlert2 no respeta saltos de línea en `text`, un párrafo por ayuda).
+- **Pendiente — los chips de la portada cuentan como texto escrito.** El chip lleva a
+  `/chat?q=...` y el front lo dispara sin `tipo`, así que se guarda con `origen = 'escrito'`
+  (medido: 15% de los mensajes). Infla palabras top, preguntas frecuentes e intención. Falta un
+  `origen = 'chip'`, y para eso hay que separar "de dónde vino el mensaje" de "cómo responde el
+  modelo": hoy el campo `tipo` hace las dos cosas. Detalle en la skill `portada`.
+- **Pendiente — "¿IA o menú clásico?" cuenta clicks, no personas.** `menuChoice` suma eventos
+  mientras el embudo de al lado suma visitas, así que los dos widgets se contradicen en pantalla
+  (medido: 25/6 por evento contra 11/5 por visita; una sola visita eligió 11 veces y 3 visitas
+  eligieron los dos modos, sumando de ambos lados). Pasarlo a visitas, como el resto.
+- **Pendiente — el tiempo promedio por visita mezcla rebotes.** La duración es `max - min` de
+  los eventos, así que una visita de un solo evento mide 0 s: 16 de 37 visitas caen ahí y
+  arrastran el promedio (7m26s con ellas, 13m06s sin ellas). Decidir si se excluyen o si se
+  usa la mediana — con 37 visitas, una pestaña olvidada de 85 minutos mueve la media.
+- **Pendiente — la sugerencia del embudo no dice el número real.** El texto es fijo ("menos de
+  5 de cada 10") y sale igual sea 4,9 o 0,2. Verificado que la métrica **sí es correcta** (de
+  19 visitas que vieron la pantalla inicial y no eligieron, 17 se fueron sin ver el menú), pero
+  conviene decir "17 de 32 personas" y nombrar la pantalla como la ve el cliente.
 - **Pendiente — reconocer al que vuelve en iPhone:** Safari (ITP) borra el localStorage a los
   **7 días** sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
   recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor

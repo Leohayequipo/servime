@@ -190,9 +190,16 @@ class AnalyticsController extends Controller
             // "Con IA" era igual al total salvo cuando algo fallaba, así que la tarjeta
             // repetía un número y no avisaba nada. Esto arranca en 0 y solo crece cuando
             // hay un problema, que es cuando el comerciante tiene que mirar.
+            //
+            // recent(30) como todo el resto del panel: sin eso la tarjeta arrastraba una
+            // caída de hace meses, ya resuelta, y el encabezado seguía diciendo "últimos
+            // 30 días". No se notaba solo porque ningún comercio llevaba tanto tiempo.
             'sin_responder' => ChatConversation::forComercio($comercioId)
+                ->recent(30)
                 ->where('used_openai', false)->count(),
+            // Métrica de infraestructura: la ve el super admin, no el comercio.
             'avg_response_time' => ChatConversation::forComercio($comercioId)
+                ->recent(30)
                 ->whereNotNull('response_time_ms')
                 ->avg('response_time_ms'),
         ];
@@ -275,6 +282,19 @@ class AnalyticsController extends Controller
             'classic' => $choices->filter(fn ($e) => ($e->data['choice'] ?? null) === 'classic')->count(),
         ];
 
+        // Por dónde entran: el botón grande, un chip sugerido (y cuál) o el menú completo.
+        // Va en clicks y no en visitas a propósito: la pregunta acá no es cuánta gente
+        // entró, sino qué puerta se usa, para decidir qué chips dejar en la portada.
+        // Los eventos viejos no traen 'desde' (el atributo es nuevo) y quedan afuera.
+        $entradas = [
+            'cta' => $choices->filter(fn ($e) => ($e->data['desde'] ?? null) === 'cta')->count(),
+            'chip' => $choices->filter(fn ($e) => ($e->data['desde'] ?? null) === 'chip')->count(),
+            'completo' => $choices->filter(fn ($e) => ($e->data['desde'] ?? null) === 'completo')->count(),
+        ];
+        $topChips = $choices->filter(fn ($e) => ($e->data['desde'] ?? null) === 'chip' && ! empty($e->data['label']))
+            ->groupBy(fn ($e) => $e->data['label'])
+            ->map->count()->sortDesc()->take(6);
+
         // Promos más clickeadas.
         //
         // La etiqueta se limpia de emoji porque el evento guarda el textContent del botón,
@@ -337,8 +357,9 @@ class AnalyticsController extends Controller
         $totalVisitantes = array_sum($visitors);
         $totalVisitas = $visitas->count();
 
-        return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax',
-            'devices', 'visitors', 'visitaAvgSeconds', 'totalVisitantes', 'totalVisitas');
+        return compact('menuChoice', 'entradas', 'topChips', 'topPromos', 'topDishes', 'funnel',
+            'heatmap', 'heatmapMax', 'devices', 'visitors', 'visitaAvgSeconds', 'totalVisitantes',
+            'totalVisitas');
     }
 
     /**

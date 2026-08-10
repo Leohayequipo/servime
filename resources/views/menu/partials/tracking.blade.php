@@ -30,8 +30,19 @@
 
     // Delegación de clicks (funciona también con contenido generado dinámicamente)
     document.addEventListener('click', function (e) {
+        // Además de QUÉ eligió (ia|classic), de DÓNDE salió el click: el botón grande,
+        // un chip sugerido (y cuál) o el link al menú completo. Sin esto, todas las
+        // puertas al asistente se mezclaban en un solo número y no se podía saber si
+        // los chips sirven ni cuál conviene cambiar.
         const choice = e.target.closest('[data-track-choice]');
-        if (choice) { window.smTrack('menu_choice', { choice: choice.getAttribute('data-track-choice') }); return; }
+        if (choice) {
+            window.smTrack('menu_choice', {
+                choice: choice.getAttribute('data-track-choice'),
+                desde: choice.getAttribute('data-track-desde') || null,
+                label: (choice.getAttribute('data-track-label') || '').trim().slice(0, 60) || null,
+            });
+            return;
+        }
 
         const promo = e.target.closest('.cat-chip-promo');
         if (promo) { window.smTrack('promo_click', { promo: (promo.textContent || '').trim().slice(0, 80) }); return; }

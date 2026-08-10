@@ -213,4 +213,32 @@ class AnalyticsTrackingTest extends TestCase
 
         $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk();
     }
+
+    // ---- Por dónde entran (desde / label del menu_choice) ----
+
+    public function test_el_panel_desglosa_por_donde_entran_y_que_atajo_usan(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        $this->evento($comercio, 'v1', 'menu_choice', $ahora, ['choice' => 'ia', 'desde' => 'cta']);
+        $this->evento($comercio, 'v2', 'menu_choice', $ahora, ['choice' => 'ia', 'desde' => 'chip', 'label' => 'Sin TACC']);
+        $this->evento($comercio, 'v3', 'menu_choice', $ahora, ['choice' => 'ia', 'desde' => 'chip', 'label' => 'Sin TACC']);
+        $this->evento($comercio, 'v4', 'menu_choice', $ahora, ['choice' => 'classic', 'desde' => 'completo']);
+        // Evento viejo, de antes del atributo: no tiene 'desde' y no se puede atribuir.
+        $this->evento($comercio, 'v5', 'menu_choice', $ahora, ['choice' => 'ia']);
+
+        $respuesta = $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk();
+        $metrics = $respuesta->viewData('metrics');
+
+        $this->assertSame(['cta' => 1, 'chip' => 2, 'completo' => 1], $metrics['entradas']);
+        $this->assertSame(2, $metrics['topChips']['Sin TACC']);
+        // El "IA vs clásico" sigue contando todos, incluido el que no trae origen.
+        $this->assertSame(4, $metrics['menuChoice']['ia']);
+
+        $respuesta->assertSee('¿Por dónde entran?')->assertSee('Sin TACC');
+    }
 }
