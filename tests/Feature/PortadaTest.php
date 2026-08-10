@@ -73,6 +73,37 @@ class PortadaTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_el_punto_focal_se_guarda_y_no_regenera_imagenes(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'portada_url' => 'comercios/1/portada/original.jpg',
+            'portada_estado' => 'listo',
+            'portada_focal_x' => 50,
+            'portada_focal_y' => 50,
+        ]);
+
+        $this->actingAs($user)->put(route('comercios.update', $comercio), [
+            'nombre' => $comercio->nombre,
+            'primary_color' => '#3B82F6',
+            'secondary_color' => '#1E40AF',
+            'accent_color' => '#F59E0B',
+            'background_color' => '#FFFFFF',
+            'chatbot_name' => 'Asistente IA',
+            'portada_focal_x' => 50,
+            'portada_focal_y' => 12,
+        ])->assertRedirect();
+
+        $comercio->refresh();
+        $this->assertSame(12, $comercio->portada_focal_y);
+        $this->assertSame('50% 12%', $comercio->focoPortada());
+
+        // Mover el encuadre es sólo CSS: no cuesta un reprocesado.
+        Queue::assertNothingPushed();
+    }
+
     public function test_el_formulario_muestra_la_barra_cuando_esta_procesando(): void
     {
         $user = User::factory()->create();

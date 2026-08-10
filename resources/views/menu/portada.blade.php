@@ -131,6 +131,10 @@
         }
         .hero img {
             width: 100%; height: 100%; object-fit: cover; display: block;
+            /* El encuadre sale del punto focal que eligió el comercio. La
+               imagen se guarda entera y se recuadra acá, así se adapta a cada
+               ancho de pantalla en vez de quedar congelado en un recorte. */
+            object-position: {{ $comercio->focoPortada() }};
             animation: drift 26s ease-in-out infinite alternate;
             will-change: transform;
         }
@@ -232,7 +236,8 @@
             transition: border-color .22s ease, transform .22s ease;
         }
         .completo:active { transform: scale(.99); }
-        .completo img { width: 50px; height: 50px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+        .completo img { width: 50px; height: 50px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
+                        object-position: {{ $comercio->focoPortada() }}; }
         .completo div { flex: 1; min-width: 0; }
         .completo h3 { font-size: 13px; font-weight: 400; color: #F7EEE0; margin-bottom: 2px; }
         .completo p { font-size: 10.5px; font-weight: 300; color: rgba(242,231,213,.5); }

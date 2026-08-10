@@ -205,6 +205,11 @@ class ComercioController extends Controller
             // fatal error inatrapable. 8000×8000 = 64 MP es el techo.
             'portada' => 'nullable|image|max:8192|dimensions:max_width=8000,max_height=8000',
 
+            // Punto focal de la portada (0-100). Sólo mueve el encuadre por CSS:
+            // no dispara reprocesado de imágenes.
+            'portada_focal_x' => 'nullable|integer|min:0|max:100',
+            'portada_focal_y' => 'nullable|integer|min:0|max:100',
+
             // Configuración de personalización
             'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -279,6 +284,13 @@ class ComercioController extends Controller
             // Eliminar logo anterior si existe
             $this->deleteLogoSafely($comercio->logo_url);
             $comercio->logo_url = $this->saveSquareLogo($request->file('logo'), 512, $comercio->id);
+        }
+
+        // El encuadre se guarda siempre: es sólo un par de números y no
+        // implica regenerar nada.
+        if ($request->filled('portada_focal_x')) {
+            $comercio->portada_focal_x = (int) $validated['portada_focal_x'];
+            $comercio->portada_focal_y = (int) ($validated['portada_focal_y'] ?? 50);
         }
 
         // Manejar eliminación de portada. No se bloquea por plan: si un comercio

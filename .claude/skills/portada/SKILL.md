@@ -40,8 +40,26 @@ píxel promedia un cuadrado enorme del original. Después se agranda en pasos (8
 Al final se corrige el brillo contra un objetivo fijo (`FONDO_LUM_OBJETIVO = 78`). Una foto
 nocturna se aclara, una sobreexpuesta se oscurece: todas caen en el mismo tono.
 
-**2 · Hero 16:11 a 780px**, encuadrado arriba del centro (ahí suele estar el cartel).
-**3 · Miniatura 180×180.**
+**2 · Hero a 780px** y **3 · Miniatura a 220px**, las dos **enteras, sin recortar para
+encuadrar** (`paraEncuadrar()`). Sólo se recortan si la foto es más alta que 4:3, y ahí es para
+no mandar píxeles que ninguna pantalla va a mostrar.
+
+## El encuadre lo hace el CSS, no el servidor
+
+`portada_focal_x` / `portada_focal_y` (0–100, migración `2026_08_09_130000`) van directo a
+`object-position` vía `Comercio::focoPortada()`. Tres cosas que esto compra:
+
+- **Moverlo no regenera nada** — son dos números, no pasa por la cola. Hay un test que lo fija.
+- **Se adapta a cada ancho de pantalla** en vez de quedar congelado en un recorte.
+- **Un solo punto sirve para el hero y para la miniatura.**
+
+> No volver a recortar el hero en el servidor "para que pese menos". Antes salía de un
+> `$cy = 0.38` hardcodeado elegido a ojo, y encima el navegador recortaba otra vez por su cuenta
+> (`object-fit: cover` en una caja 1.58:1 contra un recorte 1.45:1): dos recortes encadenados y
+> el comercio no controlaba ninguno. El hero pasó de ~51 KB a ~95 KB y es el precio de eso.
+
+En el panel: vista previa con la proporción real del celular + la foto entera con un marcador
+que se clickea o arrastra (`pointerdown/move`, anda con mouse y con dedo).
 
 **4 · Paleta:**
 - **Base** = promedio de *todos* los píxeles, con el **tono intacto** (es lo único que el

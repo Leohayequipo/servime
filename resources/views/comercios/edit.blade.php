@@ -362,11 +362,45 @@
                             </style>
 
                             @if($comercio->tienePortada())
-                                <div class="mb-3" id="portadaActual">
-                                    <img src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
-                                         alt="Portada actual"
-                                         onerror="document.getElementById('portadaActual').remove()"
-                                         class="w-full h-24 object-cover rounded-lg border border-accent-gray">
+                                {{-- Encuadre. La imagen se guarda entera y acá se elige qué parte
+                                     queda a la vista: es sólo un par de números que van a
+                                     `object-position`, así que mover esto no regenera nada. --}}
+                                <div id="portadaActual" class="mb-3">
+                                    <p class="text-xs text-text-secondary mb-1">Así se ve en el celular</p>
+                                    <div class="w-full overflow-hidden rounded-lg border border-accent-gray"
+                                         style="aspect-ratio: 376 / 238;">
+                                        <img id="focoPreview"
+                                             src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
+                                             alt="Vista previa del encuadre"
+                                             onerror="document.getElementById('portadaActual').remove()"
+                                             class="w-full h-full object-cover"
+                                             style="object-position: {{ $comercio->focoPortada() }};">
+                                    </div>
+
+                                    <p class="text-xs text-text-secondary mt-2 mb-1">
+                                        Tocá lo que no puede faltar (el cartel, un plato…)
+                                    </p>
+                                    <div id="focoPicker" class="relative w-full cursor-crosshair select-none rounded-lg overflow-hidden border border-accent-gray">
+                                        <img src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
+                                             alt="Elegir el punto focal" draggable="false"
+                                             class="w-full block opacity-80">
+                                        <span id="focoMarca"
+                                              class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,.5)]"
+                                              style="left: {{ $comercio->portada_focal_x ?? 50 }}%; top: {{ $comercio->portada_focal_y ?? 50 }}%;"></span>
+                                    </div>
+
+                                    <div class="mt-1 flex items-center justify-between">
+                                        <span id="focoValor" class="text-xs text-text-secondary">
+                                            {{ $comercio->portada_focal_x ?? 50 }}% · {{ $comercio->portada_focal_y ?? 50 }}%
+                                        </span>
+                                        <button type="button" id="focoCentrar"
+                                                class="text-xs text-text-secondary hover:text-accent-blue underline transition-colors duration-200">
+                                            Centrar
+                                        </button>
+                                    </div>
+
+                                    <input type="hidden" name="portada_focal_x" id="portada_focal_x" value="{{ $comercio->portada_focal_x ?? 50 }}">
+                                    <input type="hidden" name="portada_focal_y" id="portada_focal_y" value="{{ $comercio->portada_focal_y ?? 50 }}">
                                 </div>
 
                                 {{-- Aviso persistente: la subió igual, pero conviene que sepa
@@ -604,6 +638,55 @@
             }
 
             vistaPrevia('logo', 'logoPreview', 'logoPreviewWrap');
+
+            // ── Punto focal de la portada ────────────────────────────────
+            // Sólo mueve dos números; la vista previa se actualiza en vivo
+            // porque el encuadre lo hace object-position, no un recorte.
+            (function () {
+                const picker = document.getElementById('focoPicker');
+                if (!picker) return;
+
+                const marca = document.getElementById('focoMarca');
+                const preview = document.getElementById('focoPreview');
+                const valor = document.getElementById('focoValor');
+                const inputX = document.getElementById('portada_focal_x');
+                const inputY = document.getElementById('portada_focal_y');
+
+                function aplicar(x, y) {
+                    x = Math.max(0, Math.min(100, Math.round(x)));
+                    y = Math.max(0, Math.min(100, Math.round(y)));
+
+                    inputX.value = x;
+                    inputY.value = y;
+                    marca.style.left = x + '%';
+                    marca.style.top = y + '%';
+                    preview.style.objectPosition = x + '% ' + y + '%';
+                    valor.textContent = x + '% · ' + y + '%';
+                }
+
+                function desdeEvento(e) {
+                    const r = picker.getBoundingClientRect();
+                    const p = e.touches ? e.touches[0] : e;
+                    aplicar(((p.clientX - r.left) / r.width) * 100, ((p.clientY - r.top) / r.height) * 100);
+                }
+
+                let arrastrando = false;
+
+                picker.addEventListener('pointerdown', function (e) {
+                    arrastrando = true;
+                    picker.setPointerCapture(e.pointerId);
+                    desdeEvento(e);
+                });
+                picker.addEventListener('pointermove', function (e) {
+                    if (arrastrando) desdeEvento(e);
+                });
+                picker.addEventListener('pointerup', function () { arrastrando = false; });
+                picker.addEventListener('pointercancel', function () { arrastrando = false; });
+
+                document.getElementById('focoCentrar')?.addEventListener('click', function () {
+                    aplicar(50, 50);
+                });
+            })();
 
             // ── Limpiar horarios ─────────────────────────────────────────
             // Vaciar los campos alcanza: armarHorarios() descarta los turnos

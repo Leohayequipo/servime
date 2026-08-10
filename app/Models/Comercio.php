@@ -22,6 +22,8 @@ class Comercio extends Model
         'portada_fondo_url',
         'portada_hero_url',
         'portada_thumb_url',
+        'portada_focal_x',
+        'portada_focal_y',
         'tema_derivado',
         'portada_estado',
         'user_id',
@@ -258,6 +260,18 @@ class Comercio extends Model
         $desc = trim(strip_tags((string) $this->descripcion));
 
         return mb_strlen($desc) > 0 && mb_strlen($desc) <= 80 ? $desc : null;
+    }
+
+    /**
+     * Punto focal de la portada, listo para `object-position`.
+     *
+     * Ej: "50% 38%". Es lo único que decide el encuadre — el hero y la
+     * miniatura se guardan enteros y el navegador los recuadra con esto, así
+     * que moverlo no requiere regenerar ninguna imagen.
+     */
+    public function focoPortada(): string
+    {
+        return ($this->portada_focal_x ?? 50).'% '.($this->portada_focal_y ?? 50).'%';
     }
 
     /** ¿Puede este comercio personalizar la portada del menú público? */

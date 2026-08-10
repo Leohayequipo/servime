@@ -35,6 +35,15 @@ class BrandThemeService
     private const ACENTO_FALLBACK = [201, 169, 97];
 
     /**
+     * Alto máximo del hero respecto del ancho (4/3 = una foto vertical normal).
+     *
+     * Más alto que esto se recorta, no para encuadrar sino para no mandar
+     * píxeles que ninguna pantalla va a mostrar. Da margen de sobra para mover
+     * el punto focal: la caja del hero en el celular es apaisada (~1.6:1).
+     */
+    private const ALTO_MAXIMO_RELATIVO = 4 / 3;
+
+    /**
      * Tamaño recomendado de la portada.
      *
      * Es una recomendación, no un requisito: una imagen chica se procesa igual
@@ -103,9 +112,13 @@ class BrandThemeService
 
             $dir = "comercios/{$comercio->id}/portada";
 
+            // El hero y la miniatura NO se recortan para encuadrar: se guardan
+            // enteros y el encuadre lo hace el CSS con el punto focal. Así el
+            // comerciante puede moverlo sin que haya que regenerar nada, y el
+            // mismo punto sirve para las dos.
             $fondo = $this->guardar($this->desenfocar($img), "$dir/fondo.webp", 76);
-            $hero = $this->guardar($this->recorteAspecto($img, 780, 16 / 11), "$dir/hero.webp", 70);
-            $thumb = $this->guardar($this->recorteCuadrado($img, 180), "$dir/thumb.webp", 78);
+            $hero = $this->guardar($this->paraEncuadrar($img, 780), "$dir/hero.webp", 70);
+            $thumb = $this->guardar($this->paraEncuadrar($img, 220), "$dir/thumb.webp", 78);
 
             return [
                 'portada_fondo_url' => $fondo,
@@ -305,6 +318,31 @@ class BrandThemeService
         imagefilter($cur, IMG_FILTER_CONTRAST, -6);
 
         return $cur;
+    }
+
+    /**
+     * Imagen lista para encuadrar por CSS: se conserva entera.
+     *
+     * Sólo se recorta si es desproporcionadamente alta (más que 3:4), y ahí es
+     * para no mandar píxeles que nadie va a ver nunca — no para elegir el
+     * encuadre. Ese trabajo es del punto focal.
+     */
+    public function paraEncuadrar($img, int $ancho)
+    {
+        $w = imagesx($img);
+        $h = imagesy($img);
+
+        $recortada = $h / $w > self::ALTO_MAXIMO_RELATIVO
+            ? $this->recorteAspecto($img, $w, 1 / self::ALTO_MAXIMO_RELATIVO, 0.5)
+            : $img;
+
+        $escalada = $this->reescalar($recortada, $ancho);
+
+        if ($recortada !== $img) {
+            imagedestroy($recortada);
+        }
+
+        return $escalada;
     }
 
     /** Recorte a una relación de aspecto, centrado en la franja superior. */
