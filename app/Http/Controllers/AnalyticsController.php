@@ -22,6 +22,15 @@ class AnalyticsController extends Controller
     public const CANTIDADES = [25, 50, 100];
 
     /**
+     * Minutos de inactividad que separan dos visitas de un mismo dispositivo.
+     *
+     * El `session_id` que manda el front vive en localStorage y no vence nunca: es un id
+     * de VISITANTE, no de sesión. Sin este corte, alguien que vuelve a los 10 días arrastra
+     * una "sesión" de 10 días y rompe el promedio de tiempo en el menú.
+     */
+    private const GAP_VISITA_MINUTOS = 30;
+
+    /**
      * Dashboard principal de analytics
      */
     public function dashboard(Request $request)
@@ -281,19 +290,24 @@ class AnalyticsController extends Controller
             ->groupBy(fn ($e) => $e->data['nombre'] ?? '—')
             ->map->count()->sortDesc()->take(8);
 
-        // Embudo por sesiones únicas: visita -> ve la elección -> elige -> muestra interés.
+        // Visitas reales: los eventos de cada visitante se cortan por inactividad, así que
+        // el que vuelve otro día suma otra visita en vez de estirar la primera.
+        $visitas = $this->agruparVisitas($events);
+
+        // Cuántas visitas contienen al menos un evento que cumpla la condición.
+        $visitasCon = fn (callable $cumple) => $visitas->filter(fn ($evs) => $evs->contains($cumple))->count();
+
+        // Embudo por visita: visita -> ve la elección -> elige -> muestra interés.
         //
         // 'vieron_eleccion' es un paso propio porque solo quien PASÓ por esa pantalla puede
         // elegir: si alguien entra directo a /chat o /classic (un QR que apunta ahí, un
         // favorito, un link compartido) contaba en 'visitas' y nunca podía elegir, así que
         // el ratio de elección salía por el piso. Medido en local: 2% contra los 20% reales.
         $funnel = [
-            'visitas' => $events->where('event', 'page_view')->pluck('session_id')->unique()->count(),
-            'vieron_eleccion' => $events->where('event', 'page_view')
-                ->filter(fn ($e) => ($e->data['view'] ?? null) === 'choose')
-                ->pluck('session_id')->unique()->count(),
-            'eligieron' => $choices->pluck('session_id')->unique()->count(),
-            'interesados' => $events->where('event', 'dish_want')->pluck('session_id')->unique()->count(),
+            'visitas' => $visitasCon(fn ($e) => $e->event === 'page_view'),
+            'vieron_eleccion' => $visitasCon(fn ($e) => $e->event === 'page_view' && ($e->data['view'] ?? null) === 'choose'),
+            'eligieron' => $visitasCon(fn ($e) => $e->event === 'menu_choice'),
+            'interesados' => $visitasCon(fn ($e) => $e->event === 'dish_want'),
         ];
 
         // Heatmap por día de semana (0=Dom..6=Sáb) x hora
@@ -306,26 +320,74 @@ class AnalyticsController extends Controller
             $heatmapMax = max($heatmapMax, $heatmap[$dow][$hour]);
         }
 
-        // Por sesión: dispositivo, visitantes que vuelven y duración (sin IA)
+        // Duración: por visita, no por visitante (ver GAP_VISITA_MINUTOS)
+        $duraciones = $visitas->map(
+            fn ($evs) => $evs->max('created_at')->getTimestamp() - $evs->min('created_at')->getTimestamp()
+        );
+        $visitaAvgSeconds = $duraciones->isNotEmpty() ? (int) round($duraciones->avg()) : 0;
+
+        // Por visitante: dispositivo y recurrencia (recurrente = volvió al menos una vez)
         $devices = ['movil' => 0, 'desktop' => 0, 'tablet' => 0];
         $visitors = ['nuevos' => 0, 'recurrentes' => 0];
-        $duraciones = [];
-        foreach ($events->groupBy('session_id') as $sid => $evs) {
-            if (empty($sid)) {
-                continue;
-            }
-            $devices[$this->clasificarDispositivo($evs->sortBy('created_at')->first()->user_agent)]++;
-
-            $diasDistintos = $evs->map(fn ($e) => $e->created_at->toDateString())->unique()->count();
-            $visitors[$diasDistintos >= 2 ? 'recurrentes' : 'nuevos']++;
-
-            $duraciones[] = $evs->max('created_at')->getTimestamp() - $evs->min('created_at')->getTimestamp();
+        foreach ($visitas->groupBy(fn ($evs, $clave) => $this->visitanteDeClave($clave)) as $delVisitante) {
+            $devices[$this->clasificarDispositivo($delVisitante->first()->first()->user_agent)]++;
+            $visitors[$delVisitante->count() >= 2 ? 'recurrentes' : 'nuevos']++;
         }
-        $sessionAvgSeconds = count($duraciones) ? (int) round(array_sum($duraciones) / count($duraciones)) : 0;
-        $totalSesiones = array_sum($visitors);
+
+        $totalVisitantes = array_sum($visitors);
+        $totalVisitas = $visitas->count();
 
         return compact('menuChoice', 'topPromos', 'topDishes', 'funnel', 'heatmap', 'heatmapMax',
-            'devices', 'visitors', 'sessionAvgSeconds', 'totalSesiones');
+            'devices', 'visitors', 'visitaAvgSeconds', 'totalVisitantes', 'totalVisitas');
+    }
+
+    /**
+     * Parte los eventos en visitas: los de un mismo `session_id` separados por más de
+     * GAP_VISITA_MINUTOS de inactividad cuentan como visitas distintas.
+     *
+     * Los eventos sin `session_id` (la columna es nullable) se descartan: no se pueden
+     * atribuir a nadie, y antes caían todos juntos en un mismo balde falso.
+     *
+     * Devuelve las visitas con clave "{session_id}#{n}" (n arranca en 0 por visitante),
+     * ordenadas por visitante y, dentro de cada uno, cronológicamente.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\TrackingEvent>  $events
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, \App\Models\TrackingEvent>>
+     */
+    private function agruparVisitas($events)
+    {
+        $visitas = collect();
+
+        foreach ($events->groupBy('session_id') as $sessionId => $delVisitante) {
+            if (empty($sessionId)) {
+                continue;
+            }
+
+            $n = 0;
+            $anterior = null;
+
+            foreach ($delVisitante->sortBy('created_at') as $e) {
+                // Comparar timestamps y no diffInMinutes(): en Carbon 3 el diff viene con
+                // signo y un orden invertido daría negativo, o sea, nunca cortaría.
+                if ($anterior !== null && $e->created_at->getTimestamp() - $anterior > self::GAP_VISITA_MINUTOS * 60) {
+                    $n++;
+                }
+
+                $visitas[$sessionId.'#'.$n] ??= collect();
+                $visitas[$sessionId.'#'.$n]->push($e);
+                $anterior = $e->created_at->getTimestamp();
+            }
+        }
+
+        return $visitas;
+    }
+
+    /**
+     * Saca el session_id de la clave "{session_id}#{n}" que arma agruparVisitas().
+     */
+    private function visitanteDeClave(string $clave): string
+    {
+        return substr($clave, 0, (int) strrpos($clave, '#'));
     }
 
     /**

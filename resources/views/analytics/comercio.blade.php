@@ -237,7 +237,7 @@
                     @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
                     <p class="text-sm text-text-secondary mt-1">
-                        {{ $vs['recurrentes'] }} de {{ $metrics['totalSesiones'] }} visitantes volvieron
+                        {{ $vs['recurrentes'] }} de {{ $metrics['totalVisitantes'] }} visitantes volvieron
                     </p>
                     <p class="text-xs text-text-secondary mt-1">{{ $vs['nuevos'] }} nuevos</p>
                 </div>
@@ -247,9 +247,9 @@
                         <x-icono name="clock" class="w-4 h-4 flex-none opacity-60" />
                         Tiempo promedio en el menú
                     </h3>
-                    @php $sec = $metrics['sessionAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
+                    @php $sec = $metrics['visitaAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ $dur }}</p>
-                    <p class="text-sm text-text-secondary mt-1">por sesión</p>
+                    <p class="text-sm text-text-secondary mt-1">por visita ({{ $metrics['totalVisitas'] }} en total)</p>
                 </div>
             </div>
 

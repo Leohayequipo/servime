@@ -118,6 +118,77 @@ class AnalyticsTrackingTest extends TestCase
         $this->assertSame(1, $intents['counts']['Precio']);
     }
 
+    public function test_el_visitante_que_vuelve_suma_otra_visita_y_no_estira_la_primera(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        // Mismo dispositivo (mismo session_id de localStorage) en dos días distintos:
+        // una visita de 5 minutos y, diez días después, otra de 2.
+        $this->evento($comercio, 'vuelve', 'page_view', now()->subDays(10), ['view' => 'choose']);
+        $this->evento($comercio, 'vuelve', 'menu_choice', now()->subDays(10)->addMinutes(5), ['choice' => 'ia']);
+        $this->evento($comercio, 'vuelve', 'page_view', now()->subMinutes(2), ['view' => 'chat']);
+        $this->evento($comercio, 'vuelve', 'dish_want', now(), ['nombre' => 'Milanesa']);
+
+        // Un visitante de una sola vez, para distinguir nuevos de recurrentes
+        $this->evento($comercio, 'unica', 'page_view', now()->subDay(), ['view' => 'choose']);
+
+        $metrics = $this->actingAs($admin)
+            ->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->viewData('metrics');
+
+        $this->assertSame(3, $metrics['totalVisitas']);
+        $this->assertSame(2, $metrics['totalVisitantes']);
+        $this->assertSame(1, $metrics['visitors']['recurrentes']);
+        $this->assertSame(1, $metrics['visitors']['nuevos']);
+
+        // Promedio por visita: (5min + 2min + 0) / 3 = 140s. Sin el corte daban 10 días.
+        $this->assertSame(140, $metrics['visitaAvgSeconds']);
+
+        // El embudo también cuenta visitas: 3 con page_view, 2 que vieron la pantalla inicial
+        $this->assertSame(3, $metrics['funnel']['visitas']);
+        $this->assertSame(2, $metrics['funnel']['vieron_eleccion']);
+        $this->assertSame(1, $metrics['funnel']['eligieron']);
+        $this->assertSame(1, $metrics['funnel']['interesados']);
+    }
+
+    public function test_los_eventos_sin_session_id_no_cuentan_como_visita(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $this->evento($comercio, 'con_id', 'page_view', now(), ['view' => 'choose']);
+        $this->evento($comercio, null, 'page_view', now(), ['view' => 'choose']);
+
+        $metrics = $this->actingAs($admin)
+            ->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->viewData('metrics');
+
+        $this->assertSame(1, $metrics['totalVisitas']);
+        $this->assertSame(1, $metrics['funnel']['visitas']);
+    }
+
+    /**
+     * Evento de tracking con fecha e id de visitante controlados.
+     */
+    private function evento(Comercio $comercio, ?string $sessionId, string $event, $cuando, array $data): void
+    {
+        TrackingEvent::factory()->create([
+            'comercio_id' => $comercio->id,
+            'session_id' => $sessionId,
+            'event' => $event,
+            'data' => $data,
+            'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148',
+            'created_at' => $cuando,
+        ]);
+    }
+
     public function test_el_panel_renderiza_con_datos_de_eventos_y_conversaciones(): void
     {
         $admin = User::factory()->superAdmin()->create();

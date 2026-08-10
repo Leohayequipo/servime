@@ -46,6 +46,13 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
   (se traen los eventos `recent(30)` una vez y se agrupan en PHP). Gráficos con CSS (sin libs).
 - `layouts/app.blade.php` NO renderiza el slot `header`: el encabezado va dentro del body (`{{ $slot }}`).
 - Tracking nunca debe romper la página: `smTrack` está envuelto en try/catch y usa sendBeacon.
+- **`session_id` es un id de VISITANTE, no de sesión.** Vive en el localStorage del navegador
+  y no vence nunca, así que el mismo id vuelve a aparecer días o semanas después.
+  `getEventMetrics()` lo parte en **visitas** con `agruparVisitas()`: eventos del mismo
+  `session_id` separados por más de `GAP_VISITA_MINUTOS` (30) son visitas distintas.
+  Al sumar una métrica, decidí si se cuenta **por visita** (embudo, duración) o
+  **por visitante** (dispositivos, recurrencia). No uses `session_id` crudo para nada temporal.
+- Los eventos con `session_id` nulo (la columna es nullable) quedan fuera de las visitas.
 
 ## Datos de demo (local)
 
@@ -70,10 +77,21 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   en el dashboard de analytics (tabla + total de mensajes clasificados).
   ⚠️ `intent`/`intent_source` deben estar en `$fillable` de `ChatConversation` (modo estricto).
 - **Métricas extra (hechas, sin IA):** dispositivo (móvil/desktop/tablet desde `user_agent`),
-  visitantes que vuelven (session_id en ≥2 días distintos) y tiempo promedio de sesión
-  (max-min `created_at` por session_id). Calculadas en `getEventMetrics()` desde `tracking_events`.
+  visitantes que vuelven (visitante con ≥2 visitas) y tiempo promedio **por visita**.
+  Calculadas en `getEventMetrics()` desde `tracking_events`. Claves que van a la vista:
+  `funnel` (por visita), `visitaAvgSeconds`, `totalVisitas`, `devices`/`visitors`/`totalVisitantes`
+  (por visitante).
+- **Pendiente — reconocer al que vuelve en iPhone:** Safari (ITP) borra el localStorage a los
+  **7 días** sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
+  recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
+  (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
+- **Rate limiting (hecho):** las rutas públicas ya no cuentan por IP sino por dispositivo
+  (limitadores `chat-ia`, `carrito` y `tracking` en `AppServiceProvider`), así que un local
+  lleno no se come el cupo entre todos y deja de perder eventos por 429. Ver CLAUDE.md.
+  Verificado que **no hay Cloudflare** adelante: `$request->ip()` es la IP real del cliente.
 
 ## Tests
 
 `tests/Feature/AnalyticsTrackingTest.php`: endpoint (evento válido, whitelist, validación),
-panel (binding por slug, scope, gating por feature, aislamiento entre comercios).
+panel (binding por slug, scope, gating por feature, aislamiento entre comercios) y visitas
+(corte por inactividad, recurrencia, promedio por visita, eventos sin `session_id`).
