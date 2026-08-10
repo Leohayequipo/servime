@@ -95,12 +95,17 @@ class AnalyticsInsightsService
      * Solo mira mensajes ESCRITOS por el cliente y con el contador ya cargado
      * (las filas viejas tienen NULL = no sabemos, y no cuentan).
      *
+     * El filtro `escritas()` no es cosmético: al tocar "Ver más opciones" la interfaz
+     * reenvía la misma consulta y el modelo vuelve a declarar el mismo faltante, así
+     * que sin el filtro un solo pedido del cliente contaba dos veces.
+     *
      * @return array<int, array{consulta:string, veces:int}>
      */
     public function demandaInsatisfecha($comercioId, int $limit = 10): array
     {
         $faltantes = ChatConversation::forComercio($comercioId)
             ->recent(30)
+            ->escritas()
             ->whereNotNull('falta')
             ->pluck('falta')
             ->filter();
