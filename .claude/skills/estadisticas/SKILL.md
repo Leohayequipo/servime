@@ -29,6 +29,8 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
   | `dish_want` | `nombre`, `price` | `.btn-lo-quiero` |
   | `order_summary` | `items` | abrir el "Resumen para el mozo" (`#fabWish`) |
   | `mic_start` | — | `recognition.onstart` del dictado por voz |
+  | `categoria_tap` | `nombre` | `.cat-chip[data-categoria]` del panel de categorías del chat |
+  | `tag_tap` | `nombre` | `.tag-chip[data-tag]` del panel "Filtrar por Tags" del chat |
 
 - **Frontend:** partial `resources/views/menu/partials/tracking.blade.php`, incluido en
   `menu/portada|choose|chat|classic` con `['trackView' => '...']`. Define `window.smTrack(event, data)`
@@ -122,6 +124,28 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   contaba clicks y mostraba 25/6 al lado de un embudo que decía 13 — una sola visita había
   elegido 11 veces. Quien probó los dos modos va aparte en `menuChoice['ambos']` (nota al pie
   del widget), porque no puede sumar de ambos lados.
+- **"Qué categorías miran" (hecho).** El tap de categoría del chat manda `categoria_tap` con
+  el nombre **original del menú**, no el traducido: con el `nombre_visible` la misma categoría
+  vista en inglés habría aparecido como una segunda fila. Se descartó sacarlo del texto del
+  mensaje (`"Mostrame TODAS las opciones de la categoría X"`, que ya se guarda con
+  `origen = 'categoria'`): el parseo se rompe al cambiar la frase o el idioma. Se cuenta por
+  **tap**, no por visita — volver dos veces a postres es justamente la señal.
+- **"Qué etiquetas filtran" (hecho).** `tag_tap` desde el panel de tags del chat. Es lo único
+  del panel que contesta **qué restricciones alimentarias tienen los clientes** del comercio, y
+  antes se tiraba. Los nombres se normalizan al agrupar (`SIN_TACC`, `sin-tacc` y `sin tacc` son
+  la misma fila) porque el menú los trae cargados de cualquier forma.
+- **"Sin responder" ahora se entera de verdad (hecho).** `chatStream()` pasaba
+  `used_openai = true` **hardcodeado**, así que la tarjeta marcaba 0 mientras OpenAI rechazaba
+  todas las llamadas por falta de crédito — justo la métrica que se dejó en el panel porque
+  "avisa cuando algo falla". Ahora va una bandera `$usoIA` que se apaga en el `catch` (solo si
+  no llegó ningún token: un stream cortado a mitad igual respondió). Con el mismo flag,
+  **`registrarUsoIA()` ya no corre cuando OpenAI falla**: el comercio perdía cuota de su plan
+  por consultas que nunca se atendieron. Fijado en `tests/Feature/ChatbotCaidaTest.php`.
+  El chat sin streaming ya lo hacía bien; el bug era solo del stream, que es el que usa el front.
+- **Los widgets vacíos NO se esconden.** Si un widget desaparece cuando no hay datos, el
+  comercio nunca se entera de que la función existe — y "Atajos más usados" es justo el que le
+  diría qué botones cambiar. Todos llevan su `@empty` con un mensaje, y hay un test que lo fija
+  para un comercio sin un solo evento.
 - **El embudo cierra en `order_summary` (hecho).** "Lo quiero" es un click sobre un plato
   suelto; abrir el pedido para revisarlo es lo más cerca de una venta que podemos medir. El
   escalón **exige `items > 0`**: el panel se puede abrir vacío y sin esa condición el último
@@ -163,14 +187,11 @@ Los números son de la base local de Azopardo, medidos al auditar el panel contr
    "colita de rana" y "colita de ranas" salen como dos líneas distintas (visto en datos
    reales). `getTopWords()` ya resuelve esto con `singularizar()`; falta aplicarlo también
    acá, palabra por palabra sobre la clave normalizada.
-5. **Falta el widget de categorías del chat.** El dato ya está: los taps de categoría se
-   guardan con `origen = 'categoria'` y el mensaje dice cuál. Es trabajo de panel, no de
-   tracking.
-6. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
+5. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
    sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
    recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
    (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
-7. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
+6. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
    usados" ya da el insumo para decidir cuáles dejar.
 
 > Dato para dimensionar el pendiente 3: hoy **27 de 42** mensajes caen en la categoría

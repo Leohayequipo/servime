@@ -19,6 +19,8 @@ class TrackingController extends Controller
         'dish_want',      // clickeó "Lo quiero" (data.nombre, data.price)
         'order_summary',  // abrió el "Resumen para el mozo" (data.items) — el final del embudo
         'mic_start',      // arrancó a dictar por voz
+        'categoria_tap',  // tocó una categoría en el chat (data.nombre, el del menú sin traducir)
+        'tag_tap',        // filtró por una etiqueta del menú: sin TACC, vegano... (data.nombre)
     ];
 
     /**

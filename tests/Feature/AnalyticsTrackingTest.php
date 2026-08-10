@@ -302,11 +302,72 @@ class AnalyticsTrackingTest extends TestCase
         $this->assertSame(1, $metrics['menuChoice']['ambos']);
     }
 
+    public function test_el_panel_rankea_las_categorias_que_miran(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        // Volver dos veces a la misma categoría suma dos: acá la unidad es el toque.
+        $this->evento($comercio, 'v1', 'categoria_tap', $ahora, ['nombre' => 'Postres']);
+        $this->evento($comercio, 'v1', 'categoria_tap', $ahora, ['nombre' => 'Postres']);
+        $this->evento($comercio, 'v2', 'categoria_tap', $ahora, ['nombre' => 'Pizzas']);
+        // Sin nombre no se puede rankear: se descarta en vez de mostrar una fila vacía.
+        $this->evento($comercio, 'v3', 'categoria_tap', $ahora, []);
+
+        $respuesta = $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk();
+        $top = $respuesta->viewData('metrics')['topCategorias'];
+
+        $this->assertSame(['Postres' => 2, 'Pizzas' => 1], $top->all());
+        $respuesta->assertSee('Qué categorías miran', false);
+    }
+
+    public function test_el_panel_rankea_las_etiquetas_y_las_muestra_legibles(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        // El menú carga las etiquetas de cualquier forma: SIN_TACC, sin-tacc, sin tacc.
+        // Las tres son la misma restricción y tienen que juntarse en una sola fila.
+        $this->evento($comercio, 'v1', 'tag_tap', $ahora, ['nombre' => 'SIN_TACC']);
+        $this->evento($comercio, 'v2', 'tag_tap', $ahora, ['nombre' => 'sin-tacc']);
+        $this->evento($comercio, 'v3', 'tag_tap', $ahora, ['nombre' => 'sin tacc']);
+        $this->evento($comercio, 'v4', 'tag_tap', $ahora, ['nombre' => 'VEGANO']);
+
+        $respuesta = $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk();
+
+        $this->assertSame(['Sin tacc' => 3, 'Vegano' => 1], $respuesta->viewData('metrics')['topTags']->all());
+        $respuesta->assertSee('Qué etiquetas filtran', false);
+    }
+
+    public function test_un_comercio_sin_datos_ve_los_widgets_vacios_y_no_pantalla_en_blanco(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        // Sin un solo evento: los widgets tienen que estar igual, avisando que no hay datos.
+        // Si desaparecen, el comercio nunca se entera de que la función existe.
+        $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk()
+            ->assertSee('¿Por dónde entran?', false)
+            ->assertSee('Atajos más usados', false)
+            ->assertSee('Qué categorías miran', false)
+            ->assertSee('Todavía nadie abrió el listado de categorías', false)
+            ->assertSee('Qué etiquetas filtran', false)
+            ->assertSee('Todavía nadie filtró por etiquetas', false);
+    }
+
     public function test_el_endpoint_acepta_los_eventos_nuevos(): void
     {
         $comercio = Comercio::factory()->create();
 
-        foreach ([['order_summary', ['items' => 3]], ['mic_start', []]] as [$event, $data]) {
+        foreach ([['order_summary', ['items' => 3]], ['mic_start', []], ['categoria_tap', ['nombre' => 'Postres']]] as [$event, $data]) {
             $this->postJson(route('track', $comercio), [
                 'event' => $event,
                 'session_id' => 'sess_1',

@@ -302,6 +302,22 @@ class AnalyticsController extends Controller
             ->groupBy(fn ($e) => $this->sinEmoji($e->data['promo'] ?? '') ?: '—')
             ->map->count()->sortDesc()->take(6);
 
+        // Categorías más miradas en el chat. Se cuenta por tap y no por visita: la pregunta
+        // es qué parte de la carta despierta curiosidad, y que alguien vuelva dos veces a
+        // postres dice justamente eso.
+        $topCategorias = $events->where('event', 'categoria_tap')
+            ->filter(fn ($e) => ! empty($e->data['nombre']))
+            ->groupBy(fn ($e) => $e->data['nombre'])
+            ->map->count()->sortDesc()->take(8);
+
+        // Etiquetas filtradas. Contesta algo que ningún otro widget contesta: qué
+        // restricciones tienen sus clientes. Se muestra legible (el menú las trae como
+        // SIN_TACC o sin-tacc según cómo las cargaron).
+        $topTags = $events->where('event', 'tag_tap')
+            ->filter(fn ($e) => ! empty($e->data['nombre']))
+            ->groupBy(fn ($e) => ucfirst(mb_strtolower(str_replace(['_', '-'], ' ', $e->data['nombre']))))
+            ->map->count()->sortDesc()->take(8);
+
         // Platos más deseados ("Lo quiero")
         $topDishes = $events->where('event', 'dish_want')
             ->groupBy(fn ($e) => $e->data['nombre'] ?? '—')
@@ -388,7 +404,7 @@ class AnalyticsController extends Controller
         $totalVisitantes = array_sum($visitors);
         $totalVisitas = $visitas->count();
 
-        return compact('menuChoice', 'entradas', 'topChips', 'topPromos', 'topDishes', 'funnel',
+        return compact('menuChoice', 'entradas', 'topChips', 'topCategorias', 'topTags', 'topPromos', 'topDishes', 'funnel',
             'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'totalVisitantes',
             'totalVisitas');
     }

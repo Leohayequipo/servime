@@ -697,7 +697,17 @@ class ChatbotService
     /**
      * Obtener historial de conversación de la sesión
      */
-    private function getConversationHistory(Comercio $comercio, string $sessionId, int $limit = 10): array
+    /**
+     * Cuántas consultas anteriores se le recuerdan al modelo.
+     *
+     * Cada una son DOS entradas (la del cliente y la respuesta completa del bot), así que
+     * el costo sube rápido: con 10 medimos ~1.275 tokens de entrada extra por mensaje, en
+     * cada mensaje. Con 5 alcanza de sobra para que siga el hilo de una charla en la mesa
+     * —nadie retoma algo que preguntó diez mensajes atrás— y se paga la mitad.
+     */
+    private const HISTORIAL_MENSAJES = 5;
+
+    private function getConversationHistory(Comercio $comercio, string $sessionId, int $limit = self::HISTORIAL_MENSAJES): array
     {
         try {
             // Obtener los últimos N mensajes de la sesión (excluyendo el actual)

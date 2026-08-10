@@ -192,6 +192,7 @@ class ChatbotController extends Controller
             }
 
             $full = '';
+            $usoIA = true;
             try {
                 $full = $this->chatbotService->streamMessage(
                     $comercio,
@@ -205,20 +206,31 @@ class ChatbotController extends Controller
                 );
             } catch (\Throwable $e) {
                 \Log::error('Error en chatStream: '.$e->getMessage(), ['comercio_id' => $comercio->id]);
+                // Si no llegó ni un token, contestó el texto de respaldo y no la IA. Si el
+                // stream se cortó a mitad de camino la respuesta igual salió, así que eso
+                // sigue contando como atendido.
                 if ($full === '') {
+                    $usoIA = false;
                     $full = $this->generateFallbackResponse($comercio, $message);
                     $emit(['type' => 'delta', 'content' => $full]);
                 }
             }
 
-            // Contabilizar el uso de IA del mes (cuota del plan)
-            $comercio->registrarUsoIA();
+            // Contabilizar el uso de IA del mes (cuota del plan). Solo si OpenAI respondió:
+            // si se cae (o se queda sin crédito), el comercio no tiene por qué perder cuota
+            // por consultas que nunca se atendieron.
+            if ($usoIA) {
+                $comercio->registrarUsoIA();
+            }
 
             // Platos mencionados (datos exactos del JSON: foto/precio/botón)
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $full);
             $emit(['type' => 'done', 'platos' => $platos]);
 
-            $this->logConversation($comercio, $message, $full, true, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
+            // $usoIA y no true fijo: con esto la tarjeta "Sin responder" del panel se entera
+            // de que el asistente está caído. Estaba hardcodeado y marcaba 0 mientras OpenAI
+            // rechazaba todas las llamadas por falta de crédito.
+            $this->logConversation($comercio, $message, $full, $usoIA, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
         };
 
         return response()->stream($callback, 200, [

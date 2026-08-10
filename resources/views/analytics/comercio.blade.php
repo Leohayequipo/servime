@@ -252,7 +252,6 @@
                     ['«Quiero ver el menú completo»', $en['completo'], 'bg-gray-400 dark:bg-gray-600'],
                 ];
             @endphp
-            @if($enTotal > 0)
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                         <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
@@ -261,16 +260,20 @@
                             <x-ayuda titulo="¿Por dónde entran?" texto="En la pantalla inicial hay tres caminos: el botón grande del asistente, los atajos sugeridos (que también abren el asistente, pero con la pregunta ya escrita) y el link al menú completo de toda la vida. Esto te dice cuál usan. Ojo al comparar: el asistente tiene dos puertas y el menú completo una sola, así que es esperable que junte más. Se cuentan toques, no personas: acá lo que importa es qué botón se usa." />
                         </h3>
                         <p class="text-text-secondary text-sm mb-4">Qué toca el cliente en la pantalla inicial.</p>
-                        @foreach($puertas as [$label, $val, $color])
-                            <div class="mb-3">
-                                <div class="flex justify-between text-sm text-text-secondary mb-1">
-                                    <span>{{ $label }}</span><b>{{ $val }} ({{ round($val / $enTotal * 100) }}%)</b>
+                        @if($enTotal > 0)
+                            @foreach($puertas as [$label, $val, $color])
+                                <div class="mb-3">
+                                    <div class="flex justify-between text-sm text-text-secondary mb-1">
+                                        <span>{{ $label }}</span><b>{{ $val }} ({{ round($val / $enTotal * 100) }}%)</b>
+                                    </div>
+                                    <div class="h-2 bg-accent-gray/40 rounded">
+                                        <div class="h-2 {{ $color }} rounded" style="width: {{ round($val / $enTotal * 100) }}%"></div>
+                                    </div>
                                 </div>
-                                <div class="h-2 bg-accent-gray/40 rounded">
-                                    <div class="h-2 {{ $color }} rounded" style="width: {{ round($val / $enTotal * 100) }}%"></div>
-                                </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        @else
+                            <p class="text-text-secondary text-center py-4">Todavía no hay toques registrados en la pantalla inicial.</p>
+                        @endif
                     </div>
 
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
@@ -295,7 +298,6 @@
                         @endforelse
                     </div>
                 </div>
-            @endif
 
             <!-- Dispositivo · Visitantes · Micrófono -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -358,6 +360,7 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="flame" class="w-4 h-4 flex-none opacity-60" />
                         Promos más clickeadas
+                        <x-ayuda titulo="Promos más clickeadas" texto="Si tu menú tiene una categoría marcada como promoción, en el chat aparece como un botón destacado. Acá ves cuántas veces lo tocaron. Ojo con leer de más: que una promo se mire mucho no significa que se venda; para eso mirá si esos clientes después llegaron a tocar «Lo quiero». La barra se dibuja contra la promo más tocada, así que con una sola promo siempre se va a ver llena." />
                     </h3>
                     @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
                     @forelse($metrics['topPromos'] as $promo => $count)
@@ -378,6 +381,7 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="heart" class="w-4 h-4 flex-none opacity-60" />
                         Platos más deseados
+                        <x-ayuda titulo="Platos más deseados" texto="Cuando el asistente recomienda un plato, lo muestra en una tarjeta con foto y precio y un botón «Lo quiero» que lo suma al pedido. Esto es el ranking de los platos que más veces tocaron. Es lo más cerca de una venta que ves acá, pero no es una venta: el cliente puede sumarlo y después arrepentirse, o pedirle otra cosa al mozo. Se cuenta cada toque, así que si alguien suma dos milanesas, suma dos." />
                     </h3>
                     @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
                     @forelse($metrics['topDishes'] as $dish => $count)
@@ -391,6 +395,55 @@
                         </div>
                     @empty
                         <p class="text-text-secondary text-center py-4">Nadie tocó "Lo quiero" aún.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Cómo exploran la carta desde el chat: por categoría o filtrando por etiqueta.
+                 Van después de "platos deseados" porque son el paso anterior: curiosear una
+                 parte del menú, no querer un plato puntual. --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                        <x-icono name="grid" class="w-4 h-4 flex-none opacity-60" />
+                        Qué categorías miran
+                        <x-ayuda titulo="Qué categorías miran" texto="Cuando el cliente habla con el asistente puede abrir la lista de categorías de tu carta y tocar una. Esto es el ranking de esas categorías. Ojo que no es lo mismo que «Platos más deseados»: allá el cliente ya decidió que quiere un plato, acá recién está curioseando una parte del menú. Sirve para saber qué despierta interés y qué conviene mostrar primero. Se cuenta cada toque, así que volver dos veces a los postres suma dos." />
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">Las secciones de tu carta que más abren en el chat.</p>
+                    @php $catMax = $metrics['topCategorias']->max() ?: 1; @endphp
+                    @forelse($metrics['topCategorias'] as $cat => $count)
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm text-text-secondary mb-1">
+                                <span class="truncate">{{ $cat }}</span><b>{{ $count }}</b>
+                            </div>
+                            <div class="h-2 bg-accent-gray/40 rounded">
+                                <div class="h-2 bg-purple-500 rounded" style="width: {{ round($count / $catMax * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-text-secondary text-center py-4">Todavía nadie abrió el listado de categorías.</p>
+                    @endforelse
+                </div>
+
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                        <x-icono name="check" class="w-4 h-4 flex-none opacity-60" />
+                        Qué etiquetas filtran
+                        <x-ayuda titulo="Qué etiquetas filtran" texto="En el chat el cliente puede filtrar tu carta por etiqueta: sin TACC, vegano, sin lactosa, lo que tengas cargado en los platos. Este ranking es lo único del panel que te dice qué necesidades alimentarias tienen tus clientes, y es de lo más accionable que hay: si muchos filtran por algo que casi no tenés, ahí hay platos para sumar. Las etiquetas salen de tu menú, así que si un plato apto no está etiquetado, el filtro no lo encuentra." />
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">Las restricciones o preferencias que buscan tus clientes.</p>
+                    @php $tagMax = $metrics['topTags']->max() ?: 1; @endphp
+                    @forelse($metrics['topTags'] as $tag => $count)
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm text-text-secondary mb-1">
+                                <span class="truncate">{{ $tag }}</span><b>{{ $count }}</b>
+                            </div>
+                            <div class="h-2 bg-accent-gray/40 rounded">
+                                <div class="h-2 bg-teal-500 rounded" style="width: {{ round($count / $tagMax * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-text-secondary text-center py-4">Todavía nadie filtró por etiquetas.</p>
                     @endforelse
                 </div>
             </div>

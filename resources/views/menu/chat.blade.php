@@ -644,8 +644,11 @@
                                  no cubre la mayoría de las categorías reales (adicionales,
                                  empanadas, hamburguesas, papas, gaseosas...) y todas caían
                                  al 🍽️ genérico, repetido 6 veces. Tipografía sola es más limpio. --}}
+                            {{-- data-categoria lleva el nombre ORIGINAL del menú, no el
+                                 traducido: si no, la misma categoría vista en otro idioma
+                                 aparecería como dos en el panel de analytics. --}}
                             <button onclick="askQuestion(@js($categoria['nombre']), 'categoria', @js($categoria['nombre']), @js($categoria['nombre_visible'] ?? $categoria['nombre'])); hideCategories();"
-                                    class="cat-chip">
+                                    class="cat-chip" data-categoria="{{ $categoria['nombre'] }}">
                                 {{ $categoria['nombre_visible'] ?? $categoria['nombre'] }}
                             </button>
                         @endif
@@ -667,7 +670,7 @@
                     @foreach($tags as $tag)
                         {{-- El hover iba en atributos inline (y en touch no existe): ahora es CSS --}}
                         <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();"
-                                class="tag-chip">
+                                class="tag-chip" data-tag="{{ $tag }}">
                             {{ str_replace('_', ' ', $tag) }}
                         </button>
                     @endforeach

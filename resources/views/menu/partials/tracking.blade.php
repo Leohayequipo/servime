@@ -47,6 +47,16 @@
         const promo = e.target.closest('.cat-chip-promo');
         if (promo) { window.smTrack('promo_click', { promo: (promo.textContent || '').trim().slice(0, 80) }); return; }
 
+        // Qué parte de la carta miran. Distinto de dish_want: esto es curiosear una
+        // categoría, aquello es querer un plato puntual.
+        const cat = e.target.closest('.cat-chip[data-categoria]');
+        if (cat) { window.smTrack('categoria_tap', { nombre: cat.getAttribute('data-categoria').slice(0, 60) }); return; }
+
+        // Qué restricciones tienen sus clientes (sin TACC, vegano...). Es lo único que
+        // contesta esa pregunta, y hasta ahora se tiraba.
+        const tag = e.target.closest('.tag-chip[data-tag]');
+        if (tag) { window.smTrack('tag_tap', { nombre: tag.getAttribute('data-tag').slice(0, 60) }); return; }
+
         const dish = e.target.closest('.btn-lo-quiero');
         if (dish) { window.smTrack('dish_want', { nombre: dish.getAttribute('data-nombre'), price: dish.getAttribute('data-price') }); return; }
     });
