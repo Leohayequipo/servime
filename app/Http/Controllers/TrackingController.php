@@ -13,10 +13,12 @@ class TrackingController extends Controller
      * Eventos permitidos (whitelist para no guardar basura).
      */
     private const ALLOWED_EVENTS = [
-        'page_view',     // vio una pantalla (data.view: choose|chat|classic)
-        'menu_choice',   // eligió IA o clásico (data.choice: ia|classic)
-        'promo_click',   // clickeó una promo (data.promo)
-        'dish_want',     // clickeó "Lo quiero" (data.nombre, data.price)
+        'page_view',      // vio una pantalla (data.view: choose|chat|classic)
+        'menu_choice',    // eligió IA o clásico (data.choice: ia|classic, data.desde, data.label)
+        'promo_click',    // clickeó una promo (data.promo)
+        'dish_want',      // clickeó "Lo quiero" (data.nombre, data.price)
+        'order_summary',  // abrió el "Resumen para el mozo" (data.items) — el final del embudo
+        'mic_start',      // arrancó a dictar por voz
     ];
 
     /**

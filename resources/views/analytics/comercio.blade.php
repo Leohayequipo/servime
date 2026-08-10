@@ -193,12 +193,13 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="funnel" class="w-4 h-4 flex-none opacity-60" />
                         Embudo de interés
-                        <x-ayuda titulo="Embudo de interés" texto="Muestra hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú y menos todavía tocan «Lo quiero». Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques: si alguien vuelve otro día es una visita nueva, pero si toca cinco veces seguidas sigue siendo una." />
+                        <x-ayuda titulo="Embudo de interés" texto="Muestra hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú, menos todavía tocan «Lo quiero» y unos pocos abren su pedido para revisarlo antes de pedírselo al mozo. Ese último escalón es el que más se parece a una venta: ya tenían platos elegidos y fueron a mirar la lista. Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques: si alguien vuelve otro día es una visita nueva, pero si toca cinco veces seguidas sigue siendo una." />
                     </h3>
                     @php
                         $fv = $metrics['funnel']['visitas'];
                         $fc = $metrics['funnel']['vieron_eleccion'] ?? 0;
                         $fe = $metrics['funnel']['eligieron']; $fi = $metrics['funnel']['interesados'];
+                        $fp = $metrics['funnel']['armaron_pedido'] ?? 0;
                         // "Pasaron por la pantalla inicial" es un paso propio: quien entra
                         // directo al chat o al clásico no la ve, y sin ese paso el salto a
                         // "eligieron" parecía una caída enorme que no existía.
@@ -207,6 +208,7 @@
                             ['Pasaron por la pantalla inicial', $fc, 'bg-indigo-500'],
                             ['Eligieron una opción', $fe, 'bg-amber-500'],
                             ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500'],
+                            ['Revisaron su pedido', $fp, 'bg-emerald-600'],
                         ];
                     @endphp
                     @if($fv > 0)
@@ -288,8 +290,8 @@
                 </div>
             @endif
 
-            <!-- Dispositivo · Visitantes · Tiempo de sesión -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Dispositivo · Visitantes · Tiempo de sesión · Micrófono -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="phone" class="w-4 h-4 flex-none opacity-60" />
@@ -329,6 +331,19 @@
                     @php $sec = $metrics['visitaAvgSeconds']; $dur = $sec >= 60 ? intdiv($sec, 60).'m '.($sec % 60).'s' : $sec.'s'; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ $dur }}</p>
                     <p class="text-sm text-text-secondary mt-1">por visita ({{ $metrics['totalVisitas'] }} en total)</p>
+                </div>
+
+                {{-- El dictado por voz termina en el input y se manda como texto, así que sin
+                     su propio evento no había forma de saber si alguien usa el micrófono. --}}
+                @php $voz = $metrics['vozVisitas'] ?? 0; $vtot = $metrics['totalVisitas'] ?: 1; @endphp
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                    <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
+                        <x-icono name="mic" class="w-4 h-4 flex-none opacity-60" />
+                        Hablaron con el asistente
+                        <x-ayuda titulo="Hablaron con el asistente" texto="Cuántas visitas usaron el micrófono para dictar su consulta en vez de escribirla. Sirve para saber si esa función se usa: en un local ruidoso o con gente alrededor puede que nadie se anime, y si nunca la toca nadie no vale la pena tenerla ahí ocupando lugar. No funciona en todos los navegadores, así que parte de los que no aparecen acá es porque no les apareció el botón." />
+                    </h3>
+                    <p class="text-4xl font-bold text-text-primary">{{ round($voz / $vtot * 100) }}%</p>
+                    <p class="text-sm text-text-secondary mt-1">{{ $voz }} de {{ $metrics['totalVisitas'] }} visitas usaron el micrófono</p>
                 </div>
             </div>
 

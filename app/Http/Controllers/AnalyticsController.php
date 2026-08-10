@@ -323,12 +323,20 @@ class AnalyticsController extends Controller
         // elegir: si alguien entra directo a /chat o /classic (un QR que apunta ahí, un
         // favorito, un link compartido) contaba en 'visitas' y nunca podía elegir, así que
         // el ratio de elección salía por el piso. Medido en local: 2% contra los 20% reales.
+        // 'armaron_pedido' cierra el embudo: tocar "Lo quiero" es un click sobre un plato,
+        // abrir el resumen es irse a pedirlo. Se exige al menos un ítem para que el paso
+        // sea de verdad un subconjunto del anterior (el botón se puede abrir vacío).
         $funnel = [
             'visitas' => $visitasCon(fn ($e) => $e->event === 'page_view'),
             'vieron_eleccion' => $visitasCon(fn ($e) => $e->event === 'page_view' && ($e->data['view'] ?? null) === 'choose'),
             'eligieron' => $visitasCon(fn ($e) => $e->event === 'menu_choice'),
             'interesados' => $visitasCon(fn ($e) => $e->event === 'dish_want'),
+            'armaron_pedido' => $visitasCon(fn ($e) => $e->event === 'order_summary' && (int) ($e->data['items'] ?? 0) > 0),
         ];
+
+        // Micrófono: por visita, no por evento — dictar tres frases seguidas sigue siendo
+        // una persona usando la función. Sirve para saber si la feature vale la pena.
+        $vozVisitas = $visitasCon(fn ($e) => $e->event === 'mic_start');
 
         // Heatmap por día de semana (0=Dom..6=Sáb) x hora
         $heatmap = array_fill(0, 7, array_fill(0, 24, 0));
@@ -358,8 +366,8 @@ class AnalyticsController extends Controller
         $totalVisitas = $visitas->count();
 
         return compact('menuChoice', 'entradas', 'topChips', 'topPromos', 'topDishes', 'funnel',
-            'heatmap', 'heatmapMax', 'devices', 'visitors', 'visitaAvgSeconds', 'totalVisitantes',
-            'totalVisitas');
+            'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'visitaAvgSeconds',
+            'totalVisitantes', 'totalVisitas');
     }
 
     /**

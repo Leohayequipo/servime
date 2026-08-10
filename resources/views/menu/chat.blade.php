@@ -736,6 +736,9 @@
                         isListening = true;
                         micButton.style.background = '#ef4444';
                         messageInput.placeholder = T.escuchando;
+                        // El dictado termina en el input y se manda como texto, así que sin
+                        // este evento no hay forma de saber si el micrófono se usa.
+                        window.smTrack?.('mic_start');
                     };
                     
                     recognition.onresult = function(event) {
@@ -1449,7 +1452,17 @@
         function toggleCategories() { togglePanel(categoriesPanel); }
         function toggleTags() { togglePanel(tagsPanel); }
 
-        if (fabWish && wishPanel) fabWish.addEventListener('click', () => togglePanel(wishPanel, renderWish));
+        // Abrir el resumen es el final real del recorrido: el cliente armó el pedido y se lo
+        // va a mostrar al mozo. Se manda con la cantidad de ítems, y solo al ABRIR el panel
+        // (togglePanel también cierra) para no contar dos veces la misma consulta.
+        if (fabWish && wishPanel) fabWish.addEventListener('click', () => {
+            const abriendo = openPanelEl !== wishPanel;
+            togglePanel(wishPanel, renderWish);
+            if (abriendo) {
+                const items = loadWish().reduce((s, it) => s + (Number(it.qty) || 1), 0);
+                window.smTrack?.('order_summary', { items: items });
+            }
+        });
         document.getElementById('wishClose')?.addEventListener('click', () => closePanel());
         if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
         document.getElementById('closeCategories')?.addEventListener('click', () => closePanel());

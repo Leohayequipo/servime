@@ -241,4 +241,53 @@ class AnalyticsTrackingTest extends TestCase
 
         $respuesta->assertSee('¿Por dónde entran?')->assertSee('Sin TACC');
     }
+
+    // ---- Cierre del embudo (pedido para el mozo) y micrófono ----
+
+    public function test_el_embudo_cierra_con_el_pedido_y_cuenta_el_microfono(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        // Visita completa: mira, quiere un plato y abre el resumen para el mozo.
+        $this->evento($comercio, 'v1', 'page_view', $ahora, ['view' => 'chat']);
+        $this->evento($comercio, 'v1', 'dish_want', $ahora, ['nombre' => 'Milanesa']);
+        $this->evento($comercio, 'v1', 'order_summary', $ahora, ['items' => 2]);
+        // Abrió el resumen vacío: no armó ningún pedido, no cuenta.
+        $this->evento($comercio, 'v2', 'page_view', $ahora, ['view' => 'chat']);
+        $this->evento($comercio, 'v2', 'order_summary', $ahora, ['items' => 0]);
+        // Dictó dos veces en la misma visita: es una persona usando el micrófono, no dos.
+        $this->evento($comercio, 'v3', 'page_view', $ahora, ['view' => 'chat']);
+        $this->evento($comercio, 'v3', 'mic_start', $ahora, []);
+        $this->evento($comercio, 'v3', 'mic_start', $ahora, []);
+
+        $metrics = $this->actingAs($admin)
+            ->get(route('analytics.comercio', $comercio))->assertOk()
+            ->viewData('metrics');
+
+        $this->assertSame(1, $metrics['funnel']['armaron_pedido']);
+        $this->assertSame(1, $metrics['vozVisitas']);
+        $this->assertSame(3, $metrics['totalVisitas']);
+    }
+
+    public function test_el_endpoint_acepta_los_eventos_nuevos(): void
+    {
+        $comercio = Comercio::factory()->create();
+
+        foreach ([['order_summary', ['items' => 3]], ['mic_start', []]] as [$event, $data]) {
+            $this->postJson(route('track', $comercio), [
+                'event' => $event,
+                'session_id' => 'sess_1',
+                'data' => $data,
+            ])->assertNoContent();
+
+            $this->assertDatabaseHas('tracking_events', [
+                'comercio_id' => $comercio->id,
+                'event' => $event,
+            ]);
+        }
+    }
 }

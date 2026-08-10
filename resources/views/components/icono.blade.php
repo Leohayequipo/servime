@@ -28,6 +28,7 @@
         'phone' => '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
         'return' => '<path d="M3.5 12a8.5 8.5 0 0 1 14.2-6.3L20.5 8"/><path d="M20.5 4v4h-4"/><path d="M20.5 12a8.5 8.5 0 0 1-14.2 6.3L3.5 16"/><path d="M3.5 20v-4h4"/>',
         'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>',
+        'mic' => '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5"/>',
         'split' => '<path d="M12 3v5.5"/><path d="M12 8.5 7 13.5V21"/><path d="M12 8.5l5 5V21"/>',
 
         // Menú
