@@ -398,10 +398,21 @@
                                                 <p class="text-text-secondary text-sm truncate">
                                                     {{ Str::limit($ultimaConv->user_message, 80) }}
                                                 </p>
+                                                {{-- Del último extremo se mostraba sólo la HORA, así que
+                                                     un hilo que empezó el 09 y siguió hoy se leía
+                                                     "09/08 09:43 → 13:57" y parecía todo del mismo día
+                                                     (y encima la lista se ordena por el último mensaje,
+                                                     con lo cual quedaba arriba mostrando una fecha vieja).
+                                                     Si cruza días, la fecha va en los dos extremos. --}}
+                                                @php
+                                                    $desde = $sesion['primera_conversacion']->created_at;
+                                                    $hasta = $sesion['ultima_conversacion']->created_at;
+                                                    $mismoDia = $desde->isSameDay($hasta);
+                                                @endphp
                                                 <p class="text-text-secondary text-xs mt-1">
-                                                    {{ $sesion['primera_conversacion']->created_at->format('d/m H:i') }}
+                                                    {{ $desde->format('d/m H:i') }}
                                                     @if($sesion['primera_conversacion']->id !== $sesion['ultima_conversacion']->id)
-                                                        → {{ $sesion['ultima_conversacion']->created_at->format('H:i') }}
+                                                        → {{ $hasta->format($mismoDia ? 'H:i' : 'd/m H:i') }}
                                                     @endif
                                                 </p>
                                             </div>
