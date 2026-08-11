@@ -9,7 +9,12 @@ SaaS de **menús digitales QR** para comercios gastronómicos. Un comercio sube 
 chatbot, carrito de pre-pedido y analytics. Multi-tenant por comercio, multi-rol.
 
 - **Stack:** Laravel 12, PHP 8.2, MySQL, Blade + Tailwind (Vite), Breeze (auth).
-- **IA:** OpenAI (`gpt-4o`, chatbot/OCR) y Gemini (`gemini-2.5-flash`, procesa PDFs).
+- **IA:** OpenAI para el chatbot y OCR (el modelo sale del **plan** del comercio, hoy
+  `gpt-4o-mini`) y Gemini (`gemini-2.5-flash`) para procesar PDFs. Al tocar el chat, ver la
+  skill `chatbot`: el prompt tiene decisiones que costaron encontrarse.
+  ⚠️ **`gemini-2.5-flash` se discontinúa el 16/10/2026** y es el que procesa los menús: hay que
+  migrarlo antes de esa fecha o los PDFs van a dejar de procesarse. En la cuenta ya están
+  disponibles `gemini-3.5-flash` y `gemini-3.6-flash`.
 - **Hosting:** Hostinger (`servime.net`), auto-deploy por GitHub Actions.
 
 ## Reglas de trabajo (IMPORTANTE)
