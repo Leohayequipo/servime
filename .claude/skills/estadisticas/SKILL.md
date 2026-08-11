@@ -142,6 +142,44 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   **`registrarUsoIA()` ya no corre cuando OpenAI falla**: el comercio perdía cuota de su plan
   por consultas que nunca se atendieron. Fijado en `tests/Feature/ChatbotCaidaTest.php`.
   El chat sin streaming ya lo hacía bien; el bug era solo del stream, que es el que usa el front.
+- **Los atajos no se hacen pasar por clientes (hecho).** Hay cuatro botones que arman mensajes
+  y los cuatro declaran su `origen`: `categoria`, `ver_mas`, `chip` (atajos de la portada y
+  sugerencias de arranque del chat) y `tag` (filtros del chat). Todo lo que no sea `escrito`
+  queda fuera de los widgets de TEXTO (`escritas()`), no de los de volumen. Antes eran 21 de
+  103 mensajes contados como tipeados, y una sola frase de chip ocupaba **cuatro** casilleros
+  del top de palabras ("promociones", "que promociones", "promociones tienen", "tienen hoy"
+  eran el mismo click). Al sumar un botón nuevo: mandar `tipo` **y** agregarlo al `in:` de la
+  validación de `ChatbotController`, o el chat responde 400.
+- **"Te lo pidieron y no lo tenés" descarta lo que SÍ está en la carta (hecho).** El faltante
+  lo declara el modelo y el modelo se equivoca: anotó "rabas" seis veces con las rabas a
+  $26.000 en el menú. `demandaInsatisfecha()` pasa cada uno por `ChatbotService::tieneEnElMenu()`
+  y lo que sí está va a `faltantesQueSiEstan()`, un bloque **solo para super admin**: no es
+  demanda del cliente, es el asistente fallando. Sirve de termómetro — si esa línea crece,
+  algo se rompió en el prompt o en el modelo.
+- **"¿Para qué consultan?": faltaba la categoría más obvia (hecho).** El 84% caía en "Otras"
+  porque no existía "Buscan algo para comer", que en un menú digital es la consulta principal.
+  Se evalúa **al final** (si fuera primero, "¿tienen delivery?" caería en comida por el
+  "tienen") y hay una última red: si el texto coincide con la carta (`tieneEnElMenu()`), es
+  comida — mucha gente escribe sólo "rabas", sin verbo que reconocer. También se sumó el
+  voseo, que faltaba: "recomendás" no matcheaba con "recomenda" por el word-boundary.
+- **Los consejos saben qué tiene cargado el comercio (hecho).** "Cargá tu horario" se lo
+  decíamos a comercios que ya lo tenían. Ahora cada mensaje tiene dos versiones y una condición
+  (`! empty($c->horarios)`, `! empty($c->direccion)`): si el dato está, el consejo cambia de
+  sentido (te lo siguen preguntando, no se ve). `intents()` devuelve además `sinResolver` por
+  tema, y de ahí sale la mejor sugerencia que tenemos: *"de 6 consultas sobre dieta, en 5 no
+  encontró nada"* señala una carta sin etiquetar mucho mejor que un porcentaje general.
+- **Ayudas en dos niveles (hecho).** `x-ayuda` tiene `texto` (para el comercio: qué es y qué
+  hacer, en criollo) y `admin` (cómo se calcula y qué límites tiene). Son dos lectores
+  distintos: al comerciante le sirve "cuántos volvieron a mirar tu menú"; que el id viva en el
+  localStorage y que Safari lo borre a los 7 días es problema nuestro.
+- **"Preguntas más frecuentes" muestra sólo lo que se repite (hecho).** Con 68 preguntas
+  distintas en 80 mensajes, el top se llenaba de consultas únicas: el comercio escribía algo
+  nuevo, no lo veía y creía que el panel se lo comía. Ahora exige 2+ y avisa cuántas quedaron,
+  con link al historial (`#historial`), que es donde se lee todo.
+- **El historial muestra la fecha del ÚLTIMO mensaje** (se ordena por ahí) y **qué platos
+  ofreció** cada respuesta (columna `platos_ofrecidos`): el marcador `[[PLATOS]]` se borra
+  antes de guardar, así que sin eso no había forma de ver si el asistente recomendó cualquier
+  cosa. Las conversaciones viejas quedan en NULL, ese dato no se puede reconstruir.
 - **Los widgets vacíos NO se esconden.** Si un widget desaparece cuando no hay datos, el
   comercio nunca se entera de que la función existe — y "Atajos más usados" es justo el que le
   diría qué botones cambiar. Todos llevan su `@empty` con un mensaje, y hay un test que lo fija
@@ -159,12 +197,7 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
 
 Los números son de la base local de Azopardo, medidos al auditar el panel contra la base.
 
-1. **Los chips de la portada cuentan como texto escrito.** El chip lleva a `/chat?q=...` y el
-   front lo dispara sin `tipo`, así que se guarda con `origen = 'escrito'` (15% de los
-   mensajes). Infla palabras top, preguntas frecuentes e intención. Falta un `origen = 'chip'`,
-   y para eso hay que separar "de dónde vino el mensaje" de "cómo responde el modelo": hoy el
-   campo `tipo` hace las dos cosas y tocarlo cambia el prompt. Detalle en la skill `portada`.
-2. **No se puede medir cuánto se queda la gente, y por eso se sacó la tarjeta.** La duración
+1. **No se puede medir cuánto se queda la gente, y por eso se sacó la tarjeta.** La duración
    era `max - min` de los eventos, pero **no hay evento al salir**: el rato entre la última
    acción y el cierre de la pestaña se pierde siempre, y la visita de un solo evento mide 0 s.
    Medido: mediana **6 s** contra un promedio de **7 minutos** — el promedio no le pasaba a
@@ -172,7 +205,7 @@ Los números son de la base local de Azopardo, medidos al auditar el panel contr
    probado, mueve 18 segundos y rescata una sola visita, porque el que chatea igual toca cosas.
    Para que vuelva: evento de salida (`pagehide`/`visibilitychange` con `sendBeacon`, el mismo
    mecanismo de `smTrack`) **y** mostrar la mediana, no el promedio.
-3. **Sugerencias con IA (idea aprobada, para más adelante).** Las reglas de `suggestions()`
+2. **Sugerencias con IA (idea aprobada, para más adelante).** Las reglas de `suggestions()`
    solo ven las métricas; no ven **el menú**. Una IA sí puede cruzarlos y decir lo que ninguna
    regla puede: *"te preguntaron 5 veces por opciones sin TACC y tenés 3 platos que lo son
    pero sin etiquetar"*. La infraestructura ya está (`IntentClassifierService`, `gpt-4o-mini`,
@@ -183,20 +216,20 @@ Los números son de la base local de Azopardo, medidos al auditar el panel contr
    platos que no existen — y una sugerencia con un número falso es peor que ninguna. Guardar
    el resultado como los `intents` (no generar en cada carga del panel) y mantener el piso de
    volumen: con 6 consultas en el mes no hay nada que sugerir, ni con reglas ni con IA.
-4. **`demandaInsatisfecha()` no singulariza.** Agrupa sin acentos y en minúsculas, pero
+3. **`demandaInsatisfecha()` no singulariza.** Agrupa sin acentos y en minúsculas, pero
    "colita de rana" y "colita de ranas" salen como dos líneas distintas (visto en datos
    reales). `getTopWords()` ya resuelve esto con `singularizar()`; falta aplicarlo también
    acá, palabra por palabra sobre la clave normalizada.
-5. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
+4. **Reconocer al que vuelve en iPhone.** Safari (ITP) borra el localStorage a los **7 días**
    sin interacción, así que el visitante recurrente de iOS se cuenta como nuevo y la
    recurrencia queda subestimada. Se arregla mandando el id en una cookie del servidor
    (`Set-Cookie` con `Max-Age` largo), al estilo de `sv_vid` en `TrackSiteVisit`.
-6. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
+5. **Pantalla para configurar los chips de la portada** — ver la skill `portada`. "Atajos más
    usados" ya da el insumo para decidir cuáles dejar.
 
-> Dato para dimensionar el pendiente 3: hoy **27 de 42** mensajes caen en la categoría
-> "Otras" del rule-based. Las palabras clave no alcanzan para lo que la gente pregunta de
-> verdad, y eso también castiga a las sugerencias, que se apoyan en esa clasificación.
+> Sobre el pendiente 2: la clasificación con reglas ya mejoró bastante (28% en "Otras" contra
+> el 84% de antes), así que la IA tiene menos para ganar de lo que parecía. Antes de gastar
+> tokens, mirar qué queda realmente en "Otras".
 
 ## Tests
 
@@ -204,7 +237,18 @@ Los números son de la base local de Azopardo, medidos al auditar el panel contr
 panel (binding por slug, scope, gating por feature, aislamiento entre comercios), visitas
 (corte por inactividad, recurrencia, promedio por visita, eventos sin `session_id`) y las
 unidades de medida: el desglose de `desde`/`label`, que el embudo exige `items > 0` para
-cerrar, el micrófono por visita y que un indeciso con 5 clicks vale **una** elección.
+cerrar, el micrófono por visitante y que un indeciso con 5 clicks vale **una** elección.
+
+También que un comercio **sin datos** vea los widgets vacíos (si desaparecen, nadie se entera
+de que existen) y que las **sugerencias sean solo para super admin**.
 
 `tests/Feature/DemandaInsatisfechaTest.php`: "Te lo pidieron y no lo tenés" solo cuenta lo que
-el cliente **tipeó** — el "Ver más" reenvía la consulta y duplicaba el faltante.
+el cliente **tipeó** — el "Ver más" reenvía la consulta y duplicaba el faltante — y descarta
+lo que sí está en la carta, que va a `faltantesQueSiEstan()`.
+
+`tests/Feature/SugerenciasTest.php`: que no tire fruta. Sobre todo lo que **no** tiene que
+aparecer: una consulta suelta, poco volumen, más de cinco. Y que el consejo cambie según el
+comercio ya tenga cargado el dato.
+
+`tests/Feature/OrigenDeLosMensajesTest.php`: cada atajo responde 200 y guarda su `origen` —
+el riesgo real era que la validación no aceptara el tipo y el chat dejara de responder.

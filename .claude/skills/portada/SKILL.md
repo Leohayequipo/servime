@@ -237,14 +237,13 @@ en `portada_estado = 'error'` con un mensaje genérico.
   marcar hasta 3 de los sugeridos, con `getChipsSugeridos()` como fallback si no eligió nada.
   Sin decidir: si se permiten chips escritos a mano (riesgo: prometer algo que el menú no tiene)
   y si es feature de plan. Resuelve de raíz los dos defectos de la regla automática.
-- **Los chips ensucian las estadísticas de texto.** El chip lleva a `/chat?q=...` y
-  `chat.blade.php` lo dispara con `sendMessage(preQ)` sin `tipo`, así que la conversación se
-  guarda con `origen = 'escrito'`, como si el cliente lo hubiera tipeado. Medido: 8 de 54
-  mensajes (15%) en Azopardo. Infla palabras top, preguntas frecuentes e intención — el mismo
-  problema que ya se arregló para `categoria` y `ver_mas`. Falta un `origen = 'chip'`, y para
-  eso hay que **separar "de dónde vino el mensaje" de "cómo tiene que responder el modelo"**:
-  hoy el campo `tipo` hace las dos cosas y tocarlo cambia el prompt. Ver la skill `estadisticas`.
-- El **chatbot no usa los horarios** aunque el dato ya exista (`ChatbotController:252` deflecta).
+- ~~Los chips ensucian las estadísticas de texto~~ **(resuelto).** El chip lleva a
+  `/chat?q=...` y se disparaba sin `tipo`, así que la conversación quedaba como tipeada por el
+  cliente (8 de 54 mensajes). Ahora manda `tipo = 'chip'` y los widgets de texto lo ignoran.
+  Ojo al sumar un atajo nuevo: el valor tiene que estar en el `in:` de las dos validaciones de
+  `ChatbotController`, o el chat responde 400. Ver la skill `chatbot`.
+- ~~El chatbot no usa los horarios~~ **(resuelto).** `ChatbotService::ahoraMismo()` le pasa el
+  día, la hora y si el local está abierto, y el mensaje de respaldo también los usa.
 - **No hay aviso de cola frenada**: si el worker está caído, se descubre a mano.
 - El **cron del worker en producción no está en el repo**, vive sólo en el hPanel de Hostinger.
 - `store()` no maneja portada: se configura después de crear, desde editar (decisión, no olvido).

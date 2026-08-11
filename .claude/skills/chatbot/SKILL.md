@@ -84,6 +84,15 @@ porque el prompt le pide ofrecer alternativas y siempre termina recomendando alg
 **Preguntar por algo SÍ es demanda**, aunque no lo esté pidiendo formalmente: "¿tenés pollo
 agridulce?" significa que lo esperaba encontrar. No filtrar eso.
 
+**Pero el modelo declara faltantes que SÍ están en la carta** (anotó "rabas" seis veces
+teniéndolas): el panel los descarta pasándolos por `tieneEnElMenu()` y los muestra aparte
+como falla nuestra. O sea que `[[FALTA]]` fallando ya no ensucia al comercio — pero conviene
+mirar ese bloque de admin, porque es el termómetro de si el prompt sigue funcionando.
+
+Los platos declarados también se **guardan** (`chat_conversations.platos_ofrecidos`), porque
+el marcador se borra de la respuesta antes de persistirla y sin eso el historial del panel no
+permitía ver qué ofreció el asistente.
+
 ## Reglas de conducta que costaron encontrarse
 
 - **Tiene permiso para decir que no.** Le pedíamos ser entusiasta y vender, nunca desaconsejar:
@@ -101,11 +110,29 @@ agridulce?" significa que lo esperaba encontrar. No filtrar eso.
   ingredientes y precio, así que repetía todo eso en la prosa. Ahora usa el texto para lo que
   la tarjeta no puede decir (por qué se lo recomienda). Igual se relaja en respuestas largas.
 
+## El asistente sabe qué hora es
+
+`ahoraMismo()` inyecta en el bloque variable el día, la hora y —si el comercio cargó
+horarios— si está **abierto o cerrado**, con la próxima apertura. Sin eso recomendaba una
+cena a las 10 de la mañana y esquivaba las preguntas de horario **teniendo el dato cargado**,
+porque no lo veía por ningún lado. `estaAbierto()` devuelve `null` cuando no hay horarios y
+ahí no se dice nada: mejor callarse que afirmar que está abierto sin saberlo.
+
+Va en el `user` y no en el `system` **a propósito**: cambia en cada request y rompería el
+prefijo cacheado. El mensaje de respaldo (`generateFallbackResponse`) usa lo mismo, en vez de
+mandar a "contactar al comercio" teniendo la información.
+
 ## Atajos de la interfaz: `tipo` y `scope`
 
-El front puede mandar `tipo` = `categoria` o `ver_mas`, con `scope` (la categoría, o la
-consulta original). Eso cambia el prompt **y** marca `origen` en la conversación, para que los
+El front puede mandar `tipo` = `categoria`, `ver_mas`, `chip` o `tag`, con `scope` (la
+categoría, o la consulta original). Eso marca el `origen` en la conversación, para que los
 widgets de texto del panel no cuenten esos mensajes como escritos por el cliente.
+
+> ⚠️ **`tipo` hace dos cosas**: marca el origen Y cambia el prompt. Sólo `categoria` y
+> `ver_mas` alteran cómo responde el modelo; `chip` y `tag` son inertes para el asistente y
+> existen sólo para el panel. **Al sumar un valor nuevo hay que agregarlo al `in:` de las DOS
+> validaciones de `ChatbotController`** (`chat` y `chatStream`), o el request falla y el chat
+> deja de responder. Está cubierto en `tests/Feature/OrigenDeLosMensajesTest.php`.
 
 **"Ver más"** devolvía lo mismo más uno, con el mismo párrafo de introducción: arrancaba de
 cero y volvía a elegir los mejores. Ahora recibe la lista **completa** desde PHP (hasta 25,
