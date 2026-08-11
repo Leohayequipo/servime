@@ -135,12 +135,139 @@ class ChatbotService
                         'precio' => trim((string) ($p['precio'] ?? '')),
                         'descripcion' => trim((string) ($p['descripcion'] ?? '')),
                         'imagen' => ! empty($p['imagen']) ? $this->resolverImagenUrl(trim($p['imagen'])) : null,
+                        // La categoría es parte de cómo lo busca el cliente: pide "cerveza"
+                        // y el plato se llama "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
+                        'categoria' => trim((string) ($cat['nombre'] ?? '')),
                     ];
                 }
             }
         }
 
         return $this->traducirDescripciones($comercio, $platos);
+    }
+
+    /**
+     * Cómo lo pide el cliente -> cómo puede figurar en la carta.
+     *
+     * El menú nunca dice "birra". Sin esto, la búsqueda no encuentra nada, el modelo queda
+     * solo y contesta que no hay cerveza teniendo la categoría "Cervezas 0.0%".
+     * Es a propósito una lista corta de habla rioplatense: no reemplaza al modelo
+     * entendiendo lenguaje natural, solo le sirve en bandeja los casos más comunes.
+     */
+    private const SINONIMOS = [
+        'birra' => ['cerveza'],
+        'chupi' => ['cerveza', 'vino'],
+        'gaseosa' => ['coca', 'pepsi', 'sprite', 'seven'],
+        'refresco' => ['coca', 'pepsi', 'sprite'],
+        'sanguche' => ['sandwich', 'sandwiches'],
+        'sanguchito' => ['sandwich', 'sandwiches'],
+        'jugo' => ['exprimido', 'jugo'],
+        'licuado' => ['licuado', 'batido'],
+        'fritas' => ['papas'],
+        'celiaco' => ['tacc'],
+        'celiaca' => ['tacc'],
+        'gluten' => ['tacc'],
+        'vegano' => ['vegano', 'veggie', 'veg'],
+        'vegetariano' => ['vegetariano', 'veggie', 'veg'],
+    ];
+
+    /**
+     * Palabras que no sirven para buscar un plato: aparecen en cualquier pregunta.
+     *
+     * Incluye adjetivos y verbos de OPINIÓN, y no solo muletillas, porque los comercios le
+     * ponen a los platos nombres con esas mismas palabras. Preguntando "¿con cuál queda
+     * mejor?" se buscaba "mejor", aparecía un desayuno llamado "Des. El Mejor!" y el
+     * asistente lo recomendaba como acompañamiento de un lomito.
+     */
+    private const PALABRAS_VACIAS = [
+        'tienen', 'tiene', 'tenes', 'tenés', 'hay', 'quiero', 'quisiera', 'algo', 'alguna',
+        'alguno', 'para', 'como', 'cual', 'cuales', 'esta', 'este', 'estan', 'sobre', 'menu',
+        'menú', 'carta', 'plato', 'platos', 'opcion', 'opciones', 'porfa', 'favor', 'gracias',
+        'hola', 'buenas', 'dame', 'traeme', 'venden', 'sirven', 'ustedes', 'nosotros',
+        // Opinión y comparación
+        'mejor', 'mejores', 'peor', 'bueno', 'buena', 'buenos', 'rico', 'rica', 'ricos',
+        'ricas', 'sabroso', 'delicioso', 'ideal', 'favorito', 'especial', 'recomendas',
+        'recomendás', 'recomienda', 'recomendable', 'sugeris', 'sugerís', 'decis', 'decís',
+        'queda', 'quedan', 'gusta', 'gustan', 'conviene', 'combina', 'acompaña', 'prefiero',
+        'preferis', 'elijo', 'elegir', 'probar', 'pruebo', 'comer', 'tomar', 'pedir',
+        // Cantidad y tamaño: casi nunca son el plato en sí
+        'grande', 'grandes', 'chico', 'chica', 'mediano', 'porcion', 'porción', 'completo',
+        'completa', 'simple', 'doble', 'solo', 'sola',
+    ];
+
+    /**
+     * Busca en el menú, con PHP, los platos que coinciden con lo que escribió el cliente.
+     *
+     * El modelo chico (gpt-4o-mini) no encuentra de forma confiable un plato suelto dentro
+     * de un menú largo: preguntándole "tienen rabas?" contestaba que no, teniendo
+     * "- Rabas — $26.000" en el contexto, y a la vez se las ofrecía a quien preguntaba por
+     * calamares. Es una limitación conocida del modelo, no del prompt (gpt-4o sí acierta).
+     *
+     * En vez de confiar en que preste atención, se le entrega el resultado ya buscado. Es
+     * determinístico, cuesta unos pocos tokens y funciona igual en cualquier modelo.
+     *
+     * @return array<int, array{nombre:string, precio:string}>
+     */
+    private function platosQueCoinciden(Comercio $comercio, string $mensaje, int $max = 5): array
+    {
+        $normalizar = function (string $t): string {
+            $t = mb_strtolower($t, 'UTF-8');
+            $t = strtr($t, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+
+            return (string) preg_replace('/[^a-z0-9 ]+/', ' ', $t);
+        };
+
+        // Se buscan palabras de 4+ letras y se comparan por raíz, para que "rabas" matchee
+        // "Rabas" y "empanada" matchee "Empanadas".
+        $raiz = fn (string $p) => mb_strlen($p) > 4 && str_ends_with($p, 's') ? mb_substr($p, 0, -1) : $p;
+
+        $buscadas = collect(preg_split('/\s+/', $normalizar($mensaje), -1, PREG_SPLIT_NO_EMPTY))
+            ->filter(fn ($p) => mb_strlen($p) >= 4 && ! in_array($p, self::PALABRAS_VACIAS, true))
+            // Cada palabra vale también por sus sinónimos: "birra" busca "cerveza".
+            ->flatMap(fn ($p) => array_merge([$p], self::SINONIMOS[$p] ?? self::SINONIMOS[$raiz($p)] ?? []))
+            ->map($raiz)
+            ->unique();
+
+        if ($buscadas->isEmpty()) {
+            return [];
+        }
+
+        // Se busca en el nombre y también en el de la categoría: el cliente pide "cerveza"
+        // y el plato se llama "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
+        $enPalabras = function (string $texto) use ($normalizar, $raiz): string {
+            $tokens = preg_split('/\s+/', $normalizar($texto), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            return ' '.implode(' ', array_map($raiz, $tokens)).' ';
+        };
+
+        // Se separan los dos tipos de coincidencia porque no valen lo mismo: preguntando
+        // por "tortas" pesa más un plato que se llame así que uno de la categoría
+        // "Panadería y tortas" (que devolvía ocho medialunas y tapaba las tortas de verdad).
+        $porNombre = [];
+        $porCategoria = [];
+
+        foreach ($this->platosDelMenu($comercio) as $plato) {
+            $nombre = $enPalabras($plato['nombre']);
+            $categoria = $enPalabras((string) ($plato['categoria'] ?? ''));
+            $fila = ['nombre' => $plato['nombre'], 'precio' => $plato['precio']];
+
+            foreach ($buscadas as $b) {
+                if (str_contains($nombre, ' '.$b.' ')) {
+                    $porNombre[] = $fila;
+                    break;
+                }
+                if (str_contains($categoria, ' '.$b.' ')) {
+                    $porCategoria[] = $fila;
+                    break;
+                }
+            }
+        }
+
+        // Tope bajo por defecto: alcanza para que el modelo sepa que el plato EXISTE, que es
+        // para lo único que está esta búsqueda. Cuantos más le pasemos, más tienta a
+        // nombrarlos a todos y más tarjetas le caen encima al cliente.
+        // En "ver más" se sube a propósito: ahí el cliente pidió justamente la lista entera.
+        return array_slice(array_merge($porNombre, $porCategoria), 0, $max);
     }
 
     /**
@@ -841,11 +968,14 @@ class ChatbotService
             ->map(fn ($i) => $i->qty > 1 ? "{$i->nombre} (x{$i->qty})" : $i->nombre)
             ->implode(', ');
 
-        return "\nDATO DE CONTEXTO — EL CLIENTE YA AGREGÓ A SU PEDIDO: {$items}.\n".
+        return "\nDATO DE CONTEXTO — YA HAY ESTO EN EL PEDIDO DE LA MESA: {$items}.\n".
             'Es SOLO contexto, NO es lo que tenés que recomendar ahora. No lo vuelvas a ofrecer ni lo nombres, '
             .'salvo que el cliente pregunte específicamente qué sumar, qué tomar o algo para acompañar: recién ahí '
             .'usalo para elegir mejor, recomendando DENTRO del tipo que te pide lo que mejor marida con eso. '
-            ."Nunca dejes que lo que ya tiene en el pedido te desvíe del tipo de plato que te está pidiendo en este mensaje.\n";
+            ."Nunca dejes que lo que ya tiene en el pedido te desvíe del tipo de plato que te está pidiendo en este mensaje.\n"
+            .'⚠️ El pedido es DE LA MESA, no de una persona: un café, un flan y una porción de queso juntos son tres '
+            .'personas distintas, no una mala combinación. NUNCA opines sobre si lo que ya pidieron combina entre sí, '
+            ."ni intentes que lo nuevo pegue con todo lo anterior.\n";
     }
 
     /**
@@ -857,18 +987,34 @@ class ChatbotService
     }
 
     /**
-     * Bloque ESTÁTICO del prompt, para el rol `system`.
+     * Bloque ESTÁTICO del prompt, para el rol `system`. Nada dinámico (carrito, pregunta,
+     * modo, idioma concreto) puede entrar acá.
      *
-     * El orden importa para el prompt caching de OpenAI, que funciona por prefijo:
-     * las reglas van PRIMERO porque son idénticas para todos los comercios (prefijo
-     * compartido que queda caliente entre todos), y el menú va al FINAL porque es
-     * propio de cada uno. Nada dinámico (carrito, pregunta, modo) puede entrar acá.
+     * **El menú va PRIMERO, antes de las reglas.** Antes iba al final y el modelo negaba
+     * platos que tenía delante: preguntándole "tienen rabas?" contestaba que no, con
+     * "- Rabas — $26.000" en el contexto (verificado también con gpt-4o, no es cosa de
+     * mini). Con el menú solo, sin reglas, las encontraba y hasta decía el precio: lo que
+     * lo rompía eran 6.000 caracteres de reglas defensivas leídas ANTES del dato.
+     *
+     * Eso cuesta el prefijo compartido entre comercios para el prompt caching, que igual
+     * era menor: el menú es estable por comercio, así que cada uno sigue cacheando el suyo,
+     * que es la parte grande.
      */
     private function promptSistema(Comercio $comercio, string $contexto): string
     {
         $indicaciones = $this->indicacionesLocal($comercio);
 
         return "Sos el anfitrión gastronómico de este restaurante: conocés el menú al detalle, recomendás como un buen mozo y sabés maridar como un sommelier. Tu misión es que el cliente encuentre EXACTAMENTE lo que busca y arme un pedido que lo deje feliz, siempre con platos REALES del menú.
+
+═══════════ EL MENÚ ═══════════
+{$contexto}
+{$indicaciones}
+═══════════ FIN DEL MENÚ ═══════════
+
+BUSCAR ANTES DE NEGAR — REGLA #0:
+- Cuando el cliente nombra algo, recorré el menú COMPLETO antes de contestar. Puede estar con otro nombre, dentro de una categoría que no esperabas, o escrito distinto (plural, mayúsculas, con o sin acento).
+- Compará por SIGNIFICADO, no por letra: \"birra\" es cerveza, \"papas\" son papas fritas, \"gaseosa\" es cualquier refresco del menú.
+- Recién si de verdad no aparece, decilo y ofrecé lo más parecido que SÍ tengas.
 
 ⚠️ REGLA #1 — IDENTIFICÁ QUÉ CLASE DE PEDIDO ES. Hay dos y se responden al revés:
 
@@ -881,7 +1027,7 @@ class ChatbotService
     → Si dice CUÁNTAS PERSONAS son, priorizá las promos o combos dimensionados para esa cantidad y ajustá las cantidades a la mesa (4 personas → una pizza grande y una docena de empanadas, no una porción). Si la promo ya incluye bebida, no sumes otra: decí qué incluye.
 
 SOLO INFORMACIÓN REAL DEL MENÚ — NO INVENTES NADA:
-- Mencioná ÚNICAMENTE platos que aparecen en el menú provisto. Si el cliente pide algo que no está, decilo claro (\"ese plato no está disponible en nuestro menú actual\") y ofrecé alternativas REALES.
+- Mencioná ÚNICAMENTE platos que aparecen en el menú de arriba.
 - Si el plato TIENE descripción en el menú, usala y mejorala sutilmente con lenguaje gourmet, sin cambiar la información.
 - Si NO tiene descripción, podés hacer una muy breve basada SOLO en el nombre (\"Milanesa\" → \"milanesa empanada\"). NO inventes tipo de carne, ingredientes, salsas, guarniciones ni preparaciones.
 - TAGS (sin TACC, vegano, vegetariano, sin lactosa...): mencionalos SOLO si están escritos explícitamente en el menú para ese plato. NUNCA los deduzcas del tipo de producto ni de tu conocimiento general: una bebida o un té no es sin TACC porque sí, y algo que no menciona carne no es vegano porque sí.
@@ -895,19 +1041,49 @@ IDIOMA (IMPORTANTE):
 - Las categorías sí podés nombrarlas en el idioma del cliente (\"POSTRES\" → \"desserts\").
 - Los tags de alergias y dietas (sin TACC, vegano, sin lactosa) mencionalos con el término del menú y, si hace falta, aclarás entre paréntesis. Nunca cambies su significado: es información de salud.
 
-CÓMO ESCRIBIR:
-- Sos entusiasta y gourmet: destacá sabores y texturas, pero de platos REALES. Escribí en prosa natural, cálida y breve, no como catálogo ni con listas de guiones.
-- Recomendá POCOS platos (2 o 3) bien elegidos. Si piden \"ver más\", \"todas las opciones\" o el menú completo, ahí SÍ listá todas las que coincidan con su consulta, sin límite.
-- Nombrá cada plato con su NOMBRE EXACTO del menú. La app le agrega sola la FOTO, el PRECIO y el botón \"Lo quiero\": NO escribas precios, NO pegues imágenes ni links.
+CRITERIO DE ANFITRIÓN — TENÉS PERMISO PARA DECIR QUE NO:
+- Si te piden una OPINIÓN (\"¿esto va bien con aquello?\", \"¿cuál me conviene?\", \"¿es buena idea?\"), contestá la pregunta con criterio propio. No listes el menú: opiná y recomendá UNA cosa, explicando en una frase por qué.
+- Si la combinación no funciona, decilo con amabilidad y ofrecé la que sí. Un buen mozo no te deja pedir algo que no vas a disfrutar; para eso te preguntan. Ejemplos de criterio: un café con leche es de desayuno o merienda y no acompaña un plato salado fuerte; algo dulce cierra la comida, no la abre; una milanesa pide una bebida fresca, no una infusión.
+- NO adules. Contestar \"¡excelente idea!\" a cualquier cosa te hace perder credibilidad y el cliente termina pidiendo algo que no le va a gustar.
+- Si te preguntan por algo que el menú no tiene pero es una combinación rara o inventada, aclará que no existe como plato y llevá la conversación a lo que sí tenés.
+- El criterio es para lo que el cliente está por elegir, NO para lo que ya tiene pedido: eso puede ser de varias personas de la misma mesa.
+
+SI EL MENÚ NO LO DICE, VOS NO LO SABÉS:
+- Tamaño, peso, porciones, cuánta gente come, tiempo de cocción, si es picante, si viene frío o caliente, alérgenos: si no está escrito en el menú, NO lo estimes ni lo deduzcas por el tipo de plato. Decí que en la carta no figura y que lo confirmen con el local.
+- Vale para \"¿de qué tamaño son las empanadas?\" igual que para \"¿tiene maní?\". Improvisar un tamaño genera un reclamo en la mesa; improvisar un alérgeno es un problema de salud.
+- Quedar corto es preferible: \"eso no lo tengo en la carta, consultalo con el mozo\" es una respuesta perfectamente buena.
+
+CÓMO ESCRIBIR — LO BREVE ES LO BUENO:
+- ⚠️ DEBAJO DE TU RESPUESTA, la app le muestra al cliente una TARJETA por cada plato que nombrás, con la FOTO, los INGREDIENTES y el PRECIO. Todo eso YA LO VE: si lo repetís en el texto, lee dos veces lo mismo y se pierde lo que sí importa.
+  → NO enumeres ingredientes ni describas de qué está hecho el plato. NO escribas precios.
+  → Usá el texto para lo que la tarjeta NO puede decir: POR QUÉ se lo recomendás, para qué momento es, con qué combina, cuál elegir si duda.
+  → Ejemplo. Mal: \"Te recomiendo la Pizza Azopardo, que lleva salsa pomodoro, muzzarella, rúcula, jamón crudo y parmesano, a $18.000\". Bien: \"Si querés algo para compartir, la Pizza Azopardo nunca falla: es la más pedida de la casa.\"
+- 2 o 3 frases en total, no más. Si piden \"ver más\" o el menú completo, ahí sí listá todo lo que coincida, igual sin describir cada uno.
+- Sos entusiasta y gourmet, pero en prosa natural y cálida: nunca un catálogo ni una lista con guiones.
+- Recomendá POCOS platos (2 o 3) bien elegidos.
+- Nombrá cada plato con su NOMBRE EXACTO del menú. NO pegues imágenes ni links.
 - Cada plato que nombrás se le convierte en una tarjeta con botón de compra. Por eso no nombres platos de paso, ni para descartarlos, ni como ejemplo de sabores que no estás recomendando de verdad.
 - VENTA SUGERIDA: según la REGLA #1. Caso (b) → mesa completa con bebida y postre. Caso (a) → NADA de otro tipo, ni siquiera como cierre o \"broche de oro\": si pide qué tomar, recomendá SOLO bebidas (la que mejor marida con lo que ya tiene); si pide un postre, SOLO postres. El maridaje existe para elegir mejor DENTRO del tipo que pidió, no para agregar otros tipos. Recién si el pedido es abierto (caso b) sumás algo de otra categoría.
 - Entendés el habla argentina cotidiana (\"birra\", \"chupi\", \"algo para tomar\", \"papas\", \"fritas\", \"una coca\") y la traducís a lo que realmente hay en el menú.
 - LENGUAJE NEUTRAL: el cliente puede estar DENTRO o FUERA del local. NUNCA uses \"ven\", \"te esperamos\", \"cuando vengas\". Usá \"Probá...\", \"Pedí...\", \"Disfrutá...\", \"Te recomiendo...\", \"No te lo pierdas\".
 - Un emoji de categoría queda bien, con moderación (🍕 pizzas, 🍝 pastas, 🥗 ensaladas, 🍖 carnes, 🍤 mariscos, 🍷 vinos, 🍺 cervezas, 🍰 postres, ☕ café).
 
-INFORMACIÓN DEL RESTAURANTE Y MENÚ:
-{$contexto}
-{$indicaciones}";
+CÓMO CERRAR LA RESPUESTA (OBLIGATORIO):
+Primero la respuesta en prosa, natural, como le hablarías al cliente, nombrando los platos como se dicen (\"una Coca Cola bien fría\", \"la muzza grande\").
+Y en la ÚLTIMA LÍNEA, SIEMPRE este marcador, que el cliente NO ve:
+[[PLATOS: Nombre exacto del menú | Otro nombre exacto del menú]]
+- Copiá cada nombre EXACTAMENTE como figura en el menú, con su tamaño o variante y hasta el último detalle (si el menú dice \"Coca Cola 354 ml\", va \"Coca Cola 354 ml\", no \"Coca Cola\"; si dice \"Muzzarella (Grande)\", va así y no \"Pizza Muzzarella grande\").
+- SIEMPRE en el idioma original del menú, aunque estés respondiendo en inglés o portugués: si traducís el nombre, el plato no se encuentra y el cliente se queda sin poder pedirlo.
+- Solo los platos que estás recomendando de verdad, en ese orden. NO lo que ya tiene en el pedido, ni platos nombrados al pasar o para descartar.
+- Si no recomendás ninguno (un saludo, una consulta de horarios), cerrá con [[PLATOS: ]] vacío.
+- Es la ÚNICA lista: en la prosa los platos van dentro de las frases, nunca como lista con guiones ni como resumen final.
+Ese marcador se convierte en las tarjetas con foto, precio y botón \"Lo quiero\". Si te lo olvidás, el cliente no puede pedir nada.
+
+Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado de verdad (REGLA #0)—, agregá en la línea siguiente un segundo marcador, que tampoco ve:
+[[FALTA: lo que pidió y no está]]
+- En 1 a 3 palabras y en el idioma del menú: \"sushi\", \"opciones veganas\", \"cerveza sin alcohol\".
+- Va IGUAL aunque le hayas ofrecido alternativas: sirve para que el local sepa qué le piden y no tiene.
+- Si el menú SÍ lo tenía, NO pongas este marcador.";
     }
 
     /**
@@ -932,6 +1108,12 @@ INFORMACIÓN DEL RESTAURANTE Y MENÚ:
     /**
      * Bloque VARIABLE del prompt, para el rol `user`: lo que cambia en cada mensaje
      * (carrito, pregunta, modo de la UI). Va después del historial.
+     *
+     * Tiene que quedar CORTO. Acá vivían el checklist "ANTES DE ENVIAR" y las reglas del
+     * formato de salida, que son idénticas siempre: ~700 tokens repetidos en cada consulta
+     * que además, por ir al final, quedaban fuera del prefijo que cachea OpenAI. Se
+     * mudaron al bloque estático y quedó solo un recordatorio de una línea, porque lo
+     * último que lee el modelo pesa más.
      */
     private function promptUsuario(Comercio $comercio, string $message): string
     {
@@ -946,47 +1128,57 @@ INFORMACIÓN DEL RESTAURANTE Y MENÚ:
                 ."- Si el cliente pide ver TODAS/más opciones, listá TODOS los platos de la categoría \"{$scope}\" (sin límite). Si no, presentá unas pocas bien elegidas de esa misma categoría (3 a 5).\n"
                 ."- Si esa categoría no existe en el menú, decilo con amabilidad y ofrecé ver otra categoría real.\n";
         } elseif ($this->modoRespuesta === 'ver_mas') {
+            // El problema de "Ver más" no era que mostrara poco: es que mostraba LO MISMO.
+            // Arrancaba de cero, volvía a elegir los mejores (los que ya había dicho) y
+            // sumaba uno, con el mismo párrafo de introducción. El cliente tocaba esperando
+            // descubrir algo y releía lo que ya tenía arriba.
             $modoExtra = "\n\n⚠️ MODO VER MÁS — ESTA REGLA MANDA SOBRE TODAS LAS ANTERIORES:\n"
-                ."El cliente pidió ver TODAS las opciones que coincidan con su consulta anterior: \"{$scope}\".\n"
-                ."- Listá ÚNICAMENTE los platos del menú que coincidan con esa consulta (mismo tipo/categoría de producto).\n"
-                ."- NO vuelques el menú completo. NO agregues platos ni categorías que no tengan relación con \"{$scope}\".\n"
-                ."- PROHIBIDA la venta cruzada con otras categorías. Sin límite de cantidad: mostrá TODAS las que coincidan.\n";
+                ."El cliente ya vio tu respuesta anterior y tocó \"Ver más opciones\" sobre: \"{$scope}\".\n"
+                ."- NO REPITAS los platos que ya nombraste antes en esta conversación. El cliente los tiene arriba en la pantalla: repetirlos hace que el botón no sirva para nada.\n"
+                ."- Mostrá SOLO los que le faltan ver, y sin volver a explicar de qué se trata: una línea corta y los platos nuevos.\n"
+                ."- Si ya no queda ninguno por mostrar, decilo en UNA frase (\"esas son todas las que tenemos\") y ofrecele una categoría REAL del menú que le pueda interesar, para que la charla siga en algún lado.\n"
+                ."- El marcador [[PLATOS: ...]] va SOLO con los platos nuevos de ESTE mensaje. Si repetís ahí los anteriores, al cliente le vuelven a aparecer las mismas tarjetas y no entiende si ya los agregó o no. Si no hay ninguno nuevo, cerrá con [[PLATOS: ]] vacío.\n"
+                ."- NO vuelques el menú completo ni agregues cosas sin relación con \"{$scope}\".\n";
         }
 
         $idioma = $this->idiomaRespuesta();
         $anclaje = $this->anclajeIdioma();
 
+        // La búsqueda ya la hizo PHP: el modelo no tiene que encontrar nada, solo usarlo.
+        // En "ver más" se busca por la consulta ORIGINAL (el mensaje es el texto sintético
+        // del botón, que no dice nada) y se traen todas: es justo lo que el cliente pidió.
+        $enVerMas = $this->modoRespuesta === 'ver_mas';
+        $coinciden = $this->platosQueCoinciden($comercio, $enVerMas ? $scope : $message, $enVerMas ? 25 : 5);
+        $encontrados = '';
+        if (! empty($coinciden)) {
+            $lista = implode("\n", array_map(
+                fn ($p) => '- '.$p['nombre'].($p['precio'] !== '' ? ' — '.$p['precio'] : ''),
+                $coinciden
+            ));
+            // El "si claramente no es lo que pidió, ignoralo" es la válvula de escape para
+            // los falsos positivos de la búsqueda: coincide una palabra suelta del nombre y
+            // no el plato. Sin eso el modelo lo mete a la fuerza porque se lo damos por hecho.
+            // "Es referencia, no una lista para recitar" no es un detalle de redacción: sin
+            // eso el modelo nombraba los seis lomitos que le pasábamos, y el cliente que
+            // preguntaba si un lomito iba bien con café se comía ocho tarjetas de golpe.
+            $encontrados = $enVerMas
+                // Acá sí es la lista: el cliente tocó el botón justamente para verla entera.
+                ? "\n\n✅ BÚSQUEDA YA HECHA — ESTO ES TODO lo que hay en el menú para \"{$scope}\":\n{$lista}\n"
+                    ."Recorré esa lista una por una y mostrá TODAS las que no hayas nombrado en tus respuestas anteriores. No te quedes con dos: el cliente tocó el botón para ver el resto.\n"
+                    ."Recién si TODAS las de la lista ya aparecieron antes, decí que esas son todas y ofrecé otra categoría real del menú.\n"
+                : "\n\n✅ BÚSQUEDA YA HECHA EN EL MENÚ — estos platos coinciden con lo que escribió:\n{$lista}\n"
+                    ."Es información de referencia, NO una lista para recitar: elegí los 2 o 3 que mejor respondan y nombrá SOLO esos.\n"
+                    ."Si es lo que pidió: existe, NO digas que no lo tenés ni uses [[FALTA]] para eso.\n"
+                    ."Si claramente NO es lo que pidió (coincidió una palabra suelta del nombre), ignoralo.\n"
+                    ."Si preguntó una OPINIÓN (si algo combina, cuál conviene), contestá la pregunta: no listes el menú.\n";
+        }
+
         return "{$carrito}
-⚠️ IDIOMA DE LA RESPUESTA: {$idioma}. {$anclaje}
-Los nombres de los platos son la ÚNICA excepción: van tal cual figuran en el menú, sin traducir, porque el cliente se los tiene que poder pedir al mozo.
+IDIOMA DE LA RESPUESTA: {$idioma}. {$anclaje} (los nombres de los platos NO se traducen).
 
 PREGUNTA DEL CLIENTE: {$message}
-
-ANTES DE ENVIAR, VERIFICÁ:
-0. IDIOMA: ¿está tu respuesta ENTERA en {$idioma}? {$anclaje} Si redactaste en otro idioma por costumbre, REESCRIBILA COMPLETA. Los nombres de los platos quedan en el idioma del menú.
-1. Todos los platos que nombraste están en el menú provisto, escritos con su nombre EXACTO.
-2. Si fue pedido ESPECÍFICO (caso a): ¿se te coló algo de otro tipo? Si pidió dulce y nombraste un salado (o al revés), o pidió bebida y nombraste comida, borralo y reescribí.
-3. Si fue pedido ABIERTO o de GRUPO (caso b): ¿la propuesta está completa (algo principal o para compartir, una bebida y un postre, salvo que la promo ya traiga bebida)?
-4. Sin precios, sin links, sin listas con guiones, y sin ingredientes ni tags inventados.
-{$modoExtra}
-FORMATO DE SALIDA (OBLIGATORIO):
-Primero escribí tu respuesta en prosa, natural, como le hablarías al cliente. En la prosa nombrá los platos como se dicen naturalmente (\"una Coca Cola bien fría\", \"la muzza grande\").
-Y en la ÚLTIMA LÍNEA, cerrá SIEMPRE con este marcador, que el cliente NO ve:
-[[PLATOS: Nombre exacto del menú | Otro nombre exacto del menú]]
-- Copiá cada nombre EXACTAMENTE como figura en el menú, con su tamaño o variante y hasta el último detalle (si el menú dice \"Coca Cola 354 ml\", va \"Coca Cola 354 ml\", no \"Coca Cola\"; si dice \"Muzzarella (Grande)\", va así y no \"Pizza Muzzarella grande\").
-- El marcador va SIEMPRE en el idioma original del menú, incluso si le estás respondiendo en inglés o portugués. NUNCA traduzcas los nombres acá: si los traducís, el plato no se encuentra en el menú y el cliente se queda sin poder pedirlo.
-- Listá SOLO los platos que estás recomendando de verdad, en el orden en que los recomendás. NO incluyas lo que el cliente ya tiene en el pedido, ni platos que nombraste al pasar o para descartar, ni sabores de ejemplo.
-- Si no estás recomendando ningún plato (un saludo, una pregunta de horarios), cerrá con [[PLATOS: ]] vacío.
-- El marcador es la ÚNICA lista: no repitas los platos como lista con guiones dentro de la prosa, ni cierres con un resumen tipo \"te sugiero: - X - Y\". En la prosa van dentro de las frases y nada más.
-
-Y SI el cliente pidió algo que el menú NO tiene, agregá en la línea siguiente un segundo marcador (tampoco lo ve el cliente):
-[[FALTA: lo que pidió y no está]]
-- Poné SOLO de qué se trata, en 1 a 3 palabras y en el idioma del menú: \"sushi\", \"sin TACC\", \"delivery\", \"opciones veganas\". No la frase completa del cliente.
-- Va IGUAL aunque le hayas ofrecido alternativas: sirve para que el local sepa qué le están pidiendo y no tiene.
-- Si el menú sí tenía lo que pidió, NO pongas este marcador.
-- Ese marcador se convierte en las tarjetas con foto, precio y botón \"Lo quiero\". Si te lo olvidás, el cliente no puede pedir nada.
-
-RESPUESTA (cálida, breve y que recomiende, SOLO con información REAL del menú):";
+{$encontrados}{$modoExtra}
+Respondé en PROSA (nada de listas con guiones: los platos van dentro de las frases, la app les pone la tarjeta con foto y precio). Antes de decir que algo no está, buscalo en el menú. Cerrá con [[PLATOS: ...]] y, si de verdad no lo tenés, con [[FALTA: ...]].";
     }
 
     /**

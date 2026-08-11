@@ -299,7 +299,9 @@ class ChatbotContextTest extends TestCase
         Http::assertSent(function ($request) {
             $body = json_encode($request->data());
 
-            return str_contains($body, 'YA AGREG') && str_contains($body, 'Lenguado');
+            // Lo que importa es que el pedido en curso llegue al modelo y que quede claro
+            // que es de la MESA (puede haber cosas de varias personas), no la frase exacta.
+            return str_contains($body, 'Lenguado') && str_contains($body, 'PEDIDO DE LA MESA');
         });
     }
 }
