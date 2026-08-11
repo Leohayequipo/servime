@@ -67,7 +67,8 @@
                 <x-stat label="Personas"
                         :value="$metrics['totalVisitantes']"
                         nota="usaron tu menú · últimos 30 días"
-                        ayuda="Cuántos clientes distintos abrieron tu menú en los últimos 30 días, sin importar cuántas veces lo hayan mirado. «Consultas» cuenta mensajes; esto cuenta personas: 54 consultas pueden ser de 50 clientes o de 3 indecisos. Se identifica por dispositivo, así que quien entra desde el celular y después desde la computadora cuenta como dos, y si borra los datos del navegador vuelve a contar como alguien nuevo." />
+                        ayuda="Cuántos clientes distintos abrieron tu menú este mes, sin importar cuántas veces lo hayan mirado. «Consultas» cuenta mensajes; esto cuenta personas: 54 consultas pueden ser de 50 clientes o de 3 indecisos."
+                        admin="Es un id en el localStorage del navegador, por comercio. Celular y compu son dos visitantes; si borra los datos del navegador, vuelve a contar como nuevo. En iOS, Safari lo borra a los 7 días sin uso." />
 
                 {{-- El período va en cada nota y no solo en el encabezado: "respondió
                      todas" sin decir de cuándo no se puede interpretar. --}}
@@ -75,7 +76,8 @@
                         :value="$sinResp"
                         :nota="($sinResp > 0 ? $pctSinResp.'% de las consultas' : 'respondió todas').' · últimos 30 días'"
                         :tono="$sinResp > 0 ? 'alerta' : 'neutro'"
-                        ayuda="Las veces que un cliente escribió y el asistente no pudo contestarle, y le respondió un mensaje de disculpas. Pasa por dos motivos: se agotó la cuota mensual de mensajes de tu plan, o el servicio tuvo una falla puntual. En cero está todo bien; si el número sube, escribinos, porque puede que te convenga ampliar el plan." />
+                        ayuda="Las veces que un cliente escribió y el asistente no pudo contestarle, y le respondió un mensaje de disculpas. En cero está todo bien; si el número sube, escribinos: puede que se haya agotado la cuota de mensajes de tu plan."
+                        admin="Cuenta las conversaciones con used_openai = false: cuota del plan agotada, API caída o key rota. El flag se apaga sólo si no llegó ningún token; un stream cortado a mitad cuenta como respondido." />
 
                 <x-stat label="Hoy"
                         :value="$stats['conversations_today']"
@@ -183,7 +185,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                         <x-icono name="split" class="w-4 h-4 flex-none opacity-60" />
                         ¿IA o menú clásico?
-                        <x-ayuda titulo="¿IA o menú clásico?" texto="Qué elige la gente al llegar: preguntarle al asistente o ver el menú de toda la vida. Se cuenta una vez por visita y vale la primera elección, así que quien va y vuelve entre los dos no inclina la balanza. Si alguien probó los dos, se avisa aparte. Tené en cuenta que la pantalla inicial no los ofrece parejos: el asistente está en un botón grande y con atajos, y el menú completo en un link más abajo." />
+                        <x-ayuda titulo="¿IA o menú clásico?"
+                                 texto="Qué elige la gente al llegar: preguntarle al asistente o ver el menú de toda la vida. Tené en cuenta que la pantalla no los ofrece parejos —el asistente tiene un botón grande y atajos, el menú completo un link más abajo—, así que es esperable que gane el asistente."
+                                 admin="Una vez por visita y vale la PRIMERA elección, para que la suma cierre con el escalón «eligieron» del embudo. Quien probó los dos va aparte en menuChoice['ambos']." />
                     </h3>
                     <p class="text-text-secondary text-sm mb-4">Con qué entra cada visita.</p>
                     @if($totalChoice > 0)
@@ -209,7 +213,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="funnel" class="w-4 h-4 flex-none opacity-60" />
                         Embudo de interés
-                        <x-ayuda titulo="Embudo de interés" texto="Muestra hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú, menos todavía tocan «Lo quiero» y unos pocos abren su pedido para revisarlo antes de pedírselo al mozo. Ese último escalón es el que más se parece a una venta: ya tenían platos elegidos y fueron a mirar la lista. Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques: si alguien vuelve otro día es una visita nueva, pero si toca cinco veces seguidas sigue siendo una." />
+                        <x-ayuda titulo="Embudo de interés"
+                                 texto="Hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú, menos todavía tocan «Lo quiero» y unos pocos abren su pedido para revisarlo antes de pedírselo al mozo. Ese último escalón es el que más se parece a una venta. Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques."
+                                 admin="Por visita (corte de 30 min de inactividad sobre el mismo session_id). «Revisaron su pedido» exige items > 0: el panel se puede abrir vacío y el escalón saldría mayor que el anterior." />
                     </h3>
                     @php
                         $fv = $metrics['funnel']['visitas'];
@@ -266,7 +272,9 @@
                         <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                             <x-icono name="split" class="w-4 h-4 flex-none opacity-60" />
                             ¿Por dónde entran?
-                            <x-ayuda titulo="¿Por dónde entran?" texto="En la pantalla inicial hay tres caminos: el botón grande del asistente, los atajos sugeridos (que también abren el asistente, pero con la pregunta ya escrita) y el link al menú completo de toda la vida. Esto te dice cuál usan. Ojo al comparar: el asistente tiene dos puertas y el menú completo una sola, así que es esperable que junte más. Se cuentan toques, no personas: acá lo que importa es qué botón se usa." />
+                            <x-ayuda titulo="¿Por dónde entran?"
+                                     texto="En la pantalla inicial hay tres caminos: el botón grande del asistente, los atajos sugeridos (que abren el asistente con la pregunta ya escrita) y el link al menú completo. Esto te dice cuál usan. Ojo al comparar: el asistente tiene dos puertas y el menú completo una sola, así que es esperable que junte más."
+                                     admin="Acá se cuentan toques y no visitas, a propósito: la pregunta es qué botón se usa. Sale de data.desde del evento menu_choice; los eventos anteriores a ese campo no aparecen." />
                         </h3>
                         <p class="text-text-secondary text-sm mb-4">Qué toca el cliente en la pantalla inicial.</p>
                         @if($enTotal > 0)
@@ -289,7 +297,9 @@
                         <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                             <x-icono name="target" class="w-4 h-4 flex-none opacity-60" />
                             Atajos más usados
-                            <x-ayuda titulo="Atajos más usados" texto="Los atajos son los botones chicos de la pantalla inicial («¿Qué me recomendás?», «Ver promos», «Sin TACC»). Al tocarlos, el cliente entra al asistente con esa pregunta ya hecha. Hoy se arman solos a partir de tu menú: si tenés una categoría de promociones aparece el de promos, si tenés platos sin TACC aparece ese. Este ranking te dice cuál engancha y cuál no le interesa a nadie." />
+                            <x-ayuda titulo="Atajos más usados"
+                                     texto="Los botones chicos de la pantalla inicial («¿Qué me recomendás?», «Ver promos», «Sin TACC»). Al tocarlos, el cliente entra al asistente con esa pregunta ya hecha. Se arman solos con tu menú: si tenés promociones aparece el de promos, si tenés platos sin TACC aparece ese. Este ranking te dice cuál engancha y cuál no le interesa a nadie."
+                                     admin="Sale de data.label del menu_choice. Los chips los genera Comercio::getChipsSugeridos(), corta en 3 y las categorías del menú casi nunca entran." />
                         </h3>
                         <p class="text-text-secondary text-sm mb-4">Los botones sugeridos de la portada. El que nadie toca conviene cambiarlo.</p>
                         @php $chipMax = $metrics['topChips']->max() ?: 1; @endphp
@@ -314,7 +324,9 @@
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="phone" class="w-4 h-4 flex-none opacity-60" />
                         Dispositivos
-                        <x-ayuda titulo="Dispositivos" texto="Desde qué aparato abren tu menú, según lo que informa el navegador. Como el QR está en la mesa, lo esperable es que sea casi todo móvil: si ves mucho escritorio, quiere decir que están llegando por un link compartido o desde tus redes, y no escaneando el código en el local. Eso cambia para qué te sirve el menú, y conviene saberlo. Un detalle: cuando el navegador no informa qué es, cuenta como escritorio, así que ese número puede venir un poco alto." />
+                        <x-ayuda titulo="Dispositivos"
+                                 texto="Desde qué aparato abren tu menú. Como el QR está en la mesa, lo esperable es que sea casi todo móvil: si ves mucho escritorio, están llegando por un link compartido o desde tus redes, y no escaneando el código en el local. Eso cambia para qué te sirve el menú."
+                                 admin="Se clasifica por user_agent y «escritorio» es el cajón de descarte: lo que no dice mobi/android/iphone/ipad cae ahí, incluidos los headless y los bots de previsualización de links." />
                     </h3>
                     @php $dv = $metrics['devices']; $dvTotal = array_sum($dv) ?: 1; @endphp
                     @foreach(['movil' => 'Móvil', 'desktop' => 'Escritorio', 'tablet' => 'Tablet'] as $k => $label)
@@ -333,7 +345,9 @@
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="return" class="w-4 h-4 flex-none opacity-60" />
                         Visitantes que vuelven
-                        <x-ayuda titulo="Visitantes que vuelven" texto="Cuántos abrieron tu menú en dos momentos distintos, separados por más de media hora. No hace falta que sea otro día: alguien que mira la carta al llegar y la vuelve a abrir para el postre ya cuenta acá, así que no lo leas como «clientes habitués». Se reconoce por dispositivo, no por persona: si entra desde el celular y después desde la computadora son dos visitantes, y si borra los datos del navegador vuelve a figurar como nuevo. En iPhone el número queda corto, porque Safari borra esa marca a los 7 días sin usar el menú: los que vuelven la semana siguiente se cuentan como nuevos." />
+                        <x-ayuda titulo="Visitantes que vuelven"
+                                 texto="Cuántos abrieron tu menú en dos momentos distintos, separados por más de media hora. No hace falta que sea otro día: quien mira la carta al llegar y la vuelve a abrir para el postre ya cuenta acá, así que no lo leas como «clientes habitués»."
+                                 admin="Visitante = id de localStorage; visita = corte por 30 min de inactividad; recurrente = 2 o más visitas. En iOS queda corto: Safari borra la marca a los 7 días sin uso." />
                     </h3>
                     @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
@@ -353,15 +367,19 @@
 
                 {{-- El dictado por voz termina en el input y se manda como texto, así que sin
                      su propio evento no había forma de saber si alguien usa el micrófono. --}}
-                @php $voz = $metrics['vozVisitas'] ?? 0; $vtot = $metrics['totalVisitas'] ?: 1; @endphp
+                @php $voz = $metrics['vozVisitantes'] ?? 0; $vtot = $metrics['totalVisitantes'] ?: 1; @endphp
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="mic" class="w-4 h-4 flex-none opacity-60" />
                         Hablaron con el asistente
-                        <x-ayuda titulo="Hablaron con el asistente" texto="Cuántas visitas usaron el micrófono para dictar su consulta en vez de escribirla. Sirve para saber si esa función se usa: en un local ruidoso o con gente alrededor puede que nadie se anime, y si nunca la toca nadie no vale la pena tenerla ahí ocupando lugar. No funciona en todos los navegadores, así que parte de los que no aparecen acá es porque no les apareció el botón." />
+                        <x-ayuda titulo="Hablaron con el asistente"
+                                 texto="Cuántas personas usaron el micrófono para dictar en vez de escribir. En un local ruidoso o con gente alrededor puede que nadie se anime, y si no la usa nadie, esa función no vale la pena."
+                                 admin="Evento mic_start, por visita. Es un piso, no un porcentaje exacto: el reconocimiento de voz no existe en todos los navegadores y a esos clientes ni siquiera les aparece el botón." />
                     </h3>
                     <p class="text-4xl font-bold text-text-primary">{{ round($voz / $vtot * 100) }}%</p>
-                    <p class="text-sm text-text-secondary mt-1">{{ $voz }} de {{ $metrics['totalVisitas'] }} visitas usaron el micrófono</p>
+                    <p class="text-sm text-text-secondary mt-1">
+                        {{ $voz }} de {{ $metrics['totalVisitantes'] }} {{ $metrics['totalVisitantes'] === 1 ? 'persona usó' : 'personas usaron' }} el micrófono
+                    </p>
                 </div>
             </div>
 
@@ -371,7 +389,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="flame" class="w-4 h-4 flex-none opacity-60" />
                         Promos más pedidas
-                        <x-ayuda titulo="Promos más pedidas" texto="Cuál de las promociones que cargaste engancha más: cuenta cada vez que alguien tocó «Lo quiero» en una de ellas. Son las promos que aparecen en tu panel dentro de «Promociones del Día», una por una, no la sección entera. Abajo, aparte, ves cuántas veces abrieron esa sección: si la abren mucho pero después nadie toca «Lo quiero», el problema no es que no las vean, es la oferta o el precio. La barra se dibuja contra la promo más pedida, así que con una sola siempre se ve llena." />
+                        <x-ayuda titulo="Promos más pedidas"
+                                 texto="Cuál de las promociones que cargaste engancha más: cuenta cada vez que alguien tocó «Lo quiero» en una de ellas, una por una. Abajo ves cuántas veces abrieron la sección: si la abren mucho y después nadie toca «Lo quiero», el problema no es que no las vean, es la oferta o el precio."
+                                 admin="Cruza los dish_want con getPromocionesDelMenu(), sin tracking propio. La categoría se detecta por nombre EXACTO «Promociones del Día»: si el comercio la llama distinto, se queda sin chip, sin atajo y sin este widget." />
                     </h3>
                     <p class="text-text-secondary text-sm mb-4">Las promociones que cargaste, por interés real.</p>
                     @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
@@ -398,7 +418,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="heart" class="w-4 h-4 flex-none opacity-60" />
                         Platos más deseados
-                        <x-ayuda titulo="Platos más deseados" texto="Cuando el asistente recomienda un plato, lo muestra en una tarjeta con foto y precio y un botón «Lo quiero» que lo suma al pedido. Esto es el ranking de los platos que más veces tocaron. Es lo más cerca de una venta que ves acá, pero no es una venta: el cliente puede sumarlo y después arrepentirse, o pedirle otra cosa al mozo. Se cuenta cada toque, así que si alguien suma dos milanesas, suma dos. Incluye también tus promociones, que además tienen su propio ranking más arriba: son los mismos toques mirados de dos maneras, no los sumes." />
+                        <x-ayuda titulo="Platos más deseados"
+                                 texto="Los platos que más veces sumaron al pedido con el botón «Lo quiero». Es lo más cerca de una venta que ves acá, pero no es una venta: el cliente puede sumarlo y después arrepentirse. Incluye tus promociones, que además tienen su propio ranking más arriba — son los mismos toques mirados de dos maneras, no los sumes."
+                                 admin="Evento dish_want, por toque: dos milanesas del mismo cliente son dos." />
                     </h3>
                     @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
                     @forelse($metrics['topDishes'] as $dish => $count)
@@ -413,6 +435,11 @@
                     @empty
                         <p class="text-text-secondary text-center py-4">Nadie tocó "Lo quiero" aún.</p>
                     @endforelse
+                    @if(($dishesFuera ?? 0) > 0)
+                        <p class="text-xs text-text-secondary mt-3 pt-3 border-t border-accent-gray/40">
+                            Y {{ $dishesFuera }} {{ $dishesFuera === 1 ? 'plato más pedido' : 'platos más pedidos' }} menos veces.
+                        </p>
+                    @endif
                 </div>
             </div>
 
@@ -424,7 +451,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                         <x-icono name="grid" class="w-4 h-4 flex-none opacity-60" />
                         Qué categorías miran
-                        <x-ayuda titulo="Qué categorías miran" texto="Cuando el cliente habla con el asistente puede abrir la lista de categorías de tu carta y tocar una. Esto es el ranking de esas categorías. Ojo que no es lo mismo que «Platos más deseados»: allá el cliente ya decidió que quiere un plato, acá recién está curioseando una parte del menú. Sirve para saber qué despierta interés y qué conviene mostrar primero. Se cuenta cada toque, así que volver dos veces a los postres suma dos." />
+                        <x-ayuda titulo="Qué categorías miran"
+                                 texto="En el chat, el cliente puede abrir la lista de categorías de tu carta y tocar una. Esto es el ranking. No confundir con «Platos más deseados»: allá ya decidió que quiere un plato, acá recién está curioseando. Sirve para saber qué despierta interés y qué conviene mostrar primero."
+                                 admin="Evento categoria_tap, por toque (volver dos veces a postres suma dos) y con el nombre ORIGINAL del menú, no el traducido." />
                     </h3>
                     <p class="text-text-secondary text-sm mb-4">Las secciones de tu carta que más abren en el chat.</p>
                     @php $catMax = $metrics['topCategorias']->max() ?: 1; @endphp
@@ -446,7 +475,9 @@
                     <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                         <x-icono name="check" class="w-4 h-4 flex-none opacity-60" />
                         Qué etiquetas filtran
-                        <x-ayuda titulo="Qué etiquetas filtran" texto="En el chat el cliente puede filtrar tu carta por etiqueta: sin TACC, vegano, sin lactosa, lo que tengas cargado en los platos. Este ranking es lo único del panel que te dice qué necesidades alimentarias tienen tus clientes, y es de lo más accionable que hay: si muchos filtran por algo que casi no tenés, ahí hay platos para sumar. Las etiquetas salen de tu menú, así que si un plato apto no está etiquetado, el filtro no lo encuentra." />
+                        <x-ayuda titulo="Qué etiquetas filtran"
+                                 texto="En el chat el cliente puede filtrar por etiqueta: sin TACC, vegano, sin lactosa, lo que tengas cargado. Es lo único del panel que te dice qué necesidades alimentarias tienen tus clientes: si muchos filtran por algo que casi no tenés, ahí hay platos para sumar. Ojo que si un plato apto no está etiquetado, el filtro no lo encuentra."
+                                 admin="Evento tag_tap. Los nombres se normalizan al agrupar: SIN_TACC, sin-tacc y sin tacc son la misma fila." />
                     </h3>
                     <p class="text-text-secondary text-sm mb-4">Las restricciones o preferencias que buscan tus clientes.</p>
                     @php $tagMax = $metrics['topTags']->max() ?: 1; @endphp
@@ -510,6 +541,23 @@
                     @else
                         <p class="text-text-secondary text-center py-4">Todo lo que preguntaron encontró respuesta en tu menú. 👌</p>
                     @endif
+
+                    {{-- Los faltantes que en realidad SÍ están en la carta: no son demanda,
+                         es el asistente que no los encontró. Al comercio no le sirven (le
+                         dirían que sume algo que ya vende) pero a nosotros nos avisan que
+                         el chat está fallando, que es algo que hoy no se detecta de otra forma. --}}
+                    @if(!empty($fallasDelAsistente))
+                        <div class="mt-4 pt-4 border-t border-accent-gray/40">
+                            <p class="text-xs text-amber-500 mb-2">
+                                ⚠ El asistente no encontró esto, y SÍ está en el menú · solo visible para admins
+                            </p>
+                            <p class="text-xs text-text-secondary">
+                                @foreach($fallasDelAsistente as $f)
+                                    <span class="inline-block mr-3">{{ $f['consulta'] }} <b>×{{ $f['veces'] }}</b></span>
+                                @endforeach
+                            </p>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
@@ -547,8 +595,11 @@
                         <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                             <x-icono name="help" class="w-4 h-4 flex-none opacity-60" />
                             Preguntas más frecuentes
+                            <x-ayuda titulo="Preguntas más frecuentes"
+                                     texto="Las consultas que se repitieron dos veces o más. Lo que alguien preguntó una sola vez no aparece acá, porque no es un patrón: para leer todo está el historial de conversaciones, al final de la página. El aviso en ámbar significa que en la mayoría de esas veces el asistente no encontró nada del menú para ofrecer."
+                                     admin="Agrupa por frase normalizada, no por tema: «tienen postres» y «¿Tienen postres?» cuentan juntas, «listame postres» va aparte. Descarta saludos. El ámbar sale si platos_sugeridos = 0 en más de la mitad." />
                         </h3>
-                        <p class="text-text-secondary text-sm mb-4">Lo que los clientes escribieron, y si el asistente pudo recomendarles algo del menú.</p>
+                        <p class="text-text-secondary text-sm mb-4">Lo que los clientes preguntaron más de una vez, y si el asistente pudo recomendarles algo del menú.</p>
                         @if($frequentQuestions->count() > 0)
                             @php $qMax = $frequentQuestions->max('frequency') ?: 1; @endphp
                             <div class="space-y-2.5">
@@ -582,7 +633,16 @@
                             </div>
                         @else
                             <p class="text-text-secondary text-center py-4">
-                                Todavía nadie escribió una pregunta.
+                                Todavía no hay preguntas que se repitan.
+                            </p>
+                        @endif
+
+                        {{-- Sin esto el comercio escribe algo en el chat, no lo ve acá y cree
+                             que el panel se lo comió. No se lo comió: no se repitió. --}}
+                        @if($preguntasUnicas > 0)
+                            <p class="text-xs text-text-secondary mt-4 pt-3 border-t border-accent-gray/40">
+                                Hay {{ $preguntasUnicas }} {{ $preguntasUnicas === 1 ? 'consulta más que se hizo' : 'consultas más que se hicieron' }} una sola vez.
+                                <a href="#historial" class="text-accent-blue hover:underline">Verlas en el historial ↓</a>
                             </p>
                         @endif
                     </div>
@@ -599,21 +659,38 @@
                             <div class="space-y-3">
                                 @foreach($dailyStats as $day)
                                     <div class="flex items-center justify-between py-2 border-b border-accent-gray/50 last:border-b-0">
+                                        {{-- Este widget se había quedado atrás: mostraba "101/101
+                                             con IA" (el número que sacamos de las tarjetas por no
+                                             avisar nada) y el tiempo de respuesta en milisegundos,
+                                             que es infraestructura nuestra. Queda lo único que le
+                                             sirve al comercio —cuánta gente le consultó ese día— y
+                                             el aviso cuando algo no se pudo responder. --}}
+                                        @php
+                                            $sinResponder = $day->total - $day->openai_count;
+                                            // Los días a mano: config('app.locale') es 'en' (el
+                                            // español se aplica sólo en las rutas del menú público,
+                                            // por middleware), así que translatedFormat() escribiría
+                                            // "Tue 11/08" en un panel que está todo en español.
+                                            $dia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                                            $fecha = \Carbon\Carbon::parse($day->date);
+                                        @endphp
                                         <div>
                                             <p class="text-sm font-medium text-text-primary">
-                                                {{ \Carbon\Carbon::parse($day->date)->format('d/m/Y') }}
+                                                {{ $dia[$fecha->dayOfWeek] }} {{ $fecha->format('d/m') }}
                                             </p>
-                                            <p class="text-xs text-text-secondary">
-                                                {{ $day->openai_count }}/{{ $day->total }} con IA
-                                            </p>
+                                            @if($sinResponder > 0)
+                                                <p class="text-xs text-amber-500">
+                                                    {{ $sinResponder }} sin responder
+                                                </p>
+                                            @endif
                                         </div>
                                         <div class="text-right">
                                             <p class="text-sm font-bold text-text-primary">
-                                                {{ $day->total }} chats
+                                                {{ $day->total }} {{ $day->total === 1 ? 'consulta' : 'consultas' }}
                                             </p>
-                                            @if($day->avg_response_time)
+                                            @if(auth()->user()->isSuperAdmin() && $day->avg_response_time)
                                                 <p class="text-xs text-text-secondary">
-                                                    {{ round($day->avg_response_time) }}ms promedio
+                                                    {{ number_format($day->avg_response_time / 1000, 1, ',', '.') }} s · solo admins
                                                 </p>
                                             @endif
                                         </div>
@@ -640,7 +717,7 @@
                  cantidad si hay más de uno, idioma si no es español, y un aviso ámbar en
                  los hilos donde el asistente no encontró nada del menú. --}}
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden">
-                <div class="p-6 historial">
+                <div class="p-6 historial" id="historial">
                     @php
                         $etiquetasPeriodo = [7 => '7 días', 30 => '30 días', 90 => '3 meses', 365 => '1 año', 0 => 'Todo'];
                         // Frase aparte de la etiqueta del pill: 'últimos 1 año' no se dice.
@@ -733,8 +810,16 @@
                                             @if($thread['respuesta'])
                                                 <p class="text-xs text-text-secondary/80 truncate mt-0.5">{{ \Illuminate\Support\Str::limit($thread['respuesta'], 110) }}</p>
                                             @endif
+                                            {{-- La fecha del ÚLTIMO mensaje, que es por la que se
+                                                 ordena la lista. Antes se mostraba la del primero y
+                                                 parecía desordenada: un hilo largo que empezó el 09
+                                                 y siguió el 11 quedaba arriba de todo mostrando "09".
+                                                 Si la charla abarcó varios días se aclara el rango. --}}
                                             <p class="text-xs text-text-secondary mt-1">
-                                                {{ $thread['inicio']->format('d/m H:i') }}@if($thread['total'] > 1) &middot; {{ $thread['total'] }} mensajes @endif
+                                                {{ $thread['fin']->format('d/m H:i') }}@if($thread['total'] > 1) &middot; {{ $thread['total'] }} mensajes @endif
+                                                @if(!$thread['inicio']->isSameDay($thread['fin']))
+                                                    &middot; <span class="opacity-70">empezó el {{ $thread['inicio']->format('d/m') }}</span>
+                                                @endif
                                             </p>
                                         </div>
 
@@ -761,6 +846,17 @@
                                                 <div class="flex justify-start mt-1.5">
                                                     <div class="max-w-[85%]">
                                                         <p class="text-sm text-text-secondary bg-accent-gray/20 rounded-2xl rounded-tl-md px-3 py-2">{{ $m->bot_response }}</p>
+                                                        {{-- Qué platos le ofreció de verdad. En el chat el cliente
+                                                             ve las tarjetas con foto y precio; acá alcanza con los
+                                                             nombres, que es lo que permite detectar de un vistazo
+                                                             cuándo el asistente recomendó cualquier cosa.
+                                                             NULL = conversación anterior a que se guardara. --}}
+                                                        @if(!empty($m->platos_ofrecidos))
+                                                            <p class="text-[11px] text-text-secondary mt-1">
+                                                                <span class="opacity-60">ofreció:</span>
+                                                                {{ implode(' · ', $m->platos_ofrecidos) }}
+                                                            </p>
+                                                        @endif
                                                         <p class="text-[11px] text-text-secondary/70 mt-1">
                                                             {{ $m->created_at->format('H:i') }}@if($m->response_time_ms) &middot; {{ number_format($m->response_time_ms / 1000, 1, ',', '.') }} s @endif
                                                             @unless($m->used_openai) &middot; <span class="text-amber-500">respuesta de respaldo</span> @endunless

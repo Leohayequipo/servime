@@ -15,6 +15,7 @@ class ChatConversation extends Model
         'idioma',
         'bot_response',
         'platos_sugeridos',
+        'platos_ofrecidos',
         'falta',
         'used_openai',
         'intent',
@@ -27,6 +28,7 @@ class ChatConversation extends Model
 
     protected $casts = [
         'used_openai' => 'boolean',
+        'platos_ofrecidos' => 'array',
         'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

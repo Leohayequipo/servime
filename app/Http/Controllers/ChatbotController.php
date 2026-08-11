@@ -25,7 +25,7 @@ class ChatbotController extends Controller
         try {
             $request->validate([
                 'message' => 'required|string|max:500',
-                'tipo' => 'nullable|string|in:categoria,ver_mas',
+                'tipo' => 'nullable|string|in:categoria,ver_mas,chip,tag',
                 'scope' => 'nullable|string|max:500',
             ]);
 
@@ -75,7 +75,7 @@ class ChatbotController extends Controller
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $response);
 
             // Log de la conversación (usar session_id obtenido anteriormente)
-            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
+            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado(), array_column($platos, 'nombre'));
 
             return response()->json([
                 'response' => $response,
@@ -143,7 +143,7 @@ class ChatbotController extends Controller
     {
         $request->validate([
             'message' => 'required|string|max:500',
-            'tipo' => 'nullable|string|in:categoria,ver_mas',
+            'tipo' => 'nullable|string|in:categoria,ver_mas,chip,tag',
             'scope' => 'nullable|string|max:500',
         ]);
 
@@ -230,7 +230,7 @@ class ChatbotController extends Controller
             // $usoIA y no true fijo: con esto la tarjeta "Sin responder" del panel se entera
             // de que el asistente está caído. Estaba hardcodeado y marcaba 0 mientras OpenAI
             // rechazaba todas las llamadas por falta de crédito.
-            $this->logConversation($comercio, $message, $full, $usoIA, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado());
+            $this->logConversation($comercio, $message, $full, $usoIA, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado(), array_column($platos, 'nombre'));
         };
 
         return response()->stream($callback, 200, [
@@ -262,6 +262,19 @@ class ChatbotController extends Controller
         }
 
         if (str_contains($message, 'horario') || str_contains($message, 'abierto')) {
+            // Si el comercio cargó sus horarios, contestamos con eso: mandarlo a "contactar
+            // al local" teniendo el dato es la clase de respuesta que hace desconfiar del chat.
+            $abierto = $comercio->estaAbierto();
+            if ($abierto === true) {
+                return '¡Sí, estamos abiertos ahora! Podés ver el menú completo acá mismo.';
+            }
+            if ($abierto === false) {
+                $proxima = $comercio->proximaApertura();
+
+                return 'En este momento estamos cerrados'.($proxima ? ", abrimos {$proxima}" : '')
+                    .'. Igual podés mirar el menú y dejar todo listo.';
+            }
+
             return "Para información sobre horarios, te recomiendo contactar directamente con {$comercio->nombre}.";
         }
 
@@ -271,7 +284,7 @@ class ChatbotController extends Controller
     /**
      * Log de conversación en la base de datos
      */
-    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null, ?int $platosSugeridos = null, ?string $falta = null): void
+    private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null, ?int $platosSugeridos = null, ?string $falta = null, ?array $platosOfrecidos = null): void
     {
         try {
             // Si no se pasó session_id, obtenerlo
@@ -283,14 +296,23 @@ class ChatbotController extends Controller
                 'comercio_id' => $comercio->id,
                 'session_id' => $sessionId,
                 'user_message' => $message,
-                // 'categoria'/'ver_mas' = lo armó la interfaz al tocar un atajo, no lo
-                // tipeó el cliente. Los widgets que analizan texto lo excluyen.
-                'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas'], true) ? $modoRespuesta : 'escrito',
+                // Todo lo que no sea 'escrito' lo armó la interfaz al tocar un botón, y los
+                // widgets que analizan TEXTO lo excluyen (scope `escritas()`): son frases
+                // idénticas entre sí y dominan cualquier conteo. Medido antes de marcar los
+                // dos últimos: 21 de 103 mensajes eran botones, y una sola frase de chip
+                // ocupaba cuatro casilleros del top de palabras.
+                //   categoria → chip de categoría del chat      ver_mas → "Ver más opciones"
+                //   chip      → atajo de la portada             tag     → filtro de tags del chat
+                'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas', 'chip', 'tag'], true) ? $modoRespuesta : 'escrito',
                 // Idioma en el que se atendió: explica por qué la misma pregunta aparece
                 // en varias formas, y le dice al comercio cuántos clientes no hablan español.
                 'idioma' => app()->getLocale(),
                 // 0 = el bot no pudo recomendar nada: candidato a demanda insatisfecha
                 'platos_sugeridos' => $platosSugeridos,
+                // Y CUÁLES fueron: el marcador [[PLATOS]] se borra de la respuesta antes de
+                // guardarla, así que sin esto el historial del panel no permitía ver qué
+                // ofreció el asistente ni si el plato existía de verdad.
+                'platos_ofrecidos' => ! empty($platosOfrecidos) ? array_values($platosOfrecidos) : null,
                 // Lo que pidió y el menú no tiene (lo declara el modelo)
                 'falta' => $falta,
                 'bot_response' => $response,

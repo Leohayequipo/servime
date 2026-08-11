@@ -109,7 +109,7 @@ class AnalyticsTrackingTest extends TestCase
             ]);
         }
 
-        $intents = (new \App\Services\AnalyticsInsightsService)->intents($comercio->id);
+        $intents = (new \App\Services\AnalyticsInsightsService)->intents($comercio);
 
         $this->assertSame(4, $intents['total']);
         $this->assertSame(1, $intents['counts']['Horario']);
@@ -269,7 +269,7 @@ class AnalyticsTrackingTest extends TestCase
             ->viewData('metrics');
 
         $this->assertSame(1, $metrics['funnel']['armaron_pedido']);
-        $this->assertSame(1, $metrics['vozVisitas']);
+        $this->assertSame(1, $metrics['vozVisitantes']);
         $this->assertSame(3, $metrics['totalVisitas']);
     }
 

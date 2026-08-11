@@ -208,6 +208,18 @@ class ChatbotService
      *
      * @return array<int, array{nombre:string, precio:string}>
      */
+    /**
+     * ¿El menú tiene algo que coincida con este texto?
+     *
+     * Lo usa el panel para descartar los faltantes que el modelo declaró mal: si el
+     * asistente anotó "rabas" y las rabas están en la carta, eso no es demanda del cliente
+     * sino una falla nuestra (ver AnalyticsInsightsService::demandaInsatisfecha()).
+     */
+    public function tieneEnElMenu(Comercio $comercio, string $texto): bool
+    {
+        return ! empty($this->platosQueCoinciden($comercio, $texto, 1));
+    }
+
     private function platosQueCoinciden(Comercio $comercio, string $mensaje, int $max = 5): array
     {
         $normalizar = function (string $t): string {
@@ -949,6 +961,37 @@ class ChatbotService
     /**
      * Lee el carrito de la sesión actual para que el bot recomiende en base a lo ya elegido (maridajes, etc.).
      */
+    /**
+     * Qué día y hora es, y si el local está abierto. Va en el bloque VARIABLE (cambia en
+     * cada request, no puede entrar en el prefijo cacheado).
+     *
+     * Sin esto el asistente recomendaba una cena a las 10 de la mañana y esquivaba las
+     * preguntas de horario aunque el comercio los tuviera cargados: no los veía por ningún
+     * lado. `estaAbierto()` devuelve null cuando no hay horarios, y ahí no se dice nada —
+     * mejor callarse que afirmar que está abierto sin saberlo.
+     */
+    private function ahoraMismo(Comercio $comercio): string
+    {
+        $dias = ['Dom', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+        $ahora = now();
+        $dia = $dias[(int) $ahora->dayOfWeekIso] ?? $ahora->englishDayOfWeek;
+
+        $texto = "\nAHORA MISMO: es {$dia} y son las {$ahora->format('H:i')}. Tenelo en cuenta al recomendar "
+            .'(a la mañana un desayuno, a la tarde una merienda, a la noche una cena): no ofrezcas algo '
+            ."propio de otro momento del día salvo que el cliente lo pida.\n";
+
+        $abierto = $comercio->estaAbierto();
+        if ($abierto === true) {
+            $texto .= "El local está ABIERTO ahora. Si preguntan por el horario, decilo con esta info.\n";
+        } elseif ($abierto === false) {
+            $proxima = $comercio->proximaApertura();
+            $texto .= 'El local está CERRADO ahora'.($proxima ? ", abre {$proxima}" : '')
+                .". Si preguntan por el horario, decilo con esta info; podés igual mostrarles el menú.\n";
+        }
+
+        return $texto;
+    }
+
     private function carritoActual(Comercio $comercio): string
     {
         if (empty($this->sessionId)) {
@@ -1173,7 +1216,7 @@ Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado
                     ."Si preguntó una OPINIÓN (si algo combina, cuál conviene), contestá la pregunta: no listes el menú.\n";
         }
 
-        return "{$carrito}
+        return "{$carrito}{$this->ahoraMismo($comercio)}
 IDIOMA DE LA RESPUESTA: {$idioma}. {$anclaje} (los nombres de los platos NO se traducen).
 
 PREGUNTA DEL CLIENTE: {$message}

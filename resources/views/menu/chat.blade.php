@@ -531,7 +531,9 @@
                         __('Para compartir'),
                         __('Algo para tomar'),
                     ] as $sugerencia)
-                        <button type="button" class="chip-sugerencia" onclick="askQuestion(@js($sugerencia))">{{ $sugerencia }}</button>
+                        {{-- tipo 'chip' por lo mismo que los atajos de la portada: las arma la
+                             interfaz, son idénticas entre sí y se comían el top de palabras. --}}
+                        <button type="button" class="chip-sugerencia" onclick="askQuestion(@js($sugerencia), 'chip', @js($sugerencia))">{{ $sugerencia }}</button>
                     @endforeach
                 </div>
                 
@@ -669,7 +671,9 @@
                 <div class="side-panel-grid">
                     @foreach($tags as $tag)
                         {{-- El hover iba en atributos inline (y en touch no existe): ahora es CSS --}}
-                        <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}'); hideTags();"
+                        {{-- tipo 'tag': lo manda el filtro, no lo escribió el cliente. Sin eso,
+                             "muéstrame" y "opciones" entraban al top de palabras del panel. --}}
+                        <button onclick="askQuestion('muéstrame opciones {{ str_replace('_', ' ', strtolower($tag)) }}', 'tag', @js($tag)); hideTags();"
                                 class="tag-chip" data-tag="{{ $tag }}">
                             {{ str_replace('_', ' ', $tag) }}
                         </button>
@@ -1631,7 +1635,10 @@
                 if (preQ && preQ.trim()) {
                     // Limpiar el query para que no se reenvíe si el usuario refresca
                     history.replaceState(null, '', window.location.pathname);
-                    setTimeout(() => sendMessage(preQ.trim()), 400);
+                    // tipo 'chip': la pregunta la armó el atajo de la portada, no la tipeó
+                    // nadie. Sin esto se guardaba como escrita y "¿Qué me recomendás?" era
+                    // la palabra más buscada del comercio. No cambia cómo responde el modelo.
+                    setTimeout(() => sendMessage(preQ.trim(), 'chip', preQ.trim()), 400);
                 }
             } catch (e) {}
         })();

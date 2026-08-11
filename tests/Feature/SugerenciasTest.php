@@ -53,7 +53,7 @@ class SugerenciasTest extends TestCase
         $demanda = [['consulta' => 'opciones veganas', 'veces' => 3]];
 
         $sug = (new AnalyticsInsightsService)->suggestions(
-            $comercio->id, $this->metrics(), ['total' => 0, 'counts' => [], 'ia' => 0], $demanda
+            $comercio, $this->metrics(), ['total' => 0, 'counts' => [], 'ia' => 0], $demanda
         );
 
         $this->assertStringContainsString('3 clientes preguntaron por "opciones veganas"', $sug[0]['text']);
@@ -65,7 +65,7 @@ class SugerenciasTest extends TestCase
         $demanda = [['consulta' => 'sushi', 'veces' => 1]];
 
         $sug = (new AnalyticsInsightsService)->suggestions(
-            $comercio->id, $this->metrics(), ['total' => 0, 'counts' => [], 'ia' => 0], $demanda
+            $comercio, $this->metrics(), ['total' => 0, 'counts' => [], 'ia' => 0], $demanda
         );
 
         $this->assertSame([], $sug);
@@ -79,7 +79,7 @@ class SugerenciasTest extends TestCase
         $insights = new AnalyticsInsightsService;
 
         $sug = $insights->suggestions(
-            $comercio->id, $this->metrics(), $insights->intents($comercio->id)
+            $comercio, $this->metrics(), $insights->intents($comercio)
         );
 
         $this->assertSame([], $sug);
@@ -93,10 +93,59 @@ class SugerenciasTest extends TestCase
         $insights = new AnalyticsInsightsService;
 
         $sug = $insights->suggestions(
-            $comercio->id, $this->metrics(), $insights->intents($comercio->id)
+            $comercio, $this->metrics(), $insights->intents($comercio)
         );
 
         $this->assertStringContainsString('6 personas preguntaron por envíos', $this->textos($sug));
+    }
+
+    public function test_el_consejo_cambia_si_el_comercio_ya_cargo_el_dato(): void
+    {
+        $insights = new AnalyticsInsightsService;
+
+        // Sin horarios cargados: el consejo es que los cargue.
+        $sinHorarios = Comercio::factory()->create(['horarios' => null]);
+        $this->mensajes($sinHorarios, '¿Qué horario tienen?', 6);
+        $this->mensajes($sinHorarios, 'quiero una milanesa', 8);
+
+        $this->assertStringContainsString(
+            'no lo tenés cargado',
+            $this->textos($insights->suggestions($sinHorarios, $this->metrics(), $insights->intents($sinHorarios)))
+        );
+
+        // Con horarios cargados, el mismo dato significa otra cosa: no lo están viendo.
+        // Antes le pedíamos cargar algo que ya había cargado, y eso quema la credibilidad.
+        $conHorarios = Comercio::factory()->create(['horarios' => ['1' => [['11:00', '20:00']]]]);
+        $this->mensajes($conHorarios, '¿Qué horario tienen?', 6);
+        $this->mensajes($conHorarios, 'quiero una milanesa', 8);
+
+        $texto = $this->textos($insights->suggestions($conHorarios, $this->metrics(), $insights->intents($conHorarios)));
+        $this->assertStringContainsString('aunque lo tenés cargado', $texto);
+        $this->assertStringNotContainsString('no lo tenés cargado', $texto);
+    }
+
+    public function test_avisa_en_que_tema_el_asistente_se_queda_sin_respuestas(): void
+    {
+        $comercio = Comercio::factory()->create();
+
+        // 6 consultas por dieta y en 5 no encontró nada: falta etiquetar platos.
+        foreach (range(1, 6) as $i) {
+            ChatConversation::create([
+                'comercio_id' => $comercio->id,
+                'session_id' => 'sess_'.$i,
+                'user_message' => '¿tienen algo sin tacc?',
+                'bot_response' => 'ok',
+                'platos_sugeridos' => $i === 1 ? 2 : 0,
+                'used_openai' => true,
+                'response_time_ms' => 900,
+            ]);
+        }
+        $this->mensajes($comercio, 'quiero una milanesa', 8);
+
+        $insights = new AnalyticsInsightsService;
+        $texto = $this->textos($insights->suggestions($comercio, $this->metrics(), $insights->intents($comercio)));
+
+        $this->assertStringContainsString('De 6 consultas sobre "dieta / restricciones", en 5', $texto);
     }
 
     public function test_el_embudo_dice_cuantas_personas_se_fueron(): void
@@ -104,7 +153,7 @@ class SugerenciasTest extends TestCase
         $comercio = Comercio::factory()->create();
 
         $sug = (new AnalyticsInsightsService)->suggestions(
-            $comercio->id,
+            $comercio,
             $this->metrics(['funnel' => ['visitas' => 40, 'vieron_eleccion' => 32, 'eligieron' => 13, 'interesados' => 0, 'armaron_pedido' => 0]]),
             ['total' => 0, 'counts' => [], 'ia' => 0]
         );
@@ -117,7 +166,7 @@ class SugerenciasTest extends TestCase
         $comercio = Comercio::factory()->create();
 
         $sug = (new AnalyticsInsightsService)->suggestions(
-            $comercio->id,
+            $comercio,
             $this->metrics(['funnel' => ['visitas' => 12, 'vieron_eleccion' => 11, 'eligieron' => 1, 'interesados' => 0, 'armaron_pedido' => 0]]),
             ['total' => 0, 'counts' => [], 'ia' => 0]
         );
@@ -134,9 +183,9 @@ class SugerenciasTest extends TestCase
         $insights = new AnalyticsInsightsService;
 
         $sug = $insights->suggestions(
-            $comercio->id,
+            $comercio,
             $this->metrics(['funnel' => ['visitas' => 40, 'vieron_eleccion' => 32, 'eligieron' => 1, 'interesados' => 0, 'armaron_pedido' => 0]]),
-            $insights->intents($comercio->id),
+            $insights->intents($comercio),
             [['consulta' => 'sushi', 'veces' => 4]]
         );
 

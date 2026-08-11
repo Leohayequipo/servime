@@ -213,7 +213,7 @@ class AnalyticsController extends Controller
         $stats['serie'] = $this->serieDiaria($comercioId, 14);
 
         // Preguntas más frecuentes
-        $frequentQuestions = $this->getFrequentQuestions($comercioId);
+        ['frecuentes' => $frequentQuestions, 'unicas' => $preguntasUnicas] = $this->getFrequentQuestions($comercioId);
 
         // Estadísticas por día
         $dailyStats = $this->getDailyStats($comercioId);
@@ -224,12 +224,17 @@ class AnalyticsController extends Controller
 
         // Intención de las consultas + sugerencias accionables
         $insights = new AnalyticsInsightsService;
-        $intents = $insights->intents($comercioId);
+        $intents = $insights->intents($comercio);
         // Consultas donde el bot no encontró nada: lo que le piden y no tiene. Se calcula
         // antes porque es la primera sugerencia (la única que puede terminar en un plato
         // nuevo en la carta), así no se consulta dos veces.
-        $demandaInsatisfecha = $insights->demandaInsatisfecha($comercioId);
-        $suggestions = $insights->suggestions($comercioId, $metrics, $intents, $demandaInsatisfecha);
+        $demandaInsatisfecha = $insights->demandaInsatisfecha($comercio);
+        $suggestions = $insights->suggestions($comercio, $metrics, $intents, $demandaInsatisfecha);
+        // Lo que el asistente dijo no tener TENIÉNDOLO: no es demanda, es una falla nuestra.
+        // Solo para el super admin, como termómetro de la calidad del chat.
+        $fallasDelAsistente = auth()->user()->isSuperAdmin()
+            ? $insights->faltantesQueSiEstan($comercio)
+            : [];
 
         // Última clasificación con IA (para el botón Premium)
         $ultimaClasificacion = IntentClassificationRun::where('comercio_id', $comercioId)->latest()->first();
@@ -244,12 +249,14 @@ class AnalyticsController extends Controller
             'cantidad',
             'stats',
             'frequentQuestions',
+            'preguntasUnicas',
             'dailyStats',
             'metrics',
             'topWords',
             'intents',
             'suggestions',
             'demandaInsatisfecha',
+            'fallasDelAsistente',
             'ultimaClasificacion'
         ));
     }
@@ -335,9 +342,14 @@ class AnalyticsController extends Controller
             ->map->count()->sortDesc()->take(8);
 
         // Platos más deseados ("Lo quiero")
-        $topDishes = $events->where('event', 'dish_want')
+        // 12 y no 8 como los otros rankings: acá la cola dice algo (qué se pide poco también
+        // es información) y con 15 platos distintos el corte dejaba afuera la mitad. Los que
+        // no entran se cuentan aparte para avisarlo en vez de esconderlos.
+        $dishes = $events->where('event', 'dish_want')
             ->groupBy(fn ($e) => $e->data['nombre'] ?? '—')
-            ->map->count()->sortDesc()->take(8);
+            ->map->count()->sortDesc();
+        $topDishes = $dishes->take(12);
+        $dishesFuera = max(0, $dishes->count() - $topDishes->count());
 
         // Visitas reales: los eventos de cada visitante se cortan por inactividad, así que
         // el que vuelve otro día suma otra visita en vez de estirar la primera.
@@ -390,7 +402,13 @@ class AnalyticsController extends Controller
 
         // Micrófono: por visita, no por evento — dictar tres frases seguidas sigue siendo
         // una persona usando la función. Sirve para saber si la feature vale la pena.
-        $vozVisitas = $visitasCon(fn ($e) => $e->event === 'mic_start');
+        // Por VISITANTE, igual que las otras dos tarjetas de su fila (dispositivos y
+        // recurrencia): tenerla por visita mostraba "1 de 59" al lado de "34 personas" y
+        // parecían números en desacuerdo. Dictar varias veces sigue siendo una persona.
+        $vozVisitantes = $visitas
+            ->filter(fn ($evs) => $evs->contains(fn ($e) => $e->event === 'mic_start'))
+            ->groupBy(fn ($evs, $clave) => $this->visitanteDeClave($clave))
+            ->count();
 
         // Heatmap por día de semana (0=Dom..6=Sáb) x hora
         $heatmap = array_fill(0, 7, array_fill(0, 24, 0));
@@ -421,8 +439,8 @@ class AnalyticsController extends Controller
         $totalVisitas = $visitas->count();
 
         return compact('menuChoice', 'entradas', 'topChips', 'topCategorias', 'topTags',
-            'topPromos', 'aperturasPromos', 'topDishes', 'funnel',
-            'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'totalVisitantes',
+            'topPromos', 'aperturasPromos', 'topDishes', 'dishesFuera', 'funnel',
+            'vozVisitantes', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'totalVisitantes',
             'totalVisitas');
     }
 
@@ -640,7 +658,15 @@ class AnalyticsController extends Controller
 
         arsort($conteo);
 
-        return collect($conteo)->take($limit)->map(function ($freq, $key) use ($formas, $idiomas, $resueltas, $conDato) {
+        // Solo lo que se REPITE. Con volúmenes chicos casi nada se repite, así que el top
+        // se llenaba de consultas únicas: el comercio escribía algo nuevo, no entraba en las
+        // 10 y parecía que el panel se lo comía (medido: 68 preguntas distintas en 80
+        // mensajes). Una consulta que pasó una vez no es un patrón; para leer todo está el
+        // historial de conversaciones, que muestra las charlas completas.
+        $unicas = count(array_filter($conteo, fn ($n) => $n < 2));
+        $conteo = array_filter($conteo, fn ($n) => $n >= 2);
+
+        $frecuentes = collect($conteo)->take($limit)->map(function ($freq, $key) use ($formas, $idiomas, $resueltas, $conDato) {
             $total = $conDato[$key] ?? 0;
             $ok = $resueltas[$key] ?? 0;
 
@@ -652,6 +678,8 @@ class AnalyticsController extends Controller
                 'idiomas' => array_keys($idiomas[$key] ?? []),
             ];
         })->values();
+
+        return ['frecuentes' => $frecuentes, 'unicas' => $unicas];
     }
 
     /**
