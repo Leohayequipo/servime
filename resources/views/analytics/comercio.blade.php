@@ -370,9 +370,10 @@
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="flame" class="w-4 h-4 flex-none opacity-60" />
-                        Promos más clickeadas
-                        <x-ayuda titulo="Promos más clickeadas" texto="Si tu menú tiene una categoría marcada como promoción, en el chat aparece como un botón destacado. Acá ves cuántas veces lo tocaron. Ojo con leer de más: que una promo se mire mucho no significa que se venda; para eso mirá si esos clientes después llegaron a tocar «Lo quiero». La barra se dibuja contra la promo más tocada, así que con una sola promo siempre se va a ver llena." />
+                        Promos más pedidas
+                        <x-ayuda titulo="Promos más pedidas" texto="Cuál de las promociones que cargaste engancha más: cuenta cada vez que alguien tocó «Lo quiero» en una de ellas. Son las promos que aparecen en tu panel dentro de «Promociones del Día», una por una, no la sección entera. Abajo, aparte, ves cuántas veces abrieron esa sección: si la abren mucho pero después nadie toca «Lo quiero», el problema no es que no las vean, es la oferta o el precio. La barra se dibuja contra la promo más pedida, así que con una sola siempre se ve llena." />
                     </h3>
+                    <p class="text-text-secondary text-sm mb-4">Las promociones que cargaste, por interés real.</p>
                     @php $promoMax = $metrics['topPromos']->max() ?: 1; @endphp
                     @forelse($metrics['topPromos'] as $promo => $count)
                         <div class="mb-3">
@@ -384,15 +385,20 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-text-secondary text-center py-4">Nadie clickeó promos aún.</p>
+                        <p class="text-text-secondary text-center py-4">Todavía nadie pidió una promo.</p>
                     @endforelse
+                    @if(($metrics['aperturasPromos'] ?? 0) > 0)
+                        <p class="text-xs text-text-secondary mt-3 pt-3 border-t border-accent-gray/40">
+                            {{ $metrics['aperturasPromos'] }} {{ $metrics['aperturasPromos'] === 1 ? 'vez abrieron' : 'veces abrieron' }} la sección de promos.
+                        </p>
+                    @endif
                 </div>
 
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                     <h3 class="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
                         <x-icono name="heart" class="w-4 h-4 flex-none opacity-60" />
                         Platos más deseados
-                        <x-ayuda titulo="Platos más deseados" texto="Cuando el asistente recomienda un plato, lo muestra en una tarjeta con foto y precio y un botón «Lo quiero» que lo suma al pedido. Esto es el ranking de los platos que más veces tocaron. Es lo más cerca de una venta que ves acá, pero no es una venta: el cliente puede sumarlo y después arrepentirse, o pedirle otra cosa al mozo. Se cuenta cada toque, así que si alguien suma dos milanesas, suma dos." />
+                        <x-ayuda titulo="Platos más deseados" texto="Cuando el asistente recomienda un plato, lo muestra en una tarjeta con foto y precio y un botón «Lo quiero» que lo suma al pedido. Esto es el ranking de los platos que más veces tocaron. Es lo más cerca de una venta que ves acá, pero no es una venta: el cliente puede sumarlo y después arrepentirse, o pedirle otra cosa al mozo. Se cuenta cada toque, así que si alguien suma dos milanesas, suma dos. Incluye también tus promociones, que además tienen su propio ranking más arriba: son los mismos toques mirados de dos maneras, no los sumes." />
                     </h3>
                     @php $dishMax = $metrics['topDishes']->max() ?: 1; @endphp
                     @forelse($metrics['topDishes'] as $dish => $count)

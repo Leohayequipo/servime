@@ -219,7 +219,7 @@ class AnalyticsController extends Controller
         $dailyStats = $this->getDailyStats($comercioId);
 
         // Métricas de comportamiento (eventos del menú público) + palabras
-        $metrics = $this->getEventMetrics($comercioId);
+        $metrics = $this->getEventMetrics($comercio);
         $topWords = $this->getTopWords($comercioId);
 
         // Intención de las consultas + sugerencias accionables
@@ -271,8 +271,10 @@ class AnalyticsController extends Controller
     /**
      * Métricas derivadas de tracking_events (últimos 30 días).
      */
-    private function getEventMetrics($comercioId): array
+    private function getEventMetrics(Comercio $comercio): array
     {
+        $comercioId = $comercio->id;
+
         $events = TrackingEvent::forComercio($comercioId)
             ->recent(30)
             ->get(['event', 'data', 'session_id', 'user_agent', 'created_at']);
@@ -292,15 +294,29 @@ class AnalyticsController extends Controller
             ->groupBy(fn ($e) => $e->data['label'])
             ->map->count()->sortDesc()->take(6);
 
-        // Promos más clickeadas.
+        // Promos: interesa CUÁL promo enganchó, no cuántas veces abrieron la sección.
         //
-        // La etiqueta se limpia de emoji porque el evento guarda el textContent del botón,
-        // y los chips de promo tenían un 🔥 adelante. Sin limpiarlo, los clicks anteriores
-        // ("🔥 Promociones del Día") y los nuevos ("Promociones del Día") aparecían como
-        // dos promos distintas, y encima con un emoji suelto en el panel.
-        $topPromos = $events->where('event', 'promo_click')
-            ->groupBy(fn ($e) => $this->sinEmoji($e->data['promo'] ?? '') ?: '—')
+        // `promo_click` es el toque en el chip "Promociones del Día", o sea el contenedor:
+        // como todos los comercios lo llaman igual, el ranking tenía siempre una fila sola y
+        // no decía nada. Las promos de verdad son los platos que el comercio carga adentro
+        // ("promo 2", "promo 3"), y ésas ya se registran solas: cuando el cliente toca
+        // "Lo quiero" sale un `dish_want` con el nombre de la promo. Estaba ahí desde
+        // siempre, mezclado con las milanesas en "Platos más deseados".
+        //
+        // Así que el ranking sale de cruzar los "Lo quiero" con la lista de promos del menú,
+        // sin tracking nuevo, y las aperturas quedan como número al pie.
+        $nombresPromo = collect($comercio->getPromocionesDelMenu())
+            ->pluck('nombre')
+            ->filter()
+            ->mapWithKeys(fn ($n) => [mb_strtolower(trim($n)) => trim($n)]);
+
+        $topPromos = $events->where('event', 'dish_want')
+            ->filter(fn ($e) => $nombresPromo->has(mb_strtolower(trim($e->data['nombre'] ?? ''))))
+            ->groupBy(fn ($e) => $nombresPromo[mb_strtolower(trim($e->data['nombre']))])
             ->map->count()->sortDesc()->take(6);
+
+        // Cuántas veces abrieron la sección de promos (el chip). Es contexto, no ranking.
+        $aperturasPromos = $events->where('event', 'promo_click')->count();
 
         // Categorías más miradas en el chat. Se cuenta por tap y no por visita: la pregunta
         // es qué parte de la carta despierta curiosidad, y que alguien vuelva dos veces a
@@ -404,7 +420,8 @@ class AnalyticsController extends Controller
         $totalVisitantes = array_sum($visitors);
         $totalVisitas = $visitas->count();
 
-        return compact('menuChoice', 'entradas', 'topChips', 'topCategorias', 'topTags', 'topPromos', 'topDishes', 'funnel',
+        return compact('menuChoice', 'entradas', 'topChips', 'topCategorias', 'topTags',
+            'topPromos', 'aperturasPromos', 'topDishes', 'funnel',
             'vozVisitas', 'heatmap', 'heatmapMax', 'devices', 'visitors', 'totalVisitantes',
             'totalVisitas');
     }
