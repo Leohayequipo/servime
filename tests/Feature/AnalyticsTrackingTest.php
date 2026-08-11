@@ -363,6 +363,34 @@ class AnalyticsTrackingTest extends TestCase
             ->assertSee('Todavía nadie filtró por etiquetas', false);
     }
 
+    public function test_las_sugerencias_son_solo_para_el_super_admin(): void
+    {
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        // Hace falta volumen para que se dispare alguna sugerencia (ver MIN_MENSAJES).
+        foreach (range(1, 14) as $i) {
+            ChatConversation::create([
+                'comercio_id' => $comercio->id,
+                'session_id' => 'sess_'.$i,
+                'user_message' => '¿Hacen delivery a domicilio?',
+                'bot_response' => 'ok',
+                'used_openai' => true,
+                'response_time_ms' => 1000,
+            ]);
+        }
+
+        $admin = User::factory()->superAdmin()->create();
+        $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk()
+            ->assertSee('Sugerencias para tu negocio', false);
+
+        // El dueño del comercio NO: se apoyan en lo que el asistente dijo no encontrar, y eso
+        // incluye sus propias fallas (llegó a sugerir sumar un plato que ya estaba en la carta).
+        $this->actingAs($comercio->user)->get(route('analytics.comercio', $comercio))->assertOk()
+            ->assertDontSee('Sugerencias para tu negocio', false);
+    }
+
     public function test_el_endpoint_acepta_los_eventos_nuevos(): void
     {
         $comercio = Comercio::factory()->create();

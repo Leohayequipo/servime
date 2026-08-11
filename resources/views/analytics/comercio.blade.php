@@ -94,11 +94,20 @@
             @endif
 
             <!-- Sugerencias accionables -->
-            @if(count($suggestions) > 0)
+            {{-- Solo super admin, a propósito y por ahora.
+                 Las sugerencias se apoyan en lo que el asistente declaró que NO encontró, y
+                 eso incluye sus propias fallas: llegó a decir "6 clientes preguntaron por
+                 rabas, quizás valga la pena sumarlo" con las rabas en la carta a $26.000.
+                 Un consejo equivocado es peor que ninguno, así que se prueban de este lado
+                 antes de mostrárselas al comercio. Para abrirlas hay que separar primero la
+                 demanda real de los faltantes que SÍ están en el menú (se puede: alcanza con
+                 pasar cada faltante por ChatbotService::platosQueCoinciden()). --}}
+            @if(count($suggestions) > 0 && auth()->user()->isSuperAdmin())
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 shadow-sm sm:rounded-lg p-6 mb-8">
                     <h3 class="text-lg font-medium text-amber-900 dark:text-amber-200 mb-4 flex items-center gap-2">
                         <x-icono name="idea" class="w-4 h-4 flex-none opacity-60" />
                         Sugerencias para tu negocio
+                        <span class="text-xs font-normal opacity-70">· solo visible para admins</span>
                     </h3>
                     <ul class="space-y-2.5">
                         @foreach($suggestions as $s)
@@ -305,6 +314,7 @@
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="phone" class="w-4 h-4 flex-none opacity-60" />
                         Dispositivos
+                        <x-ayuda titulo="Dispositivos" texto="Desde qué aparato abren tu menú, según lo que informa el navegador. Como el QR está en la mesa, lo esperable es que sea casi todo móvil: si ves mucho escritorio, quiere decir que están llegando por un link compartido o desde tus redes, y no escaneando el código en el local. Eso cambia para qué te sirve el menú, y conviene saberlo. Un detalle: cuando el navegador no informa qué es, cuenta como escritorio, así que ese número puede venir un poco alto." />
                     </h3>
                     @php $dv = $metrics['devices']; $dvTotal = array_sum($dv) ?: 1; @endphp
                     @foreach(['movil' => 'Móvil', 'desktop' => 'Escritorio', 'tablet' => 'Tablet'] as $k => $label)
@@ -323,6 +333,7 @@
                     <h3 class="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                         <x-icono name="return" class="w-4 h-4 flex-none opacity-60" />
                         Visitantes que vuelven
+                        <x-ayuda titulo="Visitantes que vuelven" texto="Cuántos abrieron tu menú en dos momentos distintos, separados por más de media hora. No hace falta que sea otro día: alguien que mira la carta al llegar y la vuelve a abrir para el postre ya cuenta acá, así que no lo leas como «clientes habitués». Se reconoce por dispositivo, no por persona: si entra desde el celular y después desde la computadora son dos visitantes, y si borra los datos del navegador vuelve a figurar como nuevo. En iPhone el número queda corto, porque Safari borra esa marca a los 7 días sin usar el menú: los que vuelven la semana siguiente se cuentan como nuevos." />
                     </h3>
                     @php $vs = $metrics['visitors']; $vt = array_sum($vs) ?: 1; @endphp
                     <p class="text-4xl font-bold text-text-primary">{{ round($vs['recurrentes'] / $vt * 100) }}%</p>
