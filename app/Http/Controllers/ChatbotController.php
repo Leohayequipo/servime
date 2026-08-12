@@ -284,6 +284,25 @@ class ChatbotController extends Controller
     /**
      * Log de conversación en la base de datos
      */
+    /**
+     * Consumo de la llamada al modelo, para el `metadata` de la conversación.
+     *
+     * Va acá y no como parámetro de logConversation() porque el service es la misma
+     * instancia de todo el request y ya tiene el dato: la firma tiene once parámetros
+     * posicionales y sumarle otro más solo para esto la vuelve intratable.
+     *
+     * Devuelve vacío cuando la respuesta no salió del modelo (cuota agotada, fallback):
+     * ahí no hay consumo que registrar y la clave no se agrega.
+     *
+     * @return array<string, mixed>
+     */
+    private function consumoDelModelo(): array
+    {
+        $consumo = $this->chatbotService->ultimoConsumo();
+
+        return $consumo ? ['consumo' => $consumo] : [];
+    }
+
     private function logConversation(Comercio $comercio, string $message, string $response, bool $usedOpenAI, int $responseTime, Request $request, ?string $sessionId = null, ?string $modoRespuesta = null, ?int $platosSugeridos = null, ?string $falta = null, ?array $platosOfrecidos = null): void
     {
         try {
@@ -320,13 +339,13 @@ class ChatbotController extends Controller
                 'response_time_ms' => $responseTime,
                 'user_ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'metadata' => [
+                'metadata' => array_merge([
                     'comercio_name' => $comercio->nombre,
                     'message_length' => strlen($message),
                     'response_length' => strlen($response),
                     'timestamp' => now()->toISOString(),
                     'session_id_source' => $request->header('X-Session-ID') ? 'header' : 'inferred',
-                ],
+                ], $this->consumoDelModelo()),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error logging conversation: '.$e->getMessage());

@@ -145,13 +145,33 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 
 ## Modelo: qué se probó y qué se descartó
 
-| Opción | Banco | Latencia | Costo (1k consultas) | Veredicto |
+| Opción | Banco | Dietas | Costo (1k charlas) | Veredicto |
 |---|---|---|---|---|
-| **gpt-4o-mini** | 22/22 *(con la búsqueda)* | ~5 s | **~$0,93** | lo que se usa |
-| gpt-4o | 22/22 | ~5 s | ~$16 | 17× más caro, no hace falta |
-| gemini-3.5-flash-lite | 7/8 | **2,1 s** | ~$2,28 | mejor y más rápido, 2,5× más caro |
-| gemini-2.5-flash | 4/8 | 6,5 s | ~$3,10 | se deprecia 16/10/2026 |
-| Vector store (file_search) | 5/5 | 7,1 s | más caro | **descartado** |
+| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el recomendado** (ago-2026) |
+| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | lo que se usa hoy; falla en dietas |
+| gpt-5-nano | ok | 3/3 | $11,69 | razona 4.692 tokens: 3× más caro |
+| gpt-5-mini | ok | 3/3 | $32,56 | razona 2.534 tokens: 8× |
+| gpt-4.1 | ok | 3/3 | $40,22 | 9× |
+| gpt-4o | 22/22 | **1/2** | $71,87 | 17× **y falla**: la peor opción |
+| gemini-3.5-flash-lite | 7/8 | — | ~$2,28 | más rápido, no respeta bien marcadores |
+| gemini-2.5-flash | 4/8 | — | ~$3,10 | se deprecia 16/10/2026 |
+| Vector store (file_search) | 5/5 | — | más caro | **descartado** |
+
+**"Dietas" es el banco que importa y no existía antes.** `gpt-4o-mini` le ofrece a un vegano
+el "Sandw. Veggie" **describiendo el queso en la misma frase**: no es falta de dato —está
+escrito en la descripción— es que no saca la conclusión. No lo arreglan ni una regla en el
+prompt (0/3, y encima **rompió el caso sin TACC**: empezó a inventar "Empanada de J y Q en
+versión sin TACC") ni etiquetar mejor los platos (A/B con tags explícitos: sin cambio).
+Los modelos que razonan aciertan sin tocar nada.
+
+**Los GPT-5 con razonamiento salen caros aunque el token valga menos**: nano cuesta 15× menos
+por token que mini y gasta 45× más pensando. `luna` razona poco (383 tokens) y por eso gana.
+
+**`luna` sale MÁS BARATO que el modelo actual** porque su input cacheado vale $0,02/1M contra
+$0,075/1M, y **el 91% del consumo es caché** (medido). Cuanto más grande el menú, más rinde:
+−13% con 151 platos, −23% con 291.
+
+**Contra:** tarda ~1,6 s más en el primer token (razona antes). El tiempo total es igual.
 
 - **Gemini cuenta ~7.000 tokens donde OpenAI cuenta 5.000** con el mismo texto, y no respeta
   bien los marcadores (2.5-flash falló 3 de 8): sin marcador no hay tarjetas ni carrito.
@@ -164,6 +184,41 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 
 El modelo sale del plan (`Comercio::modeloIA()` / `maxTokensChat()`), se lee en cada consulta:
 cambiarlo en `/admin/plans` pega desde el mensaje siguiente, sin limpiar caché.
+
+### ⚠️ El body no es el mismo para todas las familias
+
+Los **GPT-5 (y los `o*`) rechazan con HTTP 400 cuatro parámetros** que los GPT-4 aceptan:
+`max_tokens` (piden `max_completion_tokens`), `temperature` distinta del default,
+`presence_penalty` y `frequency_penalty`. Lo arma `payloadOpenAI()`, que decide por el nombre
+del modelo (`esModeloDeRazonamiento()`).
+
+**Sin eso, cambiar el modelo del plan deja el chat devolviendo 400 en cada consulta.** Al
+migrar producción el orden es: **primero deployar el código, después tocar `/admin/plans`.**
+Al revés, el comercio se queda sin chatbot sin que nadie haya tocado el repo.
+
+Los tres parámetros que se pierden estaban para variar el vocabulario; en las pruebas contra
+menús reales las respuestas siguieron saliendo bien sin ellos.
+
+## Consumo: qué gastó cada consulta
+
+Cada respuesta de OpenAI trae un `usage` que **antes se descartaba**. Ahora se guarda en
+`chat_conversations.metadata` bajo la clave `consumo` (JSON, sin migración):
+
+```json
+"consumo": { "modelo": "...", "tokens_entrada": 7320, "tokens_cacheados": 6940,
+             "tokens_salida": 237, "tokens_razonamiento": 159 }
+```
+
+- **En streaming hay que pedirlo**: `stream_options.include_usage`. Sin eso el stream no
+  informa nada, y por ahí van casi todas las charlas reales.
+- **`tokens_cacheados` es el único modo de saber si el prompt caching rinde en producción.**
+  Verificado a mano: 2ª llamada seguida = 6.912 de 6.954 tokens cacheados (99,4%).
+- **La cuota cuenta MENSAJES, no consumo**: un menú de 291 platos gasta el doble que uno de
+  42 y descuenta lo mismo. Este dato es lo que permite ver esa diferencia.
+- Se guardan **tokens, no pesos**: los precios cambian y un costo congelado envejece mal.
+- **La base es MariaDB 10.4: no soporta `->>`.** Para consultar el JSON va
+  `JSON_UNQUOTE(JSON_EXTRACT(metadata,'$.consumo.modelo'))`. Sin índice: con decenas de miles
+  de filas habrá que pasarlo a columnas propias.
 
 ## Otros gotchas
 
@@ -181,16 +236,26 @@ cambiarlo en `/admin/plans` pega desde el mensaje siguiente, sin limpiar caché.
 
 ## Cómo probar un cambio de prompt
 
-No hay tests automáticos de la calidad de las respuestas (dependen de OpenAI y el modelo va a
-temperatura 0.7, así que la misma pregunta puede dar distinto). Lo que funcionó: un **banco de
-preguntas de control** corrido antes y después, con el comercio de prueba local. Cubrir:
+No hay tests automáticos de la calidad de las respuestas (dependen de OpenAI y la misma
+pregunta puede dar distinto). Lo que funcionó: un **banco de preguntas de control** corrido
+antes y después, con el comercio de prueba local. Cubrir:
 
 - platos que **sí** están, con plural, nombre compuesto, jerga y por categoría;
 - dos o tres que **no** están (tienen que declarar `[[FALTA]]`);
 - un pedido por tipo ("algo dulce"), uno abierto ("qué me recomendás") y una **pregunta de
-  opinión** ("¿con cuál queda mejor?", que no debe traer platos).
+  opinión** ("¿con cuál queda mejor?", que no debe traer platos);
+- **dieta y alergia** ("soy vegano", "¿tienen sin TACC?"): que no cruce las dos ni prometa
+  lo que la carta no dice.
 
 Verificar siempre que **el marcador salga**, no solo que el texto se lea bien.
+
+**Corré cada caso 3 veces.** Una sola corrida no alcanza para nada: `gpt-4o` acertó el caso
+del vegano en la primera y falló en la segunda, y estuve por recomendarlo con esa muestra.
+
+**Y usá preguntas reales de `chat_conversations`, no inventadas.** Los clientes escriben 41
+caracteres de promedio ("algo dulce", "avocados"); un banco de preguntas bien redactadas mide
+otra cosa. Con las reales medí que `luna` gasta 285 tokens de salida, no los 383 que daba el
+caso de laboratorio — y de ahí salió que era más barato, no más caro.
 
 ## Tests
 
@@ -199,4 +264,6 @@ Verificar siempre que **el marcador salga**, no solo que el texto se lea bien.
 | `tests/Feature/BusquedaEnMenuTest.php` (9) | la búsqueda de PHP: nombre, plural, categoría, jerga, que las muletillas no traigan medio menú, que "mejor" no traiga el desayuno, prioridad del nombre sobre la categoría |
 | `tests/Feature/ChatbotContextTest.php` | el carrito entra al prompt, y un plato del carrito no vuelve a salir como tarjeta |
 | `tests/Feature/ChatbotCaidaTest.php` (2) | con OpenAI caído la consulta queda como `used_openai = false` y no consume cuota |
-| `tests/Feature/ChatbotConfigTest.php` | configuración del asistente por comercio |
+| `tests/Feature/ChatbotConfigTest.php` (6) | configuración del asistente por comercio; que `veganas` y `sin_tacc` sean focos distintos y no se crucen |
+| `tests/Feature/ModeloOpenAiPayloadTest.php` (5) | qué parámetros lleva el body según la familia del modelo |
+| `tests/Feature/ConsumoDelModeloTest.php` (4) | que el `usage` se capture y que el stream lo pida |

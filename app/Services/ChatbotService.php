@@ -41,6 +41,19 @@ class ChatbotService
     private ?string $faltaDeclarada = null;
 
     /**
+     * Consumo de la última llamada al modelo.
+     *
+     * La API lo devuelve en cada respuesta y hasta ahora se descartaba, así que no había
+     * forma de saber cuánto cuesta realmente cada comercio: la cuota cuenta MENSAJES, y un
+     * menú de 291 platos consume el doble que uno de 42 gastando lo mismo de cuota. Los
+     * tokens de caché además dicen si el descuento del prompt caching está entrando de
+     * verdad en producción, que hasta ahora solo se podía medir a mano.
+     *
+     * @var array<string, mixed>
+     */
+    private array $ultimoConsumo = [];
+
+    /**
      * Qué puede pedirle el comercio que el asistente empuje ("Qué querés que destaque").
      *
      * Fuente ÚNICA de la lista: la usan el selector de la pantalla de edición, la validación
@@ -86,6 +99,7 @@ class ChatbotService
             $this->ultimoMensaje = $message;
             $this->platosDeclarados = [];
             $this->faltaDeclarada = null;
+            $this->ultimoConsumo = [];
 
             // Obtener contexto de los menús procesados
             $contexto = $this->buildMenuContext($comercio);
@@ -426,6 +440,41 @@ class ChatbotService
     public function faltanteDeclarado(): ?string
     {
         return $this->faltaDeclarada;
+    }
+
+    /**
+     * Consumo de la última llamada al modelo, para guardarlo junto a la conversación.
+     * Vacío si la respuesta no salió del modelo (fallback) o si la API no informó nada.
+     *
+     * @return array<string, mixed>
+     */
+    public function ultimoConsumo(): array
+    {
+        return $this->ultimoConsumo;
+    }
+
+    /**
+     * Normaliza el `usage` que devuelve OpenAI.
+     *
+     * `cached_tokens` es la parte del prompt que entró por el prompt caching (se cobra más
+     * barato) y `reasoning_tokens` es lo que los modelos GPT-5 gastan pensando antes de
+     * escribir: no se ve en la respuesta pero se paga como salida.
+     *
+     * @param  array<string, mixed>|null  $usage
+     */
+    private function registrarConsumo(?array $usage, string $model): void
+    {
+        if (! is_array($usage) || empty($usage)) {
+            return;
+        }
+
+        $this->ultimoConsumo = [
+            'modelo' => $model,
+            'tokens_entrada' => (int) ($usage['prompt_tokens'] ?? 0),
+            'tokens_cacheados' => (int) ($usage['prompt_tokens_details']['cached_tokens'] ?? 0),
+            'tokens_salida' => (int) ($usage['completion_tokens'] ?? 0),
+            'tokens_razonamiento' => (int) ($usage['completion_tokens_details']['reasoning_tokens'] ?? 0),
+        ];
     }
 
     /**
@@ -1296,6 +1345,9 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
 
         if ($stream) {
             $payload['stream'] = true;
+            // Sin esto el stream no informa el consumo y las charlas reales —que van casi
+            // todas por streaming— quedarían sin medir.
+            $payload['stream_options'] = ['include_usage' => true];
         }
 
         return $payload;
@@ -1326,6 +1378,7 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
 
         if ($response->successful()) {
             $data = $response->json();
+            $this->registrarConsumo($data['usage'] ?? null, $model);
 
             return $data['choices'][0]['message']['content'] ?? 'No pude procesar tu mensaje.';
         }
@@ -1351,6 +1404,7 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
         $this->ultimoMensaje = $message;
         $this->platosDeclarados = [];
         $this->faltaDeclarada = null;
+        $this->ultimoConsumo = [];
 
         $contexto = $this->trimContext($this->buildMenuContext($comercio), 48000);
         $conversationHistory = $sessionId ? $this->getConversationHistory($comercio, $sessionId) : [];
@@ -1480,6 +1534,13 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
                 }
 
                 $json = json_decode($data, true);
+
+                // El chunk del consumo llega al final, con `choices` vacío. Solo aparece
+                // porque el payload pide `stream_options.include_usage`.
+                if (isset($json['usage'])) {
+                    $this->registrarConsumo($json['usage'], $model);
+                }
+
                 $delta = $json['choices'][0]['delta']['content'] ?? '';
                 if ($delta !== '') {
                     $full .= $delta;
