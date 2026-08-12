@@ -229,6 +229,57 @@ en `portada_estado = 'error'` con un mensaje genérico.
 | `tests/Feature/HorariosTest.php` (6) | sin horarios devuelve `null`, cruce de medianoche, turno partido, próxima apertura |
 | `tests/Feature/ComercioSlugTest.php` (7) | nombre repetido no rompe, renombrar archiva el slug, la URL vieja sigue entrando |
 
+## Las imágenes de PLATOS y PROMOS no reciben este tratamiento
+
+La portada y el logo se procesan (resize + webp). Las de platos y promociones **se guardan
+tal cual las sube el comercio**: `uploadPlatoImagen` y `uploadPromocionImagen` validan y hacen
+`store()`, nada más. Medido en la base:
+
+```
+3120x4160 px — 1.024 KB    ← foto de celular sin tocar
+3120x4160 px — 1.090 KB
+3120x4160 px — 1.090 KB
+```
+
+**La tarjeta del menú las muestra en 80×80 px.** Un cliente en el celular se baja un mega para
+ver una miniatura, y el menú público es justamente lo que se abre desde el teléfono en la mesa.
+
+Y cada lugar valida distinto, sin criterio común:
+
+| Sube | Límite | Formatos | ¿Procesa? |
+|---|---|---|---|
+| plato / promo | 2 MB | jpeg png jpg gif | **no** |
+| logo | 2 MB | jpeg png jpg gif | sí (cuadrado fijo) |
+| portada | 8 MB | cualquier imagen | sí (fondo/hero/thumb webp) |
+| menú (PDF o foto) | 10 MB | pdf jpeg png jpg gif | — |
+
+El límite de 2 MB **molesta de verdad**: una foto de celular actual lo pasa fácil y el comercio
+no puede subirla. Y ninguno de los dos acepta **webp**, que es el formato al que la portada ya
+convierte todo.
+
+Si se unifica: el camino es un servicio que procese al subir (achicar al lado mayor razonable
++ webp), como ya hace `BrandThemeService` con GD nativo — sin dependencias nuevas. Con eso el
+límite de entrada puede subir tranquilo, porque lo que se guarda siempre queda chico.
+
+## Imágenes huérfanas: borrar un comercio deja los archivos
+
+`ComercioController::destroy()` borra el logo (`deleteLogoSafely`) y los registros de la base,
+pero **nunca toca `menu-items/`**. Los archivos de los platos quedan en el disco para siempre,
+sin nada que los referencie.
+
+Medido: **34 archivos, 9,3 MB de tres comercios borrados (31, 32, 33) — el 98% de todo lo que
+ocupan las imágenes**. Las válidas eran 4 archivos, 0,18 MB.
+
+Lo que **sí** está sano (verificado uno por uno contra la base y el disco):
+
+- borrar la imagen de un plato → borra archivo y referencia;
+- borrar la de una promo → idem, y aborta si `imagen_path` no coincide con la de la promo;
+- **reemplazar** una imagen → borra la anterior (probado subiendo dos al mismo plato).
+
+O sea que el uso diario no genera basura: el único agujero es el borrado de comercio. Falta
+(a) que `destroy()` borre la carpeta del comercio y (b) un comando para limpiar los 9 MB que
+ya están, con `--force` para que no borre nada sin pedirlo.
+
 ## Pendientes conocidos
 
 - **Pantalla para elegir los chips de la portada** (idea aprobada, sin implementar). Hoy son

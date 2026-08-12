@@ -506,7 +506,9 @@
                             <!-- 🤖 Personalidad del asistente -->
                             @php
                                 $cfg = $comercio->chatbot_config ?? [];
-                                $platosMenu = (new \App\Services\ChatbotService)->platosDelMenu($comercio);
+                                $chatbotService = new \App\Services\ChatbotService;
+                                $platosMenu = $chatbotService->platosDelMenu($comercio);
+                                $estrellasMenu = $chatbotService->platosEstrella($comercio);
                                 $focosElegidos = $cfg['focos'] ?? [];
                             @endphp
                             <div>
@@ -563,23 +565,25 @@
                                     @endforeach
                                 </div>
 
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Platos estrella (los recomienda primero)</p>
-                                @if(count($platosMenu) > 0)
-                                    @if(count($platosMenu) > 8)
-                                        <input type="text" id="cfg_estrellas_search" placeholder="🔍 Buscar plato..."
-                                               class="w-full mb-2 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                {{-- Los platos estrella se marcan con la ⭐ de cada plato, en "Contenido
+                                     Extraído". Acá solo se muestran: antes había un cajón con los 151
+                                     platos del menú y era imposible ver cuáles estaban marcados. --}}
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">
+                                    Platos estrella (los recomienda primero)
+                                    <span class="normal-case text-text-secondary/70">— <span id="estrellas-contador">{{ count($estrellasMenu) }}</span> de {{ \App\Http\Controllers\MenuController::MAX_ESTRELLAS }}</span>
+                                </p>
+                                <div id="estrellas-resumen" class="flex flex-wrap gap-2 mb-2">
+                                    @foreach($estrellasMenu as $nombre)
+                                        <span class="inline-block px-3 py-1.5 rounded-full border border-amber-500 bg-amber-500/20 text-sm text-amber-400">⭐ {{ $nombre }}</span>
+                                    @endforeach
+                                </div>
+                                <p id="estrellas-vacio" class="text-sm text-text-secondary mb-4 {{ count($estrellasMenu) > 0 ? 'hidden' : '' }}">
+                                    @if(count($platosMenu) > 0)
+                                        Ninguno marcado. Tocá la ⭐ de un plato en «Contenido Extraído», más abajo.
+                                    @else
+                                        Activá un menú procesado para elegir tus platos estrella.
                                     @endif
-                                    <div id="cfg_estrellas_list" class="flex flex-wrap gap-2 mb-4 max-h-40 overflow-y-auto p-1">
-                                        @foreach($platosMenu as $p)
-                                            <label class="cursor-pointer cfg-estrella-item" data-nombre="{{ strtolower($p['nombre']) }}">
-                                                <input type="checkbox" name="cfg_estrellas" value="{{ $p['nombre'] }}" class="peer sr-only" @checked(in_array($p['nombre'], $cfg['estrellas'] ?? []))>
-                                                <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-amber-500/20 peer-checked:border-amber-500 peer-checked:text-amber-400 transition-colors">⭐ {{ $p['nombre'] }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <p class="text-sm text-text-secondary mb-4">Activá un menú procesado para elegir tus platos estrella.</p>
-                                @endif
+                                </p>
 
                                 <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Detalles de tu local (opcional)</p>
                                 <textarea id="cfg_detalles" rows="3" maxlength="600"
@@ -926,6 +930,18 @@
                                                                         id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
                                                                         {{ $nombrePlato }}
                                                                     </h5>
+                                                                    <!-- Plato estrella: el asistente lo recomienda primero. Vive acá y no
+                                                                         en una lista aparte para que la marca viaje con el plato. -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); togglePlatoEstrella(this, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                            data-estrella="{{ ! empty($plato['estrella']) ? '1' : '0' }}"
+                                                                            id="estrella-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                            class="plato-estrella-btn flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors {{ ! empty($plato['estrella']) ? 'text-amber-400 bg-amber-500/20' : 'text-text-secondary hover:text-amber-400 hover:bg-amber-500/10' }}"
+                                                                            title="{{ ! empty($plato['estrella']) ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella' }}">
+                                                                        <svg class="w-5 h-5" fill="{{ ! empty($plato['estrella']) ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                                                        </svg>
+                                                                    </button>
                                                                     <!-- Botón de edición visible en móvil -->
                                                                     <button type="button"
                                                                             onclick="event.stopPropagation(); enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
@@ -1459,7 +1475,6 @@
                     const emojis = document.querySelector('input[name="cfg_emojis"]:checked');
                     if (emojis) formData.append('chatbot_config[emojis]', emojis.value);
                     document.querySelectorAll('input[name="cfg_focos"]:checked').forEach(el => formData.append('chatbot_config[focos][]', el.value));
-                    document.querySelectorAll('input[name="cfg_estrellas"]:checked').forEach(el => formData.append('chatbot_config[estrellas][]', el.value));
                     const det = document.getElementById('cfg_detalles');
                     if (det && det.value.trim()) formData.append('chatbot_config[detalles]', det.value.trim());
                     
@@ -1555,7 +1570,7 @@
             });
             
             // Auto-guardar la personalidad del asistente al cambiar
-            document.querySelectorAll('input[name="cfg_tono"], input[name="cfg_trato"], input[name="cfg_emojis"], input[name="cfg_focos"], input[name="cfg_estrellas"]').forEach(el => {
+            document.querySelectorAll('input[name="cfg_tono"], input[name="cfg_trato"], input[name="cfg_emojis"], input[name="cfg_focos"]').forEach(el => {
                 el.addEventListener('change', saveChatbotConfig);
             });
             const cfgDetalles = document.getElementById('cfg_detalles');
@@ -1567,15 +1582,87 @@
                 });
             }
 
-            // Buscador de platos estrella (filtra los chips en vivo)
-            const estrellasSearch = document.getElementById('cfg_estrellas_search');
-            if (estrellasSearch) {
-                estrellasSearch.addEventListener('input', function() {
-                    const q = this.value.trim().toLowerCase();
-                    document.querySelectorAll('.cfg-estrella-item').forEach(el => {
-                        el.style.display = (!q || el.dataset.nombre.includes(q)) ? '' : 'none';
+            // Marca/desmarca un plato como estrella desde su propia tarjeta.
+            // Se guarda en el JSON del menú, junto al plato, no en una lista aparte.
+            window.togglePlatoEstrella = async function(btn, categoriaIndex, platoIndex) {
+                @if(!isset($isEdit) || !$isEdit || !isset($menu) || !$menu)
+                    showTemporaryMessage('Guardá el menú antes de marcar platos estrella', 'error');
+                    return;
+                @endif
+
+                const marcado = btn.dataset.estrella === '1';
+                btn.disabled = true;
+
+                try {
+                    const url = `{{ route('menus.update.plato.estrella', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            estrella: !marcado,
+                            categoria_index: categoriaIndex,
+                            plato_index: platoIndex
+                        })
                     });
-                });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        // 422 = llegó al tope de estrellas; el mensaje lo arma el backend.
+                        showTemporaryMessage(data.error || 'No se pudo marcar el plato', 'error');
+                        return;
+                    }
+
+                    pintarEstrella(btn, data.estrella);
+                    refrescarResumenEstrellas();
+                    showTemporaryMessage(data.estrella ? 'Plato estrella marcado' : 'Ya no es plato estrella', 'success');
+                } catch (error) {
+                    console.error('Error al marcar plato estrella:', error);
+                    showTemporaryMessage('Error al marcar el plato', 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+
+            function pintarEstrella(btn, marcado) {
+                btn.dataset.estrella = marcado ? '1' : '0';
+                btn.querySelector('svg').setAttribute('fill', marcado ? 'currentColor' : 'none');
+                btn.classList.toggle('text-amber-400', marcado);
+                btn.classList.toggle('bg-amber-500/20', marcado);
+                btn.classList.toggle('text-text-secondary', !marcado);
+                btn.classList.toggle('hover:text-amber-400', !marcado);
+                btn.classList.toggle('hover:bg-amber-500/10', !marcado);
+                btn.title = marcado ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella';
+            }
+
+            // El resumen de arriba se arma leyendo qué estrellas están encendidas en las
+            // tarjetas, así no hay que recargar la página para verlo actualizado.
+            function refrescarResumenEstrellas() {
+                const resumen = document.getElementById('estrellas-resumen');
+                const vacio = document.getElementById('estrellas-vacio');
+                const contador = document.getElementById('estrellas-contador');
+                if (!resumen) return;
+
+                const marcados = [...document.querySelectorAll('.plato-estrella-btn[data-estrella="1"]')].map(btn => {
+                    const item = btn.closest('.plato-item');
+                    const nombre = item?.querySelector('h5');
+                    return nombre ? nombre.textContent.trim() : '';
+                }).filter(Boolean);
+
+                resumen.innerHTML = marcados.map(n => {
+                    const span = document.createElement('span');
+                    span.className = 'inline-block px-3 py-1.5 rounded-full border border-amber-500 bg-amber-500/20 text-sm text-amber-400';
+                    span.textContent = '⭐ ' + n;
+                    return span.outerHTML;
+                }).join('');
+
+                if (contador) contador.textContent = marcados.length;
+                if (vacio) vacio.classList.toggle('hidden', marcados.length > 0);
             }
 
             // Inicializar vista previa
@@ -2324,16 +2411,20 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Validar tamaño (2MB máximo)
-            if (file.size > 2 * 1024 * 1024) {
-                alert('La imagen no puede ser mayor a 2MB');
+            // El tope sale del mismo lugar que la validación del backend
+            // (ImagenMenuService::MAX_KB). Estaba fijo en 2 MB acá, así que subir el límite
+            // del servidor no servía de nada: el navegador cortaba antes de mandar el archivo,
+            // y una foto de celular actual no entraba.
+            const maxKb = {{ \App\Services\ImagenMenuService::MAX_KB }};
+            if (file.size > maxKb * 1024) {
+                showError(`La imagen no puede pesar más de ${Math.round(maxKb / 1024)} MB`);
                 event.target.value = '';
                 return;
             }
 
             // Validar tipo
             if (!file.type.match('image.*')) {
-                alert('Solo se permiten archivos de imagen (JPEG, PNG, GIF)');
+                showError('Solo se permiten archivos de imagen (JPEG, PNG, GIF o WEBP)');
                 event.target.value = '';
                 return;
             }
@@ -2603,26 +2694,30 @@
                         }
                     }
 
-                    // Limpiar el container completamente
+                    // Dejar el contenedor como lo arma Blade cuando el plato no tiene imagen:
+                    // el recuadro punteado "Imagen" que vuelve a abrir el selector de archivo.
+                    //
+                    // Antes se metía acá un placeholder con la clase `hidden`, así que el
+                    // contenedor quedaba visualmente VACÍO y no había forma de subir otra
+                    // imagen sin recargar la página. Y el input de subir vive DENTRO de este
+                    // mismo contenedor, así que el innerHTML = '' se lo llevaba puesto: el
+                    // código de abajo lo buscaba por id y ya no existía.
                     if (container) {
-                        container.innerHTML = '';
-                        
-                        // Crear placeholder
-                        const placeholder = document.createElement('div');
-                        placeholder.id = `plato-imagen-placeholder-${categoriaIndex}-${platoIndex}`;
-                        placeholder.className = 'w-24 h-24 bg-secondary-dark border border-accent-gray rounded-lg flex items-center justify-center text-text-secondary text-xs text-center p-2 hidden';
-                        placeholder.textContent = 'Sin imagen';
-                        container.appendChild(placeholder);
-                    }
-
-                    // Actualizar texto del botón
-                    const inputElement = document.getElementById(`imagen-input-${categoriaIndex}-${platoIndex}`);
-                    if (inputElement) {
-                        inputElement.value = ''; // Limpiar el input también
-                        const button = inputElement.closest('label')?.querySelector('span');
-                        if (button) {
-                            button.innerHTML = '<span class="mr-2">📷</span>Subir';
-                        }
+                        container.innerHTML = `
+                            <label class="cursor-pointer">
+                                <input type="file"
+                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                       class="hidden"
+                                       onchange="uploadPlatoImagen(event, ${categoriaIndex}, ${platoIndex})"
+                                       id="imagen-input-${categoriaIndex}-${platoIndex}">
+                                <div class="w-20 h-20 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
+                                    <svg class="w-5 h-5 mb-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-[9px] font-semibold text-accent-blue">Imagen</span>
+                                </div>
+                            </label>
+                        `;
                     }
 
                     showSuccess('Imagen eliminada exitosamente');
@@ -4150,13 +4245,15 @@
                 }
             } catch (error) {
                 showError('Error al subir la imagen: ' + error.message);
+                // OJO: va el ID, no el índice. El contenedor lo nombra Blade con el ID
+                // (promo-imagen-container-{id}), y uploadPromocionImagen espera un ID.
                 container.innerHTML = `
                     <label class="cursor-pointer">
-                        <input type="file" 
+                        <input type="file"
                                accept="image/jpeg,image/png,image/jpg,image/gif"
                                class="hidden"
-                               onchange="uploadPromocionImagen(event, ${promoIndex})"
-                               id="promo-imagen-input-${promoIndex}">
+                               onchange="uploadPromocionImagen(event, ${promoId})"
+                               id="promo-imagen-input-${promoId}">
                         <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                             📷 Subir
                         </span>
@@ -4211,13 +4308,18 @@
                             
                             const container = document.getElementById(`promo-imagen-container-${promoId}`);
                             if (container) {
+                                // OJO: va el ID, no el índice. Con el índice, el botón que queda
+                                // acá le pasaba a uploadPromocionImagen un número que buscaba un
+                                // contenedor inexistente ("No se encontró el contenedor de imagen"),
+                                // y si el índice coincidía con OTRO id, subía la imagen a la promo
+                                // equivocada.
                                 container.innerHTML = `
                                     <label class="cursor-pointer">
-                                        <input type="file" 
+                                        <input type="file"
                                                accept="image/jpeg,image/png,image/jpg,image/gif"
                                                class="hidden"
-                                               onchange="uploadPromocionImagen(event, ${promoIndex})"
-                                               id="promo-imagen-input-${promoIndex}">
+                                               onchange="uploadPromocionImagen(event, ${promoId})"
+                                               id="promo-imagen-input-${promoId}">
                                         <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                             📷 Subir
                                         </span>
@@ -4231,7 +4333,7 @@
                                     }
                                 }, 500);
                             } else {
-                                console.warn(`Contenedor promo-imagen-container-${promoIndex} no encontrado, pero la imagen fue eliminada del servidor`);
+                                console.warn(`Contenedor promo-imagen-container-${promoId} no encontrado, pero la imagen fue eliminada del servidor`);
                                 showSuccess('Imagen eliminada exitosamente');
                                 // Guardar automáticamente después de eliminar imagen
                                 setTimeout(() => {

@@ -387,8 +387,11 @@ class BrandThemeService
      *
      * Sin esto, una foto vertical sacada con celular llega acostada: GD no lee
      * la etiqueta de orientación que sí interpretan el visor y el navegador.
+     *
+     * Público porque `ImagenMenuService` lo reusa para las fotos de platos: la lectura del
+     * EXIF y el corte por memoria tienen que ser los mismos en todas las imágenes que entran.
      */
-    private function cargar(string $ruta)
+    public function cargar(string $ruta)
     {
         $info = @getimagesize($ruta);
 
@@ -481,7 +484,8 @@ class BrandThemeService
         };
     }
 
-    private function reescalar($img, int $ancho)
+    /** Público: lo reusa `ImagenMenuService` (ver `cargar`). */
+    public function reescalar($img, int $ancho)
     {
         $w = imagesx($img);
         $h = imagesy($img);
@@ -493,8 +497,8 @@ class BrandThemeService
         return $dst;
     }
 
-    /** Guarda como webp en el disco público y devuelve la ruta relativa. */
-    private function guardar($img, string $ruta, int $calidad): string
+    /** Guarda como webp en el disco público y devuelve la ruta relativa. Público: ver `cargar`. */
+    public function guardar($img, string $ruta, int $calidad): string
     {
         ob_start();
         imagewebp($img, null, $calidad);

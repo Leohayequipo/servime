@@ -180,6 +180,7 @@ class ChatbotService
                         // La categoría es parte de cómo lo busca el cliente: pide "cerveza"
                         // y el plato se llama "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
                         'categoria' => trim((string) ($cat['nombre'] ?? '')),
+                        'estrella' => ! empty($p['estrella']),
                     ];
                 }
             }
@@ -961,14 +962,27 @@ class ChatbotService
      * Crear prompt para OpenAI
      */
     /**
+     * Nombres de los platos marcados como estrella en el menú activo.
+     *
+     * @return array<int, string>
+     */
+    public function platosEstrella(Comercio $comercio): array
+    {
+        return array_values(array_map(
+            fn ($plato) => $plato['nombre'],
+            array_filter($this->platosDelMenu($comercio), fn ($plato) => ! empty($plato['estrella']))
+        ));
+    }
+
+    /**
      * Bloque de indicaciones personalizadas del local (tono, focos de venta, estrellas, detalles).
      */
     private function indicacionesLocal(Comercio $comercio): string
     {
-        $c = $comercio->chatbot_config;
-        if (! is_array($c)) {
-            return '';
-        }
+        // Sin `return` temprano cuando no hay chatbot_config: las estrellas ya no viven ahí
+        // sino en el menú, y un comercio que marcó estrellas sin tocar la personalidad las
+        // perdía del prompt.
+        $c = is_array($comercio->chatbot_config) ? $comercio->chatbot_config : [];
 
         $lineas = [];
 
@@ -1002,11 +1016,12 @@ class ChatbotService
             $lineas[] = $emojis[$c['emojis']];
         }
 
-        if (! empty($c['estrellas']) && is_array($c['estrellas'])) {
-            $est = implode(', ', array_filter(array_map('trim', $c['estrellas'])));
-            if ($est !== '') {
-                $lineas[] = 'Recomendá primero, cuando encajen con lo que pide el cliente, estos platos estrella: '.$est.'.';
-            }
+        // Las estrellas salen del MENÚ, no de una lista de nombres en chatbot_config: así
+        // no puede quedar una apuntando a un plato renombrado o borrado, que le pedía al
+        // modelo recomendar algo que no está en la carta.
+        $estrellas = $this->platosEstrella($comercio);
+        if (! empty($estrellas)) {
+            $lineas[] = 'Recomendá primero, cuando encajen con lo que pide el cliente, estos platos estrella: '.implode(', ', $estrellas).'.';
         }
 
         if (! empty($c['focos']) && is_array($c['focos'])) {

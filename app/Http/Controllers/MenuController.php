@@ -7,6 +7,7 @@ use App\Imports\MenuImport;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Services\ChatbotService;
+use App\Services\ImagenMenuService;
 use App\Services\MenuProcessorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,15 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MenuController extends Controller
 {
+    /**
+     * Cuántos platos estrella puede marcar un comercio.
+     *
+     * Con tope porque marcarlos todos equivale a no marcar ninguno: "recomendá primero
+     * estos 151 platos" no le dice nada al modelo y suma 812 tokens al prompt de CADA
+     * consulta. El límite obliga a elegir, que es de lo que se trata.
+     */
+    public const MAX_ESTRELLAS = 6;
+
     /**
      * Display a listing of the resource.
      */
@@ -591,7 +601,9 @@ class MenuController extends Controller
         }
 
         $validated = $request->validate([
-            'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
+            // El tope sale del service (10 MB): como la imagen se achica al guardarla, el
+            // límite de entrada puede ser alto. Con 2 MB una foto de celular no entraba.
+            'imagen' => ImagenMenuService::reglaDeValidacion(),
             'plato_id' => 'nullable|integer', // ID único (método preferido)
             'categoria_index' => 'nullable|integer', // Mantener para compatibilidad
             'plato_index' => 'nullable|integer', // Mantener para compatibilidad
@@ -674,8 +686,10 @@ class MenuController extends Controller
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
 
-            // Guardar imagen en la nueva estructura
-            $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
+            // Se achica a 1200px y se convierte a webp antes de guardar: la tarjeta del menú
+            // público se muestra a 448px y se estaban guardando fotos de celular de 1 MB.
+            $imagenPath = app(ImagenMenuService::class)
+                ->procesar($request->file('imagen'), "comercios/{$comercio->id}/menu-items");
 
             // Preparar referencia a la imagen anterior (si existe)
             $oldImageRelativePath = null;
@@ -1040,6 +1054,90 @@ class MenuController extends Controller
                 'error' => 'Error al actualizar los tags: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Marca o desmarca un plato como "estrella" (el asistente lo recomienda primero).
+     *
+     * La estrella vive en el PLATO, dentro del JSON del menú, y no en una lista de nombres
+     * aparte en `chatbot_config`: así viaja con él. Antes, renombrar un plato dejaba la
+     * estrella apuntando a un nombre que ya no existía y el prompt le pedía al modelo
+     * recomendar algo que no estaba en la carta; borrarlo dejaba un fantasma para siempre.
+     */
+    public function updatePlatoEstrella(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'estrella' => 'required|boolean',
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            $marcar = $request->boolean('estrella');
+
+            if ($marcar && $this->contarEstrellas($contenido) >= self::MAX_ESTRELLAS) {
+                return response()->json([
+                    'error' => 'Ya tenés '.self::MAX_ESTRELLAS.' platos estrella. Sacá uno para marcar otro.',
+                ], 422);
+            }
+
+            $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+
+            if ($marcar) {
+                $plato['estrella'] = true;
+            } else {
+                // Se saca la clave en vez de guardar `false`: así los menús sin estrellas
+                // quedan igual que antes y el JSON no se llena de ruido.
+                unset($plato['estrella']);
+            }
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'estrella' => $marcar,
+                'total' => $this->contarEstrellas($contenido),
+                'maximo' => self::MAX_ESTRELLAS,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al marcar plato estrella: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al marcar el plato: '.$e->getMessage()], 500);
+        }
+    }
+
+    /** @param  array<string, mixed>  $contenido */
+    private function contarEstrellas(array $contenido): int
+    {
+        $total = 0;
+        foreach ($contenido['categorias'] ?? [] as $categoria) {
+            foreach ($categoria['platos'] ?? [] as $plato) {
+                if (! empty($plato['estrella'])) {
+                    $total++;
+                }
+            }
+        }
+
+        return $total;
     }
 
     /**
@@ -1408,7 +1506,9 @@ class MenuController extends Controller
         }
 
         $validated = $request->validate([
-            'imagen' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
+            // El tope sale del service (10 MB): como la imagen se achica al guardarla, el
+            // límite de entrada puede ser alto. Con 2 MB una foto de celular no entraba.
+            'imagen' => ImagenMenuService::reglaDeValidacion(),
             'promo_id' => 'required|integer', // Cambiar a ID en lugar de índice
             'promo_index' => 'nullable|integer', // Mantener para compatibilidad
         ]);
@@ -1488,7 +1588,8 @@ class MenuController extends Controller
                 // El registro se creará cuando se guarden los datos de texto vía savePromociones()
                 // Asegurar que existan las carpetas del comercio
                 $this->createComercioDirectories($comercio->id);
-                $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
+                $imagenPath = app(ImagenMenuService::class)
+                    ->procesar($request->file('imagen'), "comercios/{$comercio->id}/menu-items");
 
                 // Copiar a public_html
                 $this->copyMenuItemToPublicHtml($imagenPath, $comercio->id);
@@ -1504,8 +1605,10 @@ class MenuController extends Controller
             // Asegurar que existan las carpetas del comercio
             $this->createComercioDirectories($comercio->id);
 
-            // Guardar imagen en la nueva estructura
-            $imagenPath = $request->file('imagen')->store("comercios/{$comercio->id}/menu-items", 'public');
+            // Se achica a 1200px y se convierte a webp antes de guardar: la tarjeta del menú
+            // público se muestra a 448px y se estaban guardando fotos de celular de 1 MB.
+            $imagenPath = app(ImagenMenuService::class)
+                ->procesar($request->file('imagen'), "comercios/{$comercio->id}/menu-items");
 
             // Preparar referencia a la imagen anterior (si existe)
             $oldImageRelativePath = null;

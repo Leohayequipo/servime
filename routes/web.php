@@ -122,6 +122,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-nombre', [App\Http\Controllers\MenuController::class, 'updatePlatoNombre'])->name('menus.update.plato.nombre');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-descripcion', [App\Http\Controllers\MenuController::class, 'updatePlatoDescripcion'])->name('menus.update.plato.descripcion');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-tags', [App\Http\Controllers\MenuController::class, 'updatePlatoTags'])->name('menus.update.plato.tags');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-estrella', [App\Http\Controllers\MenuController::class, 'updatePlatoEstrella'])->name('menus.update.plato.estrella');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/reordenar-platos', [App\Http\Controllers\MenuController::class, 'reordenarPlatos'])->name('menus.reordenar.platos');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-promo-imagen', [App\Http\Controllers\MenuController::class, 'uploadPromocionImagen'])->name('menus.upload.promo.imagen')->middleware('plan.feature:promociones');
     Route::get('/comercios/{comercio:slug}/menus/{menu}/export', [App\Http\Controllers\MenuController::class, 'export'])->name('menus.export')->middleware('plan.feature:excel');
