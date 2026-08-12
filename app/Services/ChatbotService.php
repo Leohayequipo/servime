@@ -40,6 +40,34 @@ class ChatbotService
     /** Lo que el cliente pidió y el menú no tiene, declarado por el modelo en [[FALTA: ...]]. */
     private ?string $faltaDeclarada = null;
 
+    /**
+     * Qué puede pedirle el comercio que el asistente empuje ("Qué querés que destaque").
+     *
+     * Fuente ÚNICA de la lista: la usan el selector de la pantalla de edición, la validación
+     * del controller y el prompt. Antes estaba escrita en los tres lados por separado, y
+     * agregar un foco sin tocar la validación devolvía un 422 que el auto-guardado se comía
+     * en silencio.
+     *
+     * Es una instrucción de venta, no un filtro: el foco NO decide qué platos existen ni
+     * los busca por su cuenta. Eso es deliberado — el modelo tiene el menú completo delante
+     * y lo resuelve mejor que cualquier lista de palabras nuestra, que se rompe distinto en
+     * cada carta (probado: "Vino Malbec" caía en bebidas, "Timbal de Vegetales" en veganas).
+     *
+     * `veganas` y `sin_tacc` van SEPARADOS y no juntos como estaban. Un menú real trae una
+     * categoría "CELIACOS" con bife de chorizo y lomo: son sin TACC y no tienen nada de
+     * vegano. Pedirle al asistente "ofrecé opciones veganas o sin TACC" lo habilitaba a
+     * cruzarlas, y son información de salud.
+     */
+    public const FOCOS = [
+        'promos' => ['label' => 'Promos del día', 'prompt' => 'las promos del día'],
+        'compartir' => ['label' => 'Para compartir', 'prompt' => 'opciones para compartir'],
+        'veganas' => ['label' => 'Veganas/vegetarianas', 'prompt' => 'opciones veganas o vegetarianas'],
+        'sin_tacc' => ['label' => 'Sin TACC/celíacos', 'prompt' => 'opciones sin TACC (aptas celíacos)'],
+        'bebidas' => ['label' => 'Bebidas/tragos', 'prompt' => 'una bebida o trago para acompañar'],
+        'postres' => ['label' => 'Postres', 'prompt' => 'un postre para cerrar'],
+        'combos' => ['label' => 'Combos', 'prompt' => 'combos'],
+    ];
+
     public function __construct()
     {
         $this->openaiApiKey = config('services.openai.api_key');
@@ -932,16 +960,11 @@ class ChatbotService
             }
         }
 
-        $focosMap = [
-            'promos' => 'las promos del día',
-            'compartir' => 'opciones para compartir',
-            'veganas' => 'opciones veganas o sin TACC',
-            'bebidas' => 'una bebida o trago para acompañar',
-            'postres' => 'un postre para cerrar',
-            'combos' => 'combos',
-        ];
         if (! empty($c['focos']) && is_array($c['focos'])) {
-            $f = array_values(array_filter(array_map(fn ($x) => $focosMap[$x] ?? null, $c['focos'])));
+            $f = array_values(array_filter(array_map(
+                fn ($x) => self::FOCOS[$x]['prompt'] ?? null,
+                $c['focos']
+            )));
             if (! empty($f)) {
                 $lineas[] = 'Cuando tenga sentido, ofrecé o destacá: '.implode(', ', $f).'.';
             }
@@ -1244,6 +1267,47 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
     }
 
     /**
+     * Arma el body de /chat/completions según lo que acepta CADA familia de modelos.
+     *
+     * Los GPT-5 son modelos de razonamiento y rechazan con HTTP 400 cuatro parámetros que
+     * los GPT-4 sí aceptan: `max_tokens` (piden `max_completion_tokens`), `temperature`
+     * distinta del default, `presence_penalty` y `frequency_penalty`. Verificado uno por
+     * uno contra la API: mandar el payload viejo a gpt-5.6-luna devuelve 400 en TODAS las
+     * consultas, o sea que cambiar el modelo del plan sin esto deja el chat muerto.
+     *
+     * Los tres parámetros que se pierden estaban puestos para variar el vocabulario; en las
+     * pruebas contra el menú real las respuestas siguieron saliendo bien sin ellos.
+     *
+     * @param  array<int, array{role:string, content:string}>  $messages
+     * @return array<string, mixed>
+     */
+    private function payloadOpenAI(string $model, array $messages, int $maxTokens, bool $stream = false): array
+    {
+        $payload = ['model' => $model, 'messages' => $messages];
+
+        if ($this->esModeloDeRazonamiento($model)) {
+            $payload['max_completion_tokens'] = $maxTokens;
+        } else {
+            $payload['max_tokens'] = $maxTokens; // Según el plan del comercio
+            $payload['temperature'] = 0.7;       // Más creatividad para descripciones gourmet
+            $payload['presence_penalty'] = 0.3;  // Evita repeticiones
+            $payload['frequency_penalty'] = 0.2; // Fomenta variedad en vocabulario
+        }
+
+        if ($stream) {
+            $payload['stream'] = true;
+        }
+
+        return $payload;
+    }
+
+    /** Familias que usan la API de razonamiento (`max_completion_tokens`, sin penalties). */
+    private function esModeloDeRazonamiento(string $model): bool
+    {
+        return (bool) preg_match('/^(gpt-5|o[1-9])/i', $model);
+    }
+
+    /**
      * Llamar a la API de OpenAI con historial de conversación
      */
     private function callOpenAI(string $system, string $userMessage, array $conversationHistory = [], string $model = 'gpt-4o-mini', int $maxTokens = 900): string
@@ -1253,16 +1317,7 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
             throw new \Exception('OpenAI API key no configurada');
         }
 
-        $messages = $this->armarMensajes($system, $userMessage, $conversationHistory);
-
-        $payload = [
-            'model' => $model,
-            'messages' => $messages,
-            'max_tokens' => $maxTokens, // Según el plan del comercio
-            'temperature' => 0.7,       // Más creatividad para descripciones gourmet
-            'presence_penalty' => 0.3,  // Evita repeticiones
-            'frequency_penalty' => 0.2, // Fomenta variedad en vocabulario
-        ];
+        $payload = $this->payloadOpenAI($model, $this->armarMensajes($system, $userMessage, $conversationHistory), $maxTokens);
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer '.$this->openaiApiKey,
@@ -1387,17 +1442,7 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
             throw new \Exception('OpenAI API key no configurada');
         }
 
-        $messages = $this->armarMensajes($system, $userMessage, $conversationHistory);
-
-        $payload = [
-            'model' => $model,
-            'messages' => $messages,
-            'max_tokens' => $maxTokens,
-            'temperature' => 0.7,
-            'presence_penalty' => 0.3,
-            'frequency_penalty' => 0.2,
-            'stream' => true,
-        ];
+        $payload = $this->payloadOpenAI($model, $this->armarMensajes($system, $userMessage, $conversationHistory), $maxTokens, true);
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer '.$this->openaiApiKey,

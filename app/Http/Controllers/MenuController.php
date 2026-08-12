@@ -6,6 +6,7 @@ use App\Exports\MenuExport;
 use App\Imports\MenuImport;
 use App\Models\Comercio;
 use App\Models\Menu;
+use App\Services\ChatbotService;
 use App\Services\MenuProcessorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -2500,7 +2501,9 @@ class MenuController extends Controller
                 'chatbot_config.trato' => 'nullable|string|in:voseo,tuteo,neutro',
                 'chatbot_config.emojis' => 'nullable|string|in:moderado,minimo,ninguno',
                 'chatbot_config.focos' => 'nullable|array',
-                'chatbot_config.focos.*' => 'string|in:promos,compartir,veganas,bebidas,postres,combos',
+                // La lista sale de ChatbotService::FOCOS y no de un `in:` escrito a mano:
+                // si se desincronizaban, el auto-guardado se comía un 422 sin avisar nada.
+                'chatbot_config.focos.*' => 'string|in:'.implode(',', array_keys(ChatbotService::FOCOS)),
                 'chatbot_config.estrellas' => 'nullable|array',
                 'chatbot_config.estrellas.*' => 'string|max:120',
                 'chatbot_config.detalles' => 'nullable|string|max:600',

@@ -504,7 +504,11 @@
                             </div>
 
                             <!-- 🤖 Personalidad del asistente -->
-                            @php $cfg = $comercio->chatbot_config ?? []; $platosMenu = (new \App\Services\ChatbotService)->platosDelMenu($comercio); @endphp
+                            @php
+                                $cfg = $comercio->chatbot_config ?? [];
+                                $platosMenu = (new \App\Services\ChatbotService)->platosDelMenu($comercio);
+                                $focosElegidos = $cfg['focos'] ?? [];
+                            @endphp
                             <div>
                                 <label class="block text-sm font-medium text-text-secondary mb-1">Personalidad del asistente</label>
                                 <p class="text-xs text-text-secondary mb-4">Cómo habla y qué querés que venda. Se guarda solo.</p>
@@ -544,12 +548,17 @@
                                     </div>
                                 </div>
 
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Qué querés que destaque</p>
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-1">Qué querés que destaque</p>
+                                <p class="text-xs text-text-secondary mb-3">
+                                    Lo que el asistente va a empujar mientras charla, como pedirle al mozo que ofrezca
+                                    postre antes de traer la cuenta. No filtra ni esconde nada del menú: el cliente
+                                    sigue viendo todo. Marcá solo lo que tu carta realmente tenga.
+                                </p>
                                 <div class="flex flex-wrap gap-2 mb-4">
-                                    @foreach(['promos'=>'Promos del día','compartir'=>'Para compartir','veganas'=>'Veganas/sin TACC','bebidas'=>'Bebidas/tragos','postres'=>'Postres','combos'=>'Combos'] as $val=>$label)
+                                    @foreach(\App\Services\ChatbotService::FOCOS as $val => $foco)
                                         <label class="cursor-pointer">
-                                            <input type="checkbox" name="cfg_focos" value="{{ $val }}" class="peer sr-only" @checked(in_array($val, $cfg['focos'] ?? []))>
-                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-green/20 peer-checked:border-accent-green peer-checked:text-accent-green transition-colors">{{ $label }}</span>
+                                            <input type="checkbox" name="cfg_focos" value="{{ $val }}" class="peer sr-only" @checked(in_array($val, $focosElegidos))>
+                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-green/20 peer-checked:border-accent-green peer-checked:text-accent-green transition-colors">{{ $foco['label'] }}</span>
                                         </label>
                                     @endforeach
                                 </div>
