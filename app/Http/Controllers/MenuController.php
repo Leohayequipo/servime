@@ -876,7 +876,10 @@ class MenuController extends Controller
             }
 
             $plato = &$contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
-            $plato['precio'] = $validated['precio'] ?? '';
+            // Formatea solo si vino un número pelado ("4500" -> "$4.500"). Si el comercio
+            // escribió algo con separadores ya decidió el formato y no se le toca: entran
+            // menús de cualquier país y el punto puede ser miles o decimales.
+            $plato['precio'] = \App\Support\Precio::formatear($validated['precio'] ?? '');
 
             $this->saveMenuContent($menu, $contenido);
 

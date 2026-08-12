@@ -506,15 +506,12 @@ class Comercio extends Model
     /**
      * Precio del panel ("19500") al formato del menú ("$19.500"). Si el comercio
      * escribió otra cosa ("2x1", "$19.500"), se respeta tal cual.
+     *
+     * El criterio vive en `Support\Precio` porque es el mismo para promos y para platos.
      */
     private function formatearPrecioPromo(string $precio): string
     {
-        $precio = trim($precio);
-        if ($precio === '' || ! ctype_digit($precio)) {
-            return $precio;
-        }
-
-        return '$'.number_format((float) $precio, 0, ',', '.');
+        return \App\Support\Precio::formatear($precio);
     }
 
     /**

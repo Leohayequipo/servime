@@ -1011,11 +1011,15 @@
                                                                     <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
                                                                         <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
                                                                             <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
-                                                                            <input type="text" 
-                                                                                   value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}" 
+                                                                            {{-- El precio se muestra CON su formato. Antes iba un
+                                                                                 preg_replace('/[^0-9]/') que convertía "$5.700,00" en
+                                                                                 570000, y al perder el foco guardaba eso: pasar por el
+                                                                                 campo multiplicaba el precio por cien. --}}
+                                                                            <input type="text"
+                                                                                   value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
                                                                                    placeholder="0"
-                                                                                   data-original-value="{{ preg_replace('/[^0-9]/', '', $plato['precio'] ?? '') }}"
-                                                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                                                                   data-original-value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
+                                                                                   oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
                                                                                    onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
                                                                                    class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
                                                                                    id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
@@ -2736,24 +2740,18 @@
             const statusElement = document.getElementById(`precio-status-${categoriaIndex}-${platoIndex}`);
             const inputElement = document.getElementById(`precio-input-${categoriaIndex}-${platoIndex}`);
             
-            // Limpiar el valor: solo números
-            const valorNumerico = nuevoPrecio.toString().replace(/[^0-9]/g, '');
-            
+            // Se manda TAL CUAL lo escribió el comercio: el backend decide si hay que
+            // formatearlo (Support\Precio). Antes acá se le quitaban los separadores y se
+            // reenviaba "$ " + el número pelado, así que "$5.700,00" volvía como "$ 570000".
+            const precioEscrito = nuevoPrecio.toString().trim();
+
             // Si está vacío, no hacer nada (permitir precios vacíos)
-            if (valorNumerico === '' && inputElement.value === '') {
+            if (precioEscrito === '' && inputElement.value === '') {
                 return;
             }
-            
+
             // Guardar el valor original por si hay error
             const valorOriginal = inputElement.dataset.originalValue || inputElement.value;
-            
-            // Actualizar el valor del input para mostrar solo números
-            if (inputElement) {
-                inputElement.value = valorNumerico;
-            }
-            
-            // Preparar precio con signo $ para guardar
-            const precioConSigno = valorNumerico ? `$ ${valorNumerico}` : '';
             
             // Mostrar indicador de carga
             if (statusElement) {
@@ -2775,7 +2773,7 @@
 
                 // Preparar datos para la petición
                 const formData = new FormData();
-                formData.append('precio', precioConSigno);
+                formData.append('precio', precioEscrito);
                 formData.append('categoria_index', categoriaIndex);
                 formData.append('plato_index', platoIndex);
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
@@ -2810,11 +2808,12 @@
                         statusElement.className = 'text-green-500 text-xs';
                     }
                     
-                    // Guardar el nuevo valor numérico como original
-                    if (inputElement) {
-                        inputElement.dataset.originalValue = valorNumerico;
-                        // Asegurar que el input solo muestre números
-                        inputElement.value = valorNumerico;
+                    // El backend devuelve el precio ya formateado ("$4.500"): el input muestra
+                    // eso mismo sin el símbolo, así lo que ves coincide con lo que quedó guardado.
+                    if (inputElement && data.precio !== undefined) {
+                        const mostrado = String(data.precio).replace('$', '').trim();
+                        inputElement.dataset.originalValue = mostrado;
+                        inputElement.value = mostrado;
                     }
                     
                     // Ocultar el check después de 2 segundos
