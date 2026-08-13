@@ -40,6 +40,10 @@
                 choice: choice.getAttribute('data-track-choice'),
                 desde: choice.getAttribute('data-track-desde') || null,
                 label: (choice.getAttribute('data-track-label') || '').trim().slice(0, 60) || null,
+                // El id de la VERSIÓN del atajo, para cruzar este click con la consulta que
+                // generó después. Sin él habría que cruzar por texto, y editar la frase
+                // rompería el cruce justo cuando se quiere comparar antes y después.
+                chip: choice.getAttribute('data-track-chip') || null,
             });
             return;
         }

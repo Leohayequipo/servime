@@ -293,28 +293,57 @@
                         @endif
                     </div>
 
+                    {{-- Un solo widget para los atajos: antes eran dos que parecían
+                         contradecirse, porque uno contaba el TOQUE (tracking_events) y el
+                         otro la CONSULTA que ese toque generó (chat_conversations). Ver
+                         Support\Chip::rendimiento(). --}}
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                         <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
                             <x-icono name="target" class="w-4 h-4 flex-none opacity-60" />
-                            Atajos más usados
-                            <x-ayuda titulo="Atajos más usados"
-                                     texto="Los botones chicos de la pantalla inicial («¿Qué me recomendás?», «Ver promos», «Sin TACC»). Al tocarlos, el cliente entra al asistente con esa pregunta ya hecha. Se arman solos con tu menú: si tenés promociones aparece el de promos, si tenés platos sin TACC aparece ese. Este ranking te dice cuál engancha y cuál no le interesa a nadie."
-                                     admin="Sale de data.label del menu_choice. Los chips los genera Comercio::getChipsSugeridos(), corta en 3 y las categorías del menú casi nunca entran." />
+                            Atajos
+                            <x-ayuda titulo="Atajos"
+                                     texto="Los botones que el cliente toca en vez de escribir, tanto en la pantalla de bienvenida como dentro del chat. «Preguntaron» es cuántos de esos toques llegaron al asistente: si tocan y no preguntan, se están yendo antes de que responda. «Con resultado» es cuántas veces terminó ofreciéndoles algún plato, y es el número que más importa: un atajo muy tocado y sin resultado es una promesa que tu menú no está pudiendo cumplir, y conviene cambiarle el texto o sacarlo. Podés editarlos desde la pantalla de tu menú."
+                                     admin="Cruza tracking_events/menu_choice (el toque en la portada) con chat_conversations (la consulta). Agrupa por el id del chip, que sale de hash(label|q): editar cualquiera de los dos genera una fila nueva, a propósito, para poder comparar redacciones. Los clicks previos a los atajos configurables no tienen id y caen agrupados por texto, marcados como «previo». En el chat no hay evento de tracking: el toque ES la consulta." />
                         </h3>
-                        <p class="text-text-secondary text-sm mb-4">Los botones sugeridos de la portada. El que nadie toca conviene cambiarlo.</p>
-                        @php $chipMax = $metrics['topChips']->max() ?: 1; @endphp
-                        @forelse($metrics['topChips'] as $chip => $count)
-                            <div class="mb-3">
-                                <div class="flex justify-between text-sm text-text-secondary mb-1">
-                                    <span class="truncate">{{ $chip }}</span><b>{{ $count }}</b>
-                                </div>
-                                <div class="h-2 bg-accent-gray/40 rounded">
-                                    <div class="h-2 bg-indigo-500 rounded" style="width: {{ round($count / $chipMax * 100) }}%"></div>
-                                </div>
+                        <p class="text-text-secondary text-sm mb-4">El que nadie toca conviene cambiarlo. El que tocan y no da resultado, también.</p>
+                        @if(count($chipStats) > 0)
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="text-text-secondary text-xs border-b border-accent-gray/40">
+                                            <th class="text-left font-normal pb-2">Atajo</th>
+                                            <th class="text-right font-normal pb-2 whitespace-nowrap">Toques</th>
+                                            <th class="text-right font-normal pb-2 whitespace-nowrap">Preguntaron</th>
+                                            <th class="text-right font-normal pb-2 whitespace-nowrap">Con resultado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($chipStats as $chip)
+                                            <tr class="border-b border-accent-gray/20 last:border-0">
+                                                <td class="py-2 pr-3">
+                                                    <span class="text-text-primary">{{ $chip['label'] }}</span>
+                                                    <span class="text-text-secondary/60 text-xs ml-1">
+                                                        {{ $chip['superficie'] === 'anterior' ? 'previo' : $chip['superficie'] }}
+                                                    </span>
+                                                </td>
+                                                <td class="py-2 text-right text-text-primary whitespace-nowrap">{{ $chip['clicks'] }}</td>
+                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['abandonos'] > 0 ? 'text-amber-500' : 'text-text-secondary' }}">
+                                                    {{ $chip['preguntas'] }}
+                                                    @if($chip['abandonos'] > 0)
+                                                        <span class="text-xs opacity-70">(−{{ $chip['abandonos'] }})</span>
+                                                    @endif
+                                                </td>
+                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-amber-500') }}">
+                                                    {{ $chip['con_platos'] }} <span class="text-xs opacity-70">({{ $chip['efectividad'] }}%)</span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
-                        @empty
+                        @else
                             <p class="text-text-secondary text-center py-4">Todavía nadie tocó un atajo.</p>
-                        @endforelse
+                        @endif
                     </div>
                 </div>
 

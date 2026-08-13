@@ -12,7 +12,8 @@ class PublicMenuController extends Controller
      */
     public function choose(Comercio $comercio)
     {
-        $chips = $comercio->getChipsSugeridos();
+        // Los que configuró el comercio, o los automáticos del menú si nunca los tocó.
+        $chips = $comercio->chipsDe('portada');
 
         // Con portada procesada se sirve el diseño derivado de su propia foto;
         // sin ella, el diseño anterior. Así ningún comercio queda roto por no
@@ -47,7 +48,10 @@ class PublicMenuController extends Controller
             }
             unset($categoria);
 
-            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones'));
+            // Atajos de arranque del chat: los del comercio, o los del menú si no configuró.
+            $chips = $comercio->chipsDe('chat');
+
+            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones', 'chips'));
         } catch (\Exception $e) {
             \Log::error('Error en PublicMenuController@chat: '.$e->getMessage(), [
                 'comercio_id' => $comercio->id,
@@ -61,6 +65,7 @@ class PublicMenuController extends Controller
                 'categorias' => [],
                 'tags' => [],
                 'promociones' => [],
+                'chips' => [],
             ]);
         }
     }

@@ -239,6 +239,45 @@
                 </div>
             </div>
 
+            {{-- Atajos más usados de TODOS los comercios. Acá se agrupa por texto y no por
+                 id: la pregunta es qué redacción funciona en general, para poder llevar las
+                 que rinden al default automático de getChipsSugeridos(). --}}
+            @if(!empty($chipsGlobales))
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden mt-8">
+                    <div class="p-6">
+                        <h3 class="text-lg font-medium text-text-primary mb-1">⚡ Atajos que mejor funcionan</h3>
+                        <p class="text-sm text-text-secondary mb-4">
+                            Agregado de todos los comercios, últimos 90 días. Las redacciones con buena
+                            efectividad son candidatas a entrar en los atajos automáticos.
+                        </p>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="text-text-secondary text-xs border-b border-accent-gray/40">
+                                        <th class="text-left font-normal pb-2">Atajo</th>
+                                        <th class="text-right font-normal pb-2 whitespace-nowrap">Clicks</th>
+                                        <th class="text-right font-normal pb-2 whitespace-nowrap">Comercios</th>
+                                        <th class="text-right font-normal pb-2 whitespace-nowrap">Con resultado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($chipsGlobales as $chip)
+                                        <tr class="border-b border-accent-gray/20 last:border-0">
+                                            <td class="py-2 pr-3 text-text-primary">{{ $chip['label'] }}</td>
+                                            <td class="py-2 text-right text-text-primary">{{ $chip['clicks'] }}</td>
+                                            <td class="py-2 text-right text-text-secondary">{{ $chip['comercios'] }}</td>
+                                            <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-amber-500') }}">
+                                                {{ $chip['efectividad'] }}%
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if($iaRuns->isNotEmpty() || $iaRunsMensajes > 0)
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl overflow-hidden mt-8">
                     <div class="p-6">

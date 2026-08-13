@@ -130,6 +130,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/comercios/{comercio:slug}/menus/import', [App\Http\Controllers\MenuController::class, 'import'])->name('menus.import')->middleware('plan.feature:excel');
     Route::post('/comercios/{comercio:slug}/menus/update-theme-colors', [App\Http\Controllers\MenuController::class, 'updateThemeColors'])->name('menus.update.theme.colors');
     Route::post('/comercios/{comercio:slug}/menus/update-chatbot-config', [App\Http\Controllers\MenuController::class, 'updateChatbotConfig'])->name('menus.update.chatbot.config');
+    // Va con `analytics` porque administrar los chips sin ver cuál funciona es a ciegas.
+    Route::post('/comercios/{comercio:slug}/menus/update-chips', [App\Http\Controllers\MenuController::class, 'updateChips'])->name('menus.update.chips')->middleware('plan.feature:analytics');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen')->middleware('plan.feature:promociones');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion')->middleware('plan.feature:promociones');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones')->middleware('plan.feature:promociones');

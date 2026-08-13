@@ -524,18 +524,23 @@
                      quedaba abajo de la bienvenida, y al estar en el idioma del cliente
                      son la señal de que puede escribir en su idioma (mejor que un cartel
                      que diga "hablamos inglés"). Se ocultan al primer mensaje. --}}
-                <div id="sugerencias" class="chips pt-1">
-                    @foreach([
-                        __('¿Qué me recomendás?'),
-                        __('Algo dulce'),
-                        __('Para compartir'),
-                        __('Algo para tomar'),
-                    ] as $sugerencia)
-                        {{-- tipo 'chip' por lo mismo que los atajos de la portada: las arma la
-                             interfaz, son idénticas entre sí y se comían el top de palabras. --}}
-                        <button type="button" class="chip-sugerencia" onclick="askQuestion(@js($sugerencia), 'chip', @js($sugerencia))">{{ $sugerencia }}</button>
-                    @endforeach
-                </div>
+                {{-- Los arma el comercio desde el panel; si no configuró nada salen del menú
+                     (Comercio::chipsDe). Cada uno lleva la frase que se ve y la pregunta que
+                     dispara, que pueden ser distintas: "Meriendas para compartir" puede
+                     ejecutar "¿qué tienen para merendar entre dos?". --}}
+                @if(!empty($chips))
+                    <div id="sugerencias" class="chips pt-1">
+                        @foreach($chips as $chip)
+                            @php $visible = trim(($chip['emoji'] ?? '').' '.__($chip['label'])); @endphp
+                            {{-- tipo 'chip' por lo mismo que los atajos de la portada: las arma la
+                                 interfaz, son idénticas entre sí y se comían el top de palabras.
+                                 El id identifica la VERSIÓN del chip para poder medirla. --}}
+                            <button type="button" class="chip-sugerencia"
+                                    data-chip-id="{{ $chip['id'] }}"
+                                    onclick="askQuestion(@js($chip['q']), 'chip_chat', null, @js($visible), @js($chip['id']))">{{ $visible }}</button>
+                        @endforeach
+                    </div>
+                @endif
                 
             </div>
         </div>
@@ -888,7 +893,7 @@
         }
 
         // Enviar mensaje (con streaming: la respuesta se escribe token a token)
-        async function sendMessage(message, tipo, scope, esReconsulta, etiqueta) {
+        async function sendMessage(message, tipo, scope, esReconsulta, etiqueta, chipId) {
             if (isLoading) return;
 
             // Las sugerencias de arranque son solo para la pantalla vacía
@@ -936,8 +941,12 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                         'X-Session-ID': sessionId
                     },
+                    // chip_id va aparte de `scope`: el scope acota la respuesta del modelo, y
+                    // meterle un identificador ahí le ensuciaría el prompt.
                     body: JSON.stringify(
-                        tipo ? { message: message, tipo: tipo, scope: scope || message } : { message: message }
+                        tipo
+                            ? { message: message, tipo: tipo, scope: scope || message, chip_id: chipId || null }
+                            : { message: message }
                     )
                 });
 
@@ -1552,8 +1561,8 @@
             });
         })();
 
-        function askQuestion(question, tipo, scope, etiqueta) {
-            sendMessage(question, tipo, scope, false, etiqueta);
+        function askQuestion(question, tipo, scope, etiqueta, chipId) {
+            sendMessage(question, tipo, scope, false, etiqueta, chipId);
             hideCategories();
             hideTags();
         }
@@ -1631,14 +1640,18 @@
         // Pregunta pre-cargada desde la pantalla de bienvenida (?q=...)
         (function () {
             try {
-                const preQ = new URLSearchParams(window.location.search).get('q');
+                const params = new URLSearchParams(window.location.search);
+                const preQ = params.get('q');
+                const preChip = params.get('chip');
                 if (preQ && preQ.trim()) {
                     // Limpiar el query para que no se reenvíe si el usuario refresca
                     history.replaceState(null, '', window.location.pathname);
-                    // tipo 'chip': la pregunta la armó el atajo de la portada, no la tipeó
-                    // nadie. Sin esto se guardaba como escrita y "¿Qué me recomendás?" era
-                    // la palabra más buscada del comercio. No cambia cómo responde el modelo.
-                    setTimeout(() => sendMessage(preQ.trim(), 'chip', preQ.trim()), 400);
+                    // tipo 'chip_portada': la pregunta la armó el atajo de la portada, no la
+                    // tipeó nadie. Sin esto se guardaba como escrita y "¿Qué me recomendás?"
+                    // era la palabra más buscada del comercio. No cambia cómo responde el
+                    // modelo. Va separado de 'chip_chat' porque son dos momentos distintos y
+                    // hay que poder compararlos.
+                    setTimeout(() => sendMessage(preQ.trim(), 'chip_portada', preQ.trim(), false, null, preChip), 400);
                 }
             } catch (e) {}
         })();

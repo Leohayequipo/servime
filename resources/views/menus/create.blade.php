@@ -591,6 +591,86 @@
                                           placeholder="Ej: Cervecería artesanal; recomendá siempre una cerveza para acompañar. La estrella es la Barrica Burger.">{{ $cfg['detalles'] ?? '' }}</textarea>
                             </div>
 
+                            {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
+                                 Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
+                                 ser distintas ("Meriendas para compartir" puede disparar "¿qué
+                                 tienen para merendar entre dos?"). Si no se configura ninguno,
+                                 siguen saliendo automáticos del menú. --}}
+                            @if($comercio->tieneFeature('analytics'))
+                                @php
+                                    // En el orden en que los ve el cliente: primero la portada
+                                    // (antes de entrar), después los del chat.
+                                    $superficies = [
+                                        'portada' => ['titulo' => 'Atajos de la portada', 'ayuda' => 'Lo primero que ve el cliente, antes de entrar al chat.'],
+                                        'chat' => ['titulo' => 'Atajos del chat', 'ayuda' => 'Aparecen debajo del saludo, antes del primer mensaje.'],
+                                    ];
+                                    // Emojis de gastronomía para el selector: escribirlos a mano
+                                    // es incómodo y en escritorio hay que acordarse de Win + .
+                                    $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
+                                @endphp
+                                <div class="mt-6 pt-6 border-t border-accent-gray/40">
+                                    <label class="block text-sm font-medium text-text-secondary mb-1">Atajos</label>
+                                    <p class="text-xs text-text-secondary mb-4">
+                                        Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
+                                        y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
+                                    </p>
+
+                                    @foreach($superficies as $superficie => $info)
+                                        @php $lista = $comercio->chipsDe($superficie); @endphp
+                                        <div class="mb-5" data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
+                                            <p class="text-xs text-text-secondary uppercase tracking-wide">{{ $info['titulo'] }}</p>
+                                            <p class="text-xs text-text-secondary/70 mb-2">
+                                                {{ $info['ayuda'] }}
+                                                @if(empty($comercio->chips[$superficie] ?? null))
+                                                    <span class="text-accent-blue">Ahora son automáticos.</span>
+                                                @endif
+                                            </p>
+
+                                            <div class="space-y-2 chips-lista">
+                                                @foreach($lista as $chip)
+                                                    <div class="chip-fila flex gap-2 items-start">
+                                                        {{-- El emoji se elige de una grilla: tipearlo requiere
+                                                             acordarse de Win + . y en el celular es peor. --}}
+                                                        <button type="button" onclick="abrirEmojis(this)"
+                                                                class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue"
+                                                                title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
+                                                        <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
+                                                        <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
+                                                               class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                                        <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
+                                                               class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                                        <button type="button" onclick="this.closest('.chip-fila').remove()"
+                                                                class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+
+                                            <div class="flex items-center gap-2 mt-2">
+                                                <button type="button" onclick="agregarChip(this)"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
+                                                <button type="button" onclick="guardarChips(this)"
+                                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar atajos</button>
+                                                <span class="text-xs text-text-secondary chips-estado"></span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+
+                                    {{-- Grilla de emojis, una sola para toda la pantalla: se abre
+                                         al lado del botón que la pidió. --}}
+                                    <div id="emoji-picker" class="hidden fixed z-50 bg-secondary-dark border border-accent-gray rounded-xl p-2 shadow-2xl"
+                                         style="max-width: 260px">
+                                        <div class="grid grid-cols-8 gap-1">
+                                            @foreach($emojisSugeridos as $emoji)
+                                                <button type="button" onclick="elegirEmoji(@js($emoji))"
+                                                        class="w-7 h-7 rounded hover:bg-accent-blue/20 text-lg leading-none">{{ $emoji }}</button>
+                                            @endforeach
+                                        </div>
+                                        <button type="button" onclick="elegirEmoji('')"
+                                                class="w-full mt-1 text-xs text-text-secondary hover:text-red-400 py-1">Sin ícono</button>
+                                    </div>
+                                </div>
+                            @endif
+
                             <!-- Configuraciones -->
                         </div>
                     </div>
@@ -1585,6 +1665,132 @@
                     cfgDetallesTimeout = setTimeout(saveChatbotConfig, 1000);
                 });
             }
+
+            // ── Atajos (chips) ────────────────────────────────────────────────────────
+            // El tope sale de cada bloque porque no es el mismo en las dos pantallas: la
+            // portada entra en una grilla de tres y el chat banca cuatro.
+            window.agregarChip = function(btn) {
+                const bloque = btn.closest('[data-superficie]');
+                const lista = bloque.querySelector('.chips-lista');
+                const maximo = parseInt(bloque.dataset.maximo, 10) || 4;
+
+                if (lista.querySelectorAll('.chip-fila').length >= maximo) {
+                    showError(`En esta pantalla entran hasta ${maximo} atajos`);
+                    return;
+                }
+
+                const fila = document.createElement('div');
+                fila.className = 'chip-fila flex gap-2 items-start';
+                fila.innerHTML = `
+                    <button type="button" onclick="abrirEmojis(this)" class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue" title="Elegir ícono">🍽️</button>
+                    <input type="hidden" class="chip-emoji">
+                    <input type="text" maxlength="40" placeholder="Lo que se ve" class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                    <input type="text" maxlength="200" placeholder="La pregunta que ejecuta" class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                    <button type="button" onclick="this.closest('.chip-fila').remove()" class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
+                `;
+                lista.appendChild(fila);
+                fila.querySelector('.chip-label').focus();
+            };
+
+            // Selector de emoji: una sola grilla para toda la pantalla, se abre junto al
+            // botón que la pidió y recuerda a cuál tiene que devolverle la elección.
+            let emojiDestino = null;
+
+            window.abrirEmojis = function(btn) {
+                const picker = document.getElementById('emoji-picker');
+                if (!picker) return;
+                emojiDestino = btn;
+
+                // El picker se cuelga del <body> la primera vez. Nace dentro de .metric-card,
+                // que en :hover aplica -translate-y-1, y un ancestro con `transform` hace que
+                // `position: fixed` se posicione contra ESE elemento y no contra la ventana:
+                // la grilla terminaba fuera de la pantalla y parecía que no abría.
+                if (picker.parentElement !== document.body) {
+                    document.body.appendChild(picker);
+                }
+
+                const r = btn.getBoundingClientRect();
+                picker.classList.remove('hidden');
+                // Si no entra abajo, se abre para arriba.
+                const alto = picker.offsetHeight;
+                picker.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 270))}px`;
+                picker.style.top = (r.bottom + alto + 8 > window.innerHeight)
+                    ? `${Math.max(8, r.top - alto - 6)}px`
+                    : `${r.bottom + 6}px`;
+            };
+
+            window.elegirEmoji = function(emoji) {
+                if (emojiDestino) {
+                    emojiDestino.textContent = emoji || '🍽️';
+                    emojiDestino.closest('.chip-fila').querySelector('.chip-emoji').value = emoji;
+                }
+                document.getElementById('emoji-picker')?.classList.add('hidden');
+                emojiDestino = null;
+            };
+
+            // Cerrar al tocar fuera
+            document.addEventListener('click', function(e) {
+                const picker = document.getElementById('emoji-picker');
+                if (!picker || picker.classList.contains('hidden')) return;
+                if (!picker.contains(e.target) && !e.target.closest('.chip-emoji-btn')) {
+                    picker.classList.add('hidden');
+                    emojiDestino = null;
+                }
+            });
+
+            window.guardarChips = async function(btn) {
+                const bloque = btn.closest('[data-superficie]');
+                const estado = bloque.querySelector('.chips-estado');
+                const chips = [...bloque.querySelectorAll('.chip-fila')].map(f => ({
+                    emoji: f.querySelector('.chip-emoji').value.trim(),
+                    label: f.querySelector('.chip-label').value.trim(),
+                    q: f.querySelector('.chip-q').value.trim(),
+                })).filter(c => c.label && c.q);
+
+                // Una fila a medias no se guarda en silencio: o la completa o la saca.
+                const incompletas = [...bloque.querySelectorAll('.chip-fila')].filter(f => {
+                    const l = f.querySelector('.chip-label').value.trim();
+                    const q = f.querySelector('.chip-q').value.trim();
+                    return (l && !q) || (!l && q);
+                });
+                if (incompletas.length) {
+                    showError('Cada atajo necesita la frase que se ve Y la pregunta que ejecuta');
+                    return;
+                }
+
+                btn.disabled = true;
+                estado.textContent = 'Guardando...';
+
+                try {
+                    const response = await fetch(`{{ route('menus.update.chips', ['comercio' => $comercio->slug]) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ superficie: bloque.dataset.superficie, chips: chips })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        showError(data.error || 'No se pudieron guardar los atajos');
+                        estado.textContent = '';
+                        return;
+                    }
+
+                    estado.textContent = data.automaticos ? 'Sin atajos propios: vuelven los automáticos' : '✓ Guardado';
+                    showTemporaryMessage('Atajos guardados', 'success');
+                    setTimeout(() => { estado.textContent = ''; }, 4000);
+                } catch (error) {
+                    console.error('Error al guardar atajos:', error);
+                    showError('Error al guardar los atajos');
+                    estado.textContent = '';
+                } finally {
+                    btn.disabled = false;
+                }
+            };
 
             // Marca/desmarca un plato como estrella desde su propia tarjeta.
             // Se guarda en el JSON del menú, junto al plato, no en una lista aparte.

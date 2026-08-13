@@ -87,8 +87,13 @@ class AnalyticsController extends Controller
                 ->withQueryString();
         }
 
+        // Atajos más usados de TODOS los comercios: sirve para descubrir qué redacciones
+        // funcionan en general y llevarlas al default automático. El comercio ve los suyos
+        // en su propio panel; acá interesa el agregado.
+        $chipsGlobales = $esAdmin ? $this->getChipStatsGlobales() : [];
+
         return view('analytics.dashboard', compact(
-            'comercios', 'stats', 'iaRuns', 'iaRunsMensajes', 'web', 'webVisitas'
+            'comercios', 'stats', 'iaRuns', 'iaRunsMensajes', 'web', 'webVisitas', 'chipsGlobales'
         ));
     }
 
@@ -239,7 +244,10 @@ class AnalyticsController extends Controller
         // Última clasificación con IA (para el botón Premium)
         $ultimaClasificacion = IntentClassificationRun::where('comercio_id', $comercioId)->latest()->first();
 
+        $chipStats = \App\Support\Chip::rendimiento($comercioId, $periodo);
+
         return view('analytics.comercio', compact(
+            'chipStats',
             'comercio',
             'threads',
             'threadsTotal',
@@ -259,6 +267,43 @@ class AnalyticsController extends Controller
             'fallasDelAsistente',
             'ultimaClasificacion'
         ));
+    }
+
+    /**
+     * Los atajos más usados de todos los comercios (solo super admin).
+     *
+     * Agrupa por el TEXTO y no por el id, al revés que el reporte del comercio: acá la
+     * pregunta es cuál redacción funciona en general, y dos comercios que escribieron lo
+     * mismo tienen ids distintos sólo porque la pregunta que dispara difiere en una coma.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getChipStatsGlobales(int $limite = 15): array
+    {
+        $clicks = ChatConversation::whereIn('origen', ['chip', 'chip_portada', 'chip_chat'])
+            ->where('created_at', '>=', now()->subDays(90))
+            ->get(['user_message', 'origen', 'platos_sugeridos', 'metadata', 'comercio_id']);
+
+        $filas = [];
+        foreach ($clicks as $click) {
+            $label = $click->metadata['chip']['label'] ?? $click->user_message;
+            $clave = mb_strtolower(trim($label));
+
+            $filas[$clave] ??= ['label' => $label, 'clicks' => 0, 'con_platos' => 0, 'comercios' => []];
+            $filas[$clave]['clicks']++;
+            $filas[$clave]['con_platos'] += ($click->platos_sugeridos > 0) ? 1 : 0;
+            $filas[$clave]['comercios'][$click->comercio_id] = true;
+        }
+
+        foreach ($filas as &$fila) {
+            $fila['comercios'] = count($fila['comercios']);
+            $fila['efectividad'] = (int) round($fila['con_platos'] * 100 / max($fila['clicks'], 1));
+        }
+        unset($fila);
+
+        usort($filas, fn ($a, $b) => $b['clicks'] <=> $a['clicks']);
+
+        return array_slice($filas, 0, $limite);
     }
 
     /**

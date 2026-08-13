@@ -25,7 +25,8 @@ class ChatbotController extends Controller
         try {
             $request->validate([
                 'message' => 'required|string|max:500',
-                'tipo' => 'nullable|string|in:categoria,ver_mas,chip,tag',
+                'tipo' => 'nullable|string|in:categoria,ver_mas,chip,chip_portada,chip_chat,tag',
+                'chip_id' => 'nullable|string|max:16',
                 'scope' => 'nullable|string|max:500',
             ]);
 
@@ -143,7 +144,8 @@ class ChatbotController extends Controller
     {
         $request->validate([
             'message' => 'required|string|max:500',
-            'tipo' => 'nullable|string|in:categoria,ver_mas,chip,tag',
+            'tipo' => 'nullable|string|in:categoria,ver_mas,chip,chip_portada,chip_chat,tag',
+            'chip_id' => 'nullable|string|max:16',
             'scope' => 'nullable|string|max:500',
         ]);
 
@@ -296,6 +298,40 @@ class ChatbotController extends Controller
      *
      * @return array<string, mixed>
      */
+    /**
+     * Qué chip se tocó, para el `metadata` de la conversación.
+     *
+     * Se guarda el id Y el texto que tenía en ese momento. El id identifica la versión
+     * —editar la frase o la pregunta genera uno nuevo, para que la analítica pueda comparar
+     * variantes—, y el texto hace que el histórico se explique solo: si el comercio cambia
+     * o borra el chip, el reporte igual puede decir "Algo dulce: 15 clicks" en vez de
+     * mostrar un id huérfano.
+     *
+     * @return array<string, mixed>
+     */
+    private function chipDelClick(Request $request, Comercio $comercio): array
+    {
+        $id = $request->input('chip_id');
+
+        if (! $id) {
+            return [];
+        }
+
+        // El label se resuelve del lado del servidor y no se toma del request: el cliente
+        // podría mandar cualquier cosa, y el reporte quedaría con texto inventado.
+        $label = '';
+        foreach (['chat', 'portada'] as $superficie) {
+            foreach ($comercio->chipsDe($superficie) as $chip) {
+                if (($chip['id'] ?? null) === $id) {
+                    $label = $chip['label'];
+                    break 2;
+                }
+            }
+        }
+
+        return ['chip' => array_filter(['id' => $id, 'label' => $label])];
+    }
+
     private function consumoDelModelo(): array
     {
         $consumo = $this->chatbotService->ultimoConsumo();
@@ -321,8 +357,10 @@ class ChatbotController extends Controller
                 // dos últimos: 21 de 103 mensajes eran botones, y una sola frase de chip
                 // ocupaba cuatro casilleros del top de palabras.
                 //   categoria → chip de categoría del chat      ver_mas → "Ver más opciones"
-                //   chip      → atajo de la portada             tag     → filtro de tags del chat
-                'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas', 'chip', 'tag'], true) ? $modoRespuesta : 'escrito',
+                //   chip      → atajo de la portada (histórico) tag     → filtro de tags del chat
+                //   chip_portada / chip_chat → atajos configurables, separados por superficie
+                //   porque son dos momentos distintos y hay que poder compararlos.
+                'origen' => in_array($modoRespuesta, ['categoria', 'ver_mas', 'chip', 'chip_portada', 'chip_chat', 'tag'], true) ? $modoRespuesta : 'escrito',
                 // Idioma en el que se atendió: explica por qué la misma pregunta aparece
                 // en varias formas, y le dice al comercio cuántos clientes no hablan español.
                 'idioma' => app()->getLocale(),
@@ -345,7 +383,7 @@ class ChatbotController extends Controller
                     'response_length' => strlen($response),
                     'timestamp' => now()->toISOString(),
                     'session_id_source' => $request->header('X-Session-ID') ? 'header' : 'inferred',
-                ], $this->consumoDelModelo()),
+                ], $this->consumoDelModelo(), $this->chipDelClick($request, $comercio)),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error logging conversation: '.$e->getMessage());

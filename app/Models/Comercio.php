@@ -162,6 +162,7 @@ class Comercio extends Model
         'enable_ai_responses' => 'boolean',
         'pedido_habilitado' => 'boolean',
         'chatbot_config' => 'array',
+        'chips' => 'array',
         'tema_derivado' => 'array',
         'horarios' => 'array',
         'slug_manual' => 'boolean',
@@ -767,6 +768,30 @@ class Comercio extends Model
         }
 
         return '🍽️'; // Default icon
+    }
+
+    /**
+     * Los chips que se muestran en una superficie ('portada' o 'chat').
+     *
+     * Si el comercio configuró los suyos, mandan esos. Si no, siguen los automáticos que
+     * se derivan del menú, así nadie se queda sin chips y no cambia nada para quien nunca
+     * entró a configurarlos.
+     *
+     * @return array<int, array{id:string, emoji:string, label:string, q:string}>
+     */
+    public function chipsDe(string $superficie, ?int $max = null): array
+    {
+        $max ??= \App\Support\Chip::visibles($superficie);
+        $propios = $this->chips[$superficie] ?? null;
+
+        if (is_array($propios) && ! empty($propios)) {
+            return array_slice(\App\Support\Chip::normalizarLista($propios), 0, $max);
+        }
+
+        return array_map(
+            fn ($chip) => \App\Support\Chip::normalizar($chip),
+            $this->getChipsSugeridos($max)
+        );
     }
 
     /**

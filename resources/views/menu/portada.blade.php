@@ -327,8 +327,12 @@
     @if(!empty($chips))
         <div class="grid an d4">
             @foreach($chips as $chip)
+                {{-- `chip` lleva el id de la VERSIÓN del atajo: si el comercio le cambia la
+                     frase o la pregunta, el id cambia y la analítica puede comparar cuál
+                     funcionó mejor en vez de sumar todo junto. --}}
                 <a class="card" data-track-choice="ia" data-track-desde="chip" data-track-label="{{ $chip['label'] }}"
-                   href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q']]) }}">
+                   data-track-chip="{{ $chip['id'] ?? '' }}"
+                   href="{{ route('menu.chat', ['comercio' => $comercio, 'q' => $chip['q'], 'chip' => $chip['id'] ?? null]) }}">
                     <span class="card-ico">{{ $chip['emoji'] }}</span>
                     <h3>{{ $chip['label'] }}</h3>
                 </a>

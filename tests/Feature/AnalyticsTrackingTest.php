@@ -356,7 +356,7 @@ class AnalyticsTrackingTest extends TestCase
         // Si desaparecen, el comercio nunca se entera de que la función existe.
         $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk()
             ->assertSee('¿Por dónde entran?', false)
-            ->assertSee('Atajos más usados', false)
+            ->assertSee('Todavía nadie tocó un atajo', false)
             ->assertSee('Qué categorías miran', false)
             ->assertSee('Todavía nadie abrió el listado de categorías', false)
             ->assertSee('Qué etiquetas filtran', false)

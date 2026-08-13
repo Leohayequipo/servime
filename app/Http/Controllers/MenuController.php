@@ -9,6 +9,7 @@ use App\Models\Menu;
 use App\Services\ChatbotService;
 use App\Services\ImagenMenuService;
 use App\Services\MenuProcessorService;
+use App\Support\Chip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -2587,6 +2588,58 @@ class MenuController extends Controller
     /**
      * Actualizar configuración del chatbot y pedidos automáticamente
      */
+    /**
+     * Guarda los chips que el comercio configuró para una superficie ('portada' o 'chat').
+     *
+     * El `id` no viaja desde el navegador: lo calcula `Support\Chip` a partir del texto y
+     * la pregunta. Así, editar cualquiera de los dos genera un chip nuevo y la analítica
+     * puede comparar versiones en vez de sumar peras con manzanas.
+     */
+    public function updateChips(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
+        }
+
+        $superficie = (string) $request->input('superficie');
+
+        $validated = $request->validate([
+            'superficie' => 'required|string|in:'.implode(',', Chip::SUPERFICIES),
+            // El tope depende de la pantalla: la portada entra en una grilla de tres.
+            'chips' => 'nullable|array|max:'.Chip::visibles($superficie),
+            'chips.*.emoji' => 'nullable|string|max:8',
+            'chips.*.label' => 'required|string|max:40',
+            'chips.*.q' => 'required|string|max:200',
+        ]);
+
+        try {
+            $chips = $comercio->chips ?? [];
+            $limpios = Chip::normalizarLista($validated['chips'] ?? []);
+
+            // Lista vacía = volver a los automáticos del menú, no quedarse sin chips.
+            if (empty($limpios)) {
+                unset($chips[$validated['superficie']]);
+            } else {
+                $chips[$validated['superficie']] = $limpios;
+            }
+
+            $comercio->chips = empty($chips) ? null : $chips;
+            $comercio->save();
+
+            return response()->json([
+                'success' => true,
+                'chips' => $comercio->chipsDe($validated['superficie']),
+                'automaticos' => empty($limpios),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al guardar chips: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al guardar los atajos: '.$e->getMessage()], 500);
+        }
+    }
+
     public function updateChatbotConfig(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
