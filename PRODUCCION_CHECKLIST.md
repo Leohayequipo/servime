@@ -56,11 +56,13 @@ por *volumen y tamaño*, todo en código:
 
 | Mecanismo | Valor | Dónde |
 |---|---|---|
-| Rate limit chat IA | 20 req/min/IP | `routes/web.php:114` (`throttle:20,1`) |
-| Rate limit landing chat | 20 req/min | `routes/web.php` |
-| Rate limit crear menú (OCR) | 5 req/min | `routes/web.php:86` |
-| Modelo chatbot (mayor volumen) | `gpt-4o-mini` | `ChatbotService.php:522` (hardcode) |
-| Máx. tokens respuesta chatbot | 900 | `ChatbotService.php:524` |
+| Rate limit chat IA | 20/min por dispositivo + 60/min por IP | `throttle:chat-ia` (`AppServiceProvider`) |
+| Rate limit carrito | 60 + 300 | `throttle:carrito` |
+| Rate limit tracking | 120 + 600 | `throttle:tracking` |
+| Rate limit landing chat | 20 req/min por IP | `routes/web.php` |
+| Rate limit crear menú (OCR) | 5 req/min | `routes/web.php:113` |
+| Modelo chatbot | **según el plan** del comercio | `Comercio::modeloIA()` |
+| Máx. tokens respuesta chatbot | **según el plan** | `Comercio::maxTokensChat()` |
 | Modelo OCR/carga menú | `gpt-4o` | `.env` → `OPENAI_MODEL` |
 | Modelo PDFs | `gemini-2.5-flash` | `.env` → `GEMINI_MODEL` |
 
@@ -110,7 +112,37 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 > del servidor. Lo ideal sería `php artisan storage:link` (symlink) en vez de duplicar
 > archivos. Refactor para más adelante.
 
-## 🟢 5. Limpieza y cierre
+## 🔴 5. Con fecha de vencimiento
+
+- [ ] **Migrar `gemini-2.5-flash` antes del 16/10/2026.** Es el modelo que procesa los
+      PDFs de los menús (`GeminiPdfProcessorService`) y ese día se discontinúa: si no se
+      migra, los comercios dejan de poder subir menús en PDF. En la cuenta ya están
+      disponibles `gemini-3.5-flash` y `gemini-3.6-flash`. Es cambiar `GEMINI_MODEL` y
+      probar con PDFs reales de distinto peso. **No dejarlo para octubre.**
+
+## 🔴 6. Trabajo que existe solo en la máquina local
+
+- [ ] **La rama `feat/portada-menu-publico` nunca se pusheó ni se mergeó a `main`.**
+      Al 14/08/2026 son ~29 commits sin upstream: los atajos configurables, el panel de
+      analytics completo, el consumo de tokens del chatbot, los fixes de precios e
+      imágenes de menús y el round-trip del Excel. Si se pierde el disco, se pierde todo.
+      Es el riesgo más grande abierto y el más barato de cerrar.
+
+## 🟡 7. Bugs conocidos, anotados y sin arreglar
+
+- [ ] **El stream del chat cobra cuota aunque OpenAI falle.** En `ChatbotController@chatStream`
+      el `try/catch` de `streamMessage()` es interno: si la llamada explota y se responde con
+      `generateFallbackResponse()`, igual corre `registrarUsoIA()`. No se gastó un token y el
+      comercio pierde un mensaje de su cuota. La ruta sin stream **no** lo tiene — y la que
+      usa el front es justo la que cobra de más. Detalle en la skill `planes`.
+- [ ] **El aviso de cuota llega tarde.** El dashboard avisa recién cuando se agotó, no al
+      acercarse. Al 80% le daría margen al comercio para pedir el upgrade antes de quedarse
+      sin asistente en pleno servicio.
+- [ ] **Decisión pendiente:** igualar `max_tokens_chat` en ~1500 para los tres planes desde
+      `/admin/plans` (sin deploy). Medido: ninguna respuesta real pasó de 497 tokens, así que
+      diferenciarlo por plan no le cambia nada al comercio. Ver skill `planes`.
+
+## 🟢 8. Limpieza y cierre
 
 - [x] Limpieza de archivos `.md` redundantes (12 → 4).
 - [x] CLAUDE.md creado.
@@ -120,8 +152,29 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 
 ---
 
-## Estado general
+## Estado general (14/08/2026)
 
-Tareas 1, 2, 3 y 4 cerradas en lo que toca al código. Pendiente del usuario:
-límite de gasto en paneles de IA y push + deploy cuando Hostinger esté online.
+Tareas 1, 2, 3 y 4 cerradas en lo que toca al código; la suite está en **201 tests verdes**.
+
+Lo abierto, por orden de urgencia:
+
+1. 🔴 **Pushear la rama** — ~29 commits que solo existen en local (sección 6).
+2. 🔴 **Migrar Gemini antes del 16/10/2026** — quedan ~2 meses (sección 5).
+3. 🔴 **Topes de gasto** en los paneles de OpenAI y Google AI (sección 3).
+4. 🔴 **Backups automáticos de BD** y `.env` de producción (sección 2).
+5. 🟡 Bugs anotados: cuota cobrada de más en el stream, aviso de cuota tardío (sección 7).
+
+Ideas sin arrancar (no son deuda, son features nuevas):
+
+- **Pedir reseña en Google.** Hoy el sistema no puede: no capta datos de contacto del
+  comensal (el carrito lo identifica por `session_id` anónimo y no hay checkout), no hay
+  canal de notificación hacia él, no hay campo donde guardar el link, y el chat no
+  renderiza enlaces (`parseMarkdown` solo hace negrita, itálica, `[TAGS:]` e `[IMAGEN:]`).
+  Camino corto: campo `google_review_url` + un marcador propio tipo `[[RESEÑA]]` que el
+  front convierta en botón, reusando la cañería de `[[PLATOS]]`. **No** habilitar links
+  markdown genéricos: dejaría entrar como enlace clickeable cualquier URL alucinada por el
+  modelo o colada en el texto de un menú importado.
+- **Disponibilidad / sin stock de un plato.** Hoy no existe el concepto: un plato está en
+  el menú o no está, y el asistente lo recomienda igual aunque en la cocina se haya
+  terminado. Es el próximo tema a diseñar.
 </content>
