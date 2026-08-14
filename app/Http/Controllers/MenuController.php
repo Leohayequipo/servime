@@ -2501,6 +2501,14 @@ class MenuController extends Controller
                 // Guardar estado activo actual
                 $estabaActivo = $menu->activo;
 
+                // El Excel solo trae categorías y platos, y acá se pisa el JSON entero: lo que
+                // vive fuera de esas dos claves se perdía. `restaurante` (nombre y descripción
+                // del local) lo lee ChatbotService para armar el contexto del asistente.
+                $anterior = json_decode((string) $menu->contexto_gpt, true);
+                if (is_array($anterior)) {
+                    $data = array_merge(array_diff_key($anterior, ['categorias' => null]), $data);
+                }
+
                 // Actualizar datos
                 if ($request->filled('nombre')) {
                     $menu->nombre = $request->input('nombre');

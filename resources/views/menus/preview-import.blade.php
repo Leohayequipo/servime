@@ -48,6 +48,24 @@
                         </div>
                         <div class="text-sm text-text-secondary mt-1">Con Imagen</div>
                     </div>
+                    {{-- La estrella viaja en la columna «Estrella» del Excel. Se muestra acá
+                         porque el import PISA el menú entero: si la planilla vino sin esa
+                         columna, este número en cero avisa que se van a perder antes de
+                         confirmar, no después. --}}
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                        <div class="text-3xl font-bold text-amber-400">
+                            @php
+                                $conEstrella = 0;
+                                foreach ($data['categorias'] ?? [] as $categoria) {
+                                    foreach ($categoria['platos'] ?? [] as $plato) {
+                                        if (!empty($plato['estrella'])) $conEstrella++;
+                                    }
+                                }
+                            @endphp
+                            {{ $conEstrella }}
+                        </div>
+                        <div class="text-sm text-text-secondary mt-1">Platos estrella</div>
+                    </div>
                 </div>
             </div>
 
@@ -84,6 +102,9 @@
                                                 <h5 class="text-white font-bold text-lg leading-tight capitalize whitespace-normal flex-1">
                                                     {{ $nombrePlato }}
                                                 </h5>
+                                                @if(!empty($plato['estrella']))
+                                                    <span class="flex-none text-amber-400 text-lg" title="Plato estrella: el asistente lo recomienda primero">★</span>
+                                                @endif
                                             </div>
                                             
                                             <!-- Foto y Precio (misma línea) -->

@@ -4,18 +4,19 @@ namespace App\Exports;
 
 use App\Models\Menu;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles, WithColumnWidths
+class MenuExport implements FromCollection, WithColumnWidths, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected $menu;
+
     protected $comercio;
 
     public function __construct(Menu $menu)
@@ -31,24 +32,24 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
     {
         // Obtener datos del menú desde contexto_gpt
         $data = [];
-        
+
         if ($this->menu->contexto_gpt) {
             try {
                 $jsonContent = trim($this->menu->contexto_gpt);
-                
+
                 // Remover markdown si existe
                 if (strpos($jsonContent, '```json') !== false) {
                     $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
                     $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
                 }
-                
+
                 $menuData = json_decode($jsonContent, true);
-                
+
                 if (is_array($menuData) && isset($menuData['categorias'])) {
                     foreach ($menuData['categorias'] as $categoria) {
                         $categoriaNombre = $categoria['nombre'] ?? 'Sin categoría';
                         $platos = $categoria['platos'] ?? [];
-                        
+
                         foreach ($platos as $plato) {
                             $data[] = [
                                 'id' => $plato['id'] ?? '', // ID único del plato
@@ -56,10 +57,14 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
                                 'nombre' => $plato['nombre'] ?? '',
                                 'precio' => $plato['precio'] ?? '',
                                 'descripcion' => $plato['descripcion'] ?? '',
-                                'tags' => isset($plato['tags']) && is_array($plato['tags']) 
-                                    ? implode(', ', $plato['tags']) 
+                                'tags' => isset($plato['tags']) && is_array($plato['tags'])
+                                    ? implode(', ', $plato['tags'])
                                     : '',
-                                'imagen' => isset($plato['imagen']) && !empty($plato['imagen'])
+                                // Sin esta columna, exportar y reimportar borraba los platos
+                                // estrella: el import rearma el plato desde cero con lo que
+                                // viene en la planilla.
+                                'estrella' => ! empty($plato['estrella']) ? 'Sí' : '',
+                                'imagen' => isset($plato['imagen']) && ! empty($plato['imagen'])
                                     ? asset($plato['imagen'])
                                     : '',
                             ];
@@ -70,13 +75,10 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
                 // Si hay error, retornar colección vacía
             }
         }
-        
+
         return collect($data);
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [
@@ -86,6 +88,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
             'Precio',
             'Descripción',
             'Tags',
+            'Estrella',
             'URL Imagen',
         ];
     }
@@ -96,8 +99,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
     }
 
     /**
-     * @param mixed $row
-     * @return array
+     * @param  mixed  $row
      */
     public function map($row): array
     {
@@ -108,20 +110,17 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
             $row['precio'],
             $row['descripcion'],
             $row['tags'],
+            $row['estrella'],
             $row['imagen'],
         ];
     }
 
-    /**
-     * @return string
-     */
     public function title(): string
     {
         return $this->menu->nombre ?: 'Menú';
     }
 
     /**
-     * @param Worksheet $sheet
      * @return array
      */
     public function styles(Worksheet $sheet)
@@ -131,7 +130,7 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '3B82F6'] // Azul
+                    'startColor' => ['rgb' => '3B82F6'], // Azul
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -141,9 +140,6 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
         ];
     }
 
-    /**
-     * @return array
-     */
     public function columnWidths(): array
     {
         return [
@@ -153,8 +149,8 @@ class MenuExport implements FromCollection, WithHeadings, WithMapping, WithTitle
             'D' => 15,  // Precio
             'E' => 50,  // Descripción
             'F' => 25,  // Tags
-            'G' => 40,  // URL Imagen
+            'G' => 10,  // Estrella
+            'H' => 40,  // URL Imagen
         ];
     }
 }
-
