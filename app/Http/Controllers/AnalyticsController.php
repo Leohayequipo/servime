@@ -860,6 +860,18 @@ class AnalyticsController extends Controller
                 'Respuesta Bot',
                 'Usó OpenAI',
                 'Tiempo Respuesta (ms)',
+                // De acá para abajo es lo que el panel ya muestra pero la exportación no
+                // traía: sin el origen no se puede distinguir lo que escribió el cliente de
+                // lo que armó un botón, y el análisis de texto queda contaminado.
+                'Origen',
+                'Atajo',
+                'Idioma',
+                'Platos ofrecidos',
+                'Faltante declarado',
+                'Modelo',
+                'Tokens entrada',
+                'Tokens cacheados',
+                'Tokens salida',
                 'IP',
                 'User Agent',
             ]);
@@ -872,6 +884,15 @@ class AnalyticsController extends Controller
                     $conversation->bot_response,
                     $conversation->used_openai ? 'Sí' : 'No',
                     $conversation->response_time_ms,
+                    $conversation->origen,
+                    $conversation->metadata['chip']['label'] ?? '',
+                    $conversation->idioma,
+                    $conversation->platos_sugeridos,
+                    $conversation->falta,
+                    $conversation->metadata['consumo']['modelo'] ?? '',
+                    $conversation->metadata['consumo']['tokens_entrada'] ?? '',
+                    $conversation->metadata['consumo']['tokens_cacheados'] ?? '',
+                    $conversation->metadata['consumo']['tokens_salida'] ?? '',
                     $conversation->user_ip,
                     $conversation->user_agent,
                 ]);
