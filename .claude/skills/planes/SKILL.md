@@ -27,6 +27,10 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 | Pro     | pro     | 5000            | gpt-4o-mini  | analytics, excel, promociones  |
 | Premium | premium | null (ilimitado)| gpt-4o       | analytics, excel, promociones, customizacion |
 
+⚠️ Esta tabla es lo que **siembra la migración**, no necesariamente lo que hay en la DB: los
+planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico tiene
+`promociones`). Antes de afirmar algo sobre un plan, **consultá la DB**, no esta tabla.
+
 ## Helpers en `Comercio` (fuente de verdad de la lógica)
 
 - `planEfectivo()` — el plan asignado, o `Plan::default()` (Básico) como fallback.
@@ -39,10 +43,21 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 
 ## Dónde se aplican los límites
 
-- **Chatbot** (`ChatbotController@chat`): antes de llamar a la IA chequea `puedeUsarIA()`.
+- **Chatbot** (`ChatbotController@chat` y `@chatStream`): antes de llamar a la IA chequea `puedeUsarIA()`.
   Si se agotó → responde un mensaje amable (`success: true`, `used_openai: false`), **no** llama a OpenAI.
   Tras una respuesta OK → `registrarUsoIA()`. El modelo y `max_tokens` los toma `ChatbotService`
   desde `$comercio->modeloIA()` / `maxTokensChat()` (ya **no** están hardcodeados).
+  **Verificado end-to-end (2026-08-10):** con la cuota al tope, las dos rutas devuelven el mensaje
+  amable en 18-25ms (contra ~2700ms de una llamada real, o sea que no toca la red), el contador
+  no se incrementa, y queda logueado con `used_openai=false` — así el comercio ve en analytics la
+  demanda que no pudo atender. El reset mensual sin cron también anda: un comercio con
+  `ia_mensajes_periodo` de un mes anterior devuelve 0 en `mensajesIaUsados()`.
+- 🐛 **Bug conocido — el stream cobra cuota aunque OpenAI falle.** En `chatStream()` el
+  `try/catch` alrededor de `streamMessage()` es interno, así que si la llamada explota y se
+  responde con `generateFallbackResponse()`, igual se ejecuta `registrarUsoIA()`: no se gastó
+  un token y el comercio pierde un mensaje de su cuota. La ruta sin stream **no** tiene el
+  problema (ahí la excepción sale al catch de afuera y nunca contabiliza). Son dos
+  comportamientos distintos para lo mismo, y el que usa el front es el que cobra de más.
 - **Feature gating** (super admin siempre pasa):
   - `analytics` → inline en `AnalyticsController` (vista, export): aborta 403 sin la feature.
   - `excel` y `promociones` → vía **middleware `plan.feature:<feature>`** (`App\Http\Middleware\EnsurePlanFeature`,
@@ -53,7 +68,43 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
     entera. **Borrar la portada nunca se bloquea**: si un comercio baja de plan tiene que poder
     sacarla igual. Ver la skill `portada`.
 - **Dashboard**: `DashboardController` pasa `$comerciosSinCuotaIA`; la vista muestra un aviso amarillo
-  cuando un comercio llegó al límite.
+  cuando un comercio llegó al límite. **Pendiente:** el aviso aparece recién cuando ya se agotó,
+  no al acercarse. Avisar al 80% le daría margen al comercio para pedir el upgrade antes de
+  quedarse sin asistente en pleno servicio.
+
+## `max_tokens_chat` — medido, no sirve como diferenciador
+
+Topea **la respuesta** del bot, no el prompt. Llega a OpenAI desde `ChatbotService`
+(línea ~80 en la ruta normal, ~1065 en el stream). Validado 50-4000 en `PlanController`.
+
+**El techo nunca se alcanza.** Medido sobre 137 respuestas reales con `used_openai=true`:
+
+| mediana | p90 | máximo | respuestas que rozan un tope de 600 |
+|---------|-----|--------|--------------------------------------|
+| 131 tok | 191 | 497    | 0                                    |
+
+Con topes de 600/900/1200 por plan, ni una sola respuesta se acercó. Consecuencias:
+
+- **Subirlo es gratis**: `max_tokens` es un techo, no una reserva; solo se paga lo generado.
+- **Como feature de plan es humo**: vender "respuestas más largas" cuando nada pasa de 497
+  tokens no le cambia nada al comercio. Los diferenciadores reales son `modelo_ia` y
+  `mensajes_ia_mes`.
+- **Igual conviene NO dejarlo ilimitado**: es el único freno contra una generación desbocada
+  (`gpt-4o` puede emitir ~16k tokens de salida, que son los caros) y contra una respuesta
+  ilegible en un celular. Mantenerlo cuesta cero porque nunca se activa.
+- **Recomendación pendiente de decisión del usuario:** igualar los tres planes en ~1500 desde
+  `/admin/plans` (sin deploy) y dejar de diferenciarlo. Al 2026-08-10 no está aplicado.
+
+⚠️ **El prompt de entrada pesa mucho más que la salida** y `max_tokens` no lo toca: medido,
+el system prompt de un comercio con menú cargado da ~5.000 tokens (20k chars) y viaja **entero
+en cada mensaje**, más el historial. El input tiene su propio tope, flojo y sin relación con el
+plan: `trimContext($contexto, 48000)` en `ChatbotService`. Si alguna vez hay que bajar el costo
+de IA de verdad, la palanca está ahí y en el modelo, no en `max_tokens_chat`.
+
+⚠️ Cuando trunca, **corta a mitad de frase y se le muestra así al cliente**. El código contempla
+que el marcador `[[PLATOS:...]]` quede partido (ver comentario en `ChatbotService::separarMarcador`)
+pero no hace nada con la prosa. OpenAI devuelve `finish_reason: "length"` cuando truncó; hoy
+ese dato no se lee.
 
 ## En el landing público (marketing)
 
@@ -96,7 +147,10 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
   toggle por JS) en el mismo `app.blade.php` — si agregás un link al nav, agregalo en **ambos** (desktop + mobile).
 - **Sembrar planes en la migración**, no en `DatabaseSeeder` (que retorna temprano en producción).
 - `mensajes_ia_mes = null` significa **ilimitado** en todos lados (no 0).
-- El `throttle:20,1` por IP del chat es anti-abuso, **independiente** del plan; no tocarlo por planes.
+- El throttle del chat (limitador `chat-ia`: 20/min por dispositivo + 60/min por IP, definido en
+  `AppServiceProvider`) es anti-abuso y **independiente** del plan; no tocarlo por planes. Son dos
+  capas distintas: el throttle protege el servidor y se puede esquivar rotando el `session_id`;
+  la cuota protege la factura de OpenAI y es server-side, no se esquiva.
 - Tras tocar rutas/vistas en local: `php artisan optimize:clear` (o `view:clear`) + Ctrl+F5.
 
 ## Cómo extender

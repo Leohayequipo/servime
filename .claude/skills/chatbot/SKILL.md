@@ -147,8 +147,8 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 
 | Opción | Banco | Dietas | Costo (1k charlas) | Veredicto |
 |---|---|---|---|---|
-| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el recomendado** (ago-2026) |
-| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | lo que se usa hoy; falla en dietas |
+| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el elegido**; ya está en Premium (ago-2026) |
+| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | Básico y Pro; falla en dietas |
 | gpt-5-nano | ok | 3/3 | $11,69 | razona 4.692 tokens: 3× más caro |
 | gpt-5-mini | ok | 3/3 | $32,56 | razona 2.534 tokens: 8× |
 | gpt-4.1 | ok | 3/3 | $40,22 | 9× |
