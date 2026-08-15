@@ -174,7 +174,61 @@ Ideas sin arrancar (no son deuda, son features nuevas):
   front convierta en botón, reusando la cañería de `[[PLATOS]]`. **No** habilitar links
   markdown genéricos: dejaría entrar como enlace clickeable cualquier URL alucinada por el
   modelo o colada en el texto de un menú importado.
-- **Disponibilidad / sin stock de un plato.** Hoy no existe el concepto: un plato está en
-  el menú o no está, y el asistente lo recomienda igual aunque en la cocina se haya
-  terminado. Es el próximo tema a diseñar.
+- **Disponibilidad / sin stock de un plato.** Diseñado el 14/08/2026, **pendiente de
+  implementar**. Ver el detalle abajo.
+
+---
+
+## 📋 Pendiente diseñado: disponibilidad de platos ("hoy no hay")
+
+Decidido el 14/08/2026, sin escribir una línea de código todavía. Se anota completo para
+no volver a discutirlo desde cero.
+
+**El problema.** Hoy no existe el concepto: un plato está en el menú o no está. El
+asistente recomienda con total seguridad algo que en la cocina se terminó hace dos horas
+—y si es plato estrella, lo recomienda **primero**—, con foto y precio, que le da al
+cliente la sensación de que está garantizado. La IA vende lo que el local no tiene.
+
+**1. El dato NO va en el JSON del menú.** El import de Excel rearma cada plato desde cero
+y borra lo que no viaje en una columna (así se perdían las estrellas, arreglado en
+`5eb1676`). Acá sería peor: este dato cambia varias veces por día. Va en tabla aparte,
+`plato_disponibilidad` (`comercio_id`, `plato_id`, `disponible_hasta`, `motivo`), colgada
+del id numérico del plato que ya asigna `MenuController` (~L479). Al reimportar hay que
+**limpiar las marcas huérfanas**: si la planilla vino sin la columna ID los ids se
+reasignan, y es mejor perder la marca que apuntar al plato equivocado.
+
+**2. Tiene que apagarse solo.** Por defecto vence al cierre del servicio. Si "sin stock"
+dura hasta que alguien lo desmarque, en dos semanas media carta está marcada, nadie confía
+y el comercio deja de usarlo. Un dato que miente con confianza es peor que no tener el
+dato: es el mismo problema de vuelta.
+
+**3. Se marca desde el celular, en dos toques.** Quien sabe que se acabaron las milanesas
+es el mozo a las 21:30, no el dueño en la compu. Lista con switch y buscador arriba. Si
+tarda más que unos segundos no lo usa nadie y la data se pudre.
+
+**4. El asistente tiene que SABERLO, no ignorarlo.** Si el plato simplemente se saca de
+`platosDelMenu()`, el bot responde "no tenemos milanesas" y el cliente entiende que el
+local **nunca** tiene: peor que el problema original. El plato entra al prompt **marcado**,
+con instrucción de convertirlo en venta ("hoy nos quedamos sin milanesas, pero tengo un
+lomo que va parecido"). Ahí está el valor: el "no" pasa a ser una recomendación.
+- Tocar también `platosQueCoinciden()`, que valida el marcador `[[FALTA]]`: si un plato sin
+  stock deja de matchear, se cuenta como *demanda insatisfecha*. "No lo vendo" y "hoy se
+  acabó" son cosas distintas, y mezclarlas ensucia el widget de sugerencias que ya anda.
+- Las tarjetas de plato no deberían salir con botón de agregar.
+
+**5. Menú clásico y carrito.** Atenuado con "hoy no disponible", **no escondido**: si se
+esconde, el cliente que lo vino a buscar scrollea y no entiende nada. En el carrito,
+bloquear el alta y avisarle al cliente si ya lo tenía adentro — nunca borrárselo por atrás.
+
+**6. De regalo, dato de compras.** "Cuántas veces te pidieron algo que no tenías" es
+información de proveedor (si las milanesas se acaban 4 de 5 viernes, se está comprando
+mal). Se engancha con `AnalyticsInsightsService`, que ya hace demanda insatisfecha.
+
+**❌ Lo que se descartó: stock con cantidades reales.** El carrito es de *pre-pedido*:
+nadie confirma desde la cocina y no hay integración con el punto de venta. Un contador que
+arranca en 12 milanesas se desincroniza el primer día y queda un número que miente con
+precisión. Binario + vencimiento automático es lo honesto y lo que se va a usar.
+
+**Primer corte que ya sirve:** tabla + switch en el panel + plato marcado en el prompt y en
+el menú clásico + auto-reset diario. Carrito y analytics en una segunda vuelta.
 </content>
