@@ -92,10 +92,24 @@ if [ -d "$PROJECT_DIR/storage/app/public" ]; then
     cp -r "$PROJECT_DIR/storage/app/public/"* "$PUBLIC_HTML_DIR/storage/" 2>/dev/null || true
 fi
 
-# 9. Ejecutar migraciones (no falla)
+# 9. Ejecutar migraciones
+#
+# NO aborta el deploy, a propósito: cortar acá dejaría el código nuevo con el esquema
+# viejo y encima sin las cachés reconstruidas, que es peor que seguir. Pero el error
+# YA NO se esconde: antes iba a /dev/null y una migración fallida era invisible e
+# indiagnosticable —el paso 12 tampoco la detecta, porque el menú público sigue
+# respondiendo con una columna de menos y lo que se rompe es el panel al guardar—.
+# Se muestra, se recuerda, y al final el deploy avisa en vez de decir que salió bien.
 echo -e "${YELLOW}🗄️ Ejecutando migraciones...${NC}"
 cd "$PROJECT_DIR"
-php artisan migrate --force 2>/dev/null || echo "⚠️ Migrations falló, continuando..."
+MIGRACIONES_OK=1
+if ! php artisan migrate --force 2>&1; then
+    MIGRACIONES_OK=0
+fi
+# Aunque el comando devuelva 0, confirmar que no quedó ninguna sin aplicar.
+if php artisan migrate:status 2>/dev/null | grep -q "Pending"; then
+    MIGRACIONES_OK=0
+fi
 
 # 10. Limpiar cachés (no falla)
 echo -e "${YELLOW}🧽 Limpiando cachés...${NC}"
@@ -123,4 +137,15 @@ else
 fi
 
 echo ""
+
+# El corte va acá abajo de todo, con los 12 pasos ya ejecutados: el servidor queda
+# igual que siempre y no se saltea nada. Lo único que cambia es que GitHub Actions se
+# pone en rojo en vez de verde, así la falla se ve sin tener que ir a leer el log.
+if [ "$MIGRACIONES_OK" = "0" ]; then
+    echo -e "${YELLOW}⚠️  DEPLOY CON PROBLEMAS: quedaron migraciones sin aplicar.${NC}"
+    echo -e "${YELLOW}   El sitio público sigue en pie, pero el panel va a tirar 500${NC}"
+    echo -e "${YELLOW}   al guardar. Entrar por SSH y correr: php artisan migrate --force${NC}"
+    exit 1
+fi
+
 echo -e "${GREEN}🎉 ¡Deploy actualizado completado!${NC}"
