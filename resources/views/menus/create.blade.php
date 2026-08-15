@@ -668,6 +668,75 @@
                                         <button type="button" onclick="elegirEmoji('')"
                                                 class="w-full mt-1 text-xs text-text-secondary hover:text-red-400 py-1">Sin ícono</button>
                                     </div>
+
+                                    {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
+                                         porque es donde el comercio configura lo que ve el cliente; pero
+                                         el dato se guarda en `comercios`, no en el menú: el link es de la
+                                         ficha del negocio y no se tiene que perder al subir otra carta. --}}
+                                    @php $tieneLink = filled($comercio->google_review_url); @endphp
+                                    <div class="mt-6 pt-6 border-t border-accent-gray/40" id="bloque-resenas"
+                                         data-url-comercio="{{ route('comercios.edit', $comercio) }}">
+                                        <label class="block text-sm font-medium text-text-secondary mb-1">Reseñas en Google</label>
+                                        <p class="text-xs text-text-secondary mb-4">
+                                            Al cliente que usó el asistente y ya lleva un rato en la mesa se le
+                                            ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
+                                        </p>
+
+                                        <div class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
+                                                    {{ $tieneLink ? '' : 'opacity-60' }}">
+                                            <button type="button"
+                                                    id="resenas-switch"
+                                                    role="switch"
+                                                    aria-checked="{{ $comercio->resenas_activo ? 'true' : 'false' }}"
+                                                    aria-label="Pedir reseña en Google"
+                                                    onclick="alternarResenas(this)"
+                                                    @disabled(! $tieneLink)
+                                                    class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
+                                                           {{ $comercio->resenas_activo ? 'bg-green-500' : 'bg-accent-gray' }}">
+                                                <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
+                                                             {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
+                                            </button>
+                                            <div class="min-w-0">
+                                                <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
+                                                <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
+                                                    @if(! $tieneLink)
+                                                        Cargá primero el link en
+                                                        <a href="{{ route('comercios.edit', $comercio) }}" class="text-accent-blue hover:underline">los datos del comercio</a>.
+                                                    @elseif($comercio->resenas_activo)
+                                                        Activo — se le muestra a quien cumpla las condiciones.
+                                                    @else
+                                                        Listo para activar.
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {{-- Los textos van vacíos cuando el comercio no los tocó, con el
+                                             de fábrica como placeholder: así se ve qué va a salir sin
+                                             tener que copiarlo, y borrar el campo vuelve al de fábrica. --}}
+                                        <div class="mt-3 space-y-2">
+                                            <input type="text" id="resena-titulo" maxlength="80"
+                                                   value="{{ $comercio->resena_titulo }}"
+                                                   placeholder="{{ \App\Models\Comercio::RESENA_TITULO }}"
+                                                   class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                            <textarea id="resena-texto" maxlength="200" rows="2"
+                                                      placeholder="{{ \App\Models\Comercio::RESENA_TEXTO }}"
+                                                      class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary resize-none">{{ $comercio->resena_texto }}</textarea>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" onclick="guardarTextosResena(this)"
+                                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar textos</button>
+                                                <span class="text-xs text-text-secondary" id="resena-estado"></span>
+                                            </div>
+                                            <p class="text-xs text-text-secondary/70">
+                                                Vacío = se usa el texto por defecto. Ojo: lo que escribas se
+                                                muestra tal cual, sin traducir al idioma del cliente.
+                                            </p>
+                                        </div>
+
+                                        {{-- Los números NO van acá: esta pantalla es para configurar.
+                                             Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
+                                             junto al resto de las métricas del menú. --}}
+                                    </div>
                                 </div>
                             @endif
 
@@ -1786,6 +1855,100 @@
                 } catch (error) {
                     console.error('Error al guardar atajos:', error);
                     showError('Error al guardar los atajos');
+                    estado.textContent = '';
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+
+            // Prende/apaga el pedido de reseña. Guarda al toque, sin botón aparte: es un
+            // solo booleano y esperar un "Guardar" para un interruptor confunde.
+            window.alternarResenas = async function(btn) {
+                const activo = btn.getAttribute('aria-checked') === 'true';
+                const nuevo = !activo;
+                const ayuda = document.getElementById('resenas-ayuda');
+                const perilla = btn.querySelector('span');
+
+                // Se pinta antes de que responda el servidor y se revierte si falla: el
+                // interruptor tiene que sentirse inmediato.
+                const pintar = (on) => {
+                    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+                    btn.classList.toggle('bg-green-500', on);
+                    btn.classList.toggle('bg-accent-gray', !on);
+                    perilla.classList.toggle('translate-x-5', on);
+                    ayuda.textContent = on
+                        ? 'Activo — se le muestra a quien cumpla las condiciones.'
+                        : 'Listo para activar.';
+                };
+
+                pintar(nuevo);
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch(`{{ route('menus.update.resenas', ['comercio' => $comercio->slug]) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ activo: nuevo })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        pintar(activo);
+                        showError(data.error || 'No se pudo cambiar la configuración');
+                        return;
+                    }
+
+                    pintar(data.activo);
+                    showTemporaryMessage(data.activo ? 'Reseñas activadas' : 'Reseñas desactivadas', 'success');
+                } catch (error) {
+                    console.error('Error al cambiar reseñas:', error);
+                    pintar(activo);
+                    showError('Error al cambiar la configuración');
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+
+            // Guarda los textos del pedido de reseña. Van con botón propio y no al toque
+            // como el interruptor: escribiendo, un guardado por tecla sería absurdo.
+            window.guardarTextosResena = async function(btn) {
+                const estado = document.getElementById('resena-estado');
+                btn.disabled = true;
+                estado.textContent = 'Guardando...';
+
+                try {
+                    const response = await fetch(`{{ route('menus.update.resenas', ['comercio' => $comercio->slug]) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            titulo: document.getElementById('resena-titulo').value.trim(),
+                            texto: document.getElementById('resena-texto').value.trim(),
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        showError(data.error || 'No se pudieron guardar los textos');
+                        estado.textContent = '';
+                        return;
+                    }
+
+                    estado.textContent = data.por_defecto ? 'Sin textos propios: vuelve el de fábrica' : '✓ Guardado';
+                    showTemporaryMessage('Textos guardados', 'success');
+                    setTimeout(() => { estado.textContent = ''; }, 4000);
+                } catch (error) {
+                    console.error('Error al guardar textos de reseña:', error);
+                    showError('Error al guardar los textos');
                     estado.textContent = '';
                 } finally {
                     btn.disabled = false;

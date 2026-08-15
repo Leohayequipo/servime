@@ -345,6 +345,56 @@
                             <p class="text-text-secondary text-center py-4">Todavía nadie tocó un atajo.</p>
                         @endif
                     </div>
+
+                    {{-- Reseñas en Google. Se prende y se le cambia el texto desde la pantalla
+                         del menú; acá se mira si funciona. --}}
+                    @if($comercio->pideResena() || $resenaStats['impresiones'] > 0)
+                        <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
+                            <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                                <x-icono name="heart" class="w-4 h-4 flex-none opacity-60" />
+                                Reseñas en Google
+                                <x-ayuda titulo="Reseñas en Google"
+                                         texto="A quien usó el asistente y ya lleva un rato en la mesa le ofrecemos dejar su reseña. Aparece recién cuando vuelve a mirar el celular, así no lo interrumpe mientras come. Si muchos lo cierran, probá con otro texto. Si la mayoría ni lo mira, el tema no es qué dice sino cuándo aparece. Los textos los cambiás desde la pantalla de tu menú."
+                                         admin="Eventos resena_view / resena_click / resena_dismiss, contados por sesión y no por evento. «Ni lo miraron» es la resta, topeada en cero: si se pierde una impresión (bloqueador, pestaña cerrada antes del beacon) los clicks pueden superarlas. Se muestra una vez por dispositivo y no vuelve por RESENA_DIAS_GRACIA días." />
+                            </h3>
+                            <p class="text-text-secondary text-sm mb-4">Una reseña nueva vale más que cualquier métrica de acá.</p>
+
+                            @if($resenaStats['impresiones'] > 0)
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <div class="text-2xl font-bold text-text-primary tabular-nums">{{ $resenaStats['impresiones'] }}</div>
+                                        <div class="text-xs text-text-secondary mt-0.5">Se les mostró</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-green-500 tabular-nums">{{ $resenaStats['clicks'] }}</div>
+                                        <div class="text-xs text-text-secondary mt-0.5">Fueron a Google</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-amber-500 tabular-nums">{{ $resenaStats['cierres'] }}</div>
+                                        <div class="text-xs text-text-secondary mt-0.5">Lo cerraron</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-text-secondary tabular-nums">{{ $resenaStats['ignorados'] }}</div>
+                                        <div class="text-xs text-text-secondary mt-0.5">Ni lo miraron</div>
+                                    </div>
+                                </div>
+
+                                @php $tasa = (int) round($resenaStats['clicks'] * 100 / max($resenaStats['impresiones'], 1)); @endphp
+                                <div class="mt-4 pt-4 border-t border-accent-gray/40">
+                                    <p class="text-text-secondary text-sm">
+                                        De cada 100 que lo vieron, <span class="text-text-primary font-semibold">{{ $tasa }}</span> fueron a dejar la reseña.
+                                        @if($resenaStats['cierres'] > $resenaStats['clicks'])
+                                            Lo cierran más de lo que lo tocan: probá cambiando el texto.
+                                        @elseif($resenaStats['ignorados'] > $resenaStats['impresiones'] / 2)
+                                            La mayoría ni lo registra: el problema es cuándo aparece, no qué dice.
+                                        @endif
+                                    </p>
+                                </div>
+                            @else
+                                <p class="text-text-secondary text-center py-4">Todavía no se le mostró a nadie.</p>
+                            @endif
+                        </div>
+                    @endif
                 </div>
 
             <!-- Dispositivo · Visitantes · Micrófono -->

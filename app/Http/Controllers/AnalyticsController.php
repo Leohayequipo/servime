@@ -246,8 +246,13 @@ class AnalyticsController extends Controller
 
         $chipStats = \App\Support\Chip::rendimiento($comercioId, $periodo);
 
+        // Pedido de reseña en Google. Se configura desde la pantalla del menú; los números
+        // viven acá, con el resto de las métricas.
+        $resenaStats = $comercio->estadisticasResenas($periodo);
+
         return view('analytics.comercio', compact(
             'chipStats',
+            'resenaStats',
             'comercio',
             'threads',
             'threadsTotal',

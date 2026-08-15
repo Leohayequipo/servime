@@ -239,6 +239,28 @@
                                     <x-input-error :messages="$errors->get('tagline')" class="mt-1" />
                                 </div>
 
+                                {{-- Link de reseñas de Google. Vive acá, en el comercio, y no en
+                                     el menú: es de la ficha del negocio y no cambia cuando suben
+                                     una carta nueva. El interruptor para mostrarlo está en el
+                                     editor de menú, junto a los atajos. --}}
+                                <div class="md:col-span-2">
+                                    <label for="google_review_url" class="block text-sm font-medium text-text-secondary mb-2">
+                                        Link de reseñas de Google
+                                    </label>
+                                    <input type="url"
+                                           id="google_review_url"
+                                           name="google_review_url"
+                                           maxlength="255"
+                                           value="{{ old('google_review_url', $comercio->google_review_url) }}"
+                                           placeholder="https://g.page/r/..."
+                                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                    <p class="text-xs text-text-secondary mt-1">
+                                        Se saca del perfil del negocio en Google, en «Pedir reseñas».
+                                        Cargado el link, se activa desde el editor del menú.
+                                    </p>
+                                    <x-input-error :messages="$errors->get('google_review_url')" class="mt-1" />
+                                </div>
+
                             </div>
                         </div>
                     </div>

@@ -2648,6 +2648,63 @@ class MenuController extends Controller
         }
     }
 
+    /**
+     * Prende o apaga el pedido de reseña en Google.
+     *
+     * El link se carga en los datos del comercio; acá solo se decide si se muestra. Sin
+     * link no se puede activar: el botón abriría la nada, y el comercio quedaría creyendo
+     * que está pidiendo reseñas.
+     */
+    public function updateResenas(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
+        }
+
+        // Parcial a propósito: el interruptor manda `activo` y los textos van por su
+        // propio botón. Cada uno pisa solo lo suyo.
+        $validated = $request->validate([
+            'activo' => 'sometimes|boolean',
+            'titulo' => 'sometimes|nullable|string|max:80',
+            'texto' => 'sometimes|nullable|string|max:200',
+        ]);
+
+        if (($validated['activo'] ?? false) && blank($comercio->google_review_url)) {
+            return response()->json([
+                'error' => 'Primero cargá el link de reseñas en los datos del comercio.',
+            ], 422);
+        }
+
+        try {
+            if ($request->has('activo')) {
+                $comercio->resenas_activo = $validated['activo'];
+            }
+
+            // Vacío guarda NULL, no cadena vacía: es lo que hace que vuelva el texto de
+            // fábrica en vez de mostrarle al cliente un bloque sin título.
+            if ($request->has('titulo')) {
+                $comercio->resena_titulo = filled($validated['titulo'] ?? null) ? trim($validated['titulo']) : null;
+            }
+            if ($request->has('texto')) {
+                $comercio->resena_texto = filled($validated['texto'] ?? null) ? trim($validated['texto']) : null;
+            }
+
+            $comercio->save();
+
+            return response()->json([
+                'success' => true,
+                'activo' => $comercio->resenas_activo,
+                'por_defecto' => blank($comercio->resena_titulo) && blank($comercio->resena_texto),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al guardar reseñas: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al guardar la configuración.'], 500);
+        }
+    }
+
     public function updateChatbotConfig(Request $request, Comercio $comercio)
     {
         $user = auth()->user();

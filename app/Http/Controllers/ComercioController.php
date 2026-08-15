@@ -225,6 +225,11 @@ class ComercioController extends Controller
             'page_description' => 'nullable|string|max:500',
             'favicon_url' => 'nullable|string|max:255',
             'pedido_habilitado' => 'nullable|boolean',
+
+            // Link de reseñas de Google. Se restringe a http/https a propósito: termina
+            // como `href` en el menú público, y `url` a secas deja pasar `javascript:`
+            // con ciertos formatos.
+            'google_review_url' => 'nullable|url:http,https|max:255',
         ]);
 
         $comercio->nombre = $validated['nombre'];
@@ -273,6 +278,20 @@ class ComercioController extends Controller
         $comercio->page_title = $validated['page_title'] ?? null;
         $comercio->page_description = $validated['page_description'] ?? null;
         $comercio->favicon_url = $validated['favicon_url'] ?? null;
+
+        // Este NO usa `?? null` como sus vecinos, a propósito. Hay requests parciales que
+        // reusan este endpoint —borrar el logo manda su propio FormData con un puñado de
+        // campos—, y con el patrón de al lado borrar el logo le borraba al comercio el
+        // link de reseñas sin que nadie tocara ese campo. Solo se escribe si vino.
+        if ($request->has('google_review_url')) {
+            $comercio->google_review_url = $validated['google_review_url'] ?? null;
+
+            // Sin link no hay nada que mostrar: el switch queda apagado solo, así no
+            // queda "activo" apuntando a la nada.
+            if (blank($comercio->google_review_url)) {
+                $comercio->resenas_activo = false;
+            }
+        }
 
         // Manejar eliminación de logo
         if ($request->has('delete_logo') && $request->delete_logo == '1') {

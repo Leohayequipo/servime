@@ -21,6 +21,16 @@ class TrackingController extends Controller
         'mic_start',      // arrancó a dictar por voz
         'categoria_tap',  // tocó una categoría en el chat (data.nombre, el del menú sin traducir)
         'tag_tap',        // filtró por una etiqueta del menú: sin TACC, vegano... (data.nombre)
+
+        // Pedido de reseña en Google. Los DOS hacen falta: con los clicks solos, sin
+        // denominador, no se puede saber si el bloque funciona o si simplemente se
+        // mostró mucho.
+        'resena_view',    // se le mostró el bloque de reseña
+        'resena_click',   // tocó el botón y se fue a Google
+        // Cerrarlo NO es lo mismo que ignorarlo: el que cierra lo vio y dijo que no (el
+        // texto no convence), el que ignora ni lo registró (el momento está mal). Sin
+        // este evento las dos cosas caen en la misma bolsa y no se sabe qué corregir.
+        'resena_dismiss', // lo cerró con el "Ahora no"
     ];
 
     /**

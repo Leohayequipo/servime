@@ -1268,6 +1268,9 @@
             
             chatMessages.appendChild(messageDiv);
             if (sender === 'user') {
+                // Cuenta para el pedido de reseña: mide que haya usado el asistente de
+                // verdad, no que haya entrado y rebotado.
+                window.smResena?.contarMensaje();
                 scrollToBottom();
             } else {
                 // La respuesta del bot: mostrar desde la primera línea
@@ -1685,5 +1688,10 @@
     </script>
 
     @include('menu.partials.tracking', ['trackView' => 'chat'])
+
+    {{-- Va DESPUÉS del tracking: el bloque usa window.smTrack para registrar que se mostró. --}}
+    @if($comercio->pideResena())
+        @include('menu.partials.resena')
+    @endif
 </body>
 </html>

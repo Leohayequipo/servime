@@ -43,7 +43,21 @@ class Comercio extends Model
         'page_description',
         'favicon_url',
         'pedido_habilitado',
+        'google_review_url',
+        'resenas_activo',
+        'resena_titulo',
+        'resena_texto',
     ];
+
+    /**
+     * Textos por defecto del pedido de reseña.
+     *
+     * No se guardan en la columna: viven acá y se usan cuando el comercio no editó nada,
+     * así una mejora de redacción llega a todos los que nunca la tocaron.
+     */
+    public const RESENA_TITULO = '¿Cómo la pasaron?';
+
+    public const RESENA_TEXTO = 'Si te gustó, contalo en Google. ¡Gracias!';
 
     /**
      * Get the route key for the model.
@@ -163,10 +177,69 @@ class Comercio extends Model
         'pedido_habilitado' => 'boolean',
         'chatbot_config' => 'array',
         'chips' => 'array',
+        'resenas_activo' => 'boolean',
         'tema_derivado' => 'array',
         'horarios' => 'array',
         'slug_manual' => 'boolean',
     ];
+
+    /**
+     * ¿Hay que pedirle la reseña de Google al cliente en este menú?
+     *
+     * Las dos condiciones juntas: el switch prendido NO alcanza si no hay link, porque el
+     * botón abriría la nada. Se pregunta desde la vista pública, así que tiene que poder
+     * responder sin depender de nadie más.
+     */
+    public function pideResena(): bool
+    {
+        return $this->resenas_activo && filled($this->google_review_url);
+    }
+
+    /** El título del pedido de reseña: el del comercio, o el de fábrica. */
+    public function resenaTitulo(): string
+    {
+        return filled($this->resena_titulo) ? $this->resena_titulo : self::RESENA_TITULO;
+    }
+
+    /** El texto del pedido de reseña: el del comercio, o el de fábrica. */
+    public function resenaTexto(): string
+    {
+        return filled($this->resena_texto) ? $this->resena_texto : self::RESENA_TEXTO;
+    }
+
+    /**
+     * Cuántas veces se mostró el pedido de reseña y cuántas lo tocaron.
+     *
+     * Se cuentan sesiones y no eventos: el bloque se muestra una sola vez por sesión, pero
+     * un evento repetido (reintento de red, doble toque) inflaría el número y arruinaría
+     * el porcentaje, que es lo único que dice si sirve.
+     *
+     * @return array{impresiones:int, clicks:int, cierres:int, ignorados:int}
+     */
+    public function estadisticasResenas(int $dias = 30): array
+    {
+        $contar = fn (string $evento) => \Illuminate\Support\Facades\DB::table('tracking_events')
+            ->where('comercio_id', $this->id)
+            ->where('event', $evento)
+            ->when($dias > 0, fn ($q) => $q->where('created_at', '>=', now()->subDays($dias)))
+            ->distinct()
+            ->count('session_id');
+
+        $impresiones = $contar('resena_view');
+        $clicks = $contar('resena_click');
+        $cierres = $contar('resena_dismiss');
+
+        return [
+            'impresiones' => $impresiones,
+            'clicks' => $clicks,
+            'cierres' => $cierres,
+            // Ni lo tocaron ni lo cerraron: lo tuvieron delante y no lo registraron. Es
+            // problema de MOMENTO, no de texto, y por eso se cuenta aparte del cierre.
+            // Nunca negativo: si el tracking pierde una impresión (bloqueador, pestaña
+            // cerrada antes del beacon) los clicks pueden superarlas.
+            'ignorados' => max(0, $impresiones - $clicks - $cierres),
+        ];
+    }
 
     /** Nombres de los días, indexados por día ISO (1 = lunes). */
     public const DIAS = [
