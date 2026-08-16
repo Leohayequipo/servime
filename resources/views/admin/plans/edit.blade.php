@@ -64,11 +64,20 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Modelo IA</label>
+                        {{-- La lista sale del modelo e incluye SIEMPRE el que el plan ya tiene,
+                             aunque se haya cargado por SQL y no esté entre los ofrecidos: si no,
+                             guardar cualquier otro campo del plan lo cambiaba en silencio al
+                             primero de la lista. --}}
                         <select name="modelo_ia" class="input-field">
-                            @foreach(['gpt-4o-mini', 'gpt-4o'] as $modelo)
+                            @foreach($plan->modelosParaElegir() as $modelo)
                                 <option value="{{ $modelo }}" @selected(old('modelo_ia', $plan->modelo_ia) === $modelo)>{{ $modelo }}</option>
                             @endforeach
                         </select>
+                        <p class="text-text-secondary text-xs mt-1">
+                            <span class="text-accent-blue">gpt-5.6-luna</span> es el recomendado:
+                            salió más barato que el mini y es el único que acierta las consultas
+                            de dietas (sin TACC, vegano).
+                        </p>
                     </div>
                     <div>
                         <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Max tokens chat</label>
