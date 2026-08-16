@@ -195,6 +195,24 @@ class Comercio extends Model
         return $this->resenas_activo && filled($this->google_review_url);
     }
 
+    /**
+     * Los cuatro archivos de la portada: el original y los tres derivados.
+     *
+     * El original va incluido porque es el que muestra el panel para elegir el encuadre:
+     * sin él no se ve la foto y no hay nada sobre lo que arrastrar el marcador.
+     *
+     * @return array<int, string|null>
+     */
+    public function archivosPortada(): array
+    {
+        return [
+            $this->portada_url,
+            $this->portada_fondo_url,
+            $this->portada_hero_url,
+            $this->portada_thumb_url,
+        ];
+    }
+
     /** El título del pedido de reseña: el del comercio, o el de fábrica. */
     public function resenaTitulo(): string
     {

@@ -636,6 +636,11 @@ class ComercioController extends Controller
 
         try {
             $comercio->update($temas->generar($comercio, $ruta) + ['portada_estado' => 'listo']);
+
+            // El servidor web sirve desde public_html, no desde storage. Sin esto la
+            // portada no se ve hasta el próximo deploy, que es lo único que la copiaba
+            // -y era la única imagen del sistema sin copia propia al subirse-.
+            \App\Support\PublicHtml::publicarVarias($comercio->archivosPortada());
         } catch (\Throwable $e) {
             \Log::error('Fallo al generar el tema en caliente: '.$e->getMessage(), [
                 'comercio_id' => $comercio->id,

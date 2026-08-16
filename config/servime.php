@@ -36,6 +36,23 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | public_html (Hostinger)
+    |--------------------------------------------------------------------------
+    |
+    | Laravel guarda en storage/app/public, pero el servidor web sirve desde
+    | public_html/storage, que es un DIRECTORIO CON COPIAS y no un symlink: el
+    | symlink se probó en Hostinger y falló, por eso se copia.
+    |
+    | La ruta estaba hardcodeada en seis funciones distintas. Acá está una sola
+    | vez, y además se puede apuntar a otro lado en los tests. El default es la
+    | de producción, así que el comportamiento no cambia.
+    |
+    */
+
+    'public_html' => env('PUBLIC_HTML_PATH', '/home/u560898880/domains/servime.net/public_html'),
+
     'resenas' => [
         'minutos' => (int) env('RESENA_MINUTOS', 20),
         'mensajes' => (int) env('RESENA_MENSAJES', 3),

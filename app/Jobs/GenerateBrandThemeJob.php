@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Comercio;
 use App\Services\BrandThemeService;
+use App\Support\PublicHtml;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -47,6 +48,11 @@ class GenerateBrandThemeJob implements ShouldQueue
 
         try {
             $comercio->update($temas->generar($comercio, $ruta) + ['portada_estado' => 'listo']);
+
+            // Igual que en la ruta en caliente: el servidor web sirve desde public_html.
+            // Va en los DOS lados a propósito; si estuviera solo en el controlador, las
+            // fotos grandes -las que caen en la cola- seguirían sin verse.
+            PublicHtml::publicarVarias($comercio->archivosPortada());
         } catch (\Throwable $e) {
             $comercio->update(['portada_estado' => 'error']);
 
