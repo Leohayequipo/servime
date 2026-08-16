@@ -590,6 +590,13 @@
                                           class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none"
                                           placeholder="Ej: Cervecería artesanal; recomendá siempre una cerveza para acompañar. La estrella es la Barrica Burger.">{{ $cfg['detalles'] ?? '' }}</textarea>
                             </div>
+                        </div>
+                    </div>
+
+                    {{-- Atajos y Reseñas van en tarjetas PROPIAS, no dentro de la de
+                         Chatbot. Antes colgaban de ahí separadas apenas por una línea, y
+                         la pantalla se leía como un formulario único e interminable: son
+                         tres cosas que se configuran y se guardan por separado. --}}
 
                             {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
                                  Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
@@ -608,8 +615,15 @@
                                     // es incómodo y en escritorio hay que acordarse de Win + .
                                     $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
                                 @endphp
-                                <div class="mt-6 pt-6 border-t border-accent-gray/40">
-                                    <label class="block text-sm font-medium text-text-secondary mb-1">Atajos</label>
+                    <div class="metric-card">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">⚡</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Atajos</h3>
+                        </div>
+                                <div>
+
                                     <p class="text-xs text-text-secondary mb-4">
                                         Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
                                         y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
@@ -687,8 +701,19 @@
                                          el dato se guarda en `comercios`, no en el menú: el link es de la
                                          ficha del negocio y no se tiene que perder al subir otra carta. --}}
                                     @php $tieneLink = filled($comercio->google_review_url); @endphp
-                                    <div class="mt-6 pt-6 border-t border-accent-gray/40" id="bloque-resenas"
-                                         data-url-comercio="{{ route('comercios.edit', $comercio) }}">
+                                </div>
+                    </div>
+
+                    <div class="metric-card" id="bloque-resenas"
+                         data-url-comercio="{{ route('comercios.edit', $comercio) }}">
+                        <div class="flex items-center mb-6">
+                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                                <span class="text-lg">⭐</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Reseñas en Google</h3>
+                        </div>
+                                <div>
+
                                         <label class="block text-sm font-medium text-text-secondary mb-1">Reseñas en Google</label>
                                         <p class="text-xs text-text-secondary mb-4">
                                             Al cliente que usó el asistente y ya lleva un rato en la mesa se le
@@ -749,13 +774,14 @@
                                         {{-- Los números NO van acá: esta pantalla es para configurar.
                                              Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
                                              junto al resto de las métricas del menú. --}}
-                                    </div>
                                 </div>
+                    </div>
+
                             @endif
 
                             <!-- Configuraciones -->
-                        </div>
-                    </div>
+
+
                 </div>
 
                 <!-- Columna Derecha: Personalización -->
