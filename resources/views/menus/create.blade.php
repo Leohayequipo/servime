@@ -615,11 +615,24 @@
                                         y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
                                     </p>
 
+                                    {{-- Cada pantalla en su propia tarjeta. Antes los dos grupos iban
+                                         uno abajo del otro sin nada que los separara y se leían como una
+                                         sola lista larga: se editaban los de la portada creyendo que
+                                         eran los del chat. Son dos pantallas distintas del cliente y se
+                                         miden por separado, así que también se ven por separado. --}}
                                     @foreach($superficies as $superficie => $info)
                                         @php $lista = $comercio->chipsDe($superficie); @endphp
-                                        <div class="mb-5" data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
-                                            <p class="text-xs text-text-secondary uppercase tracking-wide">{{ $info['titulo'] }}</p>
-                                            <p class="text-xs text-text-secondary/70 mb-2">
+                                        <div class="mb-4 p-4 bg-secondary-dark/60 border border-accent-gray rounded-xl"
+                                             data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
+                                            <div class="flex items-center justify-between gap-2 mb-1">
+                                                <p class="text-sm font-semibold text-text-primary">{{ $info['titulo'] }}</p>
+                                                {{-- Lo actualiza el JS al agregar o quitar: si fuera solo
+                                                     el valor del servidor, mentiría apenas tocás una fila. --}}
+                                                <span class="text-xs text-text-secondary/70 flex-none chips-contador">
+                                                    {{ count($lista) }}/{{ \App\Support\Chip::visibles($superficie) }}
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-text-secondary/70 mb-3">
                                                 {{ $info['ayuda'] }}
                                                 @if(empty($comercio->chips[$superficie] ?? null))
                                                     <span class="text-accent-blue">Ahora son automáticos.</span>
@@ -639,7 +652,7 @@
                                                                class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
                                                         <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
                                                                class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                                        <button type="button" onclick="this.closest('.chip-fila').remove()"
+                                                        <button type="button" onclick="quitarChip(this)"
                                                                 class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
                                                     </div>
                                                 @endforeach
@@ -1738,13 +1751,35 @@
             // ── Atajos (chips) ────────────────────────────────────────────────────────
             // El tope sale de cada bloque porque no es el mismo en las dos pantallas: la
             // portada entra en una grilla de tres y el chat banca cuatro.
+            // El contador del encabezado de cada tarjeta, en vivo.
+            window.actualizarContadorChips = function(bloque) {
+                const contador = bloque.querySelector('.chips-contador');
+                if (!contador) return;
+                const usados = bloque.querySelectorAll('.chip-fila').length;
+                contador.textContent = `${usados}/${bloque.dataset.maximo}`;
+            };
+
+            window.quitarChip = function(btn) {
+                const bloque = btn.closest('[data-superficie]');
+                btn.closest('.chip-fila').remove();
+                actualizarContadorChips(bloque);
+            };
+
             window.agregarChip = function(btn) {
                 const bloque = btn.closest('[data-superficie]');
                 const lista = bloque.querySelector('.chips-lista');
                 const maximo = parseInt(bloque.dataset.maximo, 10) || 4;
 
                 if (lista.querySelectorAll('.chip-fila').length >= maximo) {
-                    showError(`En esta pantalla entran hasta ${maximo} atajos`);
+                    // showInfo y no showError: el comercio no hizo nada mal, llegó a un
+                    // límite. Un cartel rojo que dice «Error» por usar bien la pantalla
+                    // asusta al que recién empieza a configurar su menú.
+                    showInfo(
+                        `Acá entran ${maximo} atajos y ya los tenés puestos. Si querés sumar otro, ` +
+                        `borrá alguno con la × y probá cuál funciona mejor.`,
+                        'Ya llegaste al máximo'
+                    );
+
                     return;
                 }
 
@@ -1755,9 +1790,10 @@
                     <input type="hidden" class="chip-emoji">
                     <input type="text" maxlength="40" placeholder="Lo que se ve" class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
                     <input type="text" maxlength="200" placeholder="La pregunta que ejecuta" class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                    <button type="button" onclick="this.closest('.chip-fila').remove()" class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
+                    <button type="button" onclick="quitarChip(this)" class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
                 `;
                 lista.appendChild(fila);
+                actualizarContadorChips(bloque);
                 fila.querySelector('.chip-label').focus();
             };
 
