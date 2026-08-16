@@ -783,8 +783,19 @@
                 <!-- Columna Derecha: Personalización -->
                 <div class="space-y-6">
                     
-                    <!-- 👁️ Vista Previa del Tema -->
-                    <div class="metric-card">
+                    {{-- 👁️ Vista Previa del Tema.
+
+                         Pegada arriba mientras se scrollea: la columna izquierda tiene tres
+                         tarjetas largas y esta es la única de este lado, así que quedaba un
+                         hueco enorme y la vista previa se perdía apenas bajabas dos dedos.
+                         Y es justo lo que hay que estar mirando mientras se toca el tono, los
+                         emojis o el saludo: sin esto había que scrollear arriba para ver el
+                         efecto de cada cambio.
+
+                         El `top-24` deja pasar la barra de navegación, que también es sticky.
+                         Sólo en `xl`, que es cuando hay dos columnas: abajo de ese ancho la
+                         grilla se apila y pegarla taparía el formulario. --}}
+                    <div class="metric-card xl:sticky xl:top-24">
                         <div class="flex items-center mb-6">
                             <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
                                 <span class="text-lg">👁️</span>
