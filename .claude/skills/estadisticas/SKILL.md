@@ -193,9 +193,50 @@ eventos + conversaciones realistas (picos de almuerzo/cena, 62% elige IA). No co
   lleno no se come el cupo entre todos y deja de perder eventos por 429. Ver CLAUDE.md.
   Verificado que **no hay Cloudflare** adelante: `$request->ip()` es la IP real del cliente.
 
+## Reseñas en Google (ago-2026)
+
+Al cliente que usó el asistente y ya lleva un rato en la mesa se le ofrece dejar su reseña.
+Se configura en el editor del menú (interruptor + textos, gateado por `analytics`) y **se mide
+acá**, con su propio widget al lado del de Atajos.
+
+Tres eventos, y los tres hacen falta:
+
+| Evento | Qué dice |
+|---|---|
+| `resena_view` | se le mostró |
+| `resena_click` | se fue a Google |
+| `resena_dismiss` | lo cerró con «Ahora no» |
+
+**Cerrar no es lo mismo que ignorar**, y por eso se cuentan aparte: el que cierra lo vio y dijo
+que no —falla el **texto**—, el que ignora lo tuvo delante sin registrarlo —falla el
+**momento**—. Sin `resena_dismiss` las dos caían en la misma bolsa y no se sabía qué corregir.
+"Ni lo miraron" es la resta y **se topea en cero**: si se pierde una impresión (bloqueador,
+pestaña cerrada antes del beacon) los clicks pueden superarlas.
+
+Se cuenta por **sesión y no por evento** (`Comercio::estadisticasResenas()`): un reintento de
+red no puede valer por dos personas, o el porcentaje —lo único que dice si sirve— queda
+arruinado.
+
+⚠️ **El disparo no es un temporizador**: es `visibilitychange`, cuando el teléfono vuelve a la
+mano. Más un timer de respaldo para cuando los minutos se cumplen con la pantalla ya a la vista
+(probado en un celular real: sin él no aparecía nunca). Detalle en `menu/partials/resena.blade.php`.
+
+⚠️ **Nunca filtrar por si la pasó bien.** Se dispara por uso y por tiempo, jamás por sentimiento:
+mostrar el link sólo a quien va a dejar una reseña buena es *review gating* y Google puede
+penalizar la ficha del negocio.
+
+**Pendiente:** replicarlo en el menú clásico, que hoy queda afuera entero.
+
 ## Pendientes
 
 Los números son de la base local de Azopardo, medidos al auditar el panel contra la base.
+
+0. 🔴 **El costo por comercio: el dato está y no se ve.** Cada consulta guarda su gasto en
+   `chat_conversations.metadata.consumo` (entrada, cacheados, salida, razonamiento), pero **no
+   hay precios por modelo en el sistema** ni pantalla que lo muestre — la única salida es el
+   Excel de conversaciones, que además se lo lleva el comercio. Falta el array de precios y un
+   widget en `/analytics/dashboard` con el **margen**: costo real contra el precio del plan.
+   Es multiplicar y mostrar, el dato ya está guardado. Detalle en la skill `planes`.
 
 1. **No se puede medir cuánto se queda la gente, y por eso se sacó la tarjeta.** La duración
    era `max - min` de los eventos, pero **no hay evento al salir**: el rato entre la última

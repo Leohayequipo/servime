@@ -95,6 +95,50 @@ Con topes de 600/900/1200 por plan, ni una sola respuesta se acercó. Consecuenc
 - **Recomendación pendiente de decisión del usuario:** igualar los tres planes en ~1500 desde
   `/admin/plans` (sin deploy) y dejar de diferenciarlo. Al 2026-08-10 no está aplicado.
 
+## El modelo del plan: dónde está la lista y el bug que ya se pagó
+
+La lista del desplegable vive en **`Plan::MODELOS_IA`** (antes estaba escrita a mano dentro
+del Blade). Orden de recomendación, `gpt-5.6-luna` primero.
+
+**No es una validación**: `modelo_ia` acepta cualquier string, a propósito, para poder cargar
+un modelo nuevo por SQL antes de que exista en el código.
+
+⚠️ **Por eso existe `Plan::modelosParaElegir()`, y no hay que sacarlo.** Mete siempre el modelo
+que el plan YA tiene, esté o no entre los ofrecidos. Sin eso, un modelo cargado por SQL dejaba
+el desplegable posicionado en la primera opción, y **guardar cualquier otro campo del plan lo
+revertía en silencio a `gpt-4o-mini`**. Se descubre semanas después, cuando la factura no baja.
+Cubierto por `tests/Feature/ModeloDelPlanTest.php`.
+
+Al sumar un modelo nuevo, verificar que `ChatbotService::esModeloDeRazonamiento()`
+(`/^(gpt-5|o[1-9])/i`) lo clasifique bien: si es de razonamiento y no matchea, el payload sale
+con `max_tokens` y la API devuelve **400 en todas las consultas** de ese plan.
+
+## 🔴 Pendiente grande: el consumo se guarda y no se ve en ningún lado
+
+Cada consulta guarda su gasto en `chat_conversations.metadata.consumo` (`modelo`,
+`tokens_entrada`, `tokens_cacheados`, `tokens_salida`, `tokens_razonamiento`), y anda por las
+dos vías del chat, streaming incluido. Está bien medido desde ago-2026.
+
+**Falta todo lo que lo convierte en información:**
+
+1. **No hay precios por modelo en ninguna parte del sistema.** Buscado: cero. Sin eso los
+   tokens no se pueden convertir en plata. La forma recomendada es un array en
+   `config/servime.php` (`modelos_ia` → `label`, `razonamiento`, `usd_entrada`, `usd_salida`),
+   **no una tabla**: son 3 valores que cambian dos veces al año, en git queda la medición que
+   justificó cada uno, y una tabla más divergiría entre local y prod como ya pasa con `plans`.
+   El `razonamiento` como dato explícito, además, saca de encima la regex que adivina por
+   el nombre.
+2. **No hay pantalla.** Ninguna vista muestra el consumo — la única salida hoy es el Excel de
+   conversaciones, que además se lo lleva el comercio, no el super admin. El lugar natural es
+   `/analytics/dashboard`, que ya es la vista transversal.
+   ⚠️ Ojo: ese grupo de rutas sólo pide `auth`, **no `super_admin`** (el gateo por comercio se
+   hace inline en el controlador). Una vista de costos necesita el chequeo a mano.
+3. **Lo que de verdad importa no es el total, es el margen**: costo real contra el precio del
+   plan. Ahí se ve si el Premium que se vende a $X cuesta $Y, y qué comercio se come el margen
+   solo. Es la decisión de negocio que hoy no se puede tomar con datos.
+
+El dato ya está guardado hace semanas: esto es multiplicar y mostrar, no instrumentar.
+
 ⚠️ **El prompt de entrada pesa mucho más que la salida** y `max_tokens` no lo toca: medido,
 el system prompt de un comercio con menú cargado da ~5.000 tokens (20k chars) y viaja **entero
 en cada mensaje**, más el historial. El input tiene su propio tope, flojo y sin relación con el

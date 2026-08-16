@@ -172,6 +172,37 @@ formulario: quien cargó sólo la apertura no tiene por qué perder el resto de 
 > Pendiente: el chatbot todavía deflecta las preguntas de horario
 > (`ChatbotController:252`) aunque el dato ya exista.
 
+## ⚠️ Guardar NO es publicar (Hostinger)
+
+Son **dos lugares**: Laravel guarda en `storage/app/public`, pero el servidor web sirve desde
+`public_html/storage`, que es un **directorio con copias, no un symlink** — el symlink se probó
+en Hostinger y falló, no volver a proponerlo. Una imagen existe para el navegador sólo si está
+en el segundo.
+
+**Incidente 15/08/2026.** La portada era la única imagen sin copia propia al subirse (el logo,
+las fotos de platos y el archivo del menú ya la tenían). Llegaba a `public_html` sólo por el
+`cp -r` masivo del paso 8 del deploy, que además hace `rm -rf` antes. Esa copia salió
+incompleta, se tragó el error con `2>/dev/null`, y desapareció: quedó `comercios/14/` en pie y
+`comercios/14/portada/` no. Se veía como *"no puedo ver la portada **ni moverla**"* — sin foto
+no hay nada sobre lo que arrastrar el marcador de encuadre.
+
+Ahora se publica al generar el tema, con **`App\Support\PublicHtml::publicarVarias()`** y los
+**cuatro** archivos (`Comercio::archivosPortada()`), el original incluido: ese es el que el
+panel muestra para elegir el encuadre.
+
+**Va en los DOS caminos y tiene que seguir así**: `ComercioController::generarTemaDePortada()`
+y `GenerateBrandThemeJob::handle()`. Sólo en el controlador, las fotos de más de 14 MP —las que
+caen en la cola— seguirían sin verse.
+
+- La ruta de Hostinger sale de **`config('servime.public_html')`** (antes estaba hardcodeada en
+  seis funciones). En local no existe y todo es un no-op silencioso.
+- Para las portadas ya subidas: **`php artisan portadas:publicar`**. Distingue "no se pudo
+  copiar" de "el archivo no está en storage".
+- **Sigue pendiente**: el paso 8 del deploy borra y vuelve a copiar en cada corrida, así que una
+  copia a medias deja el sitio sin imágenes otra vez. Sin symlink, la salida es que **no borre**
+  (`cp -ru` encima en vez de `rm -rf` primero).
+- Las otras seis funciones de copia siguen sin unificarse con el helper nuevo. Andan.
+
 ## Seguimiento del procesado
 
 `GET /comercios/{slug}/portada/estado` y `POST .../portada/reintentar` (throttle 10,1), las dos
@@ -229,37 +260,63 @@ en `portada_estado = 'error'` con un mensaje genérico.
 | `tests/Feature/HorariosTest.php` (6) | sin horarios devuelve `null`, cruce de medianoche, turno partido, próxima apertura |
 | `tests/Feature/ComercioSlugTest.php` (7) | nombre repetido no rompe, renombrar archiva el slug, la URL vieja sigue entrando |
 
-## Las imágenes de PLATOS y PROMOS no reciben este tratamiento
+## Las imágenes de PLATOS y PROMOS: ya se procesan (`ImagenMenuService`)
 
-La portada y el logo se procesan (resize + webp). Las de platos y promociones **se guardan
-tal cual las sube el comercio**: `uploadPlatoImagen` y `uploadPromocionImagen` validan y hacen
-`store()`, nada más. Medido en la base:
+> Esta sección decía lo contrario hasta ago-2026. **Ya no**: se achican y se convierten a
+> webp al subirse. Se deja el antes/después porque el ahorro justifica no volver atrás.
 
-```
-3120x4160 px — 1.024 KB    ← foto de celular sin tocar
-3120x4160 px — 1.090 KB
-3120x4160 px — 1.090 KB
-```
+Antes se guardaba el archivo tal cual. Medido en la base: fotos de **3120×4160 y ~1 MB** para
+una tarjeta que el menú público muestra a 448 px. El cliente en la mesa se bajaba un mega por
+foto, con datos móviles.
 
-**La tarjeta del menú las muestra en 80×80 px.** Un cliente en el celular se baja un mega para
-ver una miniatura, y el menú público es justamente lo que se abre desde el teléfono en la mesa.
+`App\Services\ImagenMenuService::procesar()` hace, con GD nativo:
 
-Y cada lugar valida distinto, sin criterio común:
+1. Carga (y endereza por EXIF, si no las verticales de celular salen acostadas).
+2. Si el lado mayor pasa **`LADO_MAYOR = 1200`**, reescala proporcionalmente. **No recorta**:
+   el recorte cuadrado de la tarjeta lo hace el CSS.
+3. Guarda **webp `CALIDAD = 85`** con nombre aleatorio de 40 caracteres.
+
+Resultado sobre una foto real de 1.024 KB: **~112 KB, un 89% menos.**
+
+**El original NO se conserva**: queda sólo el webp de 1200 px. Por eso 1200 y no 800 — la
+tarjeta pide ~900 px reales en retina y así hay margen para agrandarla sin reprocesar; la
+diferencia son 50 KB. Si se necesita más resolución, no hay de dónde sacarla.
+
+**Si GD falla** (formato que no abre, sin soporte webp, imagen que no entra en memoria) guarda
+el original tal cual en vez de tirar error: que el comercio pueda subir su foto importa más que
+ahorrar kilobytes.
 
 | Sube | Límite | Formatos | ¿Procesa? |
 |---|---|---|---|
-| plato / promo | 2 MB | jpeg png jpg gif | **no** |
+| plato / promo | **10 MB** | jpeg png jpg gif **webp** | **sí** (1200 px + webp) |
 | logo | 2 MB | jpeg png jpg gif | sí (cuadrado fijo) |
 | portada | 8 MB | cualquier imagen | sí (fondo/hero/thumb webp) |
 | menú (PDF o foto) | 10 MB | pdf jpeg png jpg gif | — |
 
-El límite de 2 MB **molesta de verdad**: una foto de celular actual lo pasa fácil y el comercio
-no puede subirla. Y ninguno de los dos acepta **webp**, que es el formato al que la portada ya
-convierte todo.
+El tope de plato/promo sale de `ImagenMenuService::reglaDeValidacion()`, no escrito a mano en
+el controlador. Pudo subir de 2 a 10 MB justamente porque lo que se guarda queda chico igual:
+con 2 MB una foto de celular actual no entraba.
 
-Si se unifica: el camino es un servicio que procese al subir (achicar al lado mayor razonable
-+ webp), como ya hace `BrandThemeService` con GD nativo — sin dependencias nuevas. Con eso el
-límite de entrada puede subir tranquilo, porque lo que se guarda siempre queda chico.
+**Queda sin unificar el logo**, que sigue en 2 MB, sin webp y con su propio recorte cuadrado.
+
+## ⚠️ La ruta de la imagen queda con el dominio pegado si pasa por Excel
+
+`MenuExport` escribe la columna «URL Imagen» con `asset(...)`, o sea la URL **absoluta**
+(`https://servime.net/storage/...`). `MenuImport` la guarda tal cual. Después de un ciclo
+exportar→importar, el JSON del menú tiene URLs absolutas en vez de las relativas
+(`/storage/...`) que escribe la subida normal.
+
+Hoy **no rompe** —`asset()` y `ChatbotService::resolverImagenUrl()` detectan la URL absoluta y
+la devuelven sin tocar—, pero: bajar esa base a local deja las imágenes apuntando a producción,
+y un cambio de dominio obliga a reescribir el JSON de todos los menús importados.
+
+**Pendiente (una línea):** que `MenuImport` normalice a ruta relativa al leer la columna.
+
+Nota relacionada: borrar un menú es **baja lógica y no toca archivos** (comentario explícito en
+`MenuController::destroy`). Si se exporta, se borra el menú y se importa uno nuevo, el menú
+nuevo apunta **a los mismos archivos**: no se duplica nada y no se pierde nada. Pero quedan dos
+menús sobre el mismo archivo, así que reemplazar esa foto en el menú nuevo deja al viejo con la
+referencia rota — invisible mientras esté dado de baja, visible si alguien lo **restaura**.
 
 ## Imágenes huérfanas: borrar un comercio deja los archivos
 
