@@ -598,23 +598,23 @@
                          la pantalla se leía como un formulario único e interminable: son
                          tres cosas que se configuran y se guardan por separado. --}}
 
-                            {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
-                                 Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
-                                 ser distintas ("Meriendas para compartir" puede disparar "¿qué
-                                 tienen para merendar entre dos?"). Si no se configura ninguno,
-                                 siguen saliendo automáticos del menú. --}}
-                            @if($comercio->tieneFeature('analytics'))
-                                @php
-                                    // En el orden en que los ve el cliente: primero la portada
-                                    // (antes de entrar), después los del chat.
-                                    $superficies = [
-                                        'portada' => ['titulo' => 'Atajos de la portada', 'ayuda' => 'Lo primero que ve el cliente, antes de entrar al chat.'],
-                                        'chat' => ['titulo' => 'Atajos del chat', 'ayuda' => 'Aparecen debajo del saludo, antes del primer mensaje.'],
-                                    ];
-                                    // Emojis de gastronomía para el selector: escribirlos a mano
-                                    // es incómodo y en escritorio hay que acordarse de Win + .
-                                    $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
-                                @endphp
+                    {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
+                         Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
+                         ser distintas ("Meriendas para compartir" puede disparar "¿qué
+                         tienen para merendar entre dos?"). Si no se configura ninguno,
+                         siguen saliendo automáticos del menú. --}}
+                    @if($comercio->tieneFeature('analytics'))
+                        @php
+                            // En el orden en que los ve el cliente: primero la portada
+                            // (antes de entrar), después los del chat.
+                            $superficies = [
+                                'portada' => ['titulo' => 'Atajos de la portada', 'ayuda' => 'Lo primero que ve el cliente, antes de entrar al chat.'],
+                                'chat' => ['titulo' => 'Atajos del chat', 'ayuda' => 'Aparecen debajo del saludo, antes del primer mensaje.'],
+                            ];
+                            // Emojis de gastronomía para el selector: escribirlos a mano
+                            // es incómodo y en escritorio hay que acordarse de Win + .
+                            $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
+                        @endphp
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
                             <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
@@ -622,87 +622,85 @@
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Atajos</h3>
                         </div>
-                                <div>
 
-                                    <p class="text-xs text-text-secondary mb-4">
-                                        Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
-                                        y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
-                                    </p>
+                        <p class="text-xs text-text-secondary mb-4">
+                            Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
+                            y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
+                        </p>
 
-                                    {{-- Cada pantalla en su propia tarjeta. Antes los dos grupos iban
-                                         uno abajo del otro sin nada que los separara y se leían como una
-                                         sola lista larga: se editaban los de la portada creyendo que
-                                         eran los del chat. Son dos pantallas distintas del cliente y se
-                                         miden por separado, así que también se ven por separado. --}}
-                                    @foreach($superficies as $superficie => $info)
-                                        @php $lista = $comercio->chipsDe($superficie); @endphp
-                                        <div class="mb-4 p-4 bg-secondary-dark/60 border border-accent-gray rounded-xl"
-                                             data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
-                                            <div class="flex items-center justify-between gap-2 mb-1">
-                                                <p class="text-sm font-semibold text-text-primary">{{ $info['titulo'] }}</p>
-                                                {{-- Lo actualiza el JS al agregar o quitar: si fuera solo
-                                                     el valor del servidor, mentiría apenas tocás una fila. --}}
-                                                <span class="text-xs text-text-secondary/70 flex-none chips-contador">
-                                                    {{ count($lista) }}/{{ \App\Support\Chip::visibles($superficie) }}
-                                                </span>
-                                            </div>
-                                            <p class="text-xs text-text-secondary/70 mb-3">
-                                                {{ $info['ayuda'] }}
-                                                @if(empty($comercio->chips[$superficie] ?? null))
-                                                    <span class="text-accent-blue">Ahora son automáticos.</span>
-                                                @endif
-                                            </p>
+                        {{-- Cada pantalla en su propia tarjeta. Antes los dos grupos iban
+                             uno abajo del otro sin nada que los separara y se leían como una
+                             sola lista larga: se editaban los de la portada creyendo que
+                             eran los del chat. Son dos pantallas distintas del cliente y se
+                             miden por separado, así que también se ven por separado. --}}
+                        @foreach($superficies as $superficie => $info)
+                            @php $lista = $comercio->chipsDe($superficie); @endphp
+                            <div class="mb-4 p-4 bg-secondary-dark/60 border border-accent-gray rounded-xl"
+                                 data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <p class="text-sm font-semibold text-text-primary">{{ $info['titulo'] }}</p>
+                                    {{-- Lo actualiza el JS al agregar o quitar: si fuera solo
+                                         el valor del servidor, mentiría apenas tocás una fila. --}}
+                                    <span class="text-xs text-text-secondary/70 flex-none chips-contador">
+                                        {{ count($lista) }}/{{ \App\Support\Chip::visibles($superficie) }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-text-secondary/70 mb-3">
+                                    {{ $info['ayuda'] }}
+                                    @if(empty($comercio->chips[$superficie] ?? null))
+                                        <span class="text-accent-blue">Ahora son automáticos.</span>
+                                    @endif
+                                </p>
 
-                                            <div class="space-y-2 chips-lista">
-                                                @foreach($lista as $chip)
-                                                    <div class="chip-fila flex gap-2 items-start">
-                                                        {{-- El emoji se elige de una grilla: tipearlo requiere
-                                                             acordarse de Win + . y en el celular es peor. --}}
-                                                        <button type="button" onclick="abrirEmojis(this)"
-                                                                class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue"
-                                                                title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
-                                                        <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
-                                                        <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
-                                                               class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                                        <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
-                                                               class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                                        <button type="button" onclick="quitarChip(this)"
-                                                                class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-
-                                            <div class="flex items-center gap-2 mt-2">
-                                                <button type="button" onclick="agregarChip(this)"
-                                                        class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
-                                                <button type="button" onclick="guardarChips(this)"
-                                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar atajos</button>
-                                                <span class="text-xs text-text-secondary chips-estado"></span>
-                                            </div>
+                                <div class="space-y-2 chips-lista">
+                                    @foreach($lista as $chip)
+                                        <div class="chip-fila flex gap-2 items-start">
+                                            {{-- El emoji se elige de una grilla: tipearlo requiere
+                                                 acordarse de Win + . y en el celular es peor. --}}
+                                            <button type="button" onclick="abrirEmojis(this)"
+                                                    class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue"
+                                                    title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
+                                            <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
+                                            <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
+                                                   class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                            <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
+                                                   class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                            <button type="button" onclick="quitarChip(this)"
+                                                    class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
                                         </div>
                                     @endforeach
-
-                                    {{-- Grilla de emojis, una sola para toda la pantalla: se abre
-                                         al lado del botón que la pidió. --}}
-                                    <div id="emoji-picker" class="hidden fixed z-50 bg-secondary-dark border border-accent-gray rounded-xl p-2 shadow-2xl"
-                                         style="max-width: 260px">
-                                        <div class="grid grid-cols-8 gap-1">
-                                            @foreach($emojisSugeridos as $emoji)
-                                                <button type="button" onclick="elegirEmoji(@js($emoji))"
-                                                        class="w-7 h-7 rounded hover:bg-accent-blue/20 text-lg leading-none">{{ $emoji }}</button>
-                                            @endforeach
-                                        </div>
-                                        <button type="button" onclick="elegirEmoji('')"
-                                                class="w-full mt-1 text-xs text-text-secondary hover:text-red-400 py-1">Sin ícono</button>
-                                    </div>
-
-                                    {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
-                                         porque es donde el comercio configura lo que ve el cliente; pero
-                                         el dato se guarda en `comercios`, no en el menú: el link es de la
-                                         ficha del negocio y no se tiene que perder al subir otra carta. --}}
-                                    @php $tieneLink = filled($comercio->google_review_url); @endphp
                                 </div>
+
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button type="button" onclick="agregarChip(this)"
+                                            class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
+                                    <button type="button" onclick="guardarChips(this)"
+                                            class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar atajos</button>
+                                    <span class="text-xs text-text-secondary chips-estado"></span>
+                                </div>
+                            </div>
+                        @endforeach
+
+                        {{-- Grilla de emojis, una sola para toda la pantalla: se abre
+                             al lado del botón que la pidió. --}}
+                        <div id="emoji-picker" class="hidden fixed z-50 bg-secondary-dark border border-accent-gray rounded-xl p-2 shadow-2xl"
+                             style="max-width: 260px">
+                            <div class="grid grid-cols-8 gap-1">
+                                @foreach($emojisSugeridos as $emoji)
+                                    <button type="button" onclick="elegirEmoji(@js($emoji))"
+                                            class="w-7 h-7 rounded hover:bg-accent-blue/20 text-lg leading-none">{{ $emoji }}</button>
+                                @endforeach
+                            </div>
+                            <button type="button" onclick="elegirEmoji('')"
+                                    class="w-full mt-1 text-xs text-text-secondary hover:text-red-400 py-1">Sin ícono</button>
+                        </div>
                     </div>
+
+                    {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
+                         porque es donde el comercio configura lo que ve el cliente; pero
+                         el dato se guarda en `comercios`, no en el menú: el link es de la
+                         ficha del negocio y no se tiene que perder al subir otra carta. --}}
+                    @php $tieneLink = filled($comercio->google_review_url); @endphp
 
                     <div class="metric-card" id="bloque-resenas"
                          data-url-comercio="{{ route('comercios.edit', $comercio) }}">
@@ -712,74 +710,72 @@
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Reseñas en Google</h3>
                         </div>
-                                <div>
 
-                                        <label class="block text-sm font-medium text-text-secondary mb-1">Reseñas en Google</label>
-                                        <p class="text-xs text-text-secondary mb-4">
-                                            Al cliente que usó el asistente y ya lleva un rato en la mesa se le
-                                            ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
-                                        </p>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">Reseñas en Google</label>
+                        <p class="text-xs text-text-secondary mb-4">
+                            Al cliente que usó el asistente y ya lleva un rato en la mesa se le
+                            ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
+                        </p>
 
-                                        <div class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
-                                                    {{ $tieneLink ? '' : 'opacity-60' }}">
-                                            <button type="button"
-                                                    id="resenas-switch"
-                                                    role="switch"
-                                                    aria-checked="{{ $comercio->resenas_activo ? 'true' : 'false' }}"
-                                                    aria-label="Pedir reseña en Google"
-                                                    onclick="alternarResenas(this)"
-                                                    @disabled(! $tieneLink)
-                                                    class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
-                                                           {{ $comercio->resenas_activo ? 'bg-green-500' : 'bg-accent-gray' }}">
-                                                <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
-                                                             {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
-                                            </button>
-                                            <div class="min-w-0">
-                                                <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
-                                                <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
-                                                    @if(! $tieneLink)
-                                                        Cargá primero el link en
-                                                        <a href="{{ route('comercios.edit', $comercio) }}" class="text-accent-blue hover:underline">los datos del comercio</a>.
-                                                    @elseif($comercio->resenas_activo)
-                                                        Activo — se le muestra a quien cumpla las condiciones.
-                                                    @else
-                                                        Listo para activar.
-                                                    @endif
-                                                </p>
-                                            </div>
-                                        </div>
+                        <div class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
+                                    {{ $tieneLink ? '' : 'opacity-60' }}">
+                            <button type="button"
+                                    id="resenas-switch"
+                                    role="switch"
+                                    aria-checked="{{ $comercio->resenas_activo ? 'true' : 'false' }}"
+                                    aria-label="Pedir reseña en Google"
+                                    onclick="alternarResenas(this)"
+                                    @disabled(! $tieneLink)
+                                    class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
+                                           {{ $comercio->resenas_activo ? 'bg-green-500' : 'bg-accent-gray' }}">
+                                <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
+                                             {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
+                            </button>
+                            <div class="min-w-0">
+                                <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
+                                <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
+                                    @if(! $tieneLink)
+                                        Cargá primero el link en
+                                        <a href="{{ route('comercios.edit', $comercio) }}" class="text-accent-blue hover:underline">los datos del comercio</a>.
+                                    @elseif($comercio->resenas_activo)
+                                        Activo — se le muestra a quien cumpla las condiciones.
+                                    @else
+                                        Listo para activar.
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
 
-                                        {{-- Los textos van vacíos cuando el comercio no los tocó, con el
-                                             de fábrica como placeholder: así se ve qué va a salir sin
-                                             tener que copiarlo, y borrar el campo vuelve al de fábrica. --}}
-                                        <div class="mt-3 space-y-2">
-                                            <input type="text" id="resena-titulo" maxlength="80"
-                                                   value="{{ $comercio->resena_titulo }}"
-                                                   placeholder="{{ \App\Models\Comercio::RESENA_TITULO }}"
-                                                   class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                            <textarea id="resena-texto" maxlength="200" rows="2"
-                                                      placeholder="{{ \App\Models\Comercio::RESENA_TEXTO }}"
-                                                      class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary resize-none">{{ $comercio->resena_texto }}</textarea>
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" onclick="guardarTextosResena(this)"
-                                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar textos</button>
-                                                <span class="text-xs text-text-secondary" id="resena-estado"></span>
-                                            </div>
-                                            <p class="text-xs text-text-secondary/70">
-                                                Vacío = se usa el texto por defecto. Ojo: lo que escribas se
-                                                muestra tal cual, sin traducir al idioma del cliente.
-                                            </p>
-                                        </div>
+                        {{-- Los textos van vacíos cuando el comercio no los tocó, con el
+                             de fábrica como placeholder: así se ve qué va a salir sin
+                             tener que copiarlo, y borrar el campo vuelve al de fábrica. --}}
+                        <div class="mt-3 space-y-2">
+                            <input type="text" id="resena-titulo" maxlength="80"
+                                   value="{{ $comercio->resena_titulo }}"
+                                   placeholder="{{ \App\Models\Comercio::RESENA_TITULO }}"
+                                   class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                            <textarea id="resena-texto" maxlength="200" rows="2"
+                                      placeholder="{{ \App\Models\Comercio::RESENA_TEXTO }}"
+                                      class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary resize-none">{{ $comercio->resena_texto }}</textarea>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="guardarTextosResena(this)"
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar textos</button>
+                                <span class="text-xs text-text-secondary" id="resena-estado"></span>
+                            </div>
+                            <p class="text-xs text-text-secondary/70">
+                                Vacío = se usa el texto por defecto. Ojo: lo que escribas se
+                                muestra tal cual, sin traducir al idioma del cliente.
+                            </p>
+                        </div>
 
-                                        {{-- Los números NO van acá: esta pantalla es para configurar.
-                                             Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
-                                             junto al resto de las métricas del menú. --}}
-                                </div>
+                        {{-- Los números NO van acá: esta pantalla es para configurar.
+                             Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
+                             junto al resto de las métricas del menú. --}}
                     </div>
 
-                            @endif
+                    @endif
 
-                            <!-- Configuraciones -->
+                    <!-- Configuraciones -->
 
 
                 </div>
