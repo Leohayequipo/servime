@@ -375,9 +375,54 @@ class Comercio extends Model
     /** ¿Hay una portada procesada y lista para pintar el menú público? */
     public function tienePortada(): bool
     {
-        return $this->portada_estado === 'listo'
-            && ! empty($this->portada_hero_url)
-            && ! empty($this->tema_derivado['base']);
+        if ($this->portada_estado !== 'listo'
+            || empty($this->portada_hero_url)
+            || empty($this->tema_derivado['base'])) {
+            return false;
+        }
+
+        return $this->archivosDePortadaEnDisco();
+    }
+
+    /** Memoria por request: `tienePortada()` se llama más de una vez por visita. */
+    private ?bool $portadaEnDisco = null;
+
+    /**
+     * ¿Están en el disco los tres archivos que la vista pública va a pedir?
+     *
+     * NO alcanza con que la base diga que la portada está lista. Si los archivos no están,
+     * `menu.portada` igual emite <img> de fondo, hero y thumb: son TRES 404 por visita, de
+     * cada cliente, cada vez que alguien escanea el QR.
+     *
+     * Y eso no es solo ruido. Todos los clientes de un local salen por el mismo wifi —el
+     * mismo motivo por el que los rate limiters van por dispositivo y no por IP—, así que
+     * varias mesas abriendo un menú con las imágenes rotas parecen, desde afuera, una sola
+     * IP escaneando el servidor. Un fail2ban que mire HTTP puede bloquear al local entero
+     * de su propio menú, todas las mesas a la vez.
+     *
+     * Faltando cualquiera de las tres se cae a `menu.choose`, el diseño sin portada, que
+     * existe, funciona y no pide ningún archivo.
+     */
+    private function archivosDePortadaEnDisco(): bool
+    {
+        if ($this->portadaEnDisco !== null) {
+            return $this->portadaEnDisco;
+        }
+
+        $disco = \Illuminate\Support\Facades\Storage::disk('public');
+
+        foreach ([$this->portada_hero_url, $this->portada_fondo_url, $this->portada_thumb_url] as $ruta) {
+            if (blank($ruta) || ! $disco->exists($ruta)) {
+                \Illuminate\Support\Facades\Log::warning('Portada marcada como lista con archivos faltantes', [
+                    'comercio' => $this->slug,
+                    'falta' => $ruta ?: '(ruta vacía)',
+                ]);
+
+                return $this->portadaEnDisco = false;
+            }
+        }
+
+        return $this->portadaEnDisco = true;
     }
 
     /**
