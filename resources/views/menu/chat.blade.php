@@ -515,7 +515,7 @@
                 <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-fade-in">
                     <div class="flex items-start">
                         <div class="flex-1">
-                            <p class="text-text-primary text-[15px] leading-normal" id="preview-welcome-message">{{ $comercio->mensajeBienvenida() }}</p>
+                            <p class="text-text-primary text-[16px] leading-normal" id="preview-welcome-message">{{ $comercio->mensajeBienvenida() }}</p>
                         </div>
                     </div>
                 </div>
@@ -1013,7 +1013,7 @@
                 <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-slide-in-left">
                     <div class="flex items-start">
                         <div class="flex-1 min-w-0">
-                            <div class="text-text-primary text-[15px] leading-normal" data-bot-text style="white-space: pre-wrap;"></div>
+                            <div class="text-text-primary text-[16px] leading-normal" data-bot-text style="white-space: pre-wrap;"></div>
                             <div data-bot-extra></div>
                         </div>
                     </div>
@@ -1231,7 +1231,7 @@
                             <span class="font-semibold text-text-primary flex-1 min-w-0 break-words">${nombre}</span>
                             ${precio ? `<span class="text-accent-blue font-bold whitespace-nowrap flex-none">${precio}</span>` : ''}
                         </div>
-                        ${desc ? `<p class="text-text-secondary text-sm mt-1 leading-snug">${desc}</p>` : ''}
+                        ${desc ? `<p class="text-text-secondary text-[15px] mt-1 leading-snug">${desc}</p>` : ''}
                         ${btn}
                     </div>
                 </div>`;
@@ -1249,7 +1249,7 @@
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end animate-slide-in-right">
-                        <div class="bg-accent-blue rounded-2xl rounded-tr-md px-3.5 py-2.5 max-w-[80%] text-white text-[15px] leading-normal shadow-lg" style="white-space: pre-wrap;">${parsedText}</div>
+                        <div class="bg-accent-blue rounded-2xl rounded-tr-md px-3.5 py-2.5 max-w-[80%] text-white text-[16px] leading-normal shadow-lg" style="white-space: pre-wrap;">${parsedText}</div>
                     </div>
                 `;
             } else {
@@ -1257,7 +1257,7 @@
                     <div class="chat-bubble-bot rounded-2xl rounded-tl-md px-4 py-3 shadow-lg border border-white/5 animate-slide-in-left">
                         <div class="flex items-start">
                             <div class="flex-1 min-w-0">
-                                <div class="text-text-primary text-[15px] leading-normal">${parsedText}</div>
+                                <div class="text-text-primary text-[16px] leading-normal">${parsedText}</div>
                                 ${renderPlatoCards(platos)}
                                 ${(permitirVerMas && platos && platos.length >= 1 && platos.length <= 6) ? `<button type="button" onclick="verMasOpciones()" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-accent-blue/40 text-accent-blue text-sm hover:bg-accent-blue/10 transition-colors">${T.ver_mas} ↓</button>` : ''}
                             </div>
