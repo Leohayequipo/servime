@@ -3,11 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Mail\WelcomeEmail;
+use App\Models\Cart;
+use App\Models\CartItem;
+use App\Models\ChatConversation;
 use App\Models\ChatLanding;
 use App\Models\Comercio;
+use App\Models\IntentClassificationRun;
 use App\Models\Menu;
+use App\Models\TrackingEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
@@ -172,6 +178,53 @@ class AdminController extends Controller
     {
         // Redirigir al método update del ComercioController con los parámetros correctos
         return redirect()->route('comercios.update', $comercio);
+    }
+
+    /**
+     * Dejar al comercio "como nuevo": borra toda su actividad y le resetea la cuota de IA.
+     *
+     * Borra ACTIVIDAD, no CONFIGURACIÓN: el menú, los platos, las promociones, la portada,
+     * los colores, el plan y los usuarios quedan intactos. Lo que se va es lo que el
+     * comercio generó al ser usado, que es lo que ensucia analytics cuando estuvo en
+     * pruebas y arranca de verdad.
+     *
+     * Es irreversible y no hay papelera: por eso vive sólo acá adentro, detrás del
+     * middleware `super_admin`, y no en el panel del comercio.
+     */
+    public function resetActividadComercio(Comercio $comercio)
+    {
+        $borrado = DB::transaction(function () use ($comercio) {
+            // Los carritos primero, y a mano: `cart_items` guarda `cart_id` sin foreign key
+            // (ver la migración que la crea), así que borrar el carrito NO se lleva sus
+            // ítems por cascada. Sin esto quedaban filas huérfanas para siempre.
+            $idsCarritos = Cart::where('comercio_id', $comercio->id)->pluck('id');
+            $items = CartItem::whereIn('cart_id', $idsCarritos)->delete();
+            $carritos = Cart::whereKey($idsCarritos)->delete();
+
+            $conteo = [
+                'conversaciones' => ChatConversation::where('comercio_id', $comercio->id)->delete(),
+                'eventos' => TrackingEvent::where('comercio_id', $comercio->id)->delete(),
+                'intents' => IntentClassificationRun::where('comercio_id', $comercio->id)->delete(),
+                'carritos' => $carritos,
+                'items_de_carrito' => $items,
+            ];
+
+            // La cuota del mes también vuelve a cero. Es plata: por eso queda registrado
+            // quién lo hizo y cuánto se borró.
+            $comercio->resetUsoIA();
+
+            return $conteo;
+        });
+
+        Log::warning('Reset de actividad de comercio', [
+            'comercio_id' => $comercio->id,
+            'comercio' => $comercio->nombre,
+            'admin_id' => auth()->id(),
+            'borrado' => $borrado,
+        ]);
+
+        return redirect()->route('admin.comercios.index')
+            ->with('success', "Se borró la actividad de «{$comercio->nombre}»: {$borrado['conversaciones']} conversación(es) y {$borrado['eventos']} evento(s). La cuota de IA quedó en cero.");
     }
 
     /**

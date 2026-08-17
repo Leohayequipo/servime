@@ -141,6 +141,17 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 - [ ] **Decisión pendiente:** igualar `max_tokens_chat` en ~1500 para los tres planes desde
       `/admin/plans` (sin deploy). Medido: ninguna respuesta real pasó de 497 tokens, así que
       diferenciarlo por plan no le cambia nada al comercio. Ver skill `planes`.
+- [ ] **A `/admin/comercios` se llega, pero no se ve que se llega.** Los dos accesos desde el
+      dashboard son una tarjeta de métrica (🏪 Comercios, el número) y un "Ver todos →" chico
+      dentro de "Comercios Recientes": los dos parecen datos, no navegación, y se termina
+      tipeando la URL de memoria. Ahora importa más que antes, porque ahí vive el botón de
+      resetear la actividad de un comercio. Falta una entrada explícita en el menú de admin.
+- [ ] **`cart_items` no cascadea desde `carts`.** La tabla guarda `cart_id` suelto, sin foreign
+      key (ver la migración que la crea). Como `carts` **sí** cascadea desde `comercios`, al
+      borrar un comercio se van sus carritos y los ítems quedan colgados para siempre: en la
+      base local hay 13 filas huérfanas del 06/07/2026. No rompe nada, es basura que se
+      acumula. Se arregla con una migración que agregue la FK con `cascadeOnDelete` y limpie
+      lo viejo. El reset de actividad ya los borra a mano para no depender de esto.
 
 ## 🟢 8. Limpieza y cierre
 

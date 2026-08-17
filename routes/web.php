@@ -81,6 +81,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
         Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
         Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
+
+        // Borra la ACTIVIDAD del comercio (conversaciones, tracking, carritos, intents) y
+        // le pone la cuota de IA en cero. No toca la configuración ni el menú. Es
+        // irreversible y sólo para super admin: ver AdminController@resetActividadComercio.
+        Route::post('/comercios/{comercio:slug}/reset-actividad', [App\Http\Controllers\AdminController::class, 'resetActividadComercio'])->name('comercios.reset-actividad');
+
         Route::delete('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'destroyComercio'])->name('comercios.destroy');
 
         // Gestión de Menús

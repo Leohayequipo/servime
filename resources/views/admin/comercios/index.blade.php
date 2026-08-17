@@ -110,10 +110,24 @@
                                         <p class="text-xs text-text-secondary">{{ $comercio->created_at->diffForHumans() }}</p>
                                     </td>
                                     <td class="py-4 px-4">
-                                        <a href="{{ route('menus.index', $comercio) }}"
-                                           class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
-                                            Ver menús
-                                        </a>
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('menus.index', $comercio) }}"
+                                               class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
+                                                Ver menús
+                                            </a>
+
+                                            {{-- Empezar de nuevo: borra la actividad (conversaciones, estadísticas,
+                                                 carritos) y pone la cuota de IA en cero. No toca el menú ni la
+                                                 configuración. No tiene vuelta atrás. --}}
+                                            <form method="POST" action="{{ route('admin.comercios.reset-actividad', $comercio) }}" class="inline"
+                                                  onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('Se va a borrar TODA la actividad de «{{ $comercio->nombre }}»: conversaciones del chatbot, estadísticas, carritos y el consumo de IA del mes. El menú y la configuración no se tocan. No se puede deshacer. ¿Seguimos?', r=>{ if(r) f.submit(); }, 'Borrando actividad...');">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition-colors">
+                                                    Resetear
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
