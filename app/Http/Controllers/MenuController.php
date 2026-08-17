@@ -670,18 +670,7 @@ class MenuController extends Controller
 
             // Asignar ID si no existe
             if (! isset($plato['id'])) {
-                // Buscar el máximo ID existente
-                $proximoId = 1;
-                foreach ($contenido['categorias'] as $categoria) {
-                    if (isset($categoria['platos']) && is_array($categoria['platos'])) {
-                        foreach ($categoria['platos'] as $platoItem) {
-                            if (isset($platoItem['id']) && $platoItem['id'] >= $proximoId) {
-                                $proximoId = $platoItem['id'] + 1;
-                            }
-                        }
-                    }
-                }
-                $plato['id'] = $proximoId;
+                $plato['id'] = $this->proximoIdDePlato($contenido);
             }
 
             // Asegurar que existan las carpetas del comercio
@@ -1129,6 +1118,26 @@ class MenuController extends Controller
         }
     }
 
+    /**
+     * Siguiente id libre de plato dentro del menú.
+     *
+     * @param  array<string, mixed>  $contenido
+     */
+    private function proximoIdDePlato(array $contenido): int
+    {
+        $proximoId = 1;
+
+        foreach ($contenido['categorias'] ?? [] as $categoria) {
+            foreach ($categoria['platos'] ?? [] as $plato) {
+                if (isset($plato['id']) && $plato['id'] >= $proximoId) {
+                    $proximoId = $plato['id'] + 1;
+                }
+            }
+        }
+
+        return $proximoId;
+    }
+
     /** @param  array<string, mixed>  $contenido */
     private function contarEstrellas(array $contenido): int
     {
@@ -1142,6 +1151,139 @@ class MenuController extends Controller
         }
 
         return $total;
+    }
+
+    /**
+     * Agrega un producto nuevo al final de una categoría.
+     *
+     * El plato entra con las mismas claves que los que extrae la IA (nombre, descripción,
+     * precio, tags) para que el menú público, el asistente y el resto de los endpoints de
+     * edición no tengan que distinguir de dónde salió.
+     */
+    public function agregarPlato(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'categoria_index' => 'required|integer',
+            'nombre' => 'required|string|max:255',
+            'precio' => 'nullable|string|max:50',
+            'descripcion' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+
+            $categoriaIndex = $validated['categoria_index'];
+
+            if (! isset($contenido['categorias'][$categoriaIndex])) {
+                return response()->json(['error' => 'Categoría inválida.'], 400);
+            }
+
+            $categoria = &$contenido['categorias'][$categoriaIndex];
+
+            if (! isset($categoria['platos']) || ! is_array($categoria['platos'])) {
+                $categoria['platos'] = [];
+            }
+
+            $categoria['platos'][] = [
+                // El id no es decorativo: con él se le devuelve la foto al plato cuando se
+                // reprocesa el menú y se lo reconoce al reimportar el Excel.
+                'id' => $this->proximoIdDePlato($contenido),
+                'nombre' => trim($validated['nombre']),
+                'descripcion' => trim($validated['descripcion'] ?? ''),
+                // Mismo criterio que al editar el precio: formatea solo el número pelado.
+                'precio' => \App\Support\Precio::formatear($validated['precio'] ?? ''),
+                'tags' => [],
+            ];
+
+            $platoIndex = count($categoria['platos']) - 1;
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'plato_index' => $platoIndex,
+                'message' => 'Producto agregado exitosamente',
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al agregar plato: '.$e->getMessage());
+
+            return response()->json([
+                'error' => 'Error al agregar el producto: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Elimina un producto de una categoría.
+     */
+    public function deletePlato(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Menú no encontrado en este comercio.'], 404);
+        }
+
+        $validated = $request->validate([
+            'categoria_index' => 'required|integer',
+            'plato_index' => 'required|integer',
+        ]);
+
+        try {
+            $contenido = $this->getMenuContent($menu);
+
+            $categoriaIndex = $validated['categoria_index'];
+            $platoIndex = $validated['plato_index'];
+
+            if (! isset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex])) {
+                return response()->json(['error' => 'Índices de plato inválidos.'], 400);
+            }
+
+            $plato = $contenido['categorias'][$categoriaIndex]['platos'][$platoIndex];
+
+            // La imagen se va con el plato: si no, queda un archivo que ya nadie referencia
+            // ocupando el storage del comercio para siempre.
+            if (! empty($plato['imagen'])) {
+                $this->deleteMenuItemSafely(str_replace('/storage/', '', $plato['imagen']));
+            }
+
+            unset($contenido['categorias'][$categoriaIndex]['platos'][$platoIndex]);
+
+            // Reindexar: el índice ES la identidad del plato para todos los endpoints de
+            // edición, así que un array con huecos dejaría al resto apuntando a otro plato.
+            $contenido['categorias'][$categoriaIndex]['platos'] = array_values(
+                $contenido['categorias'][$categoriaIndex]['platos']
+            );
+
+            $this->saveMenuContent($menu, $contenido);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Producto eliminado exitosamente',
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar plato: '.$e->getMessage());
+
+            return response()->json([
+                'error' => 'Error al eliminar el producto: '.$e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

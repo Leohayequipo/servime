@@ -1138,6 +1138,15 @@
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                                         </svg>
                                                                     </button>
+                                                                    <!-- Eliminar producto -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); eliminarPlato({{ $categoriaIndex }}, {{ $platoIndex }}, @js($nombrePlato))"
+                                                                            class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                                            title="Eliminar producto">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                        </svg>
+                                                                    </button>
                                                                 </div>
                                                                 
                                                                 <!-- Foto y Precio (misma línea) -->
@@ -1283,6 +1292,15 @@
                                                         @endforeach
                                                     @endif
                                                 </div>
+                                                <!-- Agregar producto nuevo a esta categoría -->
+                                                <button type="button"
+                                                        onclick="agregarPlato({{ $categoriaIndex }}, @js($categoria['nombre'] ?? 'esta categoría'))"
+                                                        class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-accent-blue/40 text-accent-blue hover:border-accent-blue hover:bg-accent-blue/10 rounded-lg text-sm font-semibold transition-all">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                                    </svg>
+                                                    Agregar producto
+                                                </button>
                                             </div>
                                         @endforeach
                                     </div>
@@ -2840,25 +2858,34 @@
     </div>
 
     <script>
+        // Peso y tipo de una imagen de plato, antes de mandarla.
+        //
+        // El tope sale del mismo lugar que la validación del backend
+        // (ImagenMenuService::MAX_KB). Estaba fijo en 2 MB acá, así que subir el límite
+        // del servidor no servía de nada: el navegador cortaba antes de mandar el archivo,
+        // y una foto de celular actual no entraba.
+        function validarImagenPlato(file, avisar = showError) {
+            const maxKb = {{ \App\Services\ImagenMenuService::MAX_KB }};
+
+            if (file.size > maxKb * 1024) {
+                avisar(`La imagen no puede pesar más de ${Math.round(maxKb / 1024)} MB`);
+                return false;
+            }
+
+            if (!file.type.match('image.*')) {
+                avisar('Solo se permiten archivos de imagen (JPEG, PNG, GIF o WEBP)');
+                return false;
+            }
+
+            return true;
+        }
+
         // Función para subir imagen de plato
         async function uploadPlatoImagen(event, categoriaIndex, platoIndex) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // El tope sale del mismo lugar que la validación del backend
-            // (ImagenMenuService::MAX_KB). Estaba fijo en 2 MB acá, así que subir el límite
-            // del servidor no servía de nada: el navegador cortaba antes de mandar el archivo,
-            // y una foto de celular actual no entraba.
-            const maxKb = {{ \App\Services\ImagenMenuService::MAX_KB }};
-            if (file.size > maxKb * 1024) {
-                showError(`La imagen no puede pesar más de ${Math.round(maxKb / 1024)} MB`);
-                event.target.value = '';
-                return;
-            }
-
-            // Validar tipo
-            if (!file.type.match('image.*')) {
-                showError('Solo se permiten archivos de imagen (JPEG, PNG, GIF o WEBP)');
+            if (!validarImagenPlato(file)) {
                 event.target.value = '';
                 return;
             }
@@ -3781,6 +3808,220 @@
                 console.error('Error al reordenar platos:', error);
                 showError('Error al reordenar los platos: ' + (error.message || 'Error desconocido'));
             }
+        }
+
+        // Agregar un producto nuevo a una categoría
+        async function agregarPlato(categoriaIndex, nombreCategoria) {
+            const menuId = {{ $menu->id ?? 'null' }};
+            if (!menuId) {
+                showError('El menú no está disponible');
+                return;
+            }
+
+            const { value: datos } = await Swal.fire({
+                ...swalConfig,
+                title: 'Nuevo producto',
+                html: `
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left;">
+                        <p style="color: #9CA3AF; font-size: 0.85rem; margin: 0;">
+                            Se agrega en <strong style="color: #CCCCCC;">${nombreCategoria}</strong>
+                        </p>
+                        <input id="nuevo-plato-nombre" class="swal2-input" style="margin: 0; width: 100%;"
+                               placeholder="Nombre del producto" maxlength="255" autocomplete="off">
+                        <input id="nuevo-plato-precio" class="swal2-input" style="margin: 0; width: 100%;"
+                               placeholder="Precio (opcional)" inputmode="decimal" maxlength="50" autocomplete="off">
+                        <textarea id="nuevo-plato-descripcion" class="swal2-textarea" style="margin: 0; width: 100%;"
+                                  placeholder="Descripción (opcional)" maxlength="1000"></textarea>
+                        <label for="nuevo-plato-imagen" style="display: flex; align-items: center; gap: 0.75rem; margin: 0; padding: 0.6rem 0.75rem; border: 2px dashed rgba(59, 130, 246, 0.4); border-radius: 0.5rem; color: #3B82F6; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                            <img id="nuevo-plato-imagen-preview" alt=""
+                                 style="display: none; width: 48px; height: 48px; object-fit: cover; border-radius: 0.375rem; flex-shrink: 0;">
+                            <span id="nuevo-plato-imagen-texto">📷 Agregar foto (opcional)</span>
+                        </label>
+                        <input type="file" id="nuevo-plato-imagen" style="display: none;"
+                               accept="image/jpeg,image/png,image/jpg,image/gif,image/webp">
+                    </div>
+                `,
+                icon: 'question',
+                iconColor: '#3B82F6',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Agregar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#EF4444',
+                didOpen: () => {
+                    const input = document.getElementById('nuevo-plato-nombre');
+                    if (input) input.focus();
+
+                    const imagenInput = document.getElementById('nuevo-plato-imagen');
+                    imagenInput.addEventListener('change', () => {
+                        const preview = document.getElementById('nuevo-plato-imagen-preview');
+                        const texto = document.getElementById('nuevo-plato-imagen-texto');
+                        const file = imagenInput.files[0];
+
+                        if (!file || !validarImagenPlato(file, (msg) => Swal.showValidationMessage(msg))) {
+                            imagenInput.value = '';
+                            preview.style.display = 'none';
+                            texto.textContent = '📷 Agregar foto (opcional)';
+                            return;
+                        }
+
+                        Swal.resetValidationMessage();
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            preview.src = e.target.result;
+                            preview.style.display = 'block';
+                            texto.textContent = file.name;
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                },
+                preConfirm: () => {
+                    const nombre = document.getElementById('nuevo-plato-nombre').value.trim();
+                    if (!nombre) {
+                        Swal.showValidationMessage('El producto necesita un nombre');
+                        return false;
+                    }
+
+                    const imagen = document.getElementById('nuevo-plato-imagen').files[0] || null;
+                    if (imagen && !validarImagenPlato(imagen, (msg) => Swal.showValidationMessage(msg))) {
+                        return false;
+                    }
+
+                    return {
+                        nombre: nombre,
+                        precio: document.getElementById('nuevo-plato-precio').value.trim(),
+                        descripcion: document.getElementById('nuevo-plato-descripcion').value.trim(),
+                        imagen: imagen
+                    };
+                }
+            });
+
+            if (!datos) return;
+
+            Swal.fire({
+                ...swalConfig,
+                title: 'Guardando...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const formData = new FormData();
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('nombre', datos.nombre);
+                formData.append('precio', datos.precio);
+                formData.append('descripcion', datos.descripcion);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const url = `{{ route('menus.agregar.plato', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || data.message || `Error HTTP ${response.status}`);
+                }
+
+                // La foto va en un segundo paso, contra el endpoint que ya usa la tarjeta:
+                // recién ahora existe el plato al que pertenece.
+                if (datos.imagen && ! await subirImagenPlato(categoriaIndex, data.plato_index, datos.imagen)) {
+                    Swal.close();
+                    // El producto ya quedó guardado, así que no se rehace el alta: se avisa
+                    // y se recarga para que puedan reintentar la foto desde la tarjeta.
+                    showError('El producto se agregó, pero la foto no se pudo subir. Probá de nuevo desde la tarjeta.');
+                    setTimeout(() => window.location.reload(), 2000);
+                    return;
+                }
+
+                Swal.close();
+                showSuccessMessage('Producto agregado');
+                // La pantalla se rearma desde el servidor: el índice ES la identidad del
+                // plato en todos los endpoints de edición, y un alta o una baja los corre.
+                setTimeout(() => window.location.reload(), 700);
+            } catch (error) {
+                Swal.close();
+                console.error('Error al agregar plato:', error);
+                showError('Error al agregar el producto: ' + (error.message || 'Error desconocido'));
+            }
+        }
+
+        // Sube la foto de un plato recién creado (mismo endpoint que la tarjeta)
+        async function subirImagenPlato(categoriaIndex, platoIndex, file) {
+            try {
+                const formData = new FormData();
+                formData.append('imagen', file);
+                formData.append('categoria_index', categoriaIndex);
+                formData.append('plato_index', platoIndex);
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const url = `{{ route('menus.upload.plato.imagen', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                return response.ok && data.success === true;
+            } catch (error) {
+                console.error('Error al subir la imagen del plato nuevo:', error);
+
+                return false;
+            }
+        }
+
+        // Eliminar un producto de una categoría
+        function eliminarPlato(categoriaIndex, platoIndex, nombrePlato) {
+            const menuId = {{ $menu->id ?? 'null' }};
+            if (!menuId) {
+                showError('El menú no está disponible');
+                return;
+            }
+
+            showConfirm(`¿Eliminar "${nombrePlato}" del menú?`, async function(confirmed) {
+                if (!confirmed) return;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('categoria_index', categoriaIndex);
+                    formData.append('plato_index', platoIndex);
+                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                    formData.append('_method', 'DELETE');
+
+                    const url = `{{ route('menus.delete.plato', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || data.message || `Error HTTP ${response.status}`);
+                    }
+
+                    showSuccessMessage('Producto eliminado');
+                    setTimeout(() => window.location.reload(), 700);
+                } catch (error) {
+                    console.error('Error al eliminar plato:', error);
+                    showError('Error al eliminar el producto: ' + (error.message || 'Error desconocido'));
+                }
+            });
         }
 
         // Helper para crear elemento de estado
