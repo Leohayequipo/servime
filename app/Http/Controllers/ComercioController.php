@@ -274,10 +274,20 @@ class ComercioController extends Controller
         $comercio->chatbot_name = $validated['chatbot_name'];
         $comercio->show_contact_info = $validated['show_contact_info'] ?? false;
         $comercio->enable_ai_responses = $validated['enable_ai_responses'] ?? false;
-        $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
         $comercio->page_title = $validated['page_title'] ?? null;
         $comercio->page_description = $validated['page_description'] ?? null;
         $comercio->favicon_url = $validated['favicon_url'] ?? null;
+
+        // Los pedidos en línea NO se escriben a ciegas, por lo mismo que el link de reseñas
+        // de acá abajo: el formulario del comercio no tiene ese switch (el switch vive en la
+        // página del menú y se guarda por `updateChatbotConfig`), así que un
+        // `$request->boolean('pedido_habilitado')` daba false siempre y guardar el perfil
+        // —o borrar el logo, o borrar la portada— le apagaba el carrito al comercio sin que
+        // nadie lo tocara. Vecinos como `show_contact_info` no sufren esto porque la vista
+        // los manda como hidden con el valor actual.
+        if ($request->has('pedido_habilitado')) {
+            $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
+        }
 
         // Este NO usa `?? null` como sus vecinos, a propósito. Hay requests parciales que
         // reusan este endpoint —borrar el logo manda su propio FormData con un puñado de

@@ -83,4 +83,63 @@ class CartTest extends TestCase
         $otra->assertOk();
         $this->assertCount(0, $otra->json('items'));
     }
+
+    /**
+     * Campos que el formulario de "Configuración del comercio" manda siempre. Ninguno
+     * tiene que ver con los pedidos: son los mínimos que exige la validación.
+     */
+    private function camposDelPerfil(Comercio $comercio): array
+    {
+        return [
+            'nombre' => $comercio->nombre,
+            'primary_color' => '#3B82F6',
+            'secondary_color' => '#1E40AF',
+            'accent_color' => '#F59E0B',
+            'background_color' => '#FFFFFF',
+            'chatbot_name' => 'Asistente IA',
+        ];
+    }
+
+    public function test_guardar_el_perfil_del_comercio_no_apaga_los_pedidos(): void
+    {
+        // El switch de pedidos NO está en el formulario del comercio (vive en la página del
+        // menú), así que escribir la columna a ciegas desde este endpoint le apagaba el
+        // carrito al comercio cada vez que guardaba cualquier otra cosa: colores, portada,
+        // horarios. Y nadie lo relacionaba con eso.
+        $comercio = $this->comercioConPedidos();
+
+        $this->actingAs($comercio->user)
+            ->put("/comercios/{$comercio->slug}", $this->camposDelPerfil($comercio));
+
+        $this->assertTrue($comercio->refresh()->pedido_habilitado);
+    }
+
+    public function test_borrar_el_logo_no_apaga_los_pedidos(): void
+    {
+        // Mismo endpoint, pero con un request PARCIAL armado a mano por el front.
+        $comercio = $this->comercioConPedidos();
+
+        $this->actingAs($comercio->user)
+            ->put("/comercios/{$comercio->slug}", $this->camposDelPerfil($comercio) + ['delete_logo' => '1']);
+
+        $this->assertTrue($comercio->refresh()->pedido_habilitado);
+    }
+
+    public function test_el_switch_de_pedidos_guarda_las_dos_posiciones(): void
+    {
+        // La contracara: el endpoint que SÍ maneja el switch tiene que poder apagarlo, para
+        // que la guarda de arriba no lo deje clavado en prendido.
+        $comercio = $this->comercioConPedidos();
+        $url = "/comercios/{$comercio->slug}/menus/update-chatbot-config";
+
+        $this->actingAs($comercio->user)
+            ->postJson($url, ['pedido_habilitado' => '0'])
+            ->assertOk();
+        $this->assertFalse($comercio->refresh()->pedido_habilitado);
+
+        $this->actingAs($comercio->user)
+            ->postJson($url, ['pedido_habilitado' => '1'])
+            ->assertOk();
+        $this->assertTrue($comercio->refresh()->pedido_habilitado);
+    }
 }
