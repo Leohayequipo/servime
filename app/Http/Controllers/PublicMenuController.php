@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Comercio;
 use App\Services\MenuTranslatorService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PublicMenuController extends Controller
 {
@@ -88,6 +90,27 @@ class PublicMenuController extends Controller
                 ->first();
         }
 
-        return view('menu.classic', compact('comercio', 'menuActivo'));
+        // Que el campo tenga una ruta NO quiere decir que el archivo esté. La vista lo mete
+        // en un <iframe>, así que con el archivo faltante el cliente sentado en la mesa ve
+        // dentro del menú lo que sea que devuelva esa URL: un 403, un 404, o la pantalla de
+        // login. Comprobado en local, y el fallback amable ("Menú no disponible") no se
+        // activaba porque solo miraba el campo de la base.
+        $archivoDisponible = $menuActivo
+            && filled($menuActivo->archivo_original)
+            && Storage::disk('public')->exists($menuActivo->archivo_original);
+
+        if ($menuActivo && filled($menuActivo->archivo_original) && ! $archivoDisponible) {
+            // Que quede registrado: la base apunta a un archivo que no está, y eso solo se
+            // arregla volviendo a subir el menú. Se loguea en cada visita a propósito —es un
+            // menú roto de cara al cliente—; si algún local con mucho tráfico ensucia el log,
+            // ahí se piensa en agrupar.
+            Log::warning('El menú clásico apunta a un archivo que no existe', [
+                'comercio' => $comercio->slug,
+                'menu_id' => $menuActivo->id,
+                'archivo' => $menuActivo->archivo_original,
+            ]);
+        }
+
+        return view('menu.classic', compact('comercio', 'menuActivo', 'archivoDisponible'));
     }
 }

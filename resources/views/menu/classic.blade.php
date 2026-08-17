@@ -131,7 +131,10 @@
         
         <!-- Contenido del menú -->
         <div class="menu-content">
-            @if($menuActivo && $menuActivo->archivo_original)
+            {{-- `$archivoDisponible` comprueba que el archivo EXISTA, no solo que la base
+                 tenga la ruta: si falta, el iframe le mostraba al cliente un 403 o la
+                 pantalla de login adentro del menú. Ver PublicMenuController::classic(). --}}
+            @if($archivoDisponible ?? false)
                 <div class="w-full max-w-6xl animate-fade-in">
                     @if($menuActivo->formato === 'pdf')
                         <iframe 
