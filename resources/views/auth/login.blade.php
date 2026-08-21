@@ -1,117 +1,230 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#F2EDE3">
 
-    <title>{{ config('app.name', 'ServiME') }} - Login</title>
-    
+    <title>{{ config('app.name', 'ServiME') }} — Entrar</title>
+
     <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=fraunces:400,500,600,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=nunito-sans:400,500,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
+        /* Identidad ServiME. Los tokens repiten los de la landing para que el comercio
+           que llega desde "Quiero sumarme" no sienta que cambió de producto.
+
+           Los estilos son propios y no usan .btn-primary / .input-field de app.css:
+           esas clases las comparte todo el panel, que sigue en la estética anterior. */
         :root {
-            --primary-dark:   #111318;
-            --secondary-dark: #1c1f26;
-            --accent-blue:    #f59e0b;
-            --accent-green:   #10b981;
-            --accent-gray:    #374151;
-            --text-primary:   #FFFFFF;
-            --text-secondary: #94a3b8;
-            --background:     #0a0f1e;
+            --ground:      #F2EDE3;
+            --surface:     #FBF9F5;
+            --ink:         #284236;
+            --muted:       #55705F;
+            --line:        rgba(40, 66, 54, 0.14);
+            --accent:      #C0563A;
+            --accent2:     #A8462C;
+            --accent-ink:  #B4462A;
+            --sage:        #6B8C7A;
+            --wood:        #D4B08C;
+            --shadow-md:   0 2px 6px rgba(40, 66, 54, .07), 0 12px 32px rgba(40, 66, 54, .07);
         }
-        body { font-family: Roboto, Inter, system-ui, sans-serif; color: var(--text-primary); min-height: 100vh; position: relative; }
 
-        .video-background {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: -20; filter: blur(8px); -webkit-filter: blur(8px);
-        }
-        .video-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,.75); z-index: -10;
-        }
-        .floating-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .particle {
-            position: absolute; width: 2px; height: 2px;
-            background: var(--accent-blue); border-radius: 50%;
-            animation: particle-float 6s ease-in-out infinite;
-        }
-        @keyframes particle-float {
-            0%,100% { transform: translateY(0) rotate(0deg); opacity: 0; }
-            50%      { transform: translateY(-20px) rotate(180deg); opacity: 1; }
-        }
-        .logo-container { position: relative; z-index: 10; }
-        .logo-glow { filter: drop-shadow(0 0 16px rgba(245,158,11,.5)); }
+        html, body { min-height: 100%; }
 
-        /* Override input background — neutrals instead of navy */
-        .input-field {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border-color: rgba(255, 255, 255, 0.12) !important;
+        body {
+            font-family: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--ground);
+            color: var(--ink);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.25rem;
+            position: relative;
+            -webkit-font-smoothing: antialiased;
         }
-        .input-field:focus {
-            background: rgba(255, 255, 255, 0.08) !important;
-            border-color: #f59e0b !important;
+
+        /* ── Fondo ──
+           El video se mantiene, pero el velo pasa de negro al 75% a crema: con el velo
+           oscuro la pantalla se iba a la estética anterior por más que la tarjeta fuera
+           clara. Ajustá --velo si lo querés más o menos presente. */
+        :root { --velo: .76; }
+
+        .video-fondo {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -20;
+            filter: blur(7px) saturate(.85);
+            -webkit-filter: blur(7px) saturate(.85);
+        }
+
+        .video-velo {
+            position: fixed;
+            inset: 0;
+            z-index: -10;
+            background: rgba(242, 237, 227, var(--velo));
+        }
+
+        /* El halo cálido de la landing, por encima del velo */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -5;
+            pointer-events: none;
+            background:
+                radial-gradient(820px 520px at 78% 12%, rgba(212, 176, 140, .34), transparent 62%),
+                radial-gradient(680px 480px at 14% 88%, rgba(167, 188, 168, .26), transparent 62%);
+        }
+
+        .font-display {
+            font-family: Fraunces, ui-serif, Georgia, "Times New Roman", serif;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+        }
+
+        .tarjeta {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1.75rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .etiqueta {
+            display: block;
+            font-size: .8rem;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: .45rem;
+        }
+
+        .campo {
+            width: 100%;
+            border-radius: 1rem;
+            padding: .8rem 1rem;
+            font-size: .95rem;
+            color: var(--ink);
+            background: var(--ground);
+            border: 1px solid var(--line);
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .campo::placeholder { color: var(--sage); }
+        .campo:focus {
+            outline: none;
+            background: var(--surface);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(192, 86, 58, .16);
+        }
+        .campo.con-error { border-color: var(--accent-ink); }
+
+        .error {
+            color: var(--accent-ink);
+            font-size: .82rem;
+            margin-top: .4rem;
+        }
+
+        .boton {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            padding: .85rem 1.5rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+            background: var(--accent);
+            border: 0;
+            cursor: pointer;
+            transition: background .18s ease, transform .18s ease;
+        }
+        .boton:hover { background: var(--accent2); }
+        .boton:active { transform: translateY(1px); }
+
+        .enlace {
+            color: var(--accent-ink);
+            text-decoration: none;
+            transition: color .15s ease;
+        }
+        .enlace:hover { color: var(--accent2); text-decoration: underline; }
+
+        /* Casilla propia: la de app.css se pinta en ámbar */
+        .casilla {
+            width: 1.05rem;
+            height: 1.05rem;
+            border-radius: .3rem;
+            border: 1px solid var(--sage);
+            background: var(--ground);
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        a:focus-visible, button:focus-visible, input:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: .5rem;
         }
     </style>
 </head>
-<body class="text-text-primary min-h-screen flex items-center justify-center relative overflow-hidden">
-    
-    <!-- Video de Fondo con Blur -->
-    <video class="video-background" autoplay loop muted playsinline>
-        <source src="{{ asset('videos/background_principal.mp4') }}" type="video/mp4">
-        Tu navegador no soporta videos HTML5.
-    </video>
-    
-    <!-- Overlay Oscuro -->
-    <div class="video-overlay"></div>
-    
-    <!-- Floating Particles Background -->
-    <div class="floating-particles">
-        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-        <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
-        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
-        <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
-        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
-        <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
-        <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
-        <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
-        <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
-    </div>
+<body>
+    {{-- El video pesa 3 MB, así que el <source> lo pone el script del final solo en
+         pantallas grandes: en un celular con datos no se descarga. Sin JS tampoco carga,
+         y la pantalla queda igual de usable sobre el fondo crema. --}}
+    <video id="video-fondo" class="video-fondo" autoplay loop muted playsinline
+           preload="none" aria-hidden="true" tabindex="-1"></video>
+    <div class="video-velo" aria-hidden="true"></div>
 
-    <div class="w-full max-w-md mx-auto px-6 relative z-20">
-        
-        <!-- Logo Section -->
-        <div class="text-center mb-8 logo-container">
-            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="w-auto mx-auto mb-3 logo-glow" style="height:160px;">
-            <p class="text-text-secondary">Accede a tu panel de administración</p>
+    <main class="w-full relative" style="max-width: 26rem; z-index: 1;">
+
+        <div class="text-center" style="margin-bottom: 1.75rem;">
+            <a href="{{ url('/') }}" aria-label="ServiME, ir al inicio" class="inline-block">
+                <picture>
+                    <source srcset="{{ asset('images/logo_servime.webp') }}" type="image/webp">
+                    <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME"
+                         width="96" height="96" fetchpriority="high" decoding="async"
+                         style="height:96px;width:96px;">
+                </picture>
+            </a>
+            <h1 class="font-display" style="font-size:1.9rem; margin:1rem 0 .35rem; line-height:1.2;">
+                Entrá a tu panel
+            </h1>
+            <p style="color:var(--muted); font-size:.95rem;">
+                Gestioná tu menú, tus promociones y tus resultados.
+            </p>
         </div>
 
         @if(session('status'))
-            <div class="mb-5 rounded-xl px-4 py-3 text-sm font-medium text-center" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;">
-                ✓ {{ session('status') }}
+            <div style="margin-bottom:1.25rem; border-radius:1rem; padding:.8rem 1rem; font-size:.9rem; text-align:center;
+                        background:rgba(107,140,122,.16); border:1px solid rgba(107,140,122,.45); color:var(--ink);">
+                {{ session('status') }}
             </div>
         @endif
 
-        <!-- Login Form -->
-        <div class="rounded-2xl p-8 neon-glow" style="background:rgba(12,9,6,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,0.18);">
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+        <div class="tarjeta" style="padding: 2rem 1.75rem;">
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
 
                 {{-- Acepta email o nombre de usuario. El type pasa de "email" a "text"
                      porque con type=email el navegador rechaza "juan.perez" antes de
                      que el formulario llegue al servidor. --}}
-                <div class="mb-6">
-                    <label for="email" class="block text-sm font-medium text-text-secondary mb-2">
-                        Email o usuario
-                    </label>
+                <div style="margin-bottom:1.25rem;">
+                    <label for="email" class="etiqueta">Email o usuario</label>
                     <input id="email"
                            type="text"
                            name="email"
@@ -120,108 +233,87 @@
                            autofocus
                            autocapitalize="none"
                            autocomplete="username"
-                           class="input-field w-full"
+                           class="campo @error('email') con-error @enderror"
                            placeholder="tu@email.com o tu.usuario">
                     @error('email')
-                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                        <p class="error">{{ $message }}</p>
                     @enderror
-        </div>
+                </div>
 
-                <!-- Password Field -->
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium text-text-secondary mb-2">
-                        Contraseña
-                    </label>
-                    <input id="password" 
-                            type="password"
-                            name="password"
-                           required 
+                <div style="margin-bottom:1.25rem;">
+                    <label for="password" class="etiqueta">Contraseña</label>
+                    <input id="password"
+                           type="password"
+                           name="password"
+                           required
                            autocomplete="current-password"
-                           class="input-field w-full"
+                           class="campo @error('password') con-error @enderror"
                            placeholder="••••••••">
                     @error('password')
-                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                        <p class="error">{{ $message }}</p>
                     @enderror
-        </div>
+                </div>
 
-                <!-- Remember Me & Forgot Password -->
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-                    <div class="flex items-center">
-                        <input id="remember_me"
-                               name="remember"
-                               type="checkbox"
-                               class="w-4 h-4 text-accent-blue bg-white/5 border-white/20 rounded focus:ring-accent-blue focus:ring-2">
-                        <label for="remember_me" class="ml-2 text-sm text-text-secondary">
-                            Recordarme
-                        </label>
-                    </div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style="margin-bottom:1.5rem;">
+                    <label for="remember_me" class="flex items-center gap-2" style="cursor:pointer;">
+                        <input id="remember_me" name="remember" type="checkbox" class="casilla">
+                        <span style="font-size:.9rem; color:var(--muted);">Recordarme</span>
+                    </label>
 
                     @if (Route::has('password.request'))
-                        <a href="{{ route('password.request') }}" 
-                           class="text-sm text-accent-blue hover:text-accent-green transition-colors duration-300 text-center sm:text-right">
+                        <a href="{{ route('password.request') }}" class="enlace"
+                           style="font-size:.88rem;">
                             ¿Olvidaste tu contraseña?
                         </a>
                     @endif
                 </div>
 
-                <!-- Login Button -->
-                <button type="submit" 
-                        class="btn-primary w-full text-center py-3 px-6 text-lg font-semibold">
-                    INICIAR SESIÓN
-                </button>
+                <button type="submit" class="boton">Iniciar sesión</button>
             </form>
 
-
-            <!-- Register Link -->
-            {{-- @if (Route::has('register'))
+            {{-- Registro cerrado: las altas las hace el equipo. Se deja para reactivarlo.
+            @if (Route::has('register'))
                 <div class="mt-6 text-center">
-                    <p class="text-text-secondary">
-                        ¿No tienes cuenta? 
-                        <a href="{{ route('register') }}" 
-                           class="text-accent-blue hover:text-accent-green transition-colors duration-300 font-medium">
-                            Regístrate aquí
-                        </a>
+                    <p style="color:var(--muted); font-size:.9rem;">
+                        ¿No tenés cuenta?
+                        <a href="{{ route('register') }}" class="enlace">Registrate acá</a>
                     </p>
                 </div>
             @endif --}}
         </div>
 
-        <!-- Footer -->
-        <div class="text-center mt-8 space-y-2">
-            <p class="text-text-secondary text-sm">
-                © {{ date('Y') }} ServiMe! Todos los derechos reservados.
-            </p>
-            <a href="{{ url('/?chat=1') }}"
-               class="text-xs text-text-secondary/50 hover:text-text-secondary transition-colors duration-300">
-                Centro de Ayuda
+        <div class="text-center" style="margin-top:1.75rem; display:flex; flex-direction:column; gap:.5rem;">
+            <a href="{{ url('/?chat=1') }}" class="enlace" style="font-size:.88rem;">
+                ¿Necesitás ayuda? Escribinos
             </a>
+            <p style="color:var(--sage); font-size:.78rem;">
+                © {{ date('Y') }} ServiME. Todos los derechos reservados.
+            </p>
         </div>
-    </div>
+    </main>
 
-    <!-- Dark Mode Script -->
-    <script src="{{ asset('js/dark-mode.js') }}"></script>
-    
-    <!-- Scripts -->
     <script>
-        // Add floating animation to particles
-        document.addEventListener('DOMContentLoaded', function() {
-            const particles = document.querySelectorAll('.particle');
-            particles.forEach((particle, index) => {
-                particle.style.animationDelay = `${index * 0.5}s`;
-                particle.style.animationDuration = `${6 + Math.random() * 4}s`;
-            });
-        });
-        
-        // Add focus effects to inputs
-        document.querySelectorAll('.input-field').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentElement.classList.add('neon-glow');
-            });
-            
-            input.addEventListener('blur', function() {
-                this.parentElement.classList.remove('neon-glow');
-            });
-        });
+        // Carga el video sólo donde tiene sentido: en pantallas grandes y si el visitante
+        // no pidió menos movimiento. Es un fondo decorativo — no vale gastarle 3 MB de
+        // datos a alguien que entra del celular a escribir su contraseña.
+        (function () {
+            var video = document.getElementById('video-fondo');
+            if (!video) return;
+
+            var pantallaGrande = window.matchMedia('(min-width: 900px)').matches;
+            var menosMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!pantallaGrande || menosMovimiento) return;
+
+            var source = document.createElement('source');
+            source.type = 'video/mp4';
+            source.src = @json(asset('videos/background_principal.mp4'));
+            video.appendChild(source);
+            video.load();
+
+            // Si el navegador bloquea el autoplay, el fondo crema ya está debajo.
+            var promesa = video.play();
+            if (promesa && promesa.catch) promesa.catch(function () {});
+        })();
     </script>
 </body>
 </html>
