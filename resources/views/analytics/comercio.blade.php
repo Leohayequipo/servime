@@ -214,7 +214,7 @@
                         <x-icono name="funnel" class="w-4 h-4 flex-none opacity-60" />
                         Embudo de interés
                         <x-ayuda titulo="Embudo de interés"
-                                 texto="Hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú, menos todavía tocan «Lo quiero» y unos pocos abren su pedido para revisarlo antes de pedírselo al mozo. Ese último escalón es el que más se parece a una venta. Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques."
+                                 texto="Hasta dónde llega la gente que abre tu menú, paso a paso: todos visitan, algunos pasan por la pantalla inicial, menos eligen cómo ver el menú, menos todavía tocan «Lo quiero» y unos pocos abren su pedido para revisarlo antes de pedírselo al camarero. Ese último escalón es el que más se parece a una venta. Donde veas la caída más grande, ahí está lo que conviene revisar. Cuenta personas, no toques."
                                  admin="Por visita (corte de 30 min de inactividad sobre el mismo session_id). «Revisaron su pedido» exige items > 0: el panel se puede abrir vacío y el escalón saldría mayor que el anterior." />
                     </h3>
                     @php

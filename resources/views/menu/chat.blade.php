@@ -588,7 +588,7 @@
     <div class="fab-container">
         @if($comercio->pedido_habilitado)
             <div class="fab-item">
-                <button id="fabWish" title="{{ __('Resumen para el mozo') }}" class="fab-btn fab-btn-wish">
+                <button id="fabWish" title="{{ __('Resumen para el camarero') }}" class="fab-btn fab-btn-wish">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v14.5a.5.5 0 0 1-.77.42L16 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L11 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L6 19.2l-1.23.95A.5.5 0 0 1 4 19.73V6a2 2 0 0 1 2-2Zm1 4v2h8V8H8Zm0 4v2h8v-2H8Z"/></svg>
                     <span class="fab-badge" id="wishBadge"></span>
                 </button>
@@ -614,11 +614,11 @@
     </div>
 
     @if($comercio->pedido_habilitado)
-        <!-- Panel Resumen para el mozo -->
+        <!-- Panel Resumen para el camarero -->
         <div id="wishPanel" class="wish-panel">
             <div class="wish-panel-inner">
                 <div class="wish-header">
-                    <h4>{{ __('Resumen para el mozo') }}</h4>
+                    <h4>{{ __('Resumen para el camarero') }}</h4>
                     <div class="wish-header-buttons">
                         <button id="wishClear" class="wish-btn wish-btn-clear">{{ __('Vaciar') }}</button>
                         <button id="wishClose" class="wish-btn wish-btn-close">{{ __('Cerrar') }}</button>
@@ -1472,7 +1472,7 @@
         function toggleTags() { togglePanel(tagsPanel); }
 
         // Abrir el resumen es el final real del recorrido: el cliente armó el pedido y se lo
-        // va a mostrar al mozo. Se manda con la cantidad de ítems, y solo al ABRIR el panel
+        // va a mostrar al camarero. Se manda con la cantidad de ítems, y solo al ABRIR el panel
         // (togglePanel también cierra) para no contar dos veces la misma consulta.
         if (fabWish && wishPanel) fabWish.addEventListener('click', () => {
             const abriendo = openPanelEl !== wishPanel;

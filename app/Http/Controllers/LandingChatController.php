@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatLanding;
 use App\Models\Plan;
+use App\Support\ArmaPayloadOpenAI;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class LandingChatController extends Controller
 {
+    use ArmaPayloadOpenAI;
+
     private const BASE_PROMPT = <<<'PROMPT'
 Sos el asistente de ventas de ServiME, un SaaS argentino de menús digitales con IA para bares y restaurantes.
 
@@ -23,7 +26,7 @@ ServiME convierte el menú físico de un bar o restaurante en una experiencia di
 - Acceso al menú desde el celular con QR, sin instalar nada
 - Chatbot con IA entrenado específicamente con el menú del local: platos, precios, categorías, tags y promos
 - El bot recomienda según lo que pide el cliente ("algo vegetariano", "sin picante", "sin TACC")
-- Pre-pedido con total estimado para mostrar o compartir al mozo
+- Pre-pedido con total estimado para mostrar o compartir al camarero
 - Fotos y descripciones de platos (si el menú las incluye)
 - Categorías automáticas con íconos (entradas, principales, postres, bebidas, etc.)
 - Tags de filtrado: vegano, sin gluten, sin TACC, etc.
@@ -40,7 +43,7 @@ ServiME convierte el menú físico de un bar o restaurante en una experiencia di
 
 ## Argumentos de venta clave
 - Sin fricción para el cliente: nada de apps, menú siempre actualizado en el celular del comensal
-- Menos carga para el salón: el bot responde lo de siempre ("¿qué tiene sin gluten?", "¿cuál es la promo?") y los mozos se enfocan en atender
+- Menos carga para el salón: el bot responde lo de siempre ("¿qué tiene sin gluten?", "¿cuál es la promo?") y los camareros se enfocan en atender
 - IA entrenada con TU menú — no es un chatbot genérico, conoce exactamente lo que tiene el local
 - Listo en minutos: subís el PDF de la carta, la IA hace el trabajo pesado
 - Métricas reales: sabés qué pregunta la gente, qué platos generan más interés, cuántas interacciones tiene el menú
@@ -124,18 +127,23 @@ PROMPT;
         }
         $messages[] = ['role' => 'user', 'content' => $request->input('message')];
 
+        // El body cambia según la familia del modelo: los GPT-5 rechazan con 400 los
+        // parámetros de los GPT-4. Lo resuelve el trait, compartido con el chat del menú.
+        $payload = $this->payloadOpenAI(
+            config('services.openai.landing_model'),
+            $messages,
+            config('services.openai.landing_max_tokens'),
+            false,
+            // Se conservan por si se vuelve a un GPT-4: más bajos que en el asistente del
+            // menú porque acá se responde sobre precios y funciones, no se recomiendan platos.
+            ['temperature' => 0.5, 'presence_penalty' => 0.2, 'frequency_penalty' => 0.1],
+        );
+
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(20)->post($baseUrl.'/chat/completions', [
-                'model' => 'gpt-4o-mini',
-                'messages' => $messages,
-                'max_tokens' => 400,
-                'temperature' => 0.5,
-                'presence_penalty' => 0.2,
-                'frequency_penalty' => 0.1,
-            ]);
+            ])->timeout(20)->post($baseUrl.'/chat/completions', $payload);
 
             if ($response->successful()) {
                 $text = trim($response->json('choices.0.message.content', ''));

@@ -44,6 +44,17 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4o'), // gpt-4o para mejor precisión en OCR
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+
+        /*
+         * Chat de ventas de la landing. Es el único chat que no saca el modelo del plan de
+         * un comercio, porque del otro lado hay un visitante sin cuenta.
+         *
+         * `gpt-5.6-luna` razona, así que el límite incluye los tokens de razonamiento
+         * (~285 medidos en consultas reales). Con los 400 de la etapa gpt-4o-mini el
+         * modelo se los gastaba pensando y devolvía la respuesta vacía o cortada.
+         */
+        'landing_model' => env('LANDING_CHAT_MODEL', 'gpt-5.6-luna'),
+        'landing_max_tokens' => (int) env('LANDING_CHAT_MAX_TOKENS', 900),
     ],
 
     'gemini' => [

@@ -552,7 +552,7 @@
 
                                 <p class="text-xs text-text-secondary uppercase tracking-wide mb-1">Qué querés que destaque</p>
                                 <p class="text-xs text-text-secondary mb-3">
-                                    Lo que el asistente va a empujar mientras charla, como pedirle al mozo que ofrezca
+                                    Lo que el asistente va a empujar mientras charla, como pedirle al camarero que ofrezca
                                     postre antes de traer la cuenta. No filtra ni esconde nada del menú: el cliente
                                     sigue viendo todo. Marcá solo lo que tu carta realmente tenga.
                                 </p>

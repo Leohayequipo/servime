@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
  * rápido en español.
  *
  * Los NOMBRES DE PLATOS no se traducen NUNCA, por dos razones: el cliente se los tiene
- * que poder pedir al mozo, y son la clave con la que se resuelven las tarjetas contra el
+ * que poder pedir al camarero, y son la clave con la que se resuelven las tarjetas contra el
  * marcador [[PLATOS: ...]] que declara el modelo.
  */
 class MenuTranslatorService
@@ -77,7 +77,7 @@ class MenuTranslatorService
      *
      * Acá SÍ se traducen los ingredientes: es justamente lo que le sirve al turista para
      * entender qué está pidiendo. El NOMBRE del plato sigue intacto (se lo tiene que
-     * poder pedir al mozo), solo se traduce la descripción.
+     * poder pedir al camarero), solo se traduce la descripción.
      *
      * @param  array<int, string>  $descripciones
      * @return array<string, string>

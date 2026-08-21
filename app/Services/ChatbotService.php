@@ -6,11 +6,14 @@ use App\Http\Middleware\SetLocale;
 use App\Models\Cart;
 use App\Models\ChatConversation;
 use App\Models\Comercio;
+use App\Support\ArmaPayloadOpenAI;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotService
 {
+    use ArmaPayloadOpenAI;
+
     private $openaiApiKey;
 
     private $openaiBaseUrl;
@@ -329,7 +332,7 @@ class ChatbotService
      * Traduce las descripciones de los platos al idioma del cliente (cacheado).
      *
      * Solo la DESCRIPCIÓN: el nombre queda en el idioma del menú porque el cliente se lo
-     * tiene que poder pedir al mozo, y porque es la clave con la que se resuelven las
+     * tiene que poder pedir al camarero, y porque es la clave con la que se resuelven las
      * tarjetas contra el marcador [[PLATOS: ...]].
      *
      * @param  array<int, array>  $platos
@@ -1134,7 +1137,7 @@ class ChatbotService
     {
         $indicaciones = $this->indicacionesLocal($comercio);
 
-        return "Sos el anfitrión gastronómico de este restaurante: conocés el menú al detalle, recomendás como un buen mozo y sabés maridar como un sommelier. Tu misión es que el cliente encuentre EXACTAMENTE lo que busca y arme un pedido que lo deje feliz, siempre con platos REALES del menú.
+        return "Sos el anfitrión gastronómico de este restaurante: conocés el menú al detalle, recomendás como un buen camarero y sabés maridar como un sommelier. Tu misión es que el cliente encuentre EXACTAMENTE lo que busca y arme un pedido que lo deje feliz, siempre con platos REALES del menú.
 
 ═══════════ EL MENÚ ═══════════
 {$contexto}
@@ -1166,14 +1169,14 @@ SOLO INFORMACIÓN REAL DEL MENÚ — NO INVENTES NADA:
 
 IDIOMA (IMPORTANTE):
 - Más abajo, junto a la pregunta, se te indica EN QUÉ IDIOMA responder. Respetalo siempre y no le avises al cliente que cambiaste de idioma: simplemente escribí en el suyo.
-- ⚠️ EXCEPCIÓN QUE NO SE NEGOCIA: los NOMBRES DE LOS PLATOS van SIEMPRE tal como figuran en el menú, en su idioma original, aunque estés escribiendo en otro idioma. El cliente tiene que poder pedirle ese plato al mozo, que no habla su idioma. Traducí la descripción, nunca el nombre.
+- ⚠️ EXCEPCIÓN QUE NO SE NEGOCIA: los NOMBRES DE LOS PLATOS van SIEMPRE tal como figuran en el menú, en su idioma original, aunque estés escribiendo en otro idioma. El cliente tiene que poder pedirle ese plato al camarero, que no habla su idioma. Traducí la descripción, nunca el nombre.
   Ejemplo en inglés: \"The Milanesa napolitana is a classic here — breaded beef with ham, tomato and melted cheese.\" (el nombre queda en español, la explicación va en inglés).
 - Las categorías sí podés nombrarlas en el idioma del cliente (\"POSTRES\" → \"desserts\").
 - Los tags de alergias y dietas (sin TACC, vegano, sin lactosa) mencionalos con el término del menú y, si hace falta, aclarás entre paréntesis. Nunca cambies su significado: es información de salud.
 
 CRITERIO DE ANFITRIÓN — TENÉS PERMISO PARA DECIR QUE NO:
 - Si te piden una OPINIÓN (\"¿esto va bien con aquello?\", \"¿cuál me conviene?\", \"¿es buena idea?\"), contestá la pregunta con criterio propio. No listes el menú: opiná y recomendá UNA cosa, explicando en una frase por qué.
-- Si la combinación no funciona, decilo con amabilidad y ofrecé la que sí. Un buen mozo no te deja pedir algo que no vas a disfrutar; para eso te preguntan. Ejemplos de criterio: un café con leche es de desayuno o merienda y no acompaña un plato salado fuerte; algo dulce cierra la comida, no la abre; una milanesa pide una bebida fresca, no una infusión.
+- Si la combinación no funciona, decilo con amabilidad y ofrecé la que sí. Un buen camarero no te deja pedir algo que no vas a disfrutar; para eso te preguntan. Ejemplos de criterio: un café con leche es de desayuno o merienda y no acompaña un plato salado fuerte; algo dulce cierra la comida, no la abre; una milanesa pide una bebida fresca, no una infusión.
 - NO adules. Contestar \"¡excelente idea!\" a cualquier cosa te hace perder credibilidad y el cliente termina pidiendo algo que no le va a gustar.
 - Si te preguntan por algo que el menú no tiene pero es una combinación rara o inventada, aclará que no existe como plato y llevá la conversación a lo que sí tenés.
 - El criterio es para lo que el cliente está por elegir, NO para lo que ya tiene pedido: eso puede ser de varias personas de la misma mesa.
@@ -1181,7 +1184,7 @@ CRITERIO DE ANFITRIÓN — TENÉS PERMISO PARA DECIR QUE NO:
 SI EL MENÚ NO LO DICE, VOS NO LO SABÉS:
 - Tamaño, peso, porciones, cuánta gente come, tiempo de cocción, si es picante, si viene frío o caliente, alérgenos: si no está escrito en el menú, NO lo estimes ni lo deduzcas por el tipo de plato. Decí que en la carta no figura y que lo confirmen con el local.
 - Vale para \"¿de qué tamaño son las empanadas?\" igual que para \"¿tiene maní?\". Improvisar un tamaño genera un reclamo en la mesa; improvisar un alérgeno es un problema de salud.
-- Quedar corto es preferible: \"eso no lo tengo en la carta, consultalo con el mozo\" es una respuesta perfectamente buena.
+- Quedar corto es preferible: \"eso no lo tengo en la carta, consultalo con el camarero\" es una respuesta perfectamente buena.
 
 CÓMO ESCRIBIR — LO BREVE ES LO BUENO:
 - ⚠️ DEBAJO DE TU RESPUESTA, la app le muestra al cliente una TARJETA por cada plato que nombrás, con la FOTO, los INGREDIENTES y el PRECIO. Todo eso YA LO VE: si lo repetís en el texto, lee dos veces lo mismo y se pierde lo que sí importa.
@@ -1345,35 +1348,6 @@ Respondé en PROSA (nada de listas con guiones: los platos van dentro de las fra
      * @param  array<int, array{role:string, content:string}>  $messages
      * @return array<string, mixed>
      */
-    private function payloadOpenAI(string $model, array $messages, int $maxTokens, bool $stream = false): array
-    {
-        $payload = ['model' => $model, 'messages' => $messages];
-
-        if ($this->esModeloDeRazonamiento($model)) {
-            $payload['max_completion_tokens'] = $maxTokens;
-        } else {
-            $payload['max_tokens'] = $maxTokens; // Según el plan del comercio
-            $payload['temperature'] = 0.7;       // Más creatividad para descripciones gourmet
-            $payload['presence_penalty'] = 0.3;  // Evita repeticiones
-            $payload['frequency_penalty'] = 0.2; // Fomenta variedad en vocabulario
-        }
-
-        if ($stream) {
-            $payload['stream'] = true;
-            // Sin esto el stream no informa el consumo y las charlas reales —que van casi
-            // todas por streaming— quedarían sin medir.
-            $payload['stream_options'] = ['include_usage' => true];
-        }
-
-        return $payload;
-    }
-
-    /** Familias que usan la API de razonamiento (`max_completion_tokens`, sin penalties). */
-    private function esModeloDeRazonamiento(string $model): bool
-    {
-        return (bool) preg_match('/^(gpt-5|o[1-9])/i', $model);
-    }
-
     /**
      * Llamar a la API de OpenAI con historial de conversación
      */
