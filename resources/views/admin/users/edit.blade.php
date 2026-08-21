@@ -29,25 +29,25 @@
                  Va acá y no en users/show porque showUser() redirige a esta vista. --}}
             @if(session('credenciales'))
                 @php $cred = session('credenciales'); @endphp
-                <div class="mb-8 bg-amber-900/20 border border-amber-500/40 rounded-2xl p-5">
+                <div class="mb-8 bg-warning/20 border border-warning/40 rounded-2xl p-5">
                     <div class="flex items-start gap-4">
-                        <x-icono name="alert" class="w-5 h-5 flex-none mt-0.5 text-amber-400" />
+                        <x-icono name="alert" class="w-5 h-5 flex-none mt-0.5 text-warning" />
                         <div class="min-w-0 flex-1">
-                            <h2 class="text-amber-200 font-semibold">Credenciales de acceso</h2>
-                            <p class="text-amber-200/80 text-sm mt-0.5">
+                            <h2 class="text-warning font-semibold">Credenciales de acceso</h2>
+                            <p class="text-warning/80 text-sm mt-0.5">
                                 La contraseña inicial es la misma para todas las cuentas nuevas. Pedile que la cambie apenas entre.
                             </p>
 
                             <dl class="mt-4 grid gap-3 sm:grid-cols-3">
                                 @foreach(['Usuario' => $cred['usuario'], 'Email' => $cred['email'], 'Contraseña' => $cred['password']] as $etiqueta => $valor)
-                                    <div class="bg-black/25 border border-amber-500/25 rounded-xl px-3 py-2">
-                                        <dt class="text-[11px] uppercase tracking-wide text-amber-200/60">{{ $etiqueta }}</dt>
-                                        <dd class="text-sm font-mono text-amber-100 break-all select-all">{{ $valor }}</dd>
+                                    <div class="bg-black/25 border border-warning/25 rounded-xl px-3 py-2">
+                                        <dt class="text-[11px] uppercase tracking-wide text-warning/60">{{ $etiqueta }}</dt>
+                                        <dd class="text-sm font-mono text-warning break-all select-all">{{ $valor }}</dd>
                                     </div>
                                 @endforeach
                             </dl>
 
-                            <p class="text-amber-200/70 text-xs mt-3">
+                            <p class="text-warning/70 text-xs mt-3">
                                 Puede entrar con el usuario o con el email. También le llegó un mail para elegir su propia contraseña, que es la forma recomendada.
                             </p>
                         </div>

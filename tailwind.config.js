@@ -16,17 +16,29 @@ export default {
             fontFamily: {
                 sans: ['Roboto', 'Inter', ...defaultTheme.fontFamily.sans],
             },
+            // Los valores viven en variables CSS (resources/css/app.css) en vez de estar
+            // acá: así una pantalla puede redefinir la paleta con un :root local sin
+            // recompilar ni afectar al resto del panel.
+            //
+            // El formato "rgb(var(--x) / <alpha-value>)" no es capricho: hay 344 usos con
+            // opacidad (accent-blue/20, accent-gray/50…) que se romperían con un var()
+            // plano, porque Tailwind necesita los componentes sueltos para inyectar el alfa.
             colors: {
-                // Brand palette — ámbar como color primario de marca
-                'accent-blue':    '#f59e0b',   // ámbar (ex cyan #00C4FF)
-                'accent-amber':   '#f59e0b',   // alias semántico
-                'accent-green':   '#10b981',   // emerald
-                'accent-gray':    '#374151',
-                'primary-dark':   '#111318',
-                'secondary-dark': '#1c1f26',
-                'text-primary':   '#FFFFFF',
-                'text-secondary': '#94a3b8',
-                'background':     '#0b0c10',
+                'accent-blue':    'rgb(var(--c-accent) / <alpha-value>)',
+                'accent-amber':   'rgb(var(--c-accent) / <alpha-value>)',   // alias semántico
+                'accent-green':   'rgb(var(--c-ok) / <alpha-value>)',
+                'accent-gray':    'rgb(var(--c-line) / <alpha-value>)',
+                'primary-dark':   'rgb(var(--c-elev-1) / <alpha-value>)',
+                'secondary-dark': 'rgb(var(--c-elev-2) / <alpha-value>)',
+                'text-primary':   'rgb(var(--c-ink) / <alpha-value>)',
+                'text-secondary': 'rgb(var(--c-ink-soft) / <alpha-value>)',
+                'background':     'rgb(var(--c-bg) / <alpha-value>)',
+
+                // Semánticos: NO son de marca. Existen para que un aviso se lea como
+                // aviso aunque cambie la identidad, y para no volver a tocar 119 clases
+                // sueltas la próxima vez que se ajuste un color.
+                'warning':        'rgb(var(--c-warn) / <alpha-value>)',
+                'danger':         'rgb(var(--c-danger) / <alpha-value>)',
             },
         },
     },

@@ -44,8 +44,8 @@
             `;
 
             Swal.fire({
-                background: '#1c1f26',
-                color: '#ffffff',
+                background: 'rgb(var(--c-elev-2))',
+                color: 'rgb(var(--c-ink))',
                 customClass: {
                     popup: 'dark-modal',
                     title: 'text-white',
@@ -54,9 +54,9 @@
                 title: 'Contacta con el Administrador',
                 html: htmlContent,
                 icon: 'info',
-                iconColor: '#f59e0b',
+                iconColor: 'rgb(var(--c-accent))',
                 confirmButtonText: 'Cerrar',
-                confirmButtonColor: '#f59e0b',
+                confirmButtonColor: 'rgb(var(--c-accent))',
                 width: '500px'
             });
         }

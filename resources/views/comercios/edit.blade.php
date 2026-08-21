@@ -324,7 +324,7 @@
                         <div class="metric-card">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center mr-2">
+                                    <div class="w-6 h-6 bg-accent-blue rounded-lg flex items-center justify-center mr-2">
                                         <span class="text-white text-xs">🏪</span>
                                     </div>
                                     <h3 class="text-sm font-semibold text-text-primary">Portada</h3>
@@ -345,15 +345,15 @@
                                  "recargá en unos segundos" para siempre, y si la cola estaba
                                  caída el comerciante no tenía forma de enterarse. --}}
                             <div class="mb-3 hidden" id="portadaProgreso">
-                                <div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                                <div class="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
                                     <div class="flex items-center justify-between mb-2">
-                                        <p class="text-xs text-amber-300">Generando el tema…</p>
-                                        <span class="text-xs text-amber-400/70" id="portadaSegundos"></span>
+                                        <p class="text-xs text-warning">Generando el tema…</p>
+                                        <span class="text-xs text-warning/70" id="portadaSegundos"></span>
                                     </div>
-                                    <div class="h-1 w-full overflow-hidden rounded-full bg-amber-900/40">
-                                        <div class="progreso-barra h-full w-1/3 rounded-full bg-amber-400"></div>
+                                    <div class="h-1 w-full overflow-hidden rounded-full bg-warning/40">
+                                        <div class="progreso-barra h-full w-1/3 rounded-full bg-warning"></div>
                                     </div>
-                                    <p class="mt-2 hidden text-xs text-amber-200" id="portadaDemora">
+                                    <p class="mt-2 hidden text-xs text-warning" id="portadaDemora">
                                         Está tardando más de lo normal.
                                         <button type="button" id="portadaReintentar"
                                                 class="underline hover:text-white">Reintentar</button>
@@ -428,8 +428,8 @@
                                 {{-- Aviso persistente: la subió igual, pero conviene que sepa
                                      por qué se ve borrosa cada vez que entra acá. --}}
                                 @if($comercio->tema_derivado['baja_calidad'] ?? false)
-                                    <div class="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-                                        <p class="text-xs text-amber-300">
+                                    <div class="mb-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+                                        <p class="text-xs text-warning">
                                             <strong>Calidad baja.</strong>
                                             La imagen es de {{ $comercio->tema_derivado['ancho'] }}×{{ $comercio->tema_derivado['alto'] }}
                                             y se recomienda 900×600 o más. Se ve borrosa en el menú.
@@ -470,9 +470,9 @@
                                     <p class="text-xs text-accent-blue mt-1" id="portadaMedidas"></p>
                                 </div>
 
-                                <div class="mb-3 hidden rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2"
+                                <div class="mb-3 hidden rounded-lg border border-warning/40 bg-warning/10 px-3 py-2"
                                      id="portadaAviso">
-                                    <p class="text-xs text-amber-300">
+                                    <p class="text-xs text-warning">
                                         <strong>Calidad baja.</strong>
                                         <span id="portadaAvisoDetalle"></span>
                                         Se va a ver borrosa en el menú. Podés guardarla igual y cambiarla cuando quieras.
@@ -503,7 +503,7 @@
                         <!-- Contacto -->
                         <div class="metric-card">
                             <div class="flex items-center mb-4">
-                                <div class="w-6 h-6 bg-gradient-to-r from-accent-green to-green-600 rounded-lg flex items-center justify-center mr-2">
+                                <div class="w-6 h-6 bg-accent-green hover:brightness-95 rounded-lg flex items-center justify-center mr-2">
                                     <span class="text-white text-xs">📞</span>
                                 </div>
                                 <h3 class="text-sm font-semibold text-text-primary">Contacto</h3>
@@ -538,7 +538,7 @@
                         <!-- Información del Sistema -->
                         <div class="metric-card">
                             <div class="flex items-center mb-4">
-                                <div class="w-6 h-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center mr-2">
+                                <div class="w-6 h-6 bg-danger hover:brightness-95 rounded-lg flex items-center justify-center mr-2">
                                     <span class="text-white text-xs">ℹ️</span>
                                 </div>
                                 <h3 class="text-sm font-semibold text-text-primary">Sistema</h3>

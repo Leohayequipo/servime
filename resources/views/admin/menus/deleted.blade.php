@@ -33,8 +33,8 @@
             @endif
 
             <!-- Info -->
-            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-5 mb-8 flex items-start gap-4">
-                <div class="w-9 h-9 bg-yellow-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div class="bg-warning/10 border border-warning/30 rounded-2xl p-5 mb-8 flex items-start gap-4">
+                <div class="w-9 h-9 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span>ℹ️</span>
                 </div>
                 <div>

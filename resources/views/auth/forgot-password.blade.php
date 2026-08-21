@@ -1,113 +1,169 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#F2EDE3">
 
-    <title>{{ config('app.name', 'ServiME') }} - Recuperar Contraseña</title>
+    <title>{{ config('app.name', 'ServiME') }} — Recuperar contraseña</title>
 
     <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=fraunces:400,500,600,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=nunito-sans:400,500,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
+        /* Mismos tokens que el login y la landing. Estilos propios y locales: las clases
+           .btn-primary / .input-field de app.css las comparte el panel entero. */
         :root {
-            --primary-dark:   #111318;
-            --secondary-dark: #1c1f26;
-            --accent-blue:    #f59e0b;
-            --accent-green:   #10b981;
-            --accent-gray:    #374151;
-            --text-primary:   #FFFFFF;
-            --text-secondary: #94a3b8;
-            --background:     #0b0c10;
+            --ground:      #F2EDE3;
+            --surface:     #FBF9F5;
+            --ink:         #284236;
+            --muted:       #55705F;
+            --line:        rgba(40, 66, 54, 0.14);
+            --accent:      #C0563A;
+            --accent2:     #A8462C;
+            --accent-ink:  #B4462A;
+            --sage:        #6B8C7A;
+            --shadow-md:   0 2px 6px rgba(40, 66, 54, .07), 0 12px 32px rgba(40, 66, 54, .07);
+            --velo: .76;
         }
-        body { font-family: Roboto, Inter, system-ui, sans-serif; color: var(--text-primary); min-height: 100vh; position: relative; }
 
-        .video-background {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: -20; filter: blur(8px); -webkit-filter: blur(8px);
-        }
-        .video-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,.75); z-index: -10;
-        }
-        .floating-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .particle {
-            position: absolute; width: 2px; height: 2px;
-            background: var(--accent-blue); border-radius: 50%;
-            animation: particle-float 6s ease-in-out infinite;
-        }
-        @keyframes particle-float {
-            0%,100% { transform: translateY(0) rotate(0deg); opacity: 0; }
-            50%      { transform: translateY(-20px) rotate(180deg); opacity: 1; }
-        }
-        .logo-container { position: relative; z-index: 10; }
-        .logo-glow { filter: drop-shadow(0 0 16px rgba(245,158,11,.5)); }
+        html, body { min-height: 100%; }
 
-        .input-field {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border-color: rgba(255, 255, 255, 0.12) !important;
+        body {
+            font-family: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--ground);
+            color: var(--ink);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.25rem;
+            position: relative;
+            -webkit-font-smoothing: antialiased;
         }
-        .input-field:focus {
-            background: rgba(255, 255, 255, 0.08) !important;
-            border-color: #f59e0b !important;
+
+        .video-fondo {
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: -20;
+            filter: blur(7px) saturate(.85);
+            -webkit-filter: blur(7px) saturate(.85);
+        }
+        .video-velo {
+            position: fixed; inset: 0; z-index: -10;
+            background: rgba(242, 237, 227, var(--velo));
+        }
+        body::before {
+            content: "";
+            position: fixed; inset: 0; z-index: -5; pointer-events: none;
+            background:
+                radial-gradient(820px 520px at 78% 12%, rgba(212, 176, 140, .34), transparent 62%),
+                radial-gradient(680px 480px at 14% 88%, rgba(167, 188, 168, .26), transparent 62%);
+        }
+
+        .font-display {
+            font-family: Fraunces, ui-serif, Georgia, "Times New Roman", serif;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+        }
+
+        .tarjeta {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1.75rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .etiqueta {
+            display: block; font-size: .8rem; font-weight: 700;
+            color: var(--muted); margin-bottom: .45rem;
+        }
+
+        .campo {
+            width: 100%; border-radius: 1rem; padding: .8rem 1rem;
+            font-size: .95rem; color: var(--ink);
+            background: var(--ground); border: 1px solid var(--line);
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .campo::placeholder { color: var(--sage); }
+        .campo:focus {
+            outline: none; background: var(--surface);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(192, 86, 58, .16);
+        }
+        .campo.con-error { border-color: var(--accent-ink); }
+
+        .error { color: var(--accent-ink); font-size: .82rem; margin-top: .4rem; }
+
+        .boton {
+            width: 100%; display: inline-flex; align-items: center; justify-content: center;
+            padding: .85rem 1.5rem; border-radius: 1rem;
+            font-weight: 700; font-size: 1rem; color: #fff;
+            background: var(--accent); border: 0; cursor: pointer;
+            transition: background .18s ease, transform .18s ease;
+        }
+        .boton:hover { background: var(--accent2); }
+        .boton:active { transform: translateY(1px); }
+
+        .enlace { color: var(--accent-ink); text-decoration: none; transition: color .15s ease; }
+        .enlace:hover { color: var(--accent2); text-decoration: underline; }
+
+        a:focus-visible, button:focus-visible, input:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: .5rem;
         }
     </style>
 </head>
-<body class="text-text-primary min-h-screen flex items-center justify-center relative overflow-hidden">
+<body>
+    {{-- El <source> lo pone el script del final sólo en pantallas grandes: son 3 MB de
+         fondo decorativo y no valen los datos de quien entra del celular. --}}
+    <video id="video-fondo" class="video-fondo" autoplay loop muted playsinline
+           preload="none" aria-hidden="true" tabindex="-1"></video>
+    <div class="video-velo" aria-hidden="true"></div>
 
-    <!-- Video de Fondo con Blur -->
-    <video class="video-background" autoplay loop muted playsinline>
-        <source src="{{ asset('videos/background_principal.mp4') }}" type="video/mp4">
-    </video>
+    <main class="w-full relative" style="max-width: 26rem; z-index: 1;">
 
-    <!-- Overlay Oscuro -->
-    <div class="video-overlay"></div>
-
-    <!-- Floating Particles -->
-    <div class="floating-particles">
-        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-        <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
-        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
-        <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
-        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
-        <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
-        <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
-        <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
-        <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
-    </div>
-
-    <div class="w-full max-w-md mx-auto px-6 relative z-20">
-
-        <!-- Logo -->
-        <div class="text-center mb-8 logo-container">
-            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="w-auto mx-auto mb-3 logo-glow" style="height:160px;">
-            <p class="text-text-secondary">Recuperá el acceso a tu cuenta</p>
+        <div class="text-center" style="margin-bottom: 1.75rem;">
+            <a href="{{ url('/') }}" aria-label="ServiME, ir al inicio" class="inline-block">
+                <picture>
+                    <source srcset="{{ asset('images/logo_servime.webp') }}" type="image/webp">
+                    <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME"
+                         width="96" height="96" fetchpriority="high" decoding="async"
+                         style="height:96px;width:96px;">
+                </picture>
+            </a>
+            <h1 class="font-display" style="font-size:1.8rem; margin:1rem 0 .35rem; line-height:1.2;">
+                ¿Olvidaste tu contraseña?
+            </h1>
+            <p style="color:var(--muted); font-size:.95rem;">
+                Poné tu email y te mandamos un enlace para elegir una nueva.
+            </p>
         </div>
 
-        <!-- Card -->
-        <div class="rounded-2xl p-8" style="background:rgba(12,9,6,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,0.18);">
+        @if (session('status'))
+            <div style="margin-bottom:1.25rem; border-radius:1rem; padding:.8rem 1rem; font-size:.9rem; text-align:center;
+                        background:rgba(107,140,122,.16); border:1px solid rgba(107,140,122,.45); color:var(--ink);">
+                {{ session('status') }}
+            </div>
+        @endif
 
-            <!-- Session Status -->
-            @if (session('status'))
-                <div class="mb-6 text-sm text-accent-green text-center">
-                    {{ session('status') }}
-                </div>
-            @endif
-
+        <div class="tarjeta" style="padding: 2rem 1.75rem;">
             <form method="POST" action="{{ route('password.email') }}">
                 @csrf
 
-                <!-- Email -->
-                <div class="mb-6">
-                    <label for="email" class="block text-sm font-medium text-text-secondary mb-2">Email</label>
+                <div style="margin-bottom:1.5rem;">
+                    <label for="email" class="etiqueta">Email</label>
                     <input id="email"
                            type="email"
                            name="email"
@@ -115,42 +171,48 @@
                            required
                            autofocus
                            autocomplete="email"
-                           class="input-field w-full"
+                           class="campo @error('email') con-error @enderror"
                            placeholder="tu@email.com">
                     @error('email')
-                        <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                        <p class="error">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <!-- Submit -->
-                <button type="submit" class="btn-primary w-full text-center py-3 px-6 text-lg font-semibold">
-                    ENVIAR ENLACE DE RECUPERACIÓN
-                </button>
+                <button type="submit" class="boton">Enviarme el enlace</button>
             </form>
 
-            <!-- Back to login -->
-            <div class="text-center mt-6">
-                <a href="{{ route('login') }}" class="text-sm text-text-secondary hover:text-accent-blue transition-colors duration-300">
+            <div class="text-center" style="margin-top:1.5rem;">
+                <a href="{{ route('login') }}" class="enlace" style="font-size:.88rem;">
                     ← Volver al login
                 </a>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="text-center mt-8">
-            <p class="text-text-secondary text-sm">© {{ date('Y') }} ServiMe! Todos los derechos reservados.</p>
+        <div class="text-center" style="margin-top:1.75rem;">
+            <p style="color:var(--sage); font-size:.78rem;">
+                © {{ date('Y') }} ServiME. Todos los derechos reservados.
+            </p>
         </div>
-    </div>
+    </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const particles = document.querySelectorAll('.particle');
-            particles.forEach((p, i) => {
-                p.style.animationDelay = `${i * 0.5}s`;
-                p.style.animationDuration = `${6 + Math.random() * 4}s`;
-            });
-        });
+        (function () {
+            var video = document.getElementById('video-fondo');
+            if (!video) return;
+
+            var pantallaGrande = window.matchMedia('(min-width: 900px)').matches;
+            var menosMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!pantallaGrande || menosMovimiento) return;
+
+            var source = document.createElement('source');
+            source.type = 'video/mp4';
+            source.src = @json(asset('videos/background_principal.mp4'));
+            video.appendChild(source);
+            video.load();
+
+            var promesa = video.play();
+            if (promesa && promesa.catch) promesa.catch(function () {});
+        })();
     </script>
 </body>
 </html>
-

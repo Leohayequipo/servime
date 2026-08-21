@@ -3,410 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Bienvenido a ServiME!</title>
+    <meta name="x-apple-disable-message-reformatting">
+    {{-- Sin esto, Gmail y Apple Mail invierten la paleta por su cuenta y el crema
+         termina en gris sucio con el terracota apagado. --}}
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Bienvenido a ServiME</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }
-        
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-        
-        .logo {
-            position: relative;
-            z-index: 1;
-            font-size: 32px;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-        
-        .header-title {
-            position: relative;
-            z-index: 1;
-            font-size: 24px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 8px;
-        }
-        
-        .header-subtitle {
-            position: relative;
-            z-index: 1;
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 400;
-        }
-        
-        .content {
-            padding: 40px 30px;
-        }
-        
-        .welcome-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .welcome-message {
-            font-size: 18px;
-            color: #4a5568;
-            margin-bottom: 30px;
-            text-align: center;
-            line-height: 1.7;
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .feature-card {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 24px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .feature-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-            display: block;
-        }
-        
-        .feature-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 8px;
-        }
-        
-        .feature-description {
-            font-size: 14px;
-            color: #718096;
-            line-height: 1.5;
-        }
-        
-        .cta-section {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 16px;
-            padding: 30px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        
-        .cta-title {
-            font-size: 22px;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 12px;
-        }
-        
-        .cta-description {
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 24px;
-        }
-        
-        .cta-button {
-            display: inline-block;
-            background: #ffffff;
-            color: #f5576c;
-            padding: 16px 32px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-        }
-        
-        .stats-section {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 30px;
-            margin: 30px 0;
-        }
-        
-        .stats-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #2d3748;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 4px;
-        }
-        
-        .stat-label {
-            font-size: 14px;
-            color: #718096;
-            font-weight: 500;
-        }
-        
-        .footer {
-            background: #2d3748;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .footer-logo {
-            font-size: 24px;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 16px;
-        }
-        
-        .footer-text {
-            font-size: 14px;
-            color: #a0aec0;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-        
-        .social-links {
-            margin: 20px 0;
-        }
-        
-        .social-link {
-            display: inline-block;
-            margin: 0 10px;
-            color: #a0aec0;
-            text-decoration: none;
-            font-size: 16px;
-            transition: color 0.3s ease;
-        }
-        
-        .social-link:hover {
-            color: #667eea;
-        }
-        
-        .footer-bottom {
-            border-top: 1px solid #4a5568;
-            padding-top: 20px;
-            margin-top: 20px;
-        }
-        
-        .footer-bottom-text {
-            font-size: 12px;
-            color: #718096;
-        }
-        
-        @media (max-width: 600px) {
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
+        /* Los clientes de correo ignoran casi todo lo que no sea inline. Acá va sólo
+           lo que no se puede poner inline: la media query del mobile. */
+        @media only screen and (max-width: 620px) {
+            .contenedor { width: 100% !important; }
+            .pad        { padding-left: 22px !important; padding-right: 22px !important; }
+            .col        { display: block !important; width: 100% !important; }
         }
     </style>
 </head>
-<body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">🤖 ServiME</div>
-            <h1 class="header-title">¡Bienvenido a la Revolución!</h1>
-            <p class="header-subtitle">Tu asistente IA para menús digitales</p>
-        </div>
-        
-        <!-- Content -->
-        <div class="content">
-            <h2 class="welcome-title">¡Hola {{ $user->name }}! 👋</h2>
-            <p class="welcome-message">
-                ¡Estamos emocionados de tenerte en ServiME! Has dado el primer paso hacia la transformación digital de tu negocio con inteligencia artificial.
-            </p>
-            
-            <!-- Información de Acceso -->
-            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 16px; padding: 24px; margin: 30px 0;">
-                <h3 style="color: #0369a1; margin-bottom: 16px; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
-                    <span style="margin-right: 8px;">🔐</span>
-                    Tus Datos de Acceso
-                </h3>
-                <div style="background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #bae6fd;">
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; color: #0c4a6e; font-weight: 600; margin-bottom: 4px; font-size: 14px;">📧 Email:</label>
-                        <span style="color: #0369a1; font-weight: 500; font-size: 16px;">{{ $user->email }}</span>
-                    </div>
-                    @if(!empty($resetUrl))
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; color: #0c4a6e; font-weight: 600; margin-bottom: 8px; font-size: 14px;">🔑 Contraseña:</label>
-                        <a href="{{ $resetUrl }}"
-                           style="display: inline-block; background: #0ea5e9; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                            Establecer mi contraseña
-                        </a>
-                        <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
-                            Este link expira en 60 minutos. Si vence, usá "Olvidé mi contraseña" en el login.
-                        </p>
-                    </div>
-                    @endif
-                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin-top: 16px;">
-                        <p style="color: #92400e; font-size: 13px; margin: 0; font-weight: 500;">
-                            💡 <strong>Importante:</strong> Podés cambiar tu contraseña en cualquier momento desde tu perfil.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Features Grid -->
-            <div class="features-grid">
-                <div class="feature-card">
-                    <span class="feature-icon">📱</span>
-                    <h3 class="feature-title">Chatbot Inteligente</h3>
-                    <p class="feature-description">Asistente IA que responde preguntas sobre tu menú las 24/7</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">🎨</span>
-                    <h3 class="feature-title">Personalización Total</h3>
-                    <p class="feature-description">Colores, estilos y branding únicos para tu negocio</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">⚡</span>
-                    <h3 class="feature-title">Configuración Rápida</h3>
-                    <p class="feature-description">Sube tu menú y en minutos tienes todo funcionando</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">📊</span>
-                    <h3 class="feature-title">Analytics Avanzados</h3>
-                    <p class="feature-description">Métricas detalladas de interacciones con tus clientes</p>
-                </div>
-            </div>
-            
-            <!-- CTA Section -->
-            <div class="cta-section">
-                <h3 class="cta-title">¡Comencemos tu aventura digital!</h3>
-                <p class="cta-description">
-                    Crea tu primer comercio y sube tu menú para comenzar a recibir clientes inteligentes
-                </p>
-                <a href="{{ config('app.url') }}/dashboard" class="cta-button">
-                    🚀 Ir al Dashboard
-                </a>
-            </div>
-            
-            <!-- Stats Section -->
-            <div class="stats-section">
-                <h3 class="stats-title">¿Por qué elegir ServiME?</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number">+95%</div>
-                        <div class="stat-label">Satisfacción de Clientes</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">Disponibilidad</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">5 min</div>
-                        <div class="stat-label">Configuración</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 8px; margin: 30px 0;">
-                <h4 style="color: #0369a1; margin-bottom: 10px; font-size: 16px;">💡 Tip del Día</h4>
-                <p style="color: #0c4a6e; font-size: 14px; margin: 0;">
-                    <strong>Personaliza tu chatbot:</strong> Cambia el nombre y mensaje de bienvenida para que refleje la personalidad de tu negocio. Esto hará que tus clientes se sientan más conectados contigo.
-                </p>
-            </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="footer">
-            <div class="footer-logo">🤖 ServiME</div>
-            <p class="footer-text">
-                Gracias por unirte a nuestra comunidad de emprendedores digitales. 
-                Si tienes alguna pregunta, no dudes en contactarnos.
-            </p>
-            
-            <div class="social-links">
-                <a href="mailto:{{ env('SUPPORT_EMAIL', 'info.servime@gmail.com') }}" class="social-link">📧 Email</a>
-                <a href="https://wa.me/{{ env('SUPPORT_WHATSAPP', '5492257526706') }}" class="social-link">💬 WhatsApp</a>
-                <a href="{{ env('SUPPORT_WEB', config('app.url')) }}" class="social-link">🌐 Web</a>
-            </div>
-            
-            <div class="footer-bottom">
-                <p class="footer-bottom-text">
-                    Este email fue enviado a {{ $user->email }} porque te registraste en ServiME.<br>
-                    Si no deseas recibir estos emails, puedes <a href="#" style="color: #667eea;">cancelar la suscripción</a>.
-                </p>
-                <p class="footer-bottom-text" style="margin-top: 10px;">
-                    © {{ date('Y') }} ServiME. Todos los derechos reservados.
-                </p>
-            </div>
-        </div>
+<body style="margin:0; padding:0; background-color:#F2EDE3;">
+
+    {{-- Preheader: es lo que se lee en la bandeja debajo del asunto. Oculto en el cuerpo. --}}
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">
+        Tu cuenta ya está lista. Adentro están tus datos de acceso para empezar.
     </div>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F2EDE3;">
+        <tr>
+            <td align="center" style="padding:28px 12px;">
+
+                <table role="presentation" class="contenedor" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:600px; background-color:#FBF9F5; border-radius:20px; overflow:hidden; border:1px solid #E1D9C9;">
+
+                    <!-- Cabecera -->
+                    <tr>
+                        <td align="center" style="background-color:#284236; padding:34px 30px 30px;">
+                            <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" width="82" height="82" style="display:block; width:82px; height:82px; border:0; margin:0 auto 16px;">
+                            <p style="margin:0 0 6px; font-family:Georgia,'Times New Roman',serif; font-size:25px; line-height:1.25; color:#F2EDE3;">
+                                Tu menú ya sabe conversar
+                            </p>
+                            <p style="margin:0; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif; font-size:15px; line-height:1.5; color:#A7BCA8;">
+                                Bienvenido a ServiME, {{ $user->name }}
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Intro -->
+                    <tr>
+                        <td class="pad" style="padding:34px 34px 0; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+                            <p style="margin:0; font-size:16px; line-height:1.65; color:#55705F;">
+                                Tu cuenta ya está creada. Desde acá vas a poder subir tu carta, generar el QR de las mesas
+                                y ver qué le preguntan tus clientes al asistente.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Datos de acceso: lo más importante del mail -->
+                    <tr>
+                        <td class="pad" style="padding:26px 34px 0;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F2EDE3; border:1px solid #E1D9C9; border-radius:14px;">
+                                <tr>
+                                    <td style="padding:22px 24px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+                                        <p style="margin:0 0 16px; font-size:12px; letter-spacing:.09em; text-transform:uppercase; font-weight:bold; color:#6B8C7A;">
+                                            Tus datos de acceso
+                                        </p>
+
+                                        <p style="margin:0 0 4px; font-size:13px; color:#55705F;">Email</p>
+                                        <p style="margin:0 0 18px; font-size:16px; font-weight:bold; color:#284236; word-break:break-all;">
+                                            {{ $user->email }}
+                                        </p>
+
+                                        @if(!empty($resetUrl))
+                                            <p style="margin:0 0 10px; font-size:13px; color:#55705F;">Contraseña</p>
+
+                                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                                <tr>
+                                                    <td style="border-radius:12px; background-color:#C0563A;">
+                                                        <a href="{{ $resetUrl }}" style="display:inline-block; padding:13px 26px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif; font-size:15px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:12px;">
+                                                            Establecer mi contraseña
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <p style="margin:12px 0 0; font-size:13px; line-height:1.55; color:#55705F;">
+                                                El link vence en 60 minutos. Si se te pasa, entrá con
+                                                <strong style="color:#284236;">¿Olvidaste tu contraseña?</strong> desde el login y te llega uno nuevo.
+                                            </p>
+                                        @else
+                                            <p style="margin:0; font-size:14px; line-height:1.55; color:#55705F;">
+                                                Ingresá con la contraseña que te pasamos y cambiala desde tu perfil cuando entres.
+                                            </p>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Qué trae -->
+                    <tr>
+                        <td class="pad" style="padding:32px 34px 0; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+                            <p style="margin:0 0 18px; font-family:Georgia,'Times New Roman',serif; font-size:19px; color:#284236;">
+                                Lo que vas a tener
+                            </p>
+
+                            @php
+                                // En dos columnas por fila: los clientes de correo no soportan grid,
+                                // así que la grilla se arma con celdas de tabla.
+                                $bloques = [
+                                    ['Un asistente que conversa', 'Responde sobre tu carta las 24 horas, con tus platos reales.'],
+                                    ['En cuatro idiomas',         'Detecta el idioma del celular del cliente y le responde en el suyo.'],
+                                    ['Pre-pedido en la mesa',     'El cliente arma lo que quiere y el camarero solo confirma.'],
+                                    ['Qué se pide y qué no',      'Los platos más consultados y lo que buscan y no encontraron.'],
+                                ];
+                            @endphp
+
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                @foreach (array_chunk($bloques, 2) as $fila)
+                                    <tr>
+                                        @foreach ($fila as $i => $bloque)
+                                            <td class="col" width="50%" valign="top" style="padding:0 {{ $i === 0 ? '8px' : '0' }} 14px {{ $i === 0 ? '0' : '8px' }};">
+                                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F2EDE3; border:1px solid #E1D9C9; border-radius:12px;">
+                                                    <tr>
+                                                        <td style="padding:16px 18px;">
+                                                            <p style="margin:0 0 5px; font-size:15px; font-weight:bold; color:#284236;">{{ $bloque[0] }}</p>
+                                                            <p style="margin:0; font-size:13.5px; line-height:1.55; color:#55705F;">{{ $bloque[1] }}</p>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- CTA -->
+                    <tr>
+                        <td class="pad" align="center" style="padding:26px 34px 0;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="border-radius:14px; background-color:#C0563A;">
+                                        <a href="{{ rtrim(config('app.url'), '/') }}/dashboard" style="display:inline-block; padding:15px 34px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:14px;">
+                                            Entrar a mi panel
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Primer paso -->
+                    <tr>
+                        <td class="pad" style="padding:28px 34px 34px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FAF3EC; border-left:3px solid #D4B08C; border-radius:10px;">
+                                <tr>
+                                    <td style="padding:16px 20px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+                                        <p style="margin:0 0 5px; font-size:14px; font-weight:bold; color:#284236;">Por dónde empezar</p>
+                                        <p style="margin:0; font-size:14px; line-height:1.6; color:#55705F;">
+                                            Subí tu carta en PDF o sacale una foto: la IA extrae los platos, los precios y las
+                                            categorías sola. Después la repasás y ya podés generar el QR.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#284236; padding:28px 34px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+                            @php
+                                // config() y no env(): con la config cacheada en producción
+                                // env() devuelve null y el dato de contacto desaparecía.
+                                $soporteEmail = config('services.support.email');
+                                $soporteWa    = config('services.support.whatsapp');
+                            @endphp
+
+                            <p style="margin:0 0 14px; font-size:14px; line-height:1.6; color:#A7BCA8;">
+                                ¿Alguna duda? Respondé este mail y te contestamos.
+                            </p>
+
+                            <p style="margin:0 0 18px; font-size:14px;">
+                                @if($soporteEmail)
+                                    <a href="mailto:{{ $soporteEmail }}" style="color:#D4B08C; text-decoration:none;">{{ $soporteEmail }}</a>
+                                @endif
+                                @if($soporteEmail && $soporteWa)
+                                    <span style="color:#6B8C7A;">&nbsp;·&nbsp;</span>
+                                @endif
+                                @if($soporteWa)
+                                    <a href="https://wa.me/{{ $soporteWa }}" style="color:#D4B08C; text-decoration:none;">WhatsApp</a>
+                                @endif
+                            </p>
+
+                            <p style="margin:0; padding-top:16px; border-top:1px solid rgba(242,237,227,.16); font-size:12px; line-height:1.6; color:#6B8C7A;">
+                                Te escribimos a {{ $user->email }} porque se creó una cuenta de ServiME con esa dirección.<br>
+                                © {{ date('Y') }} ServiME
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
 </body>
 </html>
-

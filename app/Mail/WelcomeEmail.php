@@ -29,7 +29,7 @@ class WelcomeEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🤖 ¡Bienvenido a ServiME! Tu asistente IA para menús digitales',
+            subject: 'Bienvenido a ServiME — tu cuenta ya está lista',
             from: new \Illuminate\Mail\Mailables\Address(
                 config('mail.from.address'),
                 config('mail.from.name', 'ServiME')

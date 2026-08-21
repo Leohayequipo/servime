@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Paleta del panel ────────────────────────────────────────────────────
+   Los tokens de tailwind.config.js leen estas variables. Van en componentes
+   RGB sueltos (no en hex) porque Tailwind necesita inyectarles el alfa para
+   las utilidades con opacidad: accent-blue/20, accent-gray/50, etc.
+
+   El panel sigue siendo oscuro —es lo cómodo para trabajar muchas horas—
+   pero el negro con ámbar pasó al verde profundo con terracota de la marca.
+
+   Contrastes verificados contra WCAG AA sobre el fondo: crema 12,58:1,
+   salvia 7,27:1, terracota 6,17:1, y el texto oscuro sobre terracota 7,45:1.
+
+   Una pantalla puede redefinir estas variables con un :root propio y cambiar
+   solo ella, sin recompilar ni tocar el resto.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+    --c-accent:      232 146 122;  /* #E8927A terracota                  */
+    --c-accent-deep: 192  86  58;  /* #C0563A terracota oscuro           */
+    --c-ok:           16 185 129;  /* #10b981 emerald — semántico, no de marca */
+    --c-line:         61  92  75;  /* #3D5C4B bordes y separadores       */
+    --c-elev-1:       27  44  35;  /* #1B2C23 superficie base            */
+    --c-elev-2:       36  58  46;  /* #243A2E tarjetas                   */
+    --c-ink:         242 237 227;  /* #F2EDE3 crema                      */
+    --c-ink-soft:    167 188 168;  /* #A7BCA8 salvia claro               */
+    --c-bg:           27  44  35;  /* #1B2C23 verde profundo             */
+    --c-danger:      239  68  68;  /* #EF4444 error y cancelar */
+    --c-warn:        234 179   8;  /* #EAB308 atención — 7,65:1 sobre el fondo y 32° de
+                                      tono de diferencia con el terracota, para que un
+                                      aviso no se confunda con el color de marca */
+}
+
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fade-in-down {
     from { opacity: 0; transform: translateY(-16px); }
@@ -56,7 +86,7 @@
         background: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(245, 158, 11, 0.15);
+        border: 1px solid rgb(var(--c-accent) / .15);
         border-radius: 1rem;
     }
 
@@ -74,7 +104,7 @@
     }
     .metric-card:hover {
         @apply -translate-y-1 border-accent-blue/40;
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
+        box-shadow: 0 8px 24px rgb(var(--c-accent) / .15);
     }
 
     /* Buttons */
@@ -82,10 +112,10 @@
         @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
                bg-accent-blue text-gray-900 transition-all duration-200 no-underline
                hover:-translate-y-px;
-        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+        box-shadow: 0 4px 14px rgb(var(--c-accent) / .3);
     }
     .btn-primary:hover {
-        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+        box-shadow: 0 6px 20px rgb(var(--c-accent) / .45);
     }
 
     .btn-secondary {
@@ -114,12 +144,12 @@
         @apply w-full rounded-xl px-4 py-3 text-sm text-text-primary
                placeholder:text-text-secondary transition-all duration-200
                focus:outline-none;
-        background: var(--secondary-dark, #2A3A55);
-        border: 1px solid var(--accent-gray, #374151);
+        background: rgb(var(--c-elev-2));
+        border: 1px solid rgb(var(--c-line));
     }
     .input-field:focus {
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+        border-color: rgb(var(--c-accent));
+        box-shadow: 0 0 0 3px rgb(var(--c-accent) / .12);
     }
 
     /* Navigation */
@@ -129,13 +159,13 @@
     .nav-link:hover  { @apply text-accent-blue; }
     .nav-link.active {
         @apply text-gray-900 font-semibold;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: rgb(var(--c-accent));
     }
 
     /* Glow utilities */
-    .neon-glow   { box-shadow: 0 0 18px rgba(245, 158, 11, 0.35); }
+    .neon-glow   { box-shadow: 0 0 18px rgb(var(--c-accent) / .35); }
     .hover-lift  { @apply transition-all duration-300; }
-    .hover-lift:hover { @apply -translate-y-1; box-shadow: 0 12px 28px rgba(245, 158, 11, 0.2); }
+    .hover-lift:hover { @apply -translate-y-1; box-shadow: 0 12px 28px rgb(var(--c-accent) / .2); }
 
     /* ── Chat component classes (menu/chat.blade.php) ── */
     .chat-message {
@@ -153,22 +183,22 @@
 
     /* SweetAlert2 dark modal */
     .dark-modal {
-        background: linear-gradient(135deg, rgba(26,42,68,.98), rgba(42,58,85,.98)) !important;
-        border: 1px solid rgba(245,158,11,.25) !important;
+        background: rgb(var(--c-elev-2)) !important;
+        border: 1px solid rgb(var(--c-accent) / .25) !important;
         border-radius: 1rem !important;
-        box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 20px rgba(245,158,11,.15) !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 20px rgb(var(--c-accent) / .15) !important;
         backdrop-filter: blur(10px) !important;
     }
     .dark-modal .swal2-title   { color: #fff !important; font-weight: 600 !important; }
     .dark-modal .swal2-content { color: #94a3b8 !important; }
     .dark-modal .swal2-confirm {
-        background: linear-gradient(135deg, #10b981, #059669) !important;
+        background: rgb(var(--c-ok)) !important;
         border: none !important; border-radius: .5rem !important;
         padding: .75rem 2rem !important; font-weight: 600 !important;
         box-shadow: 0 4px 14px rgba(16,185,129,.3) !important;
     }
     .dark-modal .swal2-confirm:hover {
-        background: linear-gradient(135deg, #059669, #047857) !important;
+        background: rgb(var(--c-ok) / .85) !important;
         box-shadow: 0 6px 20px rgba(16,185,129,.4) !important;
     }
     .dark-modal .swal2-success-ring { border-color: rgba(16,185,129,.3) !important; }

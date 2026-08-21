@@ -177,7 +177,7 @@
                     <!-- Dropdown Gestión Excel -->
                     <div class="relative" id="excelDropdown">
                         <button id="excelDropdownButton" 
-                                class="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                                class="bg-accent-green hover:brightness-95 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18"/>
@@ -326,7 +326,7 @@
                                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div class="flex items-center space-x-4 flex-1 min-w-0">
                                             @if($menu->formato === 'pdf')
-                                                <div class="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                <div class="w-14 h-14 bg-danger/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
                                                     <span class="text-red-400 text-2xl">📄</span>
                                                 </div>
                                             @else
@@ -423,7 +423,7 @@
                                         <!-- Icono y botón abajo -->
                                         <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
                                             <div class="relative flex-shrink-0">
-                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-500/50' : 'bg-gradient-to-br from-gray-600 to-gray-700' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green hover:brightness-95 shadow-lg shadow-green-500/50' : 'bg-accent-gray hover:brightness-95' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
                                                     <span class="text-2xl filter drop-shadow-lg">🛒</span>
                                                     @if(old('pedido_habilitado', $comercio->pedido_habilitado))
                                                         <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
@@ -439,7 +439,7 @@
                                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
                                                            class="sr-only peer pedido-toggle"
                                                            onchange="updatePedidoStatus(this.checked);">
-                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
                                                 </label>
                                                 <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
                                                     {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
@@ -456,8 +456,8 @@
                                 id="btn-actualizar-menu"
                                 style="background-color: #10b981 !important; border: 2px solid rgba(16, 185, 129, 0.3) !important;"
                                 class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center gap-3 hover:opacity-90"
-                                onmouseover="this.style.backgroundColor='#059669'"
-                                onmouseout="this.style.backgroundColor='#10b981'">
+                                onmouseover="this.style.backgroundColor='rgb(var(--c-ok) / .85)'"
+                                onmouseout="this.style.backgroundColor='rgb(var(--c-ok))'">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
@@ -574,7 +574,7 @@
                                 </p>
                                 <div id="estrellas-resumen" class="flex flex-wrap gap-2 mb-2">
                                     @foreach($estrellasMenu as $nombre)
-                                        <span class="inline-block px-3 py-1.5 rounded-full border border-amber-500 bg-amber-500/20 text-sm text-amber-400">⭐ {{ $nombre }}</span>
+                                        <span class="inline-block px-3 py-1.5 rounded-full border border-warning bg-warning/20 text-sm text-warning">⭐ {{ $nombre }}</span>
                                     @endforeach
                                 </div>
                                 <p id="estrellas-vacio" class="text-sm text-text-secondary mb-4 {{ count($estrellasMenu) > 0 ? 'hidden' : '' }}">
@@ -1123,7 +1123,7 @@
                                                                             onclick="event.stopPropagation(); togglePlatoEstrella(this, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                             data-estrella="{{ ! empty($plato['estrella']) ? '1' : '0' }}"
                                                                             id="estrella-{{ $categoriaIndex }}-{{ $platoIndex }}"
-                                                                            class="plato-estrella-btn flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors {{ ! empty($plato['estrella']) ? 'text-amber-400 bg-amber-500/20' : 'text-text-secondary hover:text-amber-400 hover:bg-amber-500/10' }}"
+                                                                            class="plato-estrella-btn flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors {{ ! empty($plato['estrella']) ? 'text-warning bg-warning/20' : 'text-text-secondary hover:text-warning hover:bg-warning/10' }}"
                                                                             title="{{ ! empty($plato['estrella']) ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella' }}">
                                                                         <svg class="w-5 h-5" fill="{{ ! empty($plato['estrella']) ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
@@ -2084,11 +2084,11 @@
             function pintarEstrella(btn, marcado) {
                 btn.dataset.estrella = marcado ? '1' : '0';
                 btn.querySelector('svg').setAttribute('fill', marcado ? 'currentColor' : 'none');
-                btn.classList.toggle('text-amber-400', marcado);
-                btn.classList.toggle('bg-amber-500/20', marcado);
+                btn.classList.toggle('text-warning', marcado);
+                btn.classList.toggle('bg-warning/20', marcado);
                 btn.classList.toggle('text-text-secondary', !marcado);
-                btn.classList.toggle('hover:text-amber-400', !marcado);
-                btn.classList.toggle('hover:bg-amber-500/10', !marcado);
+                btn.classList.toggle('hover:text-warning', !marcado);
+                btn.classList.toggle('hover:bg-warning/10', !marcado);
                 btn.title = marcado ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella';
             }
 
@@ -2108,7 +2108,7 @@
 
                 resumen.innerHTML = marcados.map(n => {
                     const span = document.createElement('span');
-                    span.className = 'inline-block px-3 py-1.5 rounded-full border border-amber-500 bg-amber-500/20 text-sm text-amber-400';
+                    span.className = 'inline-block px-3 py-1.5 rounded-full border border-warning bg-warning/20 text-sm text-warning';
                     span.textContent = '⭐ ' + n;
                     return span.outerHTML;
                 }).join('');
@@ -3842,13 +3842,13 @@
                     </div>
                 `,
                 icon: 'question',
-                iconColor: '#3B82F6',
+                iconColor: 'rgb(var(--c-accent))',
                 focusConfirm: false,
                 showCancelButton: true,
                 confirmButtonText: 'Agregar',
                 cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#10B981',
-                cancelButtonColor: '#EF4444',
+                confirmButtonColor: 'rgb(var(--c-ok))',
+                cancelButtonColor: 'rgb(var(--c-danger))',
                 didOpen: () => {
                     const input = document.getElementById('nuevo-plato-nombre');
                     if (input) input.focus();
@@ -4191,9 +4191,9 @@
                         </div>
                     `,
                     icon: 'success',
-                    iconColor: '#10B981',
+                    iconColor: 'rgb(var(--c-ok))',
                     confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#10B981',
+                    confirmButtonColor: 'rgb(var(--c-ok))',
                     width: '520px',
                     padding: '2rem',
                     showClass: {
@@ -4204,7 +4204,7 @@
                     },
                     timer: 4000,
                     timerProgressBar: true,
-                    timerProgressBarColor: '#10B981',
+                    timerProgressBarColor: 'rgb(var(--c-ok))',
                     allowOutsideClick: true,
                     allowEscapeKey: true,
                     backdrop: true,
@@ -4236,9 +4236,9 @@
                         </div>
                     `,
                     icon: 'error',
-                    iconColor: '#EF4444',
+                    iconColor: 'rgb(var(--c-danger))',
                     confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#EF4444',
+                    confirmButtonColor: 'rgb(var(--c-danger))',
                     width: '520px',
                     padding: '2rem',
                     customClass: {

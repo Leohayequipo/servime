@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 {{ __('Editar Menú') }} - {{ $comercio->nombre }}
             </h2>
-            <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+            <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150">
                 {{ __('Volver') }}
             </a>
         </div>
@@ -41,7 +41,7 @@
                                     <div>
                                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ strtoupper($menu->formato) }}</p>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">Subido: {{ $menu->created_at->format('d/m/Y H:i') }}</p>
-                                        <a href="{{ asset('storage/' . $menu->archivo_original) }}" target="_blank" class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">Ver archivo</a>
+                                        <a href="{{ asset('storage/' . $menu->archivo_original) }}" target="_blank" class="text-sm text-accent-blue dark:text-accent-blue hover:text-accent-blue dark:hover:text-accent-blue">Ver archivo</a>
                                     </div>
                                 </div>
                             </div>
@@ -50,7 +50,7 @@
                         <!-- Nuevo archivo -->
                         <div>
                             <x-input-label for="archivo" :value="__('Nuevo Archivo (opcional)')" />
-                            <input type="file" id="archivo" name="archivo" accept=".pdf,.jpeg,.jpg,.png,.gif" class="block mt-1 w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900 file:text-indigo-700 dark:file:text-indigo-300 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-800" />
+                            <input type="file" id="archivo" name="archivo" accept=".pdf,.jpeg,.jpg,.png,.gif" class="block mt-1 w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-blue/10 dark:file:bg-accent-blue/20 file:text-accent-blue dark:file:text-accent-blue hover:file:bg-accent-blue/15 dark:hover:file:bg-accent-blue/20" />
                             <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                 Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
@@ -60,7 +60,7 @@
                         <!-- Tipo de Archivo -->
                         <div>
                             <x-input-label for="formato" :value="__('Tipo de Archivo')" />
-                            <select id="formato" name="formato" required class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full">
+                            <select id="formato" name="formato" required class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-accent-blue focus:ring-accent-blue rounded-md shadow-sm block mt-1 w-full">
                                 <option value="">Selecciona el tipo de archivo</option>
                                 <option value="pdf" {{ old('formato', $menu->formato) == 'pdf' ? 'selected' : '' }}>PDF</option>
                                 <option value="image" {{ old('formato', $menu->formato) == 'image' ? 'selected' : '' }}>Imagen (JPEG, PNG, JPG, GIF)</option>
@@ -80,7 +80,7 @@
                                         Procesado
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/15 text-warning dark:bg-warning/15 dark:text-warning">
                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
                                         </svg>
@@ -95,7 +95,7 @@
 
                         <!-- Botones -->
                         <div class="flex items-center justify-end mt-4 space-x-4">
-                            <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150">
                                 {{ __('Cancelar') }}
                             </a>
                             <x-primary-button>

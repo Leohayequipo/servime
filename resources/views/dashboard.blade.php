@@ -25,11 +25,11 @@
 
             <!-- Aviso de cuota de IA agotada -->
             @if(!empty($comerciosSinCuotaIA) && count($comerciosSinCuotaIA) > 0)
-                <div class="mb-8 bg-yellow-900/20 border border-yellow-500/30 rounded-2xl p-5 flex items-start gap-4">
-                    <div class="w-9 h-9 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">⚠️</div>
+                <div class="mb-8 bg-warning/20 border border-warning/30 rounded-2xl p-5 flex items-start gap-4">
+                    <div class="w-9 h-9 bg-warning/20 rounded-full flex items-center justify-center flex-shrink-0">⚠️</div>
                     <div>
-                        <p class="text-yellow-200 font-medium">Cuota de IA mensual alcanzada</p>
-                        <p class="text-yellow-200/80 text-sm mt-1">
+                        <p class="text-warning font-medium">Cuota de IA mensual alcanzada</p>
+                        <p class="text-warning/80 text-sm mt-1">
                             El asistente con IA dejó de responder en:
                             <strong>{{ $comerciosSinCuotaIA->pluck('nombre')->implode(', ') }}</strong>.
                             Se reactiva el mes que viene, o contactanos para ampliar tu plan.
@@ -65,7 +65,7 @@
                                 <span class="text-text-secondary/70">({{ $pctC }}%)</span>
                             </p>
                             <div class="w-full h-2 bg-accent-gray/40 rounded-full overflow-hidden">
-                                <div class="h-2 rounded-full {{ $pctC >= 100 ? 'bg-red-500' : ($pctC >= 80 ? 'bg-yellow-500' : 'bg-accent-green') }}" style="width: {{ $pctC }}%"></div>
+                                <div class="h-2 rounded-full {{ $pctC >= 100 ? 'bg-red-500' : ($pctC >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pctC }}%"></div>
                             </div>
                             @if($pctC >= 100)
                                 <p class="text-xs text-red-300 mt-2">Llegaste al límite del mes. El asistente se reactiva el mes que viene o ampliando tu plan.</p>
@@ -85,7 +85,7 @@
                             </div>
                             <p class="text-green-200 font-medium">{{ session('success') }}</p>
                         </div>
-                        <div class="absolute bottom-0 left-0 h-0.5 w-full bg-gradient-to-r from-green-500 to-emerald-500 animate-progress-bar"></div>
+                        <div class="absolute bottom-0 left-0 h-0.5 w-full bg-accent-green hover:brightness-95 animate-progress-bar"></div>
                     </div>
                 </div>
             @endif
@@ -136,7 +136,7 @@
 
                     <div class="metric-card">
                         <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 bg-yellow-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <span class="text-xl">💬</span>
                             </div>
                             <div>
@@ -148,7 +148,7 @@
 
                     <div class="metric-card">
                         <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <span class="text-xl">🤖</span>
                             </div>
                             <div>
@@ -185,7 +185,7 @@
                     </div>
                     <div class="metric-card">
                         <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 bg-yellow-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <span class="text-xl">⚡</span>
                             </div>
                             <div>
@@ -284,7 +284,7 @@
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-10">
                     <div class="flex items-center justify-between mb-5">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                            <div class="w-9 h-9 bg-accent-blue/10 rounded-lg flex items-center justify-center">
                                 <span>🤖</span>
                             </div>
                             <div>
@@ -378,7 +378,7 @@
                                                     <span class="text-lg">💬</span>
                                                 </div>
                                                 <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-primary-dark flex items-center justify-center text-xs
-                                                    {{ $tieneIA ? 'bg-purple-600' : 'bg-accent-green' }}"
+                                                    {{ $tieneIA ? 'bg-accent-blue' : 'bg-accent-green' }}"
                                                      title="{{ $tieneIA ? 'Sesión con IA' : 'Solo FAQ' }}">
                                                     {{ $tieneIA ? '🤖' : '⚡' }}
                                                 </div>
@@ -392,7 +392,7 @@
                                                         {{ $sesion['total_mensajes'] }} {{ $sesion['total_mensajes'] == 1 ? 'msg' : 'msgs' }}
                                                     </span>
                                                     @if($tieneIA)
-                                                        <span class="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">IA</span>
+                                                        <span class="text-xs bg-accent-blue/20 text-accent-blue px-2 py-0.5 rounded">IA</span>
                                                     @endif
                                                 </div>
                                                 <p class="text-text-secondary text-sm truncate">
@@ -441,12 +441,12 @@
 
                                                 <!-- Respuesta bot -->
                                                 @if($conversacion->bot_response)
-                                                    <div class="border-l-2 {{ $conversacion->used_openai ? 'border-purple-500' : 'border-accent-green' }} pl-3">
+                                                    <div class="border-l-2 {{ $conversacion->used_openai ? 'border-accent-blue' : 'border-accent-green' }} pl-3">
                                                         <div class="flex items-center gap-2 mb-1.5">
-                                                            <div class="w-6 h-6 {{ $conversacion->used_openai ? 'bg-purple-600/30' : 'bg-accent-green/20' }} rounded-full flex items-center justify-center text-xs">
+                                                            <div class="w-6 h-6 {{ $conversacion->used_openai ? 'bg-accent-blue/30' : 'bg-accent-green/20' }} rounded-full flex items-center justify-center text-xs">
                                                                 {{ $conversacion->used_openai ? '🤖' : '⚡' }}
                                                             </div>
-                                                            <span class="text-xs font-medium {{ $conversacion->used_openai ? 'text-purple-400' : 'text-accent-green' }}">
+                                                            <span class="text-xs font-medium {{ $conversacion->used_openai ? 'text-accent-blue' : 'text-accent-green' }}">
                                                                 {{ $conversacion->used_openai ? 'IA' : 'FAQ' }}
                                                             </span>
                                                             @if($conversacion->response_time_ms)

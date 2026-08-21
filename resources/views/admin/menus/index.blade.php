@@ -114,7 +114,7 @@
                                     <td class="py-4 px-4">
                                         <div class="flex flex-col gap-1">
                                             <span class="px-2 py-0.5 text-xs rounded-full font-medium w-fit
-                                                {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
+                                                {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-warning/20 text-warning border border-warning/30' }}">
                                                 {{ $menu->procesado ? 'Procesado' : 'Pendiente' }}
                                             </span>
                                             @if($menu->activo)

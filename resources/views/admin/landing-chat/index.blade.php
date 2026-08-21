@@ -39,7 +39,7 @@
 
                 <div class="metric-card">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-yellow-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <div class="w-12 h-12 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                             <span class="text-xl">📅</span>
                         </div>
                         <div>

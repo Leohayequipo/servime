@@ -39,13 +39,13 @@
             <!-- Success Messages -->
             @if(session('success'))
                 <div class="mb-8 animate-fade-in-down js-flash">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                    <div class="relative overflow-hidden bg-accent-green/15 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
                         <!-- Animated background -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
+                        <div class="absolute inset-0 bg-accent-green/10 animate-pulse"></div>
                         
                         <div class="relative flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                                <div class="w-12 h-12 bg-accent-green hover:brightness-95 rounded-full flex items-center justify-center shadow-lg animate-bounce">
                                     <span class="text-white text-xl">✨</span>
                                 </div>
                             </div>
@@ -59,7 +59,7 @@
                         </div>
                         
                         <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-progress-bar"></div>
+                        <div class="absolute bottom-0 left-0 h-1 bg-accent-green hover:brightness-95 rounded-full animate-progress-bar"></div>
                     </div>
                 </div>
             @endif
@@ -67,13 +67,13 @@
             <!-- Error Messages -->
             @if(session('error'))
                 <div class="mb-8 animate-fade-in-down js-flash">
-                    <div class="relative overflow-hidden bg-gradient-to-r from-red-900/30 to-rose-900/30 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                    <div class="relative overflow-hidden bg-danger/15 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
                         <!-- Animated background -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-rose-500/10 animate-pulse"></div>
+                        <div class="absolute inset-0 bg-danger/10 animate-pulse"></div>
                         
                         <div class="relative flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg animate-shake">
+                                <div class="w-12 h-12 bg-danger hover:brightness-95 rounded-full flex items-center justify-center shadow-lg animate-shake">
                                     <span class="text-white text-xl">⚠️</span>
                                 </div>
                             </div>
@@ -87,7 +87,7 @@
                         </div>
                         
                         <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-red-500 to-rose-500 rounded-full animate-progress-bar"></div>
+                        <div class="absolute bottom-0 left-0 h-1 bg-danger hover:brightness-95 rounded-full animate-progress-bar"></div>
                     </div>
                 </div>
             @endif
@@ -120,7 +120,7 @@
                 </a>
                 <!-- QR Dropdown -->
                 <div class="relative group">
-                    <button class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                    <button class="bg-accent-blue hover:brightness-95 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
                         <span class="mr-2">📱</span>
                         Generar QR
                         <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +151,7 @@
                         <div class="metric-card group relative overflow-visible">
                             <!-- Label MENU arriba -->
                             <div class="absolute top-3 left-4 z-20">
-                                <span class="bg-gradient-to-r from-accent-blue to-blue-600 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
+                                <span class="bg-accent-blue hover:brightness-95 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
                                     MENU
                                 </span>
                             </div>
@@ -183,8 +183,8 @@
                                             <span class="text-red-400 text-sm">⚠️</span>
                                         </div>
                                     @else
-                                        <div class="w-8 h-8 bg-yellow-500/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Procesando">
-                                            <span class="text-yellow-400 text-sm">⏳</span>
+                                        <div class="w-8 h-8 bg-warning/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Procesando">
+                                            <span class="text-warning text-sm">⏳</span>
                                         </div>
                                     @endif
                                 </div>
@@ -219,7 +219,7 @@
                                         @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
                                             <span class="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400">Error — volvé a subirlo</span>
                                         @else
-                                            <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Procesando…</span>
+                                            <span class="px-2 py-1 rounded-full text-xs bg-warning/20 text-warning">Procesando…</span>
                                         @endif
                                     </div>
                                     <div class="flex items-center justify-between">
@@ -248,7 +248,7 @@
                                     
                                     @if($menu->procesado)
                                         <a href="{{ route('menus.export', [$comercio, $menu]) }}" 
-                                           class="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm shadow-lg">
+                                           class="w-full bg-accent-green hover:brightness-95 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm shadow-lg">
                                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18"/>
@@ -289,7 +289,7 @@
             @else
                 <!-- Estado vacío -->
                 <div class="text-center py-16">
-                    <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center neon-glow">
+                    <div class="w-32 h-32 mx-auto mb-8 bg-accent-blue hover:brightness-95 rounded-full flex items-center justify-center neon-glow">
                         <span class="text-6xl">📋</span>
                     </div>
                     <h3 class="text-3xl font-bold text-text-primary mb-4">No tienes menús aún</h3>

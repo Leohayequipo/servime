@@ -110,7 +110,7 @@
                                     <div class="flex items-center justify-between">
                                         <span class="text-text-secondary text-xs">Procesado</span>
                                         <span class="px-2 py-0.5 text-xs rounded-full
-                                            {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
+                                            {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-warning/20 text-warning border border-warning/30' }}">
                                             {{ $menu->procesado ? 'Sí' : 'Pendiente' }}
                                         </span>
                                     </div>

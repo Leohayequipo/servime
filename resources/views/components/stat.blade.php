@@ -36,7 +36,7 @@
         })->implode(' ');
     }
 
-    $colorValor = $tono === 'alerta' ? 'text-amber-500' : 'text-text-primary';
+    $colorValor = $tono === 'alerta' ? 'text-warning' : 'text-text-primary';
 @endphp
 
 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-5 flex flex-col">
@@ -66,7 +66,7 @@
     @endif
 
     @if($puntos)
-        <svg class="mt-auto pt-3 w-full h-7 {{ $tono === 'alerta' ? 'text-amber-500' : 'text-text-secondary' }}"
+        <svg class="mt-auto pt-3 w-full h-7 {{ $tono === 'alerta' ? 'text-warning' : 'text-text-secondary' }}"
              viewBox="0 0 100 28" preserveAspectRatio="none" fill="none" aria-hidden="true">
             <polyline points="{{ $puntos }}" stroke="currentColor" stroke-width="1.5"
                       stroke-linecap="round" stroke-linejoin="round" opacity="0.9" vector-effect="non-scaling-stroke"/>

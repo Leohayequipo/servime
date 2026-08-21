@@ -104,14 +104,14 @@
                                         @else
                                             <p class="text-text-primary text-sm mb-1">{{ number_format($usados) }} / {{ number_format($limite) }}</p>
                                             <div class="w-32 h-1.5 bg-accent-gray/40 rounded-full overflow-hidden">
-                                                <div class="h-full {{ $pct >= 100 ? 'bg-red-500' : ($pct >= 80 ? 'bg-yellow-500' : 'bg-accent-green') }}" style="width: {{ $pct }}%"></div>
+                                                <div class="h-full {{ $pct >= 100 ? 'bg-red-500' : ($pct >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pct }}%"></div>
                                             </div>
                                         @endif
                                     </td>
                                     <td class="py-4 px-4">
                                         <form method="POST" action="{{ route('admin.comercios.reset-ia', $comercio) }}" onsubmit="event.preventDefault(); const f=this; showConfirm('¿Resetear el uso de IA de {{ addslashes($comercio->nombre) }}? Esto se cobra aparte.', r => { if(r) f.submit(); });">
                                             @csrf
-                                            <button type="submit" class="px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/20 rounded-lg text-xs font-medium transition-colors">Resetear uso IA</button>
+                                            <button type="submit" class="px-3 py-1.5 bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 rounded-lg text-xs font-medium transition-colors">Resetear uso IA</button>
                                         </form>
                                     </td>
                                 </tr>

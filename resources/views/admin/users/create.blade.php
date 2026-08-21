@@ -77,15 +77,15 @@
                     </div>
                     {{-- El valor sale de la constante del modelo para que este texto no se
                          desincronice del código si algún día se cambia la contraseña. --}}
-                    <div class="bg-amber-900/15 border border-amber-500/30 rounded-xl p-4 text-sm">
-                        <p class="text-amber-200">
+                    <div class="bg-warning/15 border border-warning/30 rounded-xl p-4 text-sm">
+                        <p class="text-warning">
                             La cuenta se crea con la contraseña
                             <code class="font-mono bg-black/30 px-1.5 py-0.5 rounded select-all">{{ \App\Models\User::passwordInicial() }}</code>
                         </p>
-                        <p class="text-amber-200/80 mt-1.5">
+                        <p class="text-warning/80 mt-1.5">
                             Es la misma para todas las cuentas nuevas, así que conviene que la cambie apenas ingrese. Va a poder entrar con su usuario o con su email.
                         </p>
-                        <p class="text-amber-200/70 text-xs mt-2">
+                        <p class="text-warning/70 text-xs mt-2">
                             También le llega un mail con un link para elegir su propia contraseña, que es la forma recomendada. Ese link <span class="font-medium">vence a la hora</span>: si tarda en abrirlo, tiene que pedir uno nuevo desde &ldquo;Olvidé mi contraseña&rdquo;.
                         </p>
                     </div>

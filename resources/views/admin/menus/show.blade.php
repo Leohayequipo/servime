@@ -62,7 +62,7 @@
                         <div>
                             <p class="text-text-secondary text-xs mb-1">Procesado</p>
                             <span class="px-2.5 py-1 text-xs rounded-full font-medium
-                                {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' }}">
+                                {{ $menu->procesado ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-warning/20 text-warning border border-warning/30' }}">
                                 {{ $menu->procesado ? 'Sí' : 'Pendiente' }}
                             </span>
                         </div>
@@ -274,7 +274,7 @@
                     <!-- JSON no parseable — fallback -->
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                            <div class="w-9 h-9 bg-accent-blue/10 rounded-lg flex items-center justify-center">
                                 <span>🤖</span>
                             </div>
                             <h3 class="font-bold text-text-primary">Contenido Procesado por IA</h3>

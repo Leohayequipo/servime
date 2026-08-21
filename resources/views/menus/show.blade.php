@@ -23,7 +23,7 @@
                 <a href="{{ route('menus.edit', [$comercio, $menu]) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                     {{ __('Editar') }}
                 </a>
-                <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-400 dark:hover:bg-gray-600 focus:bg-gray-400 dark:focus:bg-gray-600 active:bg-gray-500 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150">
                     {{ __('Volver') }}
                 </a>
             </div>
@@ -39,7 +39,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-4">
                             @if($comercio->logo_url)
-                                <div class="w-9 h-9 shadow-md border border-indigo-200 dark:border-indigo-700" style="border-radius: 50% !important; overflow: hidden !important; width: 36px !important; height: 36px !important;">
+                                <div class="w-9 h-9 shadow-md border border-accent-blue/25 dark:border-accent-blue" style="border-radius: 50% !important; overflow: hidden !important; width: 36px !important; height: 36px !important;">
                                     <img src="{{ asset('storage/' . $comercio->logo_url) }}" alt="Logo de {{ $comercio->nombre }}" class="w-full h-full object-cover" style="border-radius: 50% !important; width: 100% !important; height: 100% !important;">
                                 </div>
                             @endif
@@ -60,7 +60,7 @@
                                 Procesado
                             </span>
                         @else
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-warning/15 text-warning dark:bg-warning/15 dark:text-warning">
                                 <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
                                 </svg>
@@ -95,7 +95,7 @@
                         <div>
                             <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">Acciones</h4>
                             <div class="space-y-2">
-                                <button onclick="toggleMenuImage()" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 w-full justify-center">
+                                <button onclick="toggleMenuImage()" class="inline-flex items-center px-4 py-2 bg-accent-blue border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-accent-blue focus:bg-accent-blue active:bg-accent-blue/20 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150 w-full justify-center">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -143,7 +143,7 @@
                                         <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                             {{ $contenido['nombre_del_restaurante'] }}
                                         </h3>
-                                        <div class="w-24 h-1 bg-indigo-600 mx-auto rounded"></div>
+                                        <div class="w-24 h-1 bg-accent-blue mx-auto rounded"></div>
                                     </div>
                                 @endif
                                 
@@ -162,7 +162,7 @@
                                                                 <span class="text-gray-700 dark:text-gray-300 font-medium">
                                                                     {{ $plato['nombre'] ?? 'Sin nombre' }}
                                                                 </span>
-                                                                <span class="text-indigo-600 dark:text-indigo-400 font-bold">
+                                                                <span class="text-accent-blue dark:text-accent-blue font-bold">
                                                                     {{ $plato['precio'] ?? 'Sin precio' }}
                                                                 </span>
                                                             </div>
@@ -200,7 +200,7 @@
                     <div class="p-6">
                         <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Procesamiento</h4>
                         <div class="text-center py-8">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue mx-auto"></div>
                             <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">Procesando menú...</h3>
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">El menú se está procesando automáticamente. Vuelve más tarde para ver el contenido extraído.</p>
                         </div>

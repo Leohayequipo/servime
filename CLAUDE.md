@@ -81,6 +81,12 @@ npm run dev   /   npm run build
 - Rutas públicas resuelven comercio por `slug` (binding `{comercio:slug}`), no por id.
 - Servir logos valida path-traversal con `realpath` + prefijo permitido (ver `web.php`).
 - Menús con SoftDeletes; índices en `menus`; FK en `carts`.
+- **Colores (UI):** NUNCA escribir un color a mano ni usar la paleta genérica de Tailwind
+  (`amber-500`, `indigo-600`...). Todo pasa por los tokens de `tailwind.config.js`, cuyos
+  valores viven en el `:root` de `resources/css/app.css`. Cambiar un color del panel es
+  editar una línea ahí. Al tocar estilos, ver la skill `identidad`: tiene los contrastes
+  verificados, por qué hay tres terracotas y qué NO se toca (el menú público, el QR y los
+  colores del comercio).
 - **Confirmaciones/alertas (UI):** usar SIEMPRE los helpers SweetAlert2 definidos en
   `resources/views/layouts/app.blade.php` (`showConfirm`, `showConfirmWithLoader`,
   `showSuccess`, `showError`), NUNCA el `confirm()`/`alert()` nativo del navegador (no matchea

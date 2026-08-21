@@ -34,8 +34,8 @@
                         <div class="text-3xl font-bold text-accent-green">{{ $totalPlatos }}</div>
                         <div class="text-sm text-text-secondary mt-1">Platos</div>
                     </div>
-                    <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                        <div class="text-3xl font-bold text-purple-500">
+                    <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-lg p-4">
+                        <div class="text-3xl font-bold text-accent-blue">
                             @php
                                 $conImagen = 0;
                                 foreach ($data['categorias'] ?? [] as $categoria) {
@@ -52,8 +52,8 @@
                          porque el import PISA el menú entero: si la planilla vino sin esa
                          columna, este número en cero avisa que se van a perder antes de
                          confirmar, no después. --}}
-                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                        <div class="text-3xl font-bold text-amber-400">
+                    <div class="bg-warning/10 border border-warning/30 rounded-lg p-4">
+                        <div class="text-3xl font-bold text-warning">
                             @php
                                 $conEstrella = 0;
                                 foreach ($data['categorias'] ?? [] as $categoria) {
@@ -103,7 +103,7 @@
                                                     {{ $nombrePlato }}
                                                 </h5>
                                                 @if(!empty($plato['estrella']))
-                                                    <span class="flex-none text-amber-400 text-lg" title="Plato estrella: el asistente lo recomienda primero">★</span>
+                                                    <span class="flex-none text-warning text-lg" title="Plato estrella: el asistente lo recomienda primero">★</span>
                                                 @endif
                                             </div>
                                             
@@ -188,7 +188,7 @@
 
             <!-- Botón flotante a la derecha -->
             <button onclick="showConfirmModal()" 
-                    class="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-4 px-8 rounded-full transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-110 flex items-center gap-3">
+                    class="fixed bottom-6 right-6 z-50 bg-accent-green hover:brightness-95 text-white font-medium py-4 px-8 rounded-full transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-110 flex items-center gap-3">
                 <span class="text-2xl">📥</span>
                 <span class="text-lg">Importar</span>
             </button>
@@ -210,9 +210,9 @@
                                 </p>
                             </div>
                         @else
-                            <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                            <div class="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg">
                                 <div class="flex items-center mb-2">
-                                    <span class="text-yellow-500 text-xl mr-2">⚠️</span>
+                                    <span class="text-warning text-xl mr-2">⚠️</span>
                                     <div class="font-semibold text-text-primary">Atención</div>
                                 </div>
                                 <p class="text-sm text-text-secondary mt-2">
@@ -237,7 +237,7 @@
                                 Cancelar
                             </button>
                             <button onclick="confirmImport()" 
-                                    class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+                                    class="flex-1 bg-accent-green hover:brightness-95 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
                                 <span class="text-xl">📥</span>
                                 <span>Importar</span>
                             </button>

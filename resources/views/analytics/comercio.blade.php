@@ -90,7 +90,7 @@
             @if(auth()->user()->isSuperAdmin() && $stats['avg_response_time'])
                 <p class="-mt-6 mb-8 text-xs text-text-secondary">
                     Tiempo de respuesta del asistente:
-                    <b class="{{ $stats['avg_response_time'] > 6000 ? 'text-amber-500' : '' }}">{{ number_format($stats['avg_response_time'] / 1000, 1, ',', '.') }} s</b>
+                    <b class="{{ $stats['avg_response_time'] > 6000 ? 'text-warning' : '' }}">{{ number_format($stats['avg_response_time'] / 1000, 1, ',', '.') }} s</b>
                     promedio · últimos 30 días · solo visible para admins
                 </p>
             @endif
@@ -105,15 +105,15 @@
                  demanda real de los faltantes que SÍ están en el menú (se puede: alcanza con
                  pasar cada faltante por ChatbotService::platosQueCoinciden()). --}}
             @if(count($suggestions) > 0 && auth()->user()->isSuperAdmin())
-                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 shadow-sm sm:rounded-lg p-6 mb-8">
-                    <h3 class="text-lg font-medium text-amber-900 dark:text-amber-200 mb-4 flex items-center gap-2">
+                <div class="bg-warning/10 dark:bg-warning/20 border border-warning dark:border-warning/40 shadow-sm sm:rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-medium text-warning dark:text-warning mb-4 flex items-center gap-2">
                         <x-icono name="idea" class="w-4 h-4 flex-none opacity-60" />
                         Sugerencias para tu negocio
                         <span class="text-xs font-normal opacity-70">· solo visible para admins</span>
                     </h3>
                     <ul class="space-y-2.5">
                         @foreach($suggestions as $s)
-                            <li class="flex items-start gap-3 text-sm text-amber-900 dark:text-amber-100">
+                            <li class="flex items-start gap-3 text-sm text-warning dark:text-warning">
                                 <x-icono :name="$s['icon']" class="w-4 h-4 flex-none mt-0.5 opacity-70" />
                                 <span>{{ $s['text'] }}</span>
                             </li>
@@ -133,7 +133,7 @@
                         <p class="text-xs text-text-secondary">
                             Intención en {{ $intents['total'] }} mensajes (últimos 30 días)
                             @if($intents['ia'] > 0)
-                                · <span class="text-indigo-600 dark:text-indigo-400">{{ $intents['ia'] }} clasificados con IA</span>
+                                · <span class="text-accent-blue dark:text-accent-blue">{{ $intents['ia'] }} clasificados con IA</span>
                             @endif
                         </p>
                     </div>
@@ -142,7 +142,7 @@
                             <form method="POST" action="{{ route('analytics.reclassify', $comercio) }}">
                                 @csrf
                                 <button type="submit"
-                                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded inline-flex items-center gap-2">
+                                        class="bg-accent-blue hover:bg-accent-blue text-white text-sm font-medium py-2 px-4 rounded inline-flex items-center gap-2">
                                     ✨ Reclasificar con IA
                                 </button>
                             </form>
@@ -162,7 +162,7 @@
                                         <span>{{ $name }}</span><b>{{ $count }}</b>
                                     </div>
                                     <div class="h-2 bg-accent-gray/40 rounded">
-                                        <div class="h-2 {{ $name === 'Otras' ? 'bg-gray-400' : 'bg-indigo-500' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
+                                        <div class="h-2 {{ $name === 'Otras' ? 'bg-gray-400' : 'bg-accent-blue' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
                                     </div>
                                 </div>
                             @endif
@@ -192,11 +192,11 @@
                     <p class="text-text-secondary text-sm mb-4">Con qué entra cada visita.</p>
                     @if($totalChoice > 0)
                         <div class="flex h-5 rounded-full overflow-hidden mb-4">
-                            <div class="bg-amber-500" style="width: {{ $iaPct }}%"></div>
+                            <div class="bg-warning" style="width: {{ $iaPct }}%"></div>
                             <div class="bg-gray-400 dark:bg-gray-600" style="width: {{ $clPct }}%"></div>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
+                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-warning mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
                             <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
                         </div>
                         @if(($metrics['menuChoice']['ambos'] ?? 0) > 0)
@@ -227,8 +227,8 @@
                         // "eligieron" parecía una caída enorme que no existía.
                         $pasos = [
                             ['Visitaron el menú', $fv, 'bg-blue-500'],
-                            ['Pasaron por la pantalla inicial', $fc, 'bg-indigo-500'],
-                            ['Eligieron una opción', $fe, 'bg-amber-500'],
+                            ['Pasaron por la pantalla inicial', $fc, 'bg-accent-blue'],
+                            ['Eligieron una opción', $fe, 'bg-warning'],
                             ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500'],
                             ['Revisaron su pedido', $fp, 'bg-emerald-600'],
                         ];
@@ -262,8 +262,8 @@
                 // Se nombran con el texto que el cliente ve en la portada, no con el
                 // nombre interno: el comercio reconoce sus botones por lo que dicen.
                 $puertas = [
-                    ['«Preguntame lo que quieras»', $en['cta'], 'bg-amber-500'],
-                    ['Atajos sugeridos', $en['chip'], 'bg-indigo-500'],
+                    ['«Preguntame lo que quieras»', $en['cta'], 'bg-warning'],
+                    ['Atajos sugeridos', $en['chip'], 'bg-accent-blue'],
                     ['«Quiero ver el menú completo»', $en['completo'], 'bg-gray-400 dark:bg-gray-600'],
                 ];
             @endphp
@@ -327,13 +327,13 @@
                                                     </span>
                                                 </td>
                                                 <td class="py-2 text-right text-text-primary whitespace-nowrap">{{ $chip['clicks'] }}</td>
-                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['abandonos'] > 0 ? 'text-amber-500' : 'text-text-secondary' }}">
+                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['abandonos'] > 0 ? 'text-warning' : 'text-text-secondary' }}">
                                                     {{ $chip['preguntas'] }}
                                                     @if($chip['abandonos'] > 0)
                                                         <span class="text-xs opacity-70">(−{{ $chip['abandonos'] }})</span>
                                                     @endif
                                                 </td>
-                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-amber-500') }}">
+                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-warning') }}">
                                                     {{ $chip['con_platos'] }} <span class="text-xs opacity-70">({{ $chip['efectividad'] }}%)</span>
                                                 </td>
                                             </tr>
@@ -370,7 +370,7 @@
                                         <div class="text-xs text-text-secondary mt-0.5">Fueron a Google</div>
                                     </div>
                                     <div>
-                                        <div class="text-2xl font-bold text-amber-500 tabular-nums">{{ $resenaStats['cierres'] }}</div>
+                                        <div class="text-2xl font-bold text-warning tabular-nums">{{ $resenaStats['cierres'] }}</div>
                                         <div class="text-xs text-text-secondary mt-0.5">Lo cerraron</div>
                                     </div>
                                     <div>
@@ -542,7 +542,7 @@
                                 <span class="truncate">{{ $cat }}</span><b>{{ $count }}</b>
                             </div>
                             <div class="h-2 bg-accent-gray/40 rounded">
-                                <div class="h-2 bg-purple-500 rounded" style="width: {{ round($count / $catMax * 100) }}%"></div>
+                                <div class="h-2 bg-accent-blue rounded" style="width: {{ round($count / $catMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
@@ -586,7 +586,7 @@
                     @if($topWords->count() > 0)
                         <div class="flex flex-wrap gap-2">
                             @foreach($topWords as $word => $count)
-                                <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 px-3 py-1"
+                                <span class="inline-flex items-center rounded-full bg-warning/15 dark:bg-warning/40 text-warning dark:text-warning px-3 py-1"
                                       style="font-size: {{ 0.75 + ($count / $wordMax) * 0.7 }}rem">
                                     {{ $word }} <span class="ml-1 text-xs opacity-70">{{ $count }}</span>
                                 </span>
@@ -627,7 +627,7 @@
                          el chat está fallando, que es algo que hoy no se detecta de otra forma. --}}
                     @if(!empty($fallasDelAsistente))
                         <div class="mt-4 pt-4 border-t border-accent-gray/40">
-                            <p class="text-xs text-amber-500 mb-2">
+                            <p class="text-xs text-warning mb-2">
                                 ⚠ El asistente no encontró esto, y SÍ está en el menú · solo visible para admins
                             </p>
                             <p class="text-xs text-text-secondary">
@@ -701,11 +701,11 @@
                                              lista de números sueltos. Verde = el asistente resolvió;
                                              ámbar = no encontró nada del menú para ofrecer. --}}
                                         <div class="h-1.5 bg-accent-gray/40 rounded overflow-hidden">
-                                            <div class="h-1.5 rounded {{ $question->resuelta === false ? 'bg-amber-500' : 'bg-blue-500' }}"
+                                            <div class="h-1.5 rounded {{ $question->resuelta === false ? 'bg-warning' : 'bg-blue-500' }}"
                                                  style="width: {{ round($question->frequency / $qMax * 100) }}%"></div>
                                         </div>
                                         @if($question->resuelta === false)
-                                            <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">El asistente no encontró nada del menú para ofrecer</p>
+                                            <p class="text-[11px] text-warning dark:text-warning mt-1">El asistente no encontró nada del menú para ofrecer</p>
                                         @endif
                                     </div>
                                 @endforeach
@@ -758,7 +758,7 @@
                                                 {{ $dia[$fecha->dayOfWeek] }} {{ $fecha->format('d/m') }}
                                             </p>
                                             @if($sinResponder > 0)
-                                                <p class="text-xs text-amber-500">
+                                                <p class="text-xs text-warning">
                                                     {{ $sinResponder }} sin responder
                                                 </p>
                                             @endif
@@ -827,7 +827,7 @@
                             <label class="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
                                 <input type="checkbox" name="sin_resolver" value="1" class="peer sr-only"
                                        @checked($soloSinResolver) onchange="this.form.submit()">
-                                <span class="px-2.5 py-1.5 rounded-full border border-accent-gray text-text-secondary peer-checked:border-amber-500 peer-checked:text-amber-500 transition-colors">
+                                <span class="px-2.5 py-1.5 rounded-full border border-accent-gray text-text-secondary peer-checked:border-warning peer-checked:text-warning transition-colors">
                                     Solo sin resolver
                                 </span>
                             </label>
@@ -907,7 +907,7 @@
                                                 <span class="text-[10px] font-semibold uppercase tracking-wide text-text-secondary border border-accent-gray rounded px-1 py-0.5">{{ $idioma }}</span>
                                             @endforeach
                                             @if($thread['sin_resolver'])
-                                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-500 border border-amber-500/40 rounded-full px-2 py-0.5">
+                                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-warning border border-warning/40 rounded-full px-2 py-0.5">
                                                     <x-icono name="alert" class="w-3 h-3 flex-none" />
                                                     {{ $thread['falta'] ? implode(', ', array_slice($thread['falta'], 0, 2)) : 'sin resultado' }}
                                                 </span>
@@ -938,7 +938,7 @@
                                                         @endif
                                                         <p class="text-[11px] text-text-secondary/70 mt-1">
                                                             {{ $m->created_at->format('H:i') }}@if($m->response_time_ms) &middot; {{ number_format($m->response_time_ms / 1000, 1, ',', '.') }} s @endif
-                                                            @unless($m->used_openai) &middot; <span class="text-amber-500">respuesta de respaldo</span> @endunless
+                                                            @unless($m->used_openai) &middot; <span class="text-warning">respuesta de respaldo</span> @endunless
                                                         </p>
                                                     </div>
                                                 </div>

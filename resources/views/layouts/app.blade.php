@@ -18,56 +18,48 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
-        :root {
-            --primary-dark:   #111318;
-            --secondary-dark: #1c1f26;
-            --accent-blue:    #f59e0b;
-            --accent-green:   #10b981;
-            --accent-gray:    #374151;
-            --text-primary:   #FFFFFF;
-            --text-secondary: #94a3b8;
-            --background:     #0b0c10;
-        }
+        /* La paleta vive en resources/css/app.css (--c-*). Acá quedaba una copia
+           con los valores viejos que este bloque seguía usando: el fondo del body
+           era negro y los focus rings, ámbar, aunque el resto ya fuera verde. */
         body {
-            font-family: Roboto, Inter, system-ui, sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
+            font-family: "Nunito Sans", Roboto, system-ui, sans-serif;
+            background: rgb(var(--c-bg));
+            color: rgb(var(--c-ink));
         }
-        /* Focus rings use amber */
         input:focus, textarea:focus, select:focus {
-            --tw-ring-color: var(--accent-blue);
-            border-color: var(--accent-blue);
+            --tw-ring-color: rgb(var(--c-accent));
+            border-color: rgb(var(--c-accent));
         }
 
         /* SweetAlert2 — reemplazar azules por paleta dark amber */
         .swal2-icon.swal2-question {
-            border-color: rgba(245, 158, 11, 0.3) !important;
-            color: #f59e0b !important;
+            border-color: rgb(var(--c-accent) / .3) !important;
+            color: rgb(var(--c-accent)) !important;
         }
         .swal2-icon.swal2-question .swal2-icon-content {
-            color: #f59e0b !important;
+            color: rgb(var(--c-accent)) !important;
         }
         .swal2-icon.swal2-info {
-            border-color: rgba(245, 158, 11, 0.3) !important;
-            color: #f59e0b !important;
+            border-color: rgb(var(--c-accent) / .3) !important;
+            color: rgb(var(--c-accent)) !important;
         }
         .swal2-icon.swal2-info .swal2-icon-content {
-            color: #f59e0b !important;
+            color: rgb(var(--c-accent)) !important;
         }
         /* Popup title */
         .swal2-title {
-            color: #ffffff !important;
+            color: rgb(var(--c-ink)) !important;
         }
         /* Popup background */
         .swal2-popup {
-            background: #1c1f26 !important;
+            background: rgb(var(--c-elev-2)) !important;
         }
         /* Focus ring en botones — quitar el azul por defecto */
         .swal2-styled:focus {
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4) !important;
+            box-shadow: 0 0 0 3px rgb(var(--c-accent) / .4) !important;
         }
         .swal2-styled.swal2-cancel:focus {
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
+            box-shadow: 0 0 0 3px rgb(var(--c-danger) / .4) !important;
         }
     </style>
     
@@ -141,8 +133,8 @@
                         </button>
                         <div class="relative group hidden md:block">
                             <button class="flex items-center space-x-3 hover:bg-secondary-dark px-3 py-2 rounded-lg transition-all duration-300">
-                                <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center neon-glow">
-                                    <span class="text-sm font-semibold text-text-primary">
+                                <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-bold text-gray-900">
                                         {{ substr(auth()->user()->name, 0, 1) }}
                                     </span>
                                 </div>
@@ -210,8 +202,8 @@
                     <div class="border-t border-accent-gray my-2"></div>
                     <button type="button" onclick="document.getElementById('mobileUser').classList.toggle('hidden')"
                             class="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary-dark">
-                        <div class="w-8 h-8 bg-gradient-to-r from-accent-blue to-accent-green rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-sm font-semibold text-text-primary">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                        <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm font-bold text-gray-900">{{ substr(auth()->user()->name, 0, 1) }}</span>
                         </div>
                         <div class="min-w-0 flex-1 text-left">
                             <p class="text-sm font-medium text-text-primary truncate">{{ auth()->user()->name }}</p>
@@ -269,8 +261,8 @@
     <script>
         // Configuración global de SweetAlert2 para tema dark
         const swalConfig = {
-            background: '#1c1f26',
-            color: '#ffffff',
+            background: 'rgb(var(--c-elev-2))',
+            color: 'rgb(var(--c-ink))',
             customClass: {
                 popup: 'dark-modal',
             }
@@ -284,9 +276,9 @@
                 title: 'Información',
                 text: message,
                 icon: 'info',
-                iconColor: '#f59e0b',
+                iconColor: 'rgb(var(--c-accent))',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#f59e0b'
+                confirmButtonColor: 'rgb(var(--c-accent))'
             });
         };
 
@@ -297,10 +289,10 @@
                 title: 'Confirmar',
                 text: message,
                 icon: 'question',
-                iconColor: '#f59e0b',
+                iconColor: 'rgb(var(--c-accent))',
                 showCancelButton: true,
-                confirmButtonColor: '#10B981',
-                cancelButtonColor: '#EF4444',
+                confirmButtonColor: 'rgb(var(--c-ok))',
+                cancelButtonColor: 'rgb(var(--c-danger))',
                 confirmButtonText: 'Sí',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
@@ -315,10 +307,10 @@
                 title: 'Confirmar',
                 text: message,
                 icon: 'question',
-                iconColor: '#f59e0b',
+                iconColor: 'rgb(var(--c-accent))',
                 showCancelButton: true,
-                confirmButtonColor: '#10B981',
-                cancelButtonColor: '#EF4444',
+                confirmButtonColor: 'rgb(var(--c-ok))',
+                cancelButtonColor: 'rgb(var(--c-danger))',
                 confirmButtonText: 'Sí',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
@@ -343,7 +335,7 @@
                 text: message,
                 icon: 'success',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#10B981'
+                confirmButtonColor: 'rgb(var(--c-ok))'
             });
         }
 
@@ -354,7 +346,7 @@
                 text: message,
                 icon: 'error',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#EF4444'
+                confirmButtonColor: 'rgb(var(--c-danger))'
             });
         }
 
@@ -365,7 +357,7 @@
                 text: message,
                 icon: 'warning',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#F59E0B'
+                confirmButtonColor: 'rgb(var(--c-accent))'
             });
         }
 
@@ -375,9 +367,9 @@
                 title: title,
                 text: message,
                 icon: 'info',
-                iconColor: '#f59e0b',
+                iconColor: 'rgb(var(--c-accent))',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#f59e0b'
+                confirmButtonColor: 'rgb(var(--c-accent))'
             });
         }
 
@@ -390,7 +382,7 @@
                     title: message,
                     html: `
                         <div class="flex flex-col items-center space-y-4">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue" style="border-color: #f59e0b;"></div>
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue"></div>
                             <p class="text-gray-300">Por favor espera...</p>
                         </div>
                     `,
