@@ -10,13 +10,14 @@ La marca es **verde profundo + crema + terracota**. Reemplazó a una etapa de ne
 
 | Dónde | Cómo se ve |
 |---|---|
-| Landing y pantallas de auth | Claro: fondo crema, texto verde, CTA terracota |
-| Panel | Oscuro: fondo verde profundo, texto crema, acento terracota |
-| Emails | Claro, con el mismo criterio que la landing |
+| Landing y pantallas de auth | Fondo crema, texto verde profundo, CTA terracota |
+| Panel | Lo mismo: crema, verde y terracota |
+| Emails | Lo mismo, con hex en vez de tokens |
 | **Menú público del comercio** | **Ni una cosa ni la otra — ver "Lo que no se toca"** |
 
-El panel quedó oscuro a propósito: es cómodo para trabajar muchas horas. Lo que cambió
-no es la luminosidad sino el color — de negro con ámbar a verde con terracota.
+**El panel es claro, igual que la landing.** Hubo una etapa intermedia en verde profundo
+que se descartó: en pantallas de trabajo el fondo de color tiraba a app temática y le
+restaba seriedad. Los SaaS que se leen como herramienta seria son claros.
 
 ## La regla de oro: nada de colores escritos a mano
 
@@ -25,17 +26,17 @@ Todo el color pasa por variables CSS declaradas en `resources/css/app.css`, que
 
 ```css
 :root {
-    --c-accent:      232 146 122;  /* #E8927A terracota */
-    --c-accent-deep: 192  86  58;  /* #C0563A terracota oscuro */
-    --c-ok:           16 185 129;  /* verde de éxito — semántico */
-    --c-danger:      239  68  68;  /* rojo de error — semántico */
-    --c-warn:        234 179   8;  /* ámbar de atención — semántico */
-    --c-line:         61  92  75;  /* bordes */
-    --c-elev-1:       27  44  35;  /* superficie base */
-    --c-elev-2:       36  58  46;  /* tarjetas */
-    --c-ink:         242 237 227;  /* crema */
-    --c-ink-soft:    167 188 168;  /* salvia claro */
-    --c-bg:           27  44  35;  /* fondo */
+    --c-accent:      192  86  58;  /* #C0563A terracota                    */
+    --c-accent-deep: 168  70  44;  /* #A8462C terracota oscuro (hover)     */
+    --c-ok:           11 122  87;  /* #0B7A57 éxito       — semántico      */
+    --c-danger:      179  38  30;  /* #B3261E error       — semántico      */
+    --c-warn:        138 101   8;  /* #8A6508 atención    — semántico      */
+    --c-line:        225 217 201;  /* #E1D9C9 bordes                       */
+    --c-elev-1:      242 237 227;  /* #F2EDE3 superficie base              */
+    --c-elev-2:      251 249 245;  /* #FBF9F5 papel: tarjetas y modales    */
+    --c-ink:          40  66  54;  /* #284236 verde profundo               */
+    --c-ink-soft:     85 112  95;  /* #55705F salvia oscuro                */
+    --c-bg:          242 237 227;  /* #F2EDE3 crema                        */
 }
 ```
 
@@ -83,13 +84,19 @@ Así se pilotó la identidad en el dashboard antes de aplicarla a las 49 vistas.
 
 No son estimaciones: están medidos con la fórmula de luminancia relativa.
 
-| Sobre el fondo del panel `#1B2C23` | |
+| Sobre el crema `#F2EDE3` | |
 |---|---|
-| Crema `#F2EDE3` | 12,58:1 |
-| Salvia `#A7BCA8` | 7,27:1 |
-| Terracota `#E8927A` | 6,17:1 |
-| Ámbar de aviso `#EAB308` | 7,65:1 |
-| Texto oscuro sobre terracota | 7,45:1 |
+| Verde profundo `#284236` | 9,36:1 |
+| Salvia oscuro `#55705F` | 4,65:1 |
+| Terracota `#C0563A` con texto blanco | 4,53:1 |
+| Éxito `#0B7A57` | 4,57:1 |
+| Error `#B3261E` | 5,60:1 |
+| Atención `#8A6508` | 4,56:1 |
+
+> ⚠️ **Los semánticos NO son los mismos que en una paleta oscura.** Sobre crema, el
+> emerald `#10B981` da 2,17:1 y el ámbar `#EAB308` 1,64:1: invisibles. Un color que
+> funciona sobre fondo oscuro casi nunca sirve sobre claro, y al revés. Si algún día se
+> vuelve a una paleta oscura, hay que reemplazar los tres, no sólo el fondo.
 
 > ⚠️ **El terracota de la paleta de marca (`#E07A5F`) NO sirve para texto ni para el fondo
 > de un botón**: da 2,53:1 sobre crema y 2,95:1 con texto blanco, contra el mínimo de 4,5.
@@ -103,6 +110,21 @@ Mismo caso con el salvia: `#6B8C7A` da 3,18:1 sobre crema, así que para texto v
 La identidad no los usa. Se sacaron del nav activo, los avatares, los modales de
 SweetAlert, botones e íconos. El único que queda es el *shimmer* de las animaciones de
 carga, que no es decorativo: indica que algo está pasando.
+
+### El panel no tiene modo oscuro
+
+`layouts/app` forzaba `class="dark"` y cargaba `dark-mode.js`, lo que activaba ~112
+clases `dark:` de Breeze. Al pasar a claro se quitó el forzado y se limpiaron esas
+clases, que quedaban inertes y engañaban al leer el código. **No volver a agregar
+variantes `dark:`**: no hay modo oscuro y no aplicarían.
+
+### Cuidado con el CSS local con `!important`
+
+`menus/create` tenía en su `<style>` una regla que pintaba **todos** los inputs de la
+pantalla de gris oscuro con `!important`. Sobrevivió a varias pasadas de migración
+porque no era ni una clase de Tailwind ni un token: era CSS local pisando todo. Al
+buscar restos de una paleta vieja, revisar también los bloques `<style>` de cada vista,
+no sólo las clases.
 
 ## Lo que no se toca
 

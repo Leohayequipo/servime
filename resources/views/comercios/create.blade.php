@@ -2,14 +2,14 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                <h2 class="font-semibold text-xl text-text-primary leading-tight">
                     {{ __('Crear Comercio') }}
                 </h2>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Crear un nuevo comercio para gestionar menús digitales</p>
+                <p class="text-sm text-text-secondary mt-1">Crear un nuevo comercio para gestionar menús digitales</p>
             </div>
             <div class="flex space-x-3">
                 <a href="{{ route('comercios.index') }}" 
-                   class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                   class="bg-accent-gray hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg transition-all duration-300">
                     🔄 Cancelar
                 </a>
             </div>

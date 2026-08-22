@@ -356,7 +356,7 @@
                                     <p class="mt-2 hidden text-xs text-warning" id="portadaDemora">
                                         Está tardando más de lo normal.
                                         <button type="button" id="portadaReintentar"
-                                                class="underline hover:text-white">Reintentar</button>
+                                                class="underline hover:text-accent-blue">Reintentar</button>
                                     </p>
                                 </div>
                             </div>
@@ -366,7 +366,7 @@
                                 <p class="text-xs text-red-300">
                                     No pudimos procesar esta imagen. Probá con otra foto.
                                     <button type="button" id="portadaReintentar2"
-                                            class="underline hover:text-white">Reintentar</button>
+                                            class="underline hover:text-accent-blue">Reintentar</button>
                                 </p>
                             </div>
 

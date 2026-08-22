@@ -49,7 +49,7 @@
                 customClass: {
                     popup: 'dark-modal',
                     title: 'text-white',
-                    htmlContainer: 'text-gray-300',
+                    htmlContainer: 'text-text-secondary',
                 },
                 title: 'Contacta con el Administrador',
                 html: htmlContent,

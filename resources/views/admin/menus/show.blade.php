@@ -164,7 +164,7 @@
                 @if($promocionesCategoria && isset($promocionesCategoria['platos']) && count($promocionesCategoria['platos']) > 0)
                     <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
                         <div class="flex items-center gap-3 mb-5">
-                            <div class="w-9 h-9 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-center justify-center">
+                            <div class="w-9 h-9 bg-accent-blue/20 border border-accent-blue/30 rounded-lg flex items-center justify-center">
                                 <span>🔥</span>
                             </div>
                             <h3 class="font-bold text-text-primary">Promociones del Día</h3>
@@ -174,7 +174,7 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             @foreach($promocionesCategoria['platos'] as $promo)
-                                <div class="bg-primary-dark border border-orange-500/20 rounded-xl p-4">
+                                <div class="bg-primary-dark border border-accent-blue/20 rounded-xl p-4">
                                     <div class="flex items-start gap-3">
                                         @if(isset($promo['imagen']) && !empty($promo['imagen']))
                                             <img src="{{ asset($promo['imagen']) }}"
@@ -185,7 +185,7 @@
                                             <div class="flex items-start justify-between gap-2 mb-1">
                                                 <h5 class="font-semibold text-text-primary text-sm leading-tight">{{ $promo['nombre'] ?? 'Sin nombre' }}</h5>
                                                 @if(!empty($promo['precio']))
-                                                    <span class="text-orange-300 font-bold text-sm flex-shrink-0">${{ $promo['precio'] }}</span>
+                                                    <span class="text-accent-blue font-bold text-sm flex-shrink-0">${{ $promo['precio'] }}</span>
                                                 @endif
                                             </div>
                                             @if(!empty($promo['descripcion']))
@@ -250,7 +250,7 @@
                                                         <div class="flex flex-wrap gap-1">
                                                             @foreach($plato['tags'] as $tag)
                                                                 @if(!empty($tag))
-                                                                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">{{ $tag }}</span>
+                                                                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-accent-blue/15 text-accent-blue border border-accent-blue/30">{{ $tag }}</span>
                                                                 @endif
                                                             @endforeach
                                                         </div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -134,7 +134,7 @@
                         <div class="relative group hidden md:block">
                             <button class="flex items-center space-x-3 hover:bg-secondary-dark px-3 py-2 rounded-lg transition-all duration-300">
                                 <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center">
-                                    <span class="text-sm font-bold text-gray-900">
+                                    <span class="text-sm font-bold text-text-primary">
                                         {{ substr(auth()->user()->name, 0, 1) }}
                                     </span>
                                 </div>
@@ -203,7 +203,7 @@
                     <button type="button" onclick="document.getElementById('mobileUser').classList.toggle('hidden')"
                             class="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary-dark">
                         <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-sm font-bold text-gray-900">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                            <span class="text-sm font-bold text-text-primary">{{ substr(auth()->user()->name, 0, 1) }}</span>
                         </div>
                         <div class="min-w-0 flex-1 text-left">
                             <p class="text-sm font-medium text-text-primary truncate">{{ auth()->user()->name }}</p>
@@ -231,7 +231,6 @@
         </div>
 
     <!-- Dark Mode Script -->
-    <script src="{{ asset('js/dark-mode.js') }}"></script>
     
     <!-- Scripts -->
     <script>
@@ -383,7 +382,7 @@
                     html: `
                         <div class="flex flex-col items-center space-y-4">
                             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue"></div>
-                            <p class="text-gray-300">Por favor espera...</p>
+                            <p class="text-text-secondary">Por favor espera...</p>
                         </div>
                     `,
                     allowOutsideClick: false,

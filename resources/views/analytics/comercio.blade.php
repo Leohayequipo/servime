@@ -24,7 +24,7 @@
                         ← Dashboard
                     </a>
                     <a href="{{ route('analytics.export', $comercio) }}"
-                       class="bg-accent-green hover:opacity-90 text-gray-900 font-semibold py-2 px-4 rounded-lg inline-flex items-center gap-2">
+                       class="bg-accent-green hover:opacity-90 text-text-primary font-semibold py-2 px-4 rounded-lg inline-flex items-center gap-2">
                         <x-icono name="download" class="w-4 h-4 flex-none" />
                         Exportar
                     </a>
@@ -32,7 +32,7 @@
             </div>
 
             @if(session('success'))
-                <div class="bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 rounded-lg p-4 mb-6 text-sm">
+                <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 mb-6 text-sm">
                     {{ session('success') }}
                 </div>
             @endif
@@ -105,15 +105,15 @@
                  demanda real de los faltantes que SÍ están en el menú (se puede: alcanza con
                  pasar cada faltante por ChatbotService::platosQueCoinciden()). --}}
             @if(count($suggestions) > 0 && auth()->user()->isSuperAdmin())
-                <div class="bg-warning/10 dark:bg-warning/20 border border-warning dark:border-warning/40 shadow-sm sm:rounded-lg p-6 mb-8">
-                    <h3 class="text-lg font-medium text-warning dark:text-warning mb-4 flex items-center gap-2">
+                <div class="bg-warning/10 border border-warning shadow-sm sm:rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-medium text-warning mb-4 flex items-center gap-2">
                         <x-icono name="idea" class="w-4 h-4 flex-none opacity-60" />
                         Sugerencias para tu negocio
                         <span class="text-xs font-normal opacity-70">· solo visible para admins</span>
                     </h3>
                     <ul class="space-y-2.5">
                         @foreach($suggestions as $s)
-                            <li class="flex items-start gap-3 text-sm text-warning dark:text-warning">
+                            <li class="flex items-start gap-3 text-sm text-warning">
                                 <x-icono :name="$s['icon']" class="w-4 h-4 flex-none mt-0.5 opacity-70" />
                                 <span>{{ $s['text'] }}</span>
                             </li>
@@ -133,7 +133,7 @@
                         <p class="text-xs text-text-secondary">
                             Intención en {{ $intents['total'] }} mensajes (últimos 30 días)
                             @if($intents['ia'] > 0)
-                                · <span class="text-accent-blue dark:text-accent-blue">{{ $intents['ia'] }} clasificados con IA</span>
+                                · <span class="text-accent-blue">{{ $intents['ia'] }} clasificados con IA</span>
                             @endif
                         </p>
                     </div>
@@ -162,7 +162,7 @@
                                         <span>{{ $name }}</span><b>{{ $count }}</b>
                                     </div>
                                     <div class="h-2 bg-accent-gray/40 rounded">
-                                        <div class="h-2 {{ $name === 'Otras' ? 'bg-gray-400' : 'bg-accent-blue' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
+                                        <div class="h-2 {{ $name === 'Otras' ? 'bg-accent-gray' : 'bg-accent-blue' }} rounded" style="width: {{ round($count / $intMax * 100) }}%"></div>
                                     </div>
                                 </div>
                             @endif
@@ -193,11 +193,11 @@
                     @if($totalChoice > 0)
                         <div class="flex h-5 rounded-full overflow-hidden mb-4">
                             <div class="bg-warning" style="width: {{ $iaPct }}%"></div>
-                            <div class="bg-gray-400 dark:bg-gray-600" style="width: {{ $clPct }}%"></div>
+                            <div class="bg-accent-gray" style="width: {{ $clPct }}%"></div>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-warning mr-1"></span>IA · <b>{{ $ia }}</b> ({{ $iaPct }}%)</span>
-                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-gray-400 dark:bg-gray-600 mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
+                            <span class="text-text-secondary"><span class="inline-block w-3 h-3 rounded-sm bg-accent-gray mr-1"></span>Clásico · <b>{{ $cl }}</b> ({{ $clPct }}%)</span>
                         </div>
                         @if(($metrics['menuChoice']['ambos'] ?? 0) > 0)
                             <p class="text-xs text-text-secondary mt-3">
@@ -264,7 +264,7 @@
                 $puertas = [
                     ['«Preguntame lo que quieras»', $en['cta'], 'bg-warning'],
                     ['Atajos sugeridos', $en['chip'], 'bg-accent-blue'],
-                    ['«Quiero ver el menú completo»', $en['completo'], 'bg-gray-400 dark:bg-gray-600'],
+                    ['«Quiero ver el menú completo»', $en['completo'], 'bg-accent-gray'],
                 ];
             @endphp
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -414,7 +414,7 @@
                                 <span>{{ $label }}</span><b>{{ round($dv[$k] / $dvTotal * 100) }}%</b>
                             </div>
                             <div class="h-1.5 bg-accent-gray/40 rounded mt-1">
-                                <div class="h-1.5 bg-teal-500 rounded" style="width: {{ round($dv[$k] / $dvTotal * 100) }}%"></div>
+                                <div class="h-1.5 bg-accent-blue rounded" style="width: {{ round($dv[$k] / $dvTotal * 100) }}%"></div>
                             </div>
                         </div>
                     @endforeach
@@ -566,7 +566,7 @@
                                 <span class="truncate">{{ $tag }}</span><b>{{ $count }}</b>
                             </div>
                             <div class="h-2 bg-accent-gray/40 rounded">
-                                <div class="h-2 bg-teal-500 rounded" style="width: {{ round($count / $tagMax * 100) }}%"></div>
+                                <div class="h-2 bg-accent-blue rounded" style="width: {{ round($count / $tagMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
@@ -586,7 +586,7 @@
                     @if($topWords->count() > 0)
                         <div class="flex flex-wrap gap-2">
                             @foreach($topWords as $word => $count)
-                                <span class="inline-flex items-center rounded-full bg-warning/15 dark:bg-warning/40 text-warning dark:text-warning px-3 py-1"
+                                <span class="inline-flex items-center rounded-full bg-warning/15 text-warning px-3 py-1"
                                       style="font-size: {{ 0.75 + ($count / $wordMax) * 0.7 }}rem">
                                     {{ $word }} <span class="ml-1 text-xs opacity-70">{{ $count }}</span>
                                 </span>
@@ -705,7 +705,7 @@
                                                  style="width: {{ round($question->frequency / $qMax * 100) }}%"></div>
                                         </div>
                                         @if($question->resuelta === false)
-                                            <p class="text-[11px] text-warning dark:text-warning mt-1">El asistente no encontró nada del menú para ofrecer</p>
+                                            <p class="text-[11px] text-warning mt-1">El asistente no encontró nada del menú para ofrecer</p>
                                         @endif
                                     </div>
                                 @endforeach

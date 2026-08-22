@@ -4,27 +4,27 @@
         #btn-actualizar-menu,
         .btn-actualizar-menu,
         button[type="submit"][id="btn-actualizar-menu"] {
-            background-color: #10b981 !important;
-            border: 2px solid rgba(16, 185, 129, 0.3) !important;
+            background-color: rgb(var(--c-ok)) !important;
+            border: 2px solid rgb(var(--c-ok) / .3) !important;
         }
         
         #btn-actualizar-menu:hover,
         .btn-actualizar-menu:hover {
-            background-color: #059669 !important;
+            background-color: rgb(var(--c-ok) / .85) !important;
         }
         
         /* Forzar estilos para inputs */
         input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
         select,
         textarea {
-            background-color: #1c1f26 !important;
-            color: white !important;
-            border-color: #374151 !important;
+            background-color: rgb(var(--c-elev-2)) !important;
+            color: rgb(var(--c-ink)) !important;
+            border-color: rgb(var(--c-line)) !important;
         }
 
         .faq-container {
-            background-color: #1c1f26 !important;
-            border: 1px solid #374151 !important;
+            background-color: rgb(var(--c-elev-2)) !important;
+            border: 1px solid rgb(var(--c-line)) !important;
         }
         
         /* Espaciado personalizado para alineación perfecta */
@@ -41,7 +41,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(40, 66, 54, .55);
             display: none;
             justify-content: center;
             align-items: center;
@@ -49,13 +49,13 @@
         }
         
         .icon-modal-content {
-            background: #1c1f26;
+            background: rgb(var(--c-elev-2));
             border-radius: 1rem;
             padding: 2rem;
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
-            border: 1px solid #374151;
+            border: 1px solid rgb(var(--c-line));
         }
         
         .icon-grid {
@@ -66,8 +66,8 @@
         }
         
         .icon-option {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgb(var(--c-elev-1));
+            border: 1px solid rgb(var(--c-line));
             border-radius: 0.5rem;
             padding: 0.75rem;
             text-align: center;
@@ -77,19 +77,19 @@
         }
         
         .icon-option:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgb(var(--c-accent) / .12);
             transform: scale(1.1);
         }
         
         select option {
-            background-color: #1c1f26 !important;
-            color: white !important;
+            background-color: rgb(var(--c-elev-2)) !important;
+            color: rgb(var(--c-ink)) !important;
         }
 
         select:focus {
             outline: none !important;
-            border-color: rgba(245, 158, 11, 0.5) !important;
-            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15) !important;
+            border-color: rgb(var(--c-accent) / .5) !important;
+            box-shadow: 0 0 0 2px rgb(var(--c-accent) / .15) !important;
         }
         
         /* Modal de archivos */
@@ -99,7 +99,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(40, 66, 54, .6);
             display: none;
             justify-content: center;
             align-items: center;
@@ -107,13 +107,13 @@
         }
         
         .file-modal-content {
-            background: #1c1f26;
+            background: rgb(var(--c-elev-2));
             border-radius: 1rem;
             padding: 2rem;
             max-width: 90vw;
             max-height: 90vh;
             overflow: hidden;
-            border: 1px solid #374151;
+            border: 1px solid rgb(var(--c-line));
             position: relative;
         }
         
@@ -409,24 +409,24 @@
                                         <!-- Texto arriba -->
                                         <div class="mb-5">
                                             <div class="flex items-center gap-3 mb-2">
-                                                <h3 class="text-white font-bold text-xl tracking-tight">Pedidos en Línea</h3>
+                                                <h3 class="text-text-primary font-bold text-xl tracking-tight">Pedidos en Línea</h3>
                                                 @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/30 backdrop-blur-sm border border-green-400/50 rounded-lg">
-                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                                                        <span class="text-xs font-semibold text-green-300">ACTIVO</span>
+                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent-green/15 backdrop-blur-sm border border-accent-green/40 rounded-lg">
+                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-accent-green rounded-full animate-pulse"></span>
+                                                        <span class="text-xs font-semibold text-accent-green">ACTIVO</span>
                                                     </span>
                                                 @endif
                                             </div>
-                                            <p class="text-gray-300 text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
+                                            <p class="text-text-secondary text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
                                         </div>
                                         
                                         <!-- Icono y botón abajo -->
-                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-accent-gray">
                                             <div class="relative flex-shrink-0">
                                                 <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green hover:brightness-95 shadow-lg shadow-green-500/50' : 'bg-accent-gray hover:brightness-95' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
                                                     <span class="text-2xl filter drop-shadow-lg">🛒</span>
                                                     @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-3 border-secondary-dark animate-pulse"></div>
+                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-accent-green rounded-full border-3 border-secondary-dark animate-pulse"></div>
                                                     @endif
                                                 </div>
                                             </div>
@@ -439,9 +439,9 @@
                                                            {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
                                                            class="sr-only peer pedido-toggle"
                                                            onchange="updatePedidoStatus(this.checked);">
-                                                    <div class="w-16 h-9 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-gray-300 after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                                    <div class="w-16 h-9 bg-accent-gray peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-accent-gray after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
                                                 </label>
-                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm' : 'bg-gray-600/30 text-gray-400 border-2 border-gray-500/30' }}">
+                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/15 text-accent-green border-2 border-accent-green/40 backdrop-blur-sm' : 'bg-accent-gray/30 text-text-secondary border-2 border-accent-gray/30' }}">
                                                     {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
                                                 </div>
                                             </div>
@@ -454,7 +454,7 @@
                     <div class="flex justify-end">
                         <button type="submit" 
                                 id="btn-actualizar-menu"
-                                style="background-color: #10b981 !important; border: 2px solid rgba(16, 185, 129, 0.3) !important;"
+                                style="background-color: rgb(var(--c-ok)) !important; border: 2px solid rgb(var(--c-ok) / .3) !important;"
                                 class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center gap-3 hover:opacity-90"
                                 onmouseover="this.style.backgroundColor='rgb(var(--c-ok) / .85)'"
                                 onmouseout="this.style.backgroundColor='rgb(var(--c-ok))'">
@@ -913,7 +913,7 @@
                     <div class="metric-card">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 bg-orange-500/20 border border-orange-500/30 rounded-xl flex items-center justify-center mr-3">
+                                <div class="w-10 h-10 bg-accent-blue/20 border border-accent-blue/30 rounded-xl flex items-center justify-center mr-3">
                                     <span class="text-lg">🔥</span>
                                 </div>
                                 <h3 class="text-xl font-semibold text-text-primary">Promociones del Día</h3>
@@ -921,13 +921,13 @@
                             <div class="flex items-center gap-3">
                                 <button type="button" 
                                         onclick="addPromocion()"
-                                        class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
+                                        class="bg-accent-blue hover:bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
                                     <span>➕</span>
                                     <span>Agregar Promoción</span>
                                 </button>
                             </div>
                         </div>
-                        <div class="bg-orange-900/10 border border-orange-500/30 rounded-xl p-6">
+                        <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-6">
                             
                             <div id="promociones-container" class="space-y-4">
                                 <!-- Las promociones se agregarán aquí -->
@@ -947,13 +947,13 @@
                                                            data-promo-id="{{ $promoId }}"
                                                            value="{{ old("promociones.{$promoIndex}.nombre", $promo['nombre'] ?? '') }}"
                                                            placeholder="Nombre de la promoción"
-                                                           class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                                           class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                                                 </div>
                                                 
                                                 <!-- Precio -->
                                                 <div class="md:col-span-2">
                                                     <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
-                                                    <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
+                                                    <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-accent-blue">
                                                         <span class="text-text-primary font-medium text-sm px-3 py-2 border-r border-accent-gray">$</span>
                                                         <input type="text" 
                                                                data-promo-field="precio"
@@ -974,7 +974,7 @@
                                                               data-promo-id="{{ $promoId }}"
                                                               rows="2"
                                                               placeholder="Descripción de la promoción"
-                                                              class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none">{{ old("promociones.{$promoIndex}.descripcion", $promo['descripcion'] ?? '') }}</textarea>
+                                                              class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none">{{ old("promociones.{$promoIndex}.descripcion", $promo['descripcion'] ?? '') }}</textarea>
                                                 </div>
                                                 
                                                 <!-- Imagen -->
@@ -1000,7 +1000,7 @@
                                                                        class="hidden"
                                                                        onchange="uploadPromocionImagen(event, {{ $promoId }})"
                                                                        id="promo-imagen-input-{{ $promoId }}">
-                                                                <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                                                <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-accent-blue text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                                                     📷 Subir
                                                                 </span>
                                                             </label>
@@ -1111,7 +1111,7 @@
                                                                             <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
                                                                         </svg>
                                                                     </div>
-                                                                    <h5 class="text-white font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors capitalize whitespace-normal flex-1"
+                                                                    <h5 class="text-text-primary font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors capitalize whitespace-normal flex-1"
                                                                         ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                         onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'nombre')"
                                                                         id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
@@ -1260,12 +1260,12 @@
                                                                             @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
                                                                                 @foreach($plato['tags'] as $tagIndex => $tag)
                                                                                     @if(!empty($tag))
-                                                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-colors tag-item" 
+                                                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 hover:bg-accent-blue/30 transition-colors tag-item" 
                                                                                               data-tag-index="{{ $tagIndex }}">
                                                                                             {{ $tag }}
                                                                                             <button type="button" 
                                                                                                     onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
-                                                                                                    class="hover:text-orange-100 transition-colors p-0.5 rounded"
+                                                                                                    class="hover:text-accent-blue transition-colors p-0.5 rounded"
                                                                                                     title="Eliminar tag">
                                                                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1280,7 +1280,7 @@
                                                                             <input type="text" 
                                                                                    placeholder="Escribe un tag y presiona Enter o coma"
                                                                                    title="Escribe el nombre del tag y presiona Enter o la tecla coma (,) para agregarlo"
-                                                                                   class="text-xs bg-secondary-dark border border-accent-gray/70 rounded-md px-2.5 py-1.5 text-text-secondary placeholder:text-accent-gray focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/70 hover:border-accent-gray transition-all w-full"
+                                                                                   class="text-xs bg-secondary-dark border border-accent-gray/70 rounded-md px-2.5 py-1.5 text-text-secondary placeholder:text-accent-gray focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue/70 hover:border-accent-gray transition-all w-full"
                                                                                    id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
                                                                                    onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
                                                                                    autocomplete="off">
@@ -1410,7 +1410,7 @@
                     pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm';
                 } else {
                     pedidoStatus.textContent = '○ Inactivo';
-                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-gray-600/30 text-gray-400 border-2 border-gray-500/30';
+                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-accent-gray/30 text-text-secondary border-2 border-accent-gray/30';
                 }
             }
             
@@ -2757,8 +2757,8 @@
     <div id="iconModal" class="icon-modal">
         <div class="icon-modal-content">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-semibold text-white">Seleccionar Icono</h3>
-                <button onclick="closeIconModal()" class="text-white hover:text-gray-300 text-2xl">&times;</button>
+                <h3 class="text-xl font-semibold text-text-primary">Seleccionar Icono</h3>
+                <button onclick="closeIconModal()" class="text-text-primary hover:text-text-secondary text-2xl">&times;</button>
             </div>
             
             <div class="icon-grid" id="iconGrid">
@@ -2847,8 +2847,8 @@
     <div id="fileModal" class="file-modal">
         <div class="file-modal-content">
             <div class="file-modal-header">
-                <h3 class="text-xl font-semibold text-white">Vista Previa del Archivo</h3>
-                <button onclick="closeFileModal()" class="text-white hover:text-gray-300 text-2xl ml-4">&times;</button>
+                <h3 class="text-xl font-semibold text-text-primary">Vista Previa del Archivo</h3>
+                <button onclick="closeFileModal()" class="text-text-primary hover:text-text-secondary text-2xl ml-4">&times;</button>
             </div>
             
             <div class="file-modal-body" id="fileModalBody">
@@ -3635,12 +3635,12 @@
             
             // Agregar tag al DOM
             const tagElement = document.createElement('span');
-            tagElement.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30 tag-item';
+            tagElement.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/30 tag-item';
             tagElement.innerHTML = `
                 ${tagValue}
                 <button type="button" 
                         onclick="removeTag(${categoriaIndex}, ${platoIndex}, '${tagValue.replace(/'/g, "\\'")}')"
-                        class="ml-1 hover:text-orange-100 transition-colors"
+                        class="ml-1 hover:text-accent-blue transition-colors"
                         title="Eliminar tag">
                     ×
                 </button>
@@ -4127,7 +4127,7 @@
                 // Crear botón de undo
                 const btn = document.createElement('button');
                 btn.id = 'undo-btn';
-                btn.className = 'fixed bottom-20 right-6 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all';
+                btn.className = 'fixed bottom-20 right-6 bg-accent-gray hover:bg-accent-gray text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all';
                 btn.innerHTML = `
                     <span>↶</span>
                     <span>Deshacer</span>
@@ -4211,7 +4211,7 @@
                     customClass: {
                         popup: 'dark-modal',
                         title: 'text-white',
-                        content: 'text-gray-300',
+                        content: 'text-text-secondary',
                         confirmButton: 'bg-green-600 hover:bg-green-700'
                     }
                 }).then(() => {
@@ -4244,7 +4244,7 @@
                     customClass: {
                         popup: 'dark-modal',
                         title: 'text-white',
-                        content: 'text-gray-300',
+                        content: 'text-text-secondary',
                         confirmButton: 'bg-red-600 hover:bg-red-700'
                     }
                 });
@@ -4304,13 +4304,13 @@
                                data-promo-id="${nuevoId}"
                                value=""
                                placeholder="Nombre de la promoción"
-                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue">
                     </div>
                     
                     <!-- Precio -->
                     <div class="md:col-span-2">
                         <label class="block text-xs text-text-secondary mb-1.5">Precio</label>
-                        <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
+                        <div class="flex items-center bg-background border border-accent-gray rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-accent-blue">
                             <span class="text-text-primary font-medium text-sm px-3 py-2 border-r border-accent-gray">$</span>
                             <input type="text" 
                                    data-promo-field="precio"
@@ -4331,7 +4331,7 @@
                                   data-promo-id="${nuevoId}"
                                   rows="2"
                                   placeholder="Descripción de la promoción"
-                                  class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+                                  class="w-full px-3 py-2 bg-background border border-accent-gray rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"></textarea>
                     </div>
                     
                     <!-- Imagen -->
@@ -4344,7 +4344,7 @@
                                        class="hidden"
                                        onchange="uploadPromocionImagen(event, ${nuevoId})"
                                        id="promo-imagen-input-${nuevoId}">
-                                <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-accent-blue text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                     📷 Subir
                                 </span>
                             </label>
@@ -4924,7 +4924,7 @@
                                class="hidden"
                                onchange="uploadPromocionImagen(event, ${promoId})"
                                id="promo-imagen-input-${promoId}">
-                        <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                        <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-accent-blue text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                             📷 Subir
                         </span>
                     </label>
@@ -4990,7 +4990,7 @@
                                                class="hidden"
                                                onchange="uploadPromocionImagen(event, ${promoId})"
                                                id="promo-imagen-input-${promoId}">
-                                        <span class="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                                        <span class="inline-flex items-center px-3 py-2 bg-accent-blue hover:bg-accent-blue text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                                             📷 Subir
                                         </span>
                                     </label>

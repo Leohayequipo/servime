@@ -17,19 +17,27 @@
    solo ella, sin recompilar ni tocar el resto.
    ────────────────────────────────────────────────────────────────────────── */
 :root {
-    --c-accent:      232 146 122;  /* #E8927A terracota                  */
-    --c-accent-deep: 192  86  58;  /* #C0563A terracota oscuro           */
-    --c-ok:           16 185 129;  /* #10b981 emerald — semántico, no de marca */
-    --c-line:         61  92  75;  /* #3D5C4B bordes y separadores       */
-    --c-elev-1:       27  44  35;  /* #1B2C23 superficie base            */
-    --c-elev-2:       36  58  46;  /* #243A2E tarjetas                   */
-    --c-ink:         242 237 227;  /* #F2EDE3 crema                      */
-    --c-ink-soft:    167 188 168;  /* #A7BCA8 salvia claro               */
-    --c-bg:           27  44  35;  /* #1B2C23 verde profundo             */
-    --c-danger:      239  68  68;  /* #EF4444 error y cancelar */
-    --c-warn:        234 179   8;  /* #EAB308 atención — 7,65:1 sobre el fondo y 32° de
-                                      tono de diferencia con el terracota, para que un
-                                      aviso no se confunda con el color de marca */
+    /* Panel claro, alineado con la landing: crema de fondo, verde profundo de
+       texto y terracota de acento. El verde como fondo daba un aire temático que
+       le restaba seriedad a una herramienta de trabajo.
+
+       Contrastes WCAG AA sobre el crema: verde profundo 9,36:1, salvia oscuro
+       4,65:1, terracota con texto blanco 4,53:1.
+
+       ⚠️ Los semánticos NO son los mismos que en una paleta oscura: sobre crema,
+       el emerald daba 2,17:1 y el ámbar 1,64:1, o sea invisibles. Van en tonos
+       oscurecidos, que es lo que los hace legibles sobre claro. */
+    --c-accent:      192  86  58;  /* #C0563A terracota                      */
+    --c-accent-deep: 168  70  44;  /* #A8462C terracota oscuro (hover)       */
+    --c-ok:           11 122  87;  /* #0B7A57 éxito       (4,57:1)           */
+    --c-danger:      179  38  30;  /* #B3261E error       (5,60:1)           */
+    --c-warn:        138 101   8;  /* #8A6508 atención    (4,56:1)           */
+    --c-line:        225 217 201;  /* #E1D9C9 bordes y separadores           */
+    --c-elev-1:      242 237 227;  /* #F2EDE3 superficie base                */
+    --c-elev-2:      251 249 245;  /* #FBF9F5 papel: tarjetas y modales      */
+    --c-ink:          40  66  54;  /* #284236 verde profundo                 */
+    --c-ink-soft:     85 112  95;  /* #55705F salvia oscuro                  */
+    --c-bg:          242 237 227;  /* #F2EDE3 crema                          */
 }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
@@ -74,7 +82,7 @@
 .loading-button::after {
     content: '';
     position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(40,66,54,.10), transparent);
     animation: loading-shimmer 2s infinite;
 }
 
@@ -83,7 +91,7 @@
 
     /* Cards */
     .glass-effect {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgb(var(--c-elev-2));
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgb(var(--c-accent) / .15);
@@ -91,16 +99,16 @@
     }
 
     .card-glass {
-        background: rgba(255, 255, 255, 0.04);
+        background: rgb(var(--c-elev-2));
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid rgb(var(--c-line));
         border-radius: 1rem;
     }
 
     .metric-card {
         @apply border border-accent-gray rounded-2xl p-6 transition-all duration-300;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgb(var(--c-elev-2));
     }
     .metric-card:hover {
         @apply -translate-y-1 border-accent-blue/40;
@@ -110,7 +118,7 @@
     /* Buttons */
     .btn-primary {
         @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
-               bg-accent-blue text-gray-900 transition-all duration-200 no-underline
+               bg-accent-blue text-white transition-all duration-200 no-underline
                hover:-translate-y-px;
         box-shadow: 0 4px 14px rgb(var(--c-accent) / .3);
     }
@@ -120,18 +128,18 @@
 
     .btn-secondary {
         @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
-               text-text-primary border border-white/20 transition-all duration-200 no-underline;
-        background: rgba(255, 255, 255, 0.08);
+               text-text-primary border border-accent-gray transition-all duration-200 no-underline;
+        background: rgb(var(--c-elev-2));
         backdrop-filter: blur(8px);
     }
     .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.13);
-        @apply border-white/30 -translate-y-px;
+        background: rgb(var(--c-elev-1));
+        @apply -translate-y-px;
     }
 
     .btn-danger {
         @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-sm
-               bg-red-600 text-white transition-all duration-200 no-underline hover:bg-red-700;
+               bg-danger text-white transition-all duration-200 no-underline hover:brightness-95;
     }
 
     .btn-success {
@@ -158,7 +166,7 @@
     }
     .nav-link:hover  { @apply text-accent-blue; }
     .nav-link.active {
-        @apply text-gray-900 font-semibold;
+        @apply text-white font-semibold;
         background: rgb(var(--c-accent));
     }
 
@@ -172,13 +180,13 @@
         @apply rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] shadow-sm;
     }
     .chat-message-bot  { @apply chat-message bg-secondary-dark  text-text-primary self-start; }
-    .chat-message-user { @apply chat-message bg-accent-blue     text-gray-900     self-end; }
+    .chat-message-user { @apply chat-message bg-accent-blue     text-white        self-end; }
 
     .fab-button {
         @apply w-14 h-14 rounded-full flex items-center justify-center
                border-0 cursor-pointer transition-all duration-200
                hover:-translate-y-1;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        box-shadow: 0 8px 20px rgba(40,66,54,.18);
     }
 
     /* SweetAlert2 dark modal */
@@ -186,7 +194,7 @@
         background: rgb(var(--c-elev-2)) !important;
         border: 1px solid rgb(var(--c-accent) / .25) !important;
         border-radius: 1rem !important;
-        box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 20px rgb(var(--c-accent) / .15) !important;
+        box-shadow: 0 20px 60px rgba(40,66,54,.22), 0 0 20px rgb(var(--c-accent) / .12) !important;
         backdrop-filter: blur(10px) !important;
     }
     .dark-modal .swal2-title   { color: #fff !important; font-weight: 600 !important; }

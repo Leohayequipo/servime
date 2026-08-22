@@ -99,7 +99,7 @@
                                         <div class="group plato-item bg-primary-dark border-l-4 border-l-accent-blue border-r border-t border-b border-accent-gray/50 rounded-r-lg p-4 mb-3 hover:bg-primary-dark/90 hover:shadow-xl hover:border-accent-blue/60 transition-all duration-300 shadow-lg">
                                             <!-- Nombre del producto -->
                                             <div class="flex items-center gap-2 mb-3">
-                                                <h5 class="text-white font-bold text-lg leading-tight capitalize whitespace-normal flex-1">
+                                                <h5 class="text-text-primary font-bold text-lg leading-tight capitalize whitespace-normal flex-1">
                                                     {{ $nombrePlato }}
                                                 </h5>
                                                 @if(!empty($plato['estrella']))
@@ -156,7 +156,7 @@
                                                 @if(!empty($plato['tags']) && is_array($plato['tags']))
                                                     <div class="flex flex-wrap gap-1.5">
                                                         @foreach($plato['tags'] as $tag)
-                                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-colors">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 hover:bg-accent-blue/30 transition-colors">
                                                                 {{ trim($tag) }}
                                                             </span>
                                                         @endforeach
