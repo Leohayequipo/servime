@@ -1036,6 +1036,19 @@
                                     </a>
                                 </div>
                             </div>
+                        @else
+                            {{-- Sin comercio demo configurado la tarjeta quedaba vacía. Pasa
+                                 cuando el slug de config/servime.php no existe o su menú no
+                                 está procesado. --}}
+                            <p class="text-xs font-bold tracking-widest uppercase" style="color:var(--sage);">Demo</p>
+                            <p class="mt-2 font-display text-xl">Te la mostramos en vivo</p>
+                            <p class="mt-2 text-sm text-muted max-w-md">
+                                Escribinos y te abrimos un menú de ejemplo con la carta de tu rubro,
+                                para que veas cómo le responde el asistente a tus clientes.
+                            </p>
+                            <button type="button" data-open-contact class="btn btn-primary btn-sm mt-4">
+                                Pedir una demo
+                            </button>
                         @endif
                     </div>
                 </div>
