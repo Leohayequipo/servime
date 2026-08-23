@@ -16,14 +16,40 @@ Route::get('/', function () {
 
     // Comercio demo para que un prospecto pruebe el producto sin tener cuenta.
     // Se resuelve una sola vez y se cachea; si no existe, la landing lo omite.
+    //
+    // El log no sobra: cuando esto devuelve null la landing simplemente deja de
+    // mostrar la demo, sin error en ningún lado. Ya pasó en producción con el slug
+    // escrito `live_demo` en vez de `live-demo` —el nombre del comercio en vez del
+    // slug— y el null quedó cacheado 6 horas, así que ni corregir el .env lo
+    // destapaba. Distinguir los dos motivos ahorra el diagnóstico entero.
     $demoSlug = \Illuminate\Support\Facades\Cache::remember('landing_demo_slug', now()->addHours(6), function () {
         $slug = config('servime.demo_slug');
 
-        return $slug
-            ? \App\Models\Comercio::where('slug', $slug)
-                ->whereHas('menus', fn ($q) => $q->where('procesado', true))
-                ->value('slug')
-            : null;
+        if (! $slug) {
+            return null;                       // sin demo configurada: es una decisión, no un error
+        }
+
+        $comercio = \App\Models\Comercio::where('slug', $slug)->first();
+
+        if (! $comercio) {
+            \Illuminate\Support\Facades\Log::warning(
+                "Landing: DEMO_MENU_SLUG apunta a '{$slug}' y no existe ningún comercio con ese slug. ".
+                'Ojo que el slug no es el nombre del comercio. La landing va a mostrar el bloque de contacto en vez de la demo.'
+            );
+
+            return null;
+        }
+
+        $slugConMenu = $comercio->menus()->where('procesado', true)->exists() ? $comercio->slug : null;
+
+        if (! $slugConMenu) {
+            \Illuminate\Support\Facades\Log::warning(
+                "Landing: el comercio demo '{$slug}' existe pero no tiene ningún menú procesado. ".
+                'Hay que procesarle un menú desde el panel para que la demo aparezca.'
+            );
+        }
+
+        return $slugConMenu;
     });
 
     return view('marketing.landing', compact('planes', 'stats', 'demoSlug'));
