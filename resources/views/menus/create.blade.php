@@ -798,6 +798,53 @@
                  ficha del negocio y no se tiene que perder al subir otra carta. --}}
             @php $tieneLink = filled($comercio->google_review_url); @endphp
 
+            {{-- Con qué abre el "menú clásico", la opción de ver la carta sin el asistente. --}}
+            <div class="metric-card" id="bloque-vista-clasica">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                        <span class="text-lg">📖</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-text-primary">Menú clásico</h3>
+                </div>
+
+                <p class="text-xs text-text-secondary mb-4">
+                    Es lo que ve el cliente cuando elige mirar la carta en vez de usar el
+                    asistente. El cliente igual puede pasar de una a la otra con un botón.
+                </p>
+
+                <div class="space-y-2">
+                    <label class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray cursor-pointer">
+                        <input type="radio" name="vista_clasica" value="archivo"
+                               @checked($comercio->menu_clasico_vista !== 'lista')
+                               onchange="guardarVistaClasica(this.value)"
+                               class="mt-1 border-accent-gray bg-primary-dark text-accent-blue">
+                        <span class="min-w-0">
+                            <span class="block text-sm text-text-primary">Tu archivo (PDF o imagen)</span>
+                            <span class="block text-xs text-text-secondary mt-1">
+                                El menú tal como lo diseñaste. Conserva tu estética, pero en el
+                                celular suele haber que hacer zoom.
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray cursor-pointer">
+                        <input type="radio" name="vista_clasica" value="lista"
+                               @checked($comercio->menu_clasico_vista === 'lista')
+                               onchange="guardarVistaClasica(this.value)"
+                               class="mt-1 border-accent-gray bg-primary-dark text-accent-blue">
+                        <span class="min-w-0">
+                            <span class="block text-sm text-text-primary">La carta en lista</span>
+                            <span class="block text-xs text-text-secondary mt-1">
+                                Los platos por categoría, con precio, descripción y foto. Se lee
+                                en el celular sin hacer zoom y se actualiza cuando editás un plato.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+
+                <p id="vista-clasica-estado" class="text-xs text-text-secondary mt-3"></p>
+            </div>
+
             <div class="metric-card" id="bloque-resenas"
                  data-url-comercio="{{ route('comercios.edit', $comercio) }}">
                 <div class="flex items-center mb-6">
@@ -1942,6 +1989,35 @@
 
             // Prende/apaga el pedido de reseña. Guarda al toque, sin botón aparte: es un
             // solo booleano y esperar un "Guardar" para un interruptor confunde.
+            // Con qué abre el menú clásico. Se guarda al toque, sin botón de confirmar:
+            // es una preferencia de dos opciones y no hay nada que revisar antes.
+            window.guardarVistaClasica = async function(vista) {
+                const estado = document.getElementById('vista-clasica-estado');
+                estado.textContent = 'Guardando…';
+
+                try {
+                    const r = await fetch(`{{ route('menus.update.vista.clasica', ['comercio' => $comercio->slug]) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ vista: vista })
+                    });
+                    const data = await r.json();
+
+                    estado.textContent = data.success
+                        ? (vista === 'lista'
+                            ? 'Listo: el menú clásico abre con la carta en lista.'
+                            : 'Listo: el menú clásico abre con tu archivo.')
+                        : (data.error || 'No se pudo guardar.');
+                } catch (e) {
+                    estado.textContent = 'No se pudo guardar. Probá de nuevo.';
+                }
+            };
+
             window.alternarResenas = async function(btn) {
                 const activo = btn.getAttribute('aria-checked') === 'true';
                 const nuevo = !activo;

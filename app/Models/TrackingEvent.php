@@ -12,6 +12,7 @@ class TrackingEvent extends Model
 
     protected $fillable = [
         'comercio_id',
+        'mesa_id',
         'session_id',
         'event',
         'data',

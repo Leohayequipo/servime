@@ -397,6 +397,96 @@
                     @endif
                 </div>
 
+            {{-- Mesas. Sólo para el que usa los QR por mesa y ya cargó alguna: sin eso
+                 sería un panel vacío explicando una función que no tiene. --}}
+            @if($mesaStats && $mesaStats['mesasEnServicio'] > 0)
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-8">
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                        <x-icono name="grid" class="w-4 h-4 flex-none opacity-60" />
+                        Mesas
+                        <x-ayuda titulo="Actividad por mesa"
+                                 texto="Desde qué mesas te consultan el menú. Lo más útil no es el ranking sino la lista de abajo: una mesa en servicio de la que no entró nadie en todo el mes casi nunca quiere decir que nadie se sentó ahí, quiere decir que el cartel se despegó, quedó tapado o salió mal impreso. Andá, mirá esas mesas y reimprimí el QR si hace falta."
+                                 admin="Eventos de tracking_events con mesa_id, agrupados en visitas con el mismo corte por inactividad que el resto del panel (GAP_VISITA_MINUTOS). Los pedidos son visitas con al menos un order_summary. Las mesas fuera de servicio no se cuentan." />
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">Últimos {{ $mesaStats['dias'] }} días · {{ $mesaStats['visitasConMesa'] }} visita(s) escaneando el QR de una mesa, sobre {{ $mesaStats['mesasEnServicio'] }} mesa(s) en servicio.</p>
+
+                    {{-- El tráfico que NO entró por un QR de mesa. Va antes que cualquier
+                         conclusión porque es lo que le da sentido al resto: sin este número,
+                         "no entró nadie de la mesa 3" es una lectura imposible de hacer. --}}
+                    @if($mesaStats['visitasSinMesa'] > 0)
+                        <p class="text-text-secondary text-sm mb-4 -mt-2">
+                            Otras <span class="text-text-primary font-semibold">{{ $mesaStats['visitasSinMesa'] }}</span> visita(s) entraron sin mesa:
+                            por el QR general del local, por tus redes o por un link compartido.
+                        </p>
+                    @endif
+
+                    @if($mesaStats['sinActividad']->isNotEmpty())
+                        @if($mesaStats['alertaConfiable'])
+                            <div class="mb-5 rounded-xl border border-warning/40 bg-warning/10 p-4">
+                                <p class="text-text-primary text-sm font-semibold mb-1">
+                                    Revisá el cartel de {{ $mesaStats['sinActividad']->count() }} mesa(s)
+                                </p>
+                                <p class="text-text-secondary text-sm">
+                                    No entró nadie desde
+                                    {{ $mesaStats['sinActividad']->count() === 1 ? 'la mesa' : 'las mesas' }}
+                                    <span class="text-text-primary font-semibold">{{ $mesaStats['sinActividad']->join(', ', ' y ') }}</span>,
+                                    y la mayoría de tus clientes sí escanea el QR de su mesa.
+                                    Lo más probable es que ese QR esté despegado, tapado o ilegible.
+                                </p>
+                            </div>
+                        @else
+                            {{-- Mismo dato, sin la conclusión: mandar a alguien a revisar
+                                 carteles que están bien hace que la próxima vez ignore el aviso. --}}
+                            <div class="mb-5 rounded-xl border border-accent-gray bg-primary-dark p-4">
+                                <p class="text-text-primary text-sm font-semibold mb-1">
+                                    {{ $mesaStats['sinActividad']->count() }} mesa(s) sin registrar a nadie
+                                </p>
+                                <p class="text-text-secondary text-sm">
+                                    Son las mesas <span class="text-text-primary font-semibold">{{ $mesaStats['sinActividad']->join(', ', ' y ') }}</span>.
+                                    Ojo que la mayoría de tus visitas todavía entra sin mesa, así que
+                                    esto puede no significar nada: puede ser que la gente esté usando
+                                    el QR general en vez del de su mesa.
+                                </p>
+                            </div>
+                        @endif
+                    @endif
+
+                    @if($mesaStats['visitasConMesa'] > 0)
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-text-secondary text-xs uppercase tracking-wide">
+                                        <th class="text-left font-medium pb-2">Mesa</th>
+                                        <th class="text-right font-medium pb-2">Visitas</th>
+                                        <th class="text-right font-medium pb-2">Armaron pedido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($mesaStats['ranking'] as $fila)
+                                        <tr class="border-t border-accent-gray/40">
+                                            <td class="py-2 text-text-primary">
+                                                Mesa {{ $fila['numero'] }}
+                                                @if($fila['etiqueta'])
+                                                    <span class="text-text-secondary">· {{ $fila['etiqueta'] }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-2 text-right tabular-nums {{ $fila['visitas'] === 0 ? 'text-warning' : 'text-text-primary' }}">
+                                                {{ $fila['visitas'] }}
+                                            </td>
+                                            <td class="py-2 text-right tabular-nums text-text-secondary">{{ $fila['pedidos'] }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-text-secondary text-center py-4">
+                            Todavía no entró nadie escaneando el QR de una mesa.
+                        </p>
+                    @endif
+                </div>
+            @endif
+
             <!-- Dispositivo · Visitantes · Micrófono -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">

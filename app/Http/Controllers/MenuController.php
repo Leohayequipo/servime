@@ -2797,6 +2797,29 @@ class MenuController extends Controller
      * link no se puede activar: el botón abriría la nada, y el comercio quedaría creyendo
      * que está pidiendo reseñas.
      */
+    /**
+     * Con qué abre el "menú clásico": el archivo del comercio o la lista de platos.
+     *
+     * Se guarda la preferencia aunque no haya archivo; el modelo resuelve ese caso
+     * mostrando la lista igual (ver `Comercio::vistaMenuClasico`).
+     */
+    public function updateVistaClasica(Request $request, Comercio $comercio)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
+        }
+
+        $validated = $request->validate([
+            'vista' => 'required|in:'.Comercio::VISTA_ARCHIVO.','.Comercio::VISTA_LISTA,
+        ]);
+
+        $comercio->update(['menu_clasico_vista' => $validated['vista']]);
+
+        return response()->json(['success' => true, 'vista' => $validated['vista']]);
+    }
+
     public function updateResenas(Request $request, Comercio $comercio)
     {
         $user = auth()->user();

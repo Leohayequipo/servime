@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comercio;
+use App\Models\Mesa;
+use App\Services\ChatbotService;
 use App\Services\MenuTranslatorService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -53,7 +55,12 @@ class PublicMenuController extends Controller
             // Atajos de arranque del chat: los del comercio, o los del menú si no configuró.
             $chips = $comercio->chipsDe('chat');
 
-            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones', 'chips'));
+            // El botón "Pedir" sólo existe si hay a qué comanda mandar el pedido: hace
+            // falta que el comercio tenga la feature y que el cliente haya escaneado el
+            // QR de una mesa. Sin eso, el menú es exactamente el de siempre.
+            $puedePedir = $comercio->tieneFeature('comandas') && Mesa::idDeSesion($comercio->id) !== null;
+
+            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones', 'chips', 'puedePedir'));
         } catch (\Exception $e) {
             \Log::error('Error en PublicMenuController@chat: '.$e->getMessage(), [
                 'comercio_id' => $comercio->id,
@@ -68,6 +75,7 @@ class PublicMenuController extends Controller
                 'tags' => [],
                 'promociones' => [],
                 'chips' => [],
+                'puedePedir' => false,
             ]);
         }
     }
@@ -111,6 +119,26 @@ class PublicMenuController extends Controller
             ]);
         }
 
-        return view('menu.classic', compact('comercio', 'menuActivo', 'archivoDisponible'));
+        // Qué se muestra: el archivo o la lista de platos. Manda lo que configuró el
+        // comercio, salvo que el cliente pida la otra con ?vista= (el botón para alternar).
+        $vista = in_array(request('vista'), [Comercio::VISTA_LISTA, Comercio::VISTA_ARCHIVO], true)
+            ? request('vista')
+            : $comercio->vistaMenuClasico($archivoDisponible);
+
+        // Sin archivo no hay nada que alternar.
+        if (! $archivoDisponible) {
+            $vista = Comercio::VISTA_LISTA;
+        }
+
+        // Los platos se cargan sólo si se van a mostrar: parsear el JSON del menú entero
+        // para después renderizar un iframe sería trabajo tirado en cada visita.
+        $platosPorCategoria = $vista === Comercio::VISTA_LISTA
+            ? collect(app(ChatbotService::class)->platosDelMenu($comercio))
+                ->groupBy(fn ($p) => $p['categoria'] ?: 'Otros')
+            : collect();
+
+        return view('menu.classic', compact(
+            'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria'
+        ));
     }
 }

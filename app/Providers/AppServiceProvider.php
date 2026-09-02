@@ -67,6 +67,21 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(120)->by('sess:'.$this->claveVisitante($request)),
             Limit::perMinute(600)->by('ip:'.$request->ip()),
         ]);
+
+        // Confirmar un pedido es lo único del menú público que aparece en la pantalla del
+        // mozo. El límite es bajísimo porque nadie manda pedidos legítimos a ese ritmo, y
+        // porque acá el abuso no ensucia una métrica: le llena la tablet de basura a
+        // alguien que está laburando y hace que deje de confiar en la pantalla.
+        RateLimiter::for('pedir', fn (Request $request) => [
+            Limit::perMinute(6)->by('sess:'.$this->claveVisitante($request)),
+            Limit::perMinute(40)->by('ip:'.$request->ip()),
+        ]);
+
+        // Tablero del mozo: una tablet pollea cada 8s (~8 por minuto). El tope alto deja
+        // lugar a varias tablets en el mismo local sin que se pisen.
+        RateLimiter::for('mozo', fn (Request $request) => [
+            Limit::perMinute(120)->by('mozo:'.$request->route('token')),
+        ]);
     }
 
     /**
