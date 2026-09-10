@@ -6,6 +6,7 @@ use App\Http\Middleware\MozoAutenticado;
 use App\Models\Comanda;
 use App\Models\ComandaItem;
 use App\Models\Comercio;
+use App\Models\Mesa;
 use App\Services\ChatbotService;
 use App\Services\ComandaService;
 use Illuminate\Http\JsonResponse;
@@ -119,6 +120,32 @@ class MozoController extends Controller
         ]);
     }
 
+    /**
+     * El mozo abre una mesa sin que nadie haya pedido desde el teléfono.
+     *
+     * Es el caso más común del salón: se sientan, no usan el menú digital y le dictan el
+     * pedido al mozo. Sin esto, la pantalla sólo servía para las mesas que habían pedido
+     * solas, que son las que menos ayuda necesitan.
+     */
+    public function abrirMesa(Request $request, string $token, Mesa $mesa): JsonResponse
+    {
+        $comercio = $this->comercio($request);
+
+        if ($mesa->comercio_id !== $comercio->id) {
+            abort(404);
+        }
+
+        // `abrirOTomar` es idempotente: si dos mozos tocan la misma mesa a la vez, los dos
+        // terminan en la misma comanda en vez de duplicarla.
+        $comanda = $this->comandas->abrirOTomar($mesa);
+
+        return response()->json([
+            'success' => true,
+            'comanda_id' => $comanda->id,
+            'mesas' => $this->estadoDeLasMesas($comercio),
+        ]);
+    }
+
     public function agregarItem(Request $request, string $token, Comanda $comanda): JsonResponse
     {
         $comercio = $this->comercio($request);
@@ -131,7 +158,7 @@ class MozoController extends Controller
             'nota' => 'nullable|string|max:120',
         ]);
 
-        $this->comandas->agregarDelMozo(
+        $item = $this->comandas->agregarDelMozo(
             $comanda,
             $datos['nombre'],
             (int) ($datos['qty'] ?? 1),
@@ -139,7 +166,13 @@ class MozoController extends Controller
             $datos['nota'] ?? null,
         );
 
-        return response()->json(['success' => true, 'mesas' => $this->estadoDeLasMesas($comercio)]);
+        return response()->json([
+            'success' => true,
+            // Se devuelve para que la pantalla pueda señalar cuál es el que acaba de
+            // entrar: sin esa marca el mozo no sabe si su toque hizo algo.
+            'item_id' => $item->id,
+            'mesas' => $this->estadoDeLasMesas($comercio),
+        ]);
     }
 
     public function cambiarCantidad(Request $request, string $token, Comanda $comanda, ComandaItem $item): JsonResponse
@@ -180,6 +213,67 @@ class MozoController extends Controller
     }
 
     /**
+     * Deshace el cierre de una mesa recién cerrada.
+     *
+     * El botón "Cerrar mesa" está a un toque en el tablero: cerrar la equivocada va a
+     * pasar, y sin esto había que abrir una comanda nueva y recargar todo a mano.
+     */
+    public function reabrir(Request $request, string $token, Comanda $comanda): JsonResponse
+    {
+        $comercio = $this->comercio($request);
+        $this->verificarComanda($comercio, $comanda);
+
+        if (! $this->comandas->reabrir($comanda)) {
+            return response()->json([
+                'success' => false,
+                'message' => $comanda->fresh()->estaAbierta()
+                    ? 'La mesa ya está abierta.'
+                    : 'Ya pasó el tiempo para reabrirla, o alguien la volvió a abrir. Abrila de nuevo y cargá lo que falte.',
+            ], 409);
+        }
+
+        return response()->json(['success' => true, 'mesas' => $this->estadoDeLasMesas($comercio)]);
+    }
+
+    /**
+     * Las mesas que se cerraron hoy, con lo que pidió cada una.
+     *
+     * Para el reclamo que llega después de que el grupo se fue, y para que el mozo
+     * confirme qué pasó en una mesa que ya no está en el tablero.
+     */
+    public function cerradas(Request $request): JsonResponse
+    {
+        $comercio = $this->comercio($request);
+
+        $comandas = Comanda::where('comercio_id', $comercio->id)
+            ->where('estado', Comanda::CERRADA)
+            ->where('cerrada_at', '>=', now()->startOfDay())
+            ->with(['items', 'mesa'])
+            ->latest('cerrada_at')
+            ->limit(60)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'comandas' => $comandas->map(fn (Comanda $c) => [
+                'comanda_id' => $c->id,
+                'numero' => $c->mesa->numero,
+                'etiqueta' => $c->mesa->etiqueta,
+                'desde' => $c->abierta_at->format('H:i'),
+                'hasta' => $c->cerrada_at->format('H:i'),
+                'minutos' => $c->minutosDeServicio(),
+                'items_total' => $c->items->sum('qty'),
+                'total_centavos' => $c->total_centavos,
+                // La cerró el mozo o se cerró sola por inactividad: no es lo mismo, y
+                // muchas 'auto' seguidas significan que nadie está cerrando las mesas.
+                'cerrada_por' => $c->cerrada_por,
+                'se_puede_reabrir' => $c->sePuedeReabrir(),
+                'rondas' => $this->rondasDe($c),
+            ])->all(),
+        ]);
+    }
+
+    /**
      * Todas las mesas en servicio con su comanda abierta, si tienen.
      *
      * Se devuelven TODAS y no sólo las ocupadas: el mozo mira el salón, no una lista de
@@ -189,14 +283,29 @@ class MozoController extends Controller
      */
     private function estadoDeLasMesas(Comercio $comercio): array
     {
+        // Las que quedaron abiertas de anoche se cierran antes de dibujar nada: si no, el
+        // mozo que abre a la mañana ve el salón lleno de mesas que ya no existen. Es la
+        // misma limpieza que hace `abrirOTomar`, acá para que se note sin tocar la mesa.
+        $this->comandas->cerrarVencidasDe($comercio->id);
+
         $abiertas = Comanda::where('comercio_id', $comercio->id)
             ->abiertas()
             ->with('items')
             ->get()
             ->keyBy('mesa_id');
 
-        return $comercio->mesas()->activas()->get()->map(function ($mesa) use ($abiertas) {
+        // Las cerradas hace poco: son las que todavía se pueden reabrir si el mozo tocó
+        // la mesa equivocada. Se consultan de una sola vez y no por mesa.
+        $reabribles = Comanda::where('comercio_id', $comercio->id)
+            ->where('estado', Comanda::CERRADA)
+            ->where('cerrada_at', '>=', now()->subMinutes(ComandaService::MINUTOS_PARA_REABRIR))
+            ->latest('cerrada_at')
+            ->get()
+            ->keyBy('mesa_id');
+
+        return $comercio->mesas()->activas()->get()->map(function ($mesa) use ($abiertas, $reabribles) {
             $comanda = $abiertas->get($mesa->id);
+            $reciente = $comanda ? null : $reabribles->get($mesa->id);
 
             return [
                 'mesa_id' => $mesa->id,
@@ -208,15 +317,23 @@ class MozoController extends Controller
                 'items_total' => $comanda ? $comanda->items->sum('qty') : 0,
                 'minutos' => $comanda?->minutosDesdeElUltimoPedido(),
                 'rondas' => $comanda ? $this->rondasDe($comanda) : [],
+                // Sólo en las libres: el deshacer del cierre por error.
+                'reabrir_id' => $reciente?->id,
+                'cerrada_hace' => $reciente ? (int) max(0, $reciente->cerrada_at->diffInMinutes(now())) : null,
             ];
         })->all();
     }
 
     /**
-     * Ítems agrupados por ronda, con la hora en que entró cada una.
+     * Ítems agrupados por el momento en que entraron, del más reciente al más viejo.
      *
-     * Las rondas son lo que hace usable la pantalla: sin ellas, el mozo tiene que releer
-     * toda la lista buscando qué cambió desde la última vez que miró.
+     * Agrupar por momento es lo que hace usable la pantalla: sin eso, el mozo tiene que
+     * releer toda la lista buscando qué cambió desde la última vez que miró. Y como no se
+     * marca nada como entregado, la hora es además el único indicio para distinguir lo
+     * que ya llevó a la mesa de lo que falta.
+     *
+     * Van al revés que en la base a propósito: lo último es lo que el mozo necesita, y al
+     * final de la lista es donde el ojo llega último.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -234,7 +351,7 @@ class MozoController extends Controller
                 'precio' => $item->price_text,
                 'del_mozo' => $item->loAgregoElMozo(),
             ])->values()->all(),
-        ])->values()->all();
+        ])->reverse()->values()->all();
     }
 
     private function comercio(Request $request): Comercio

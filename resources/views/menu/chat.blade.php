@@ -456,6 +456,13 @@
         }
         .btn-pedir[disabled] { opacity: .55; cursor: default; }
         .pedir-ayuda { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); text-align: center; }
+        /* El error queda pegado al botón que se tocó, en vez de sacarlo de la pantalla
+           con un alert del navegador. */
+        .pedido-error {
+            margin: 8px 0 0; padding: 9px 12px; border-radius: 9px;
+            background: rgba(201,139,134,.14); border: 1px solid rgba(201,139,134,.4);
+            color: #E8C4C0; font-size: 13px; text-align: center;
+        }
         /* Aviso, no error: el cliente no hizo nada mal, sólo entró por otra puerta. */
         .pedir-aviso {
             margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
@@ -1545,7 +1552,7 @@
                 if (!data.success) {
                     btn.textContent = textoOriginal;
                     btn.disabled = false;
-                    alert(data.message || T.no_se_pudo_pedir);
+                    mostrarErrorPedido(data.message || T.no_se_pudo_pedir);
                     return;
                 }
 
@@ -1559,8 +1566,31 @@
             } catch (e) {
                 btn.textContent = textoOriginal;
                 btn.disabled = false;
-                alert(T.no_se_pudo_pedir);
+                mostrarErrorPedido(T.no_se_pudo_pedir);
             }
+        }
+
+        /**
+         * El error va dentro del panel, no en un alert del navegador.
+         *
+         * El alert nativo no matchea la estética (regla del proyecto) y además saca al
+         * cliente de la pantalla justo cuando está tratando de pedir. Acá el mensaje
+         * aparece pegado al botón que tocó.
+         */
+        function mostrarErrorPedido(mensaje) {
+            let caja = document.getElementById('pedidoError');
+
+            if (!caja) {
+                caja = document.createElement('p');
+                caja.id = 'pedidoError';
+                caja.className = 'pedido-error';
+                document.getElementById('btnPedir')?.insertAdjacentElement('afterend', caja);
+            }
+
+            caja.textContent = mensaje;
+            caja.hidden = false;
+            clearTimeout(caja.dataset.t);
+            caja.dataset.t = setTimeout(() => { caja.hidden = true; }, 6000);
         }
 
         // Mostrar indicador de escritura

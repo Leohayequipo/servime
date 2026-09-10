@@ -324,10 +324,13 @@ Route::prefix('mozo/{token}')->name('mozo.')->group(function () {
         Route::get('/tablero', [App\Http\Controllers\MozoController::class, 'tablero'])->name('tablero');
         Route::get('/estado', [App\Http\Controllers\MozoController::class, 'estado'])->name('estado');
         Route::post('/salir', [App\Http\Controllers\MozoController::class, 'salir'])->name('salir');
+        Route::post('/mesa/{mesa}/abrir', [App\Http\Controllers\MozoController::class, 'abrirMesa'])->name('mesa.abrir');
         Route::post('/comanda/{comanda}/item', [App\Http\Controllers\MozoController::class, 'agregarItem'])->name('item.agregar');
         Route::patch('/comanda/{comanda}/item/{item}', [App\Http\Controllers\MozoController::class, 'cambiarCantidad'])->name('item.cantidad');
         Route::delete('/comanda/{comanda}/item/{item}', [App\Http\Controllers\MozoController::class, 'borrarItem'])->name('item.borrar');
         Route::post('/comanda/{comanda}/cerrar', [App\Http\Controllers\MozoController::class, 'cerrar'])->name('comanda.cerrar');
+        Route::post('/comanda/{comanda}/reabrir', [App\Http\Controllers\MozoController::class, 'reabrir'])->name('comanda.reabrir');
+        Route::get('/cerradas', [App\Http\Controllers\MozoController::class, 'cerradas'])->name('cerradas');
     });
 });
 

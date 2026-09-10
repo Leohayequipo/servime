@@ -80,6 +80,29 @@ class Comanda extends Model
         return $this->items->groupBy('ronda');
     }
 
+    /**
+     * ¿Todavía se puede deshacer el cierre?
+     *
+     * Sólo un rato: pasada la ventana no es un error del mozo, es un grupo que se fue, y
+     * reabrir mezclaría dos servicios en el mismo registro.
+     */
+    public function sePuedeReabrir(): bool
+    {
+        if ($this->estaAbierta() || ! $this->cerrada_at) {
+            return false;
+        }
+
+        return $this->cerrada_at->greaterThan(
+            now()->subMinutes(\App\Services\ComandaService::MINUTOS_PARA_REABRIR)
+        );
+    }
+
+    /** Cuánto duró (o lleva) el servicio de esta mesa, en minutos. */
+    public function minutosDeServicio(): int
+    {
+        return (int) max(0, $this->abierta_at->diffInMinutes($this->cerrada_at ?? now()));
+    }
+
     /** Hace cuánto entró el último pedido. Es lo que le dice al mozo a qué mesa ir. */
     public function minutosDesdeElUltimoPedido(): int
     {

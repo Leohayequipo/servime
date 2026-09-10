@@ -7,6 +7,7 @@ use App\Models\Mesa;
 use App\Models\Plan;
 use App\Models\TrackingEvent;
 use App\Models\User;
+use App\Services\ComandaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -155,6 +156,99 @@ class MesaAnalyticsTest extends TestCase
             ->assertSee('0 visita(s) escaneando el QR de una mesa')
             // Y aparece del otro lado, contada como visita sin mesa.
             ->assertSee('1</span> visita(s) entraron sin mesa', false);
+    }
+
+    /**
+     * El resumen del servicio: cuántas mesas, cuánto se quedaron, cuánto sumaron.
+     */
+    public function test_el_resumen_del_servicio_cuenta_las_mesas_que_pidieron(): void
+    {
+        $comercio = $this->comercioConMesas(['analytics', 'mesas', 'comandas']);
+        $servicio = app(ComandaService::class);
+
+        foreach ([1, 2] as $n) {
+            $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => $n]);
+            $comanda = $servicio->abrirOTomar($mesa);
+            $servicio->agregarDelMozo($comanda, 'Milanesa', 2, '$5.000');
+            $comanda->update(['abierta_at' => now()->subMinutes(40)]);
+            $servicio->cerrar($comanda);
+        }
+
+        $this->actingAs($comercio->user)
+            ->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->assertSee('El servicio')
+            ->assertSee('Mesas atendidas')
+            // 2 mesas, $10.000 cada una (2 × $5.000)
+            ->assertSee('$20.000');
+    }
+
+    /**
+     * Una mesa que el mozo abrió y cerró sin cargar nada no es una mesa atendida: metida
+     * en los promedios los tira abajo sin que se entienda por qué.
+     */
+    public function test_las_comandas_vacias_no_cuentan_como_mesas_atendidas(): void
+    {
+        $comercio = $this->comercioConMesas(['analytics', 'mesas', 'comandas']);
+        $servicio = app(ComandaService::class);
+
+        $conPedido = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 1]);
+        $comanda = $servicio->abrirOTomar($conPedido);
+        $servicio->agregarDelMozo($comanda, 'Milanesa', 1, '$5.000');
+        $servicio->cerrar($comanda);
+
+        // Abierta y cerrada sin cargar nada.
+        $vacia = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 2]);
+        $servicio->cerrar($servicio->abrirOTomar($vacia));
+
+        $respuesta = $this->actingAs($comercio->user)->get(route('analytics.comercio', $comercio));
+
+        $respuesta->assertOk();
+        $this->assertStringContainsString(
+            '>1</div>',
+            preg_replace('/\s+/', '', $respuesta->getContent()),
+            'Debería contar 1 mesa atendida, no 2.'
+        );
+    }
+
+    public function test_avisa_cuando_las_mesas_se_cierran_solas(): void
+    {
+        $comercio = $this->comercioConMesas(['analytics', 'mesas', 'comandas']);
+        $servicio = app(ComandaService::class);
+        $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 1]);
+
+        $comanda = $servicio->abrirOTomar($mesa);
+        $servicio->agregarDelMozo($comanda, 'Milanesa', 1, '$5.000');
+
+        // Se envejece la comanda Y su último pedido: `cerrarInactivas` mira la última
+        // actividad, no la apertura, así que con un ítem recién cargado no cerraría —y
+        // haría bien, porque esa mesa está comiendo.
+        $comanda->update(['abierta_at' => now()->subHours(5)]);
+        $comanda->items()->update(['created_at' => now()->subHours(5)]);
+
+        $servicio->cerrarInactivas();
+
+        // El aviso habla del efecto operativo —la mesa figura ocupada y nadie más puede
+        // pedir— y no de los números, porque la duración ya no se muestra.
+        $this->actingAs($comercio->user)
+            ->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            // Fragmentos que no cruzan el salto de línea del Blade.
+            ->assertSee('se cerraron solas porque nadie')
+            ->assertSee('ocupadas en la pantalla del mozo');
+    }
+
+    public function test_sin_la_feature_comandas_no_aparece_el_resumen_del_servicio(): void
+    {
+        $comercio = $this->comercioConMesas(['analytics', 'mesas']);
+        $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 1]);
+        $comanda = app(ComandaService::class)->abrirOTomar($mesa);
+        app(ComandaService::class)->agregarDelMozo($comanda, 'Milanesa', 1, '$5.000');
+
+        $this->actingAs($comercio->user)
+            ->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->assertDontSee('Mesas atendidas');
     }
 
     public function test_sin_la_feature_mesas_la_seccion_no_aparece(): void

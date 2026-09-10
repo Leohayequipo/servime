@@ -397,6 +397,63 @@
                     @endif
                 </div>
 
+            {{-- Cómo viene el servicio. Sale de las comandas, así que sólo aparece si el
+                 local usa la pantalla del mozo y ya hubo pedidos. --}}
+            @if($servicioStats)
+                <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-8">
+                    <h3 class="text-lg font-medium text-text-primary mb-1 flex items-center gap-2">
+                        <x-icono name="clock" class="w-4 h-4 flex-none opacity-60" />
+                        El servicio
+                        <x-ayuda titulo="El servicio"
+                                 texto="Cómo vienen las mesas que pidieron desde el teléfono: cuántas fueron, cuánto pidió cada una y cuánto sumaron. El total es orientativo —sale de los precios de tu menú, no de tu caja— así que sirve para comparar días entre sí, no para cuadrar la recaudación. No verás cuánto dura una mesa: cuando nadie la cierra, el sistema la cierra solo tres horas después del último pedido, y ese número saldría siempre más largo de lo real. Preferimos no mostrarlo antes que mostrarte algo que no se sostiene."
+                                 admin="Comandas con al menos un ítem de los últimos 30 días. Las vacías —abiertas y cerradas sin cargar nada— se descartan enteras para que no tiren los promedios abajo. `cerradas_solas` son las que cerró el comando programado por inactividad; se muestran por el efecto operativo (la mesa figura ocupada y nadie más puede pedir), no como advertencia sobre los números." />
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">Últimos {{ $servicioStats['dias'] }} días · sólo mesas que pidieron.</p>
+
+                    {{-- Sin "cuánto dura una mesa": el cierre automático salta 3 horas
+                         después del último pedido, así que toda mesa que nadie cerró mide
+                         de más y arrastra el promedio. Preferimos no mostrarlo antes que
+                         mostrar un número que no se puede sostener. --}}
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <div class="text-2xl font-bold text-text-primary tabular-nums">{{ $servicioStats['mesas'] }}</div>
+                            <div class="text-xs text-text-secondary mt-0.5">Mesas atendidas</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-text-primary tabular-nums">
+                                ${{ number_format($servicioStats['ticket_centavos'] / 100, 0, ',', '.') }}
+                            </div>
+                            <div class="text-xs text-text-secondary mt-0.5">Por mesa (orientativo)</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-text-primary tabular-nums">{{ $servicioStats['items_promedio'] }}</div>
+                            <div class="text-xs text-text-secondary mt-0.5">Platos por mesa</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-accent-gray/40 space-y-2">
+                        <p class="text-text-secondary text-sm">
+                            Total del período:
+                            <span class="text-text-primary font-semibold">${{ number_format($servicioStats['total_centavos'] / 100, 0, ',', '.') }}</span>.
+                            Sale de los precios de tu menú, no de tu caja: sirve para comparar días entre sí.
+                            @if($servicioStats['abiertas'] > 0)
+                                Hay {{ $servicioStats['abiertas'] }} mesa(s) abiertas ahora mismo.
+                            @endif
+                        </p>
+
+                        {{-- La única señal accionable de este bloque: si nadie cierra las
+                             mesas, todo lo de arriba está inflado. --}}
+                        @if($servicioStats['cerradas_solas'] > 0)
+                            <p class="text-sm text-warning">
+                                {{ $servicioStats['cerradas_solas'] }} mesa(s) se cerraron solas porque nadie
+                                las cerró al irse la gente. Mientras siguen abiertas, esas mesas figuran
+                                ocupadas en la pantalla del mozo y el grupo que se sienta después no puede pedir.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- Mesas. Sólo para el que usa los QR por mesa y ya cargó alguna: sin eso
                  sería un panel vacío explicando una función que no tiene. --}}
             @if($mesaStats && $mesaStats['mesasEnServicio'] > 0)

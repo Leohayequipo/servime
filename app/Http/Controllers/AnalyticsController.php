@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ClassifyIntentsJob;
 use App\Models\ChatConversation;
+use App\Models\Comanda;
 use App\Models\Comercio;
 use App\Models\IntentClassificationRun;
 use App\Models\Menu;
@@ -256,10 +257,17 @@ class AnalyticsController extends Controller
             ? $this->getMesaMetrics($comercio)
             : null;
 
+        // Resumen del servicio. Va con `comandas` y no con `mesas`: sin la pantalla del
+        // mozo no hay comandas de las que sacar nada.
+        $servicioStats = $comercio->tieneFeature('comandas')
+            ? $this->getComandaMetrics($comercio)
+            : null;
+
         return view('analytics.comercio', compact(
             'chipStats',
             'resenaStats',
             'mesaStats',
+            'servicioStats',
             'comercio',
             'threads',
             'threadsTotal',
@@ -279,6 +287,53 @@ class AnalyticsController extends Controller
             'fallasDelAsistente',
             'ultimaClasificacion'
         ));
+    }
+
+    /**
+     * Cómo viene el servicio: cuántas mesas se atendieron, cuánto duraron y cuánto sumaron.
+     *
+     * Sólo cuenta las comandas que tuvieron al menos un pedido. Una mesa que el mozo abrió
+     * y cerró sin cargar nada no es una mesa atendida, y metida en los promedios los tira
+     * abajo sin que se entienda por qué.
+     *
+     * NO devuelve cuánto dura una mesa, y no es un olvido. El cierre automático dispara
+     * tres horas después del último pedido, así que toda mesa que nadie cerró mide
+     * ~3 horas de más y arrastra el promedio de las demás. Medirlas hasta el último
+     * pedido era una opción, pero mezcla dos formas de medir en un mismo número y lo
+     * muestra igual que uno real. Un dato que no se puede sostener es peor que ninguno.
+     *
+     * @return array{
+     *     mesas: int, total_centavos: int, ticket_centavos: int,
+     *     items_promedio: float, cerradas_solas: int, abiertas: int, dias: int
+     * }|null
+     */
+    private function getComandaMetrics(Comercio $comercio, int $dias = 30): ?array
+    {
+        $comandas = Comanda::where('comercio_id', $comercio->id)
+            ->where('abierta_at', '>=', now()->subDays($dias))
+            ->withCount('items')
+            ->get();
+
+        $conPedidos = $comandas->where('items_count', '>', 0);
+
+        if ($conPedidos->isEmpty()) {
+            return null;
+        }
+
+        $cerradas = $conPedidos->where('estado', Comanda::CERRADA);
+
+        return [
+            'mesas' => $conPedidos->count(),
+            'total_centavos' => (int) $conPedidos->sum('total_centavos'),
+            'ticket_centavos' => (int) round($conPedidos->avg('total_centavos')),
+            'items_promedio' => round($conPedidos->avg('items_count'), 1),
+            // Las que nadie cerró y cerró el sistema por inactividad. Es un problema
+            // operativo real: mientras la comanda sigue abierta, la mesa figura ocupada en
+            // el tablero y el grupo que se sienta después no puede pedir.
+            'cerradas_solas' => $cerradas->where('cerrada_por', 'auto')->count(),
+            'abiertas' => $conPedidos->where('estado', Comanda::ABIERTA)->count(),
+            'dias' => $dias,
+        ];
     }
 
     /**

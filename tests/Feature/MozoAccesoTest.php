@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Comanda;
+use App\Models\ComandaItem;
 use App\Models\Comercio;
 use App\Models\Mesa;
 use App\Models\Plan;
@@ -147,6 +148,30 @@ class MozoAccesoTest extends TestCase
         $this->get(route('mozo.pin', $comercio->mozo_token))->assertForbidden();
     }
 
+    /**
+     * El mozo que abre a la mañana no tiene que ver el salón lleno de mesas de anoche.
+     *
+     * Antes esto dependía de que el cron del servidor hubiera corrido; ahora el tablero
+     * limpia solo al dibujarse.
+     */
+    public function test_el_tablero_no_muestra_mesas_que_quedaron_abiertas_de_anoche(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio, 3);
+        app(ComandaService::class)->agregarDelMozo($comanda, 'Milanesa');
+
+        $comanda->update(['abierta_at' => now()->subHours(14)]);
+        $comanda->items()->update(['created_at' => now()->subHours(14)]);
+        $this->entrar($comercio);
+
+        $this->getJson(route('mozo.estado', $comercio->mozo_token))
+            ->assertOk()
+            ->assertJsonPath('mesas.0.ocupada', false);
+
+        $this->assertSame(Comanda::CERRADA, $comanda->fresh()->estado);
+        $this->assertSame('auto', $comanda->fresh()->cerrada_por);
+    }
+
     public function test_el_tablero_muestra_todas_las_mesas_no_solo_las_ocupadas(): void
     {
         $comercio = $this->comercioConMozo();
@@ -163,6 +188,81 @@ class MozoAccesoTest extends TestCase
             ->assertJsonPath('mesas.0.ocupada', true)
             ->assertJsonPath('mesas.1.numero', 8)
             ->assertJsonPath('mesas.1.ocupada', false);
+    }
+
+    /**
+     * El caso más común del salón: se sientan, no tocan el teléfono y le dictan el pedido
+     * al mozo. Sin esto, la pantalla sólo servía para las mesas que ya habían pedido
+     * solas, que son justamente las que menos ayuda necesitan.
+     */
+    public function test_el_mozo_abre_una_mesa_sin_que_nadie_haya_pedido(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 4]);
+        $this->entrar($comercio);
+
+        $this->assertSame(0, Comanda::count());
+
+        $this->postJson(route('mozo.mesa.abrir', [$comercio->mozo_token, $mesa]))
+            ->assertOk()
+            ->assertJson(['success' => true])
+            ->assertJsonPath('mesas.0.ocupada', true);
+
+        $this->assertSame(1, Comanda::where('mesa_id', $mesa->id)->abiertas()->count());
+    }
+
+    public function test_abrir_dos_veces_la_misma_mesa_no_duplica_la_comanda(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 4]);
+        $this->entrar($comercio);
+
+        // Dos mozos tocando la misma mesa a la vez tienen que caer en la misma comanda.
+        $primera = $this->postJson(route('mozo.mesa.abrir', [$comercio->mozo_token, $mesa]));
+        $segunda = $this->postJson(route('mozo.mesa.abrir', [$comercio->mozo_token, $mesa]));
+
+        $this->assertSame(
+            $primera->json('comanda_id'),
+            $segunda->json('comanda_id')
+        );
+        $this->assertSame(1, Comanda::count());
+    }
+
+    public function test_despues_de_abrirla_el_mozo_puede_cargarle_lo_que_le_dictaron(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 4]);
+        $this->entrar($comercio);
+
+        $comandaId = $this->postJson(route('mozo.mesa.abrir', [$comercio->mozo_token, $mesa]))
+            ->json('comanda_id');
+
+        $this->postJson(route('mozo.item.agregar', [$comercio->mozo_token, $comandaId]), [
+            'nombre' => 'Milanesa napolitana',
+            'qty' => 2,
+            'precio' => '$3.800',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('comanda_items', [
+            'comanda_id' => $comandaId,
+            'nombre' => 'Milanesa napolitana',
+            'qty' => 2,
+            'origen' => 'mozo',
+            'ronda' => 1,
+        ]);
+    }
+
+    public function test_no_se_puede_abrir_una_mesa_de_otro_local(): void
+    {
+        $mio = $this->comercioConMozo();
+        $ajeno = $this->comercioConMozo();
+        $mesaAjena = Mesa::factory()->create(['comercio_id' => $ajeno->id, 'numero' => 9]);
+        $this->entrar($mio);
+
+        $this->postJson(route('mozo.mesa.abrir', [$mio->mozo_token, $mesaAjena]))
+            ->assertNotFound();
+
+        $this->assertSame(0, Comanda::count());
     }
 
     public function test_el_mozo_agrega_un_item_a_mano(): void
@@ -185,6 +285,53 @@ class MozoAccesoTest extends TestCase
         ]);
     }
 
+    /**
+     * La pantalla necesita saber CUÁL ítem entró para poder destacarlo.
+     *
+     * Sin esa señal el mozo no sabe si su toque hizo algo, lo repite, y el plato entra
+     * dos veces — se descubre recién cuando llega el pedido a la mesa.
+     */
+    public function test_agregar_devuelve_el_item_para_poder_señalarlo(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        $this->entrar($comercio);
+
+        $respuesta = $this->postJson(route('mozo.item.agregar', [$comercio->mozo_token, $comanda]), [
+            'nombre' => 'Café con leche',
+            'qty' => 1,
+        ]);
+
+        $respuesta->assertOk();
+        $this->assertSame(
+            ComandaItem::where('comanda_id', $comanda->id)->value('id'),
+            $respuesta->json('item_id')
+        );
+    }
+
+    /**
+     * Lo último que entró va arriba: es lo que el mozo necesita ver, y al final de la
+     * lista es donde el ojo llega último.
+     */
+    public function test_lo_ultimo_que_entro_va_primero(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        $servicio = app(ComandaService::class);
+        $this->entrar($comercio);
+
+        $servicio->agregarDelMozo($comanda, 'Milanesa');   // ronda 1
+        $servicio->agregarDelMozo($comanda, 'Flan');       // ronda 2
+        $servicio->agregarDelMozo($comanda, 'Café');       // ronda 3
+
+        $rondas = $this->getJson(route('mozo.estado', $comercio->mozo_token))
+            ->assertOk()
+            ->json('mesas.0.rondas');
+
+        $this->assertSame([3, 2, 1], array_column($rondas, 'ronda'));
+        $this->assertSame('Café', $rondas[0]['items'][0]['nombre']);
+    }
+
     public function test_el_mozo_corrige_la_cantidad_y_borra_un_item(): void
     {
         $comercio = $this->comercioConMozo();
@@ -198,7 +345,11 @@ class MozoAccesoTest extends TestCase
 
         $this->deleteJson(route('mozo.item.borrar', [$comercio->mozo_token, $comanda, $item]))
             ->assertOk();
-        $this->assertDatabaseMissing('comanda_items', ['id' => $item->id]);
+
+        // Sale de la comanda, pero queda en el historial: el mozo puede haber tocado la
+        // fila equivocada, o la mesa puede reclamar después.
+        $this->assertSame(0, $comanda->items()->count());
+        $this->assertNotNull(ComandaItem::withTrashed()->find($item->id)->deleted_at);
     }
 
     public function test_cerrar_la_mesa_la_libera_sin_borrar_lo_pedido(): void
@@ -214,6 +365,106 @@ class MozoAccesoTest extends TestCase
 
         $this->assertSame(Comanda::CERRADA, $comanda->fresh()->estado);
         $this->assertDatabaseHas('comanda_items', ['comanda_id' => $comanda->id, 'nombre' => 'Milanesa']);
+    }
+
+    /**
+     * El botón "Cerrar mesa" está a un toque en el tablero: cerrar la equivocada va a
+     * pasar. Sin deshacer, había que abrir una comanda nueva y recargar todo a mano.
+     */
+    public function test_se_puede_deshacer_el_cierre_de_una_mesa_recien_cerrada(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        app(ComandaService::class)->agregarDelMozo($comanda, 'Milanesa', 1, '$3.800');
+        app(ComandaService::class)->cerrar($comanda);
+        $this->entrar($comercio);
+
+        $this->postJson(route('mozo.comanda.reabrir', [$comercio->mozo_token, $comanda]))
+            ->assertOk()
+            ->assertJsonPath('mesas.0.ocupada', true);
+
+        // La MISMA comanda, con sus ítems: si abriera una nueva, el grupo quedaría
+        // partido en dos registros y ni el total ni los tiempos servirían.
+        $comanda = $comanda->fresh();
+        $this->assertSame(Comanda::ABIERTA, $comanda->estado);
+        $this->assertNull($comanda->cerrada_at);
+        $this->assertSame(1, $comanda->items()->count());
+        $this->assertSame(1, Comanda::count());
+    }
+
+    public function test_pasada_la_ventana_ya_no_se_puede_reabrir(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        app(ComandaService::class)->cerrar($comanda);
+        // Ya no es un error del mozo: es un grupo que se fue hace rato.
+        $comanda->update(['cerrada_at' => now()->subMinutes(ComandaService::MINUTOS_PARA_REABRIR + 5)]);
+        $this->entrar($comercio);
+
+        $this->postJson(route('mozo.comanda.reabrir', [$comercio->mozo_token, $comanda]))
+            ->assertStatus(409);
+
+        $this->assertSame(Comanda::CERRADA, $comanda->fresh()->estado);
+    }
+
+    public function test_no_se_reabre_si_ya_hay_gente_nueva_en_esa_mesa(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $vieja = $this->comandaCon($comercio);
+        $mesa = $vieja->mesa;
+        app(ComandaService::class)->cerrar($vieja);
+
+        // Se sentó otro grupo antes de que el mozo tocara "Reabrir".
+        $nueva = app(ComandaService::class)->abrirOTomar($mesa);
+        $this->entrar($comercio);
+
+        $this->postJson(route('mozo.comanda.reabrir', [$comercio->mozo_token, $vieja]))
+            ->assertStatus(409);
+
+        $this->assertSame(Comanda::CERRADA, $vieja->fresh()->estado);
+        $this->assertSame(Comanda::ABIERTA, $nueva->fresh()->estado);
+    }
+
+    public function test_la_mesa_libre_avisa_que_se_puede_reabrir(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        app(ComandaService::class)->cerrar($comanda);
+        $this->entrar($comercio);
+
+        $this->getJson(route('mozo.estado', $comercio->mozo_token))
+            ->assertOk()
+            ->assertJsonPath('mesas.0.ocupada', false)
+            ->assertJsonPath('mesas.0.reabrir_id', $comanda->id);
+    }
+
+    public function test_las_mesas_cerradas_del_dia_se_pueden_consultar(): void
+    {
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio, 5);
+        app(ComandaService::class)->agregarDelMozo($comanda, 'Milanesa', 2, '$3.800');
+        app(ComandaService::class)->cerrar($comanda);
+        $this->entrar($comercio);
+
+        $this->getJson(route('mozo.cerradas', $comercio->mozo_token))
+            ->assertOk()
+            ->assertJsonPath('comandas.0.numero', 5)
+            ->assertJsonPath('comandas.0.items_total', 2)
+            ->assertJsonPath('comandas.0.cerrada_por', 'mozo')
+            // Con el detalle de lo que pidieron: es para responder un reclamo.
+            ->assertJsonPath('comandas.0.rondas.0.items.0.nombre', 'Milanesa');
+    }
+
+    public function test_las_cerradas_de_un_local_no_aparecen_en_el_de_al_lado(): void
+    {
+        $mio = $this->comercioConMozo();
+        $ajeno = $this->comercioConMozo();
+        app(ComandaService::class)->cerrar($this->comandaCon($ajeno, 9));
+        $this->entrar($mio);
+
+        $this->getJson(route('mozo.cerradas', $mio->mozo_token))
+            ->assertOk()
+            ->assertJsonCount(0, 'comandas');
     }
 
     public function test_un_link_de_mozo_no_sirve_para_tocar_las_comandas_de_otro_local(): void

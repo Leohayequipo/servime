@@ -543,6 +543,28 @@ class Comercio extends Model
     }
 
     /**
+     * ¿Hay un archivo de menú que se pueda mostrar?
+     *
+     * Mira el DISCO y no sólo la base: la ruta puede estar guardada y el archivo no
+     * existir (pasa al bajar una base de producción sin los archivos, o si se pierde en
+     * un deploy).
+     *
+     * Vive en el modelo y no en un controlador porque la vista del menú la renderizan
+     * tres sitios distintos —`MenuController::create`, `::edit` y `AdminController::editMenu`—
+     * y pasar el dato desde cada uno ya falló una vez: el admin tiraba
+     * "Undefined variable" porque era el único que no lo mandaba.
+     */
+    public function tieneArchivoDeMenu(): bool
+    {
+        $menu = $this->menus()->where('procesado', true)->where('activo', true)->first()
+            ?: $this->menus()->where('procesado', true)->latest()->first();
+
+        return $menu
+            && filled($menu->archivo_original)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($menu->archivo_original);
+    }
+
+    /**
      * Qué se muestra en el menú clásico, resolviendo el caso imposible.
      *
      * Si el comercio eligió "archivo" pero no hay archivo (lo cargó por Excel, o el

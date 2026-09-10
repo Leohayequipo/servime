@@ -8,11 +8,16 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Mesas que quedaron abiertas porque nadie las cerró al final del turno. Cada 15' y no
-// una vez por día: si corriera de madrugada, la mesa que se fue a las 22 seguiría
-// figurando ocupada toda la noche y el mozo del turno siguiente vería el salón lleno.
+// Mesas que quedaron abiertas porque nadie las cerró al final del turno.
 //
-// Requiere el cron de Laravel en el servidor (`schedule:run` cada minuto). Si ese cron no
-// está configurado, esto no corre: se puede ejecutar a mano con
-// `php artisan comandas:cerrar-inactivas`.
+// ⚠️ Esto NO es lo que sostiene la feature, y no hace falta configurarlo para salir a
+// producción. Las comandas vencidas se cierran solas cuando alguien las usa:
+// `ComandaService::abrirOTomar()` no le devuelve una comanda de anoche al grupo que se
+// sienta hoy, y el tablero del mozo las limpia al dibujarse. Se hizo así justamente para
+// no depender de que `schedule:run` esté bien puesto en el servidor: un cron que no corre
+// no avisa a nadie, y el síntoma —los pedidos de dos grupos mezclados en una mesa— se ve
+// recién cuando ya pasó.
+//
+// Queda programado igual porque no molesta y adelanta la limpieza de las mesas que nadie
+// va a tocar hasta mañana. Si el cron no está, no pasa nada.
 Schedule::command('comandas:cerrar-inactivas')->everyFifteenMinutes()->withoutOverlapping();

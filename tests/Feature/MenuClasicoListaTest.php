@@ -119,6 +119,51 @@ class MenuClasicoListaTest extends TestCase
             ->assertSee('<iframe', false);
     }
 
+    /**
+     * Elegir "mostrar tu archivo" sin tener archivo no cambia nada: la vista pública cae
+     * igual a la lista. Ofrecerlo sin avisar deja al comerciante tocando una opción que
+     * no hace nada y sin entender por qué.
+     */
+    public function test_sin_archivo_la_opcion_de_mostrarlo_esta_deshabilitada_y_avisada(): void
+    {
+        $comercio = $this->comercioConCarta();
+
+        $this->actingAs($comercio->user)
+            ->get(route('menus.create', $comercio))
+            ->assertOk()
+            ->assertSee('No hay ningún archivo cargado')
+            ->assertSee('disabled', false);
+    }
+
+    /**
+     * La vista del menú la renderizan tres rutas distintas y el dato lo necesitan las tres.
+     *
+     * Ya falló una vez: el bloque se agregó pasando la variable desde el controlador, pero
+     * `/admin/menus/{id}/edit` es de AdminController y no la mandaba, así que esa pantalla
+     * tiraba "Undefined variable" — un 500 en la cara del super admin. Ahora el dato sale
+     * del modelo y ningún controlador tiene que acordarse, pero las tres se prueban.
+     */
+    public function test_las_tres_pantallas_del_menu_abren_sin_romperse(): void
+    {
+        $comercio = $this->comercioConCarta();
+        $menu = $comercio->menus()->first();
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($comercio->user)->get(route('menus.create', $comercio))->assertOk();
+        $this->actingAs($comercio->user)->get(route('menus.edit', [$comercio, $menu]))->assertOk();
+        $this->actingAs($admin)->get(route('admin.menus.edit', $menu))->assertOk();
+    }
+
+    public function test_con_archivo_la_opcion_se_puede_elegir(): void
+    {
+        $comercio = $this->comercioConCarta(conArchivo: true);
+
+        $this->actingAs($comercio->user)
+            ->get(route('menus.create', $comercio))
+            ->assertOk()
+            ->assertDontSee('No hay ningún archivo cargado');
+    }
+
     public function test_el_dueno_guarda_su_preferencia_desde_el_panel(): void
     {
         $comercio = $this->comercioConCarta();

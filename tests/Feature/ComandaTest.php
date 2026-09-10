@@ -189,6 +189,77 @@ class ComandaTest extends TestCase
         $this->assertSame(0, $comanda->fresh()->total_centavos);
     }
 
+    public function test_lo_que_el_mozo_borra_queda_en_el_historial(): void
+    {
+        $mesa = $this->mesa();
+        $comanda = $this->servicio()->enviarCarrito(
+            $this->carritoCon($mesa->comercio, 'tel-a', ['Milanesa' => ['qty' => 1, 'centavos' => 380000]]),
+            $mesa
+        )['comanda'];
+        $item = $comanda->items()->first();
+
+        $this->servicio()->borrarItem($item);
+
+        // Fuera de la comanda y del total...
+        $this->assertSame(0, $comanda->items()->count());
+        $this->assertSame(0, $comanda->fresh()->total_centavos);
+        // ...pero no perdido: sirve para resolver un "nosotros pedimos dos" o para
+        // deshacer un toque en la fila equivocada.
+        $this->assertDatabaseHas('comanda_items', ['id' => $item->id]);
+        $this->assertNotNull(ComandaItem::withTrashed()->find($item->id)->deleted_at);
+    }
+
+    /**
+     * `comanda_items` no tiene `comercio_id` propio: cuelga de `comandas`. Sin pasar por
+     * ahí, el histórico de un local muestra lo borrado en el de al lado.
+     */
+    public function test_el_historial_de_borrados_no_mezcla_comercios(): void
+    {
+        $mio = Comercio::factory()->create();
+        $ajeno = Comercio::factory()->create();
+
+        foreach ([[$mio, 'Milanesa mía'], [$ajeno, 'Milanesa ajena']] as [$comercio, $plato]) {
+            $mesa = $this->mesa($comercio, 1);
+            $comanda = $this->servicio()->enviarCarrito(
+                $this->carritoCon($comercio, 'tel-'.$comercio->id, [$plato => ['qty' => 1]]),
+                $mesa
+            )['comanda'];
+            $this->servicio()->borrarItem($comanda->items()->first());
+        }
+
+        $borrados = ComandaItem::borradosDe($mio)->get();
+
+        $this->assertCount(1, $borrados);
+        $this->assertSame('Milanesa mía', $borrados->first()->nombre);
+    }
+
+    public function test_el_historial_no_trae_lo_que_sigue_pedido(): void
+    {
+        $mesa = $this->mesa();
+        $comanda = $this->servicio()->abrirOTomar($mesa);
+        $this->servicio()->agregarDelMozo($comanda, 'Milanesa');
+        $borrado = $this->servicio()->agregarDelMozo($comanda, 'Flan');
+
+        $this->servicio()->borrarItem($borrado);
+
+        $borrados = ComandaItem::borradosDe($mesa->comercio)->get();
+
+        $this->assertCount(1, $borrados);
+        $this->assertSame('Flan', $borrados->first()->nombre);
+    }
+
+    public function test_poner_la_cantidad_en_cero_tambien_deja_rastro(): void
+    {
+        $mesa = $this->mesa();
+        $comanda = $this->servicio()->abrirOTomar($mesa);
+        $item = $this->servicio()->agregarDelMozo($comanda, 'Milanesa');
+
+        // Bajar a cero borra el ítem: tiene que dejar el mismo rastro que la ×.
+        $this->servicio()->cambiarCantidad($item, 0);
+
+        $this->assertSame(1, ComandaItem::borradosDe($mesa->comercio)->count());
+    }
+
     public function test_cerrar_la_mesa_no_borra_lo_que_se_pidio(): void
     {
         $mesa = $this->mesa();
@@ -231,6 +302,63 @@ class ComandaTest extends TestCase
 
         $this->assertSame('mozo', $comanda->fresh()->cerrada_por);
         $this->assertEquals($cerradaAt, $comanda->fresh()->cerrada_at);
+    }
+
+    /**
+     * La defensa que reemplaza al cron.
+     *
+     * Sin esto, la mesa que quedó abierta de anoche se le devuelve entera a la gente que
+     * se sienta al mediodía: mismas rondas, mismo total, todo mezclado. Y pasaba cada vez
+     * que el `schedule:run` del servidor no corría, sin que nadie se enterara.
+     */
+    public function test_una_comanda_vencida_no_se_le_devuelve_al_grupo_siguiente(): void
+    {
+        $mesa = $this->mesa();
+        $anoche = $this->servicio()->enviarCarrito(
+            $this->carritoCon($mesa->comercio, 'tel-anoche', ['Milanesa' => ['qty' => 1, 'centavos' => 380000]]),
+            $mesa
+        )['comanda'];
+
+        // Se fueron anoche y nadie cerró la mesa.
+        $anoche->update(['abierta_at' => now()->subHours(14)]);
+        $anoche->items()->update(['created_at' => now()->subHours(14)]);
+
+        $hoy = $this->servicio()->abrirOTomar($mesa);
+
+        $this->assertNotSame($anoche->id, $hoy->id, 'El grupo nuevo heredó la comanda vieja.');
+        $this->assertSame(0, $hoy->items()->count());
+        $this->assertSame(0, $hoy->total_centavos);
+
+        // La vieja quedó cerrada y con lo suyo, no borrada.
+        $anoche = $anoche->fresh();
+        $this->assertSame(Comanda::CERRADA, $anoche->estado);
+        $this->assertSame('auto', $anoche->cerrada_por);
+        $this->assertSame(1, $anoche->items()->count());
+    }
+
+    public function test_una_comanda_con_actividad_reciente_se_sigue_reusando(): void
+    {
+        $mesa = $this->mesa();
+        $primera = $this->servicio()->abrirOTomar($mesa);
+        $this->servicio()->agregarDelMozo($primera, 'Milanesa');
+
+        // El segundo comensal de la misma mesa tiene que caer en la misma comanda.
+        $this->assertSame($primera->id, $this->servicio()->abrirOTomar($mesa)->id);
+    }
+
+    /**
+     * Una mesa que abrió hace horas pero acaba de pedir el postre está comiendo, no
+     * olvidada: el vencimiento se mide desde el último pedido, no desde la apertura.
+     */
+    public function test_una_sobremesa_larga_no_cuenta_como_vencida(): void
+    {
+        $mesa = $this->mesa();
+        $comanda = $this->servicio()->abrirOTomar($mesa);
+        $comanda->update(['abierta_at' => now()->subHours(6)]);
+        $this->servicio()->agregarDelMozo($comanda, 'Flan');
+
+        $this->assertFalse($this->servicio()->estaVencida($comanda->fresh()->load('items')));
+        $this->assertSame($comanda->id, $this->servicio()->abrirOTomar($mesa)->id);
     }
 
     public function test_las_comandas_sin_actividad_se_cierran_solas(): void
