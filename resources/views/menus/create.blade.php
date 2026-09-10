@@ -309,14 +309,23 @@
                             <!-- Nombre del Menú -->
                     <div class="mb-6">
                                 <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Nombre del Menú
+                                    Nombre del Menú <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" 
-                                       id="nombre" 
+                                {{-- En edición se guarda solo al salir del campo: ponerle otro
+                                     nombre a un menú no tiene por qué disparar el procesamiento
+                                     con IA, que tarda y cuesta. Al crear todavía no existe la
+                                     fila, así que ahí viaja con el formulario. --}}
+                                <input type="text"
+                                       id="nombre"
                                        name="nombre"
-                                       value="{{ $menu->nombre ?? '' }}"
-                                       placeholder="Ej: Menú Principal, Menú de Temporada, etc."
+                                       value="{{ old('nombre', $menu->nombre ?? '') }}"
+                                       required
+                                       @if($isEdit && $menu)
+                                           data-guardar-en="{{ route('menus.update.nombre', [$comercio, $menu]) }}"
+                                       @endif
+                                       placeholder="Ej: Carta principal, Menú de la noche…"
                                        class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                <p id="nombre-estado" class="text-xs text-text-secondary mt-2"></p>
                                 <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
                             </div>
 
@@ -450,9 +459,15 @@
                                 </div>
                             @endif
 
-                    <!-- Botón de Guardar -->
-                    <div class="flex justify-end">
-                        <button type="submit" 
+                    {{-- El botón dispara el PROCESAMIENTO del menú con IA, que tarda. Se
+                         dice qué abarca porque debajo siguen otras secciones que se guardan
+                         solas, y sin la aclaración parecía un "Guardar todo" que no es. --}}
+                    <div class="flex flex-wrap items-center justify-end gap-4">
+                        <p class="text-xs text-text-secondary text-right flex-1 min-w-[200px]">
+                            Procesa el nombre, el archivo y las promociones de esta sección.
+                            Lo de más abajo —chatbot, menú clásico y reseñas— se guarda solo.
+                        </p>
+                        <button type="submit"
                                 id="btn-actualizar-menu"
                                 style="background-color: rgb(var(--c-ok)) !important; border: 2px solid rgb(var(--c-ok) / .3) !important;"
                                 class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center gap-3 hover:opacity-90"
@@ -461,7 +476,9 @@
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span>{{ $isEdit ? 'Actualizar Menú' : 'Crear Menú' }}</span>
+                            {{-- "Procesar" y no "Guardar": lo que hace es mandar el archivo a
+                                 la IA para que extraiga los platos, no guardar la pantalla. --}}
+                            <span>{{ $isEdit ? 'Procesar menú' : 'Crear y procesar menú' }}</span>
                         </button>
                     </div>
                 </div>
@@ -1466,7 +1483,9 @@
             if (pedidoStatus) {
                 if (isChecked) {
                     pedidoStatus.textContent = '✓ Activo';
-                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-green-500/20 text-green-300 border-2 border-green-400/50 backdrop-blur-sm';
+                    // Tokens, no `green-500`: la paleta genérica de Tailwind no está en la
+                    // identidad y sobre el crema del panel ni siquiera se lee.
+                    pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-accent-green/15 text-accent-green border-2 border-accent-green/40 backdrop-blur-sm';
                 } else {
                     pedidoStatus.textContent = '○ Inactivo';
                     pedidoStatus.className = 'flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 bg-accent-gray/30 text-text-secondary border-2 border-accent-gray/30';
@@ -1482,6 +1501,42 @@
                     card.classList.remove('bg-accent-green/10', 'border-accent-green/40', 'shadow-accent-green/10');
                     card.classList.add('bg-secondary-dark', 'border-accent-gray');
                 }
+            }
+
+            // Y GUARDARLO. Hasta acá esta función sólo pintaba: el interruptor se movía,
+            // se veía verde, y al recargar volvía atrás. El checkbox tampoco tenía `name`,
+            // así que tampoco viajaba con el formulario — el pedido en línea no se podía
+            // encender desde esta pantalla.
+            guardarPedidoHabilitado(isChecked);
+        }
+
+        async function guardarPedidoHabilitado(activo) {
+            const estado = document.getElementById('pedido-status');
+            const textoPrevio = estado ? estado.textContent : '';
+
+            try {
+                const r = await fetch(`{{ route('menus.update.chatbot.config', ['comercio' => $comercio->slug]) }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ pedido_habilitado: activo })
+                });
+                const data = await r.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'no se pudo guardar');
+                }
+            } catch (e) {
+                // Se revierte lo que se pintó: dejar el interruptor en verde cuando el
+                // servidor no lo guardó es peor que no dejarlo mover.
+                const toggle = document.getElementById('pedido_habilitado');
+                if (toggle) toggle.checked = !activo;
+                if (estado) estado.textContent = textoPrevio;
+                showError('No se pudo cambiar el pedido en línea. Probá de nuevo.');
             }
         }
         
@@ -2003,6 +2058,73 @@
             // solo booleano y esperar un "Guardar" para un interruptor confunde.
             // Con qué abre el menú clásico. Se guarda al toque, sin botón de confirmar:
             // es una preferencia de dos opciones y no hay nada que revisar antes.
+            // ── Nombre del menú ────────────────────────────────────────────────────
+            //
+            // Es obligatorio y se guarda solo. Mientras esté vacío, el botón que procesa
+            // el menú queda bloqueado: si el nombre hace falta, mejor pedirlo antes de
+            // gastar una llamada a la IA que después.
+            (function () {
+                const campo = document.getElementById('nombre');
+                const estado = document.getElementById('nombre-estado');
+                const botonProcesar = document.getElementById('btn-actualizar-menu');
+                if (!campo) return;
+
+                let ultimoGuardado = campo.value.trim();
+
+                function pintarFalta(falta) {
+                    campo.classList.toggle('border-danger', falta);
+                    campo.classList.toggle('border-accent-gray', !falta);
+                    if (botonProcesar) {
+                        botonProcesar.disabled = falta;
+                        botonProcesar.classList.toggle('opacity-50', falta);
+                        botonProcesar.classList.toggle('cursor-not-allowed', falta);
+                        botonProcesar.title = falta ? 'Poné un nombre para el menú' : '';
+                    }
+                    if (falta) estado.textContent = 'Poné un nombre para identificar este menú.';
+                }
+
+                campo.addEventListener('input', () => {
+                    const vacio = campo.value.trim() === '';
+                    pintarFalta(vacio);
+                    if (!vacio) estado.textContent = '';
+                });
+
+                campo.addEventListener('blur', async () => {
+                    const valor = campo.value.trim();
+                    const url = campo.dataset.guardarEn;
+
+                    // Sin url estamos creando el menú: el nombre viaja con el formulario.
+                    if (!url || valor === '' || valor === ultimoGuardado) return;
+
+                    estado.textContent = 'Guardando…';
+                    try {
+                        const r = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ nombre: valor })
+                        });
+                        const data = await r.json();
+
+                        if (data.success) {
+                            ultimoGuardado = data.nombre;
+                            estado.textContent = '✓ Guardado';
+                            setTimeout(() => { if (estado.textContent === '✓ Guardado') estado.textContent = ''; }, 2500);
+                        } else {
+                            estado.textContent = data.error || 'No se pudo guardar el nombre.';
+                        }
+                    } catch (e) {
+                        estado.textContent = 'No se pudo guardar el nombre. Revisá la conexión.';
+                    }
+                });
+
+                pintarFalta(campo.value.trim() === '');
+            })();
+
             window.guardarVistaClasica = async function(vista) {
                 const estado = document.getElementById('vista-clasica-estado');
                 estado.textContent = 'Guardando…';

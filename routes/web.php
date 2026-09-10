@@ -192,6 +192,10 @@ Route::middleware('auth')->group(function () {
     // (activarlas sin poder ver cuántos las tocan es a ciegas).
     Route::post('/comercios/{comercio:slug}/menus/update-resenas', [App\Http\Controllers\MenuController::class, 'updateResenas'])->name('menus.update.resenas')->middleware('plan.feature:analytics');
 
+    // El nombre del menú se guarda solo, sin depender del botón que dispara el
+    // procesamiento con IA.
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/nombre', [App\Http\Controllers\MenuController::class, 'updateNombre'])->name('menus.update.nombre');
+
     // Con qué abre el menú clásico. Sin feature: es cómo se muestra el menú que el
     // comercio ya tiene, no una función aparte.
     Route::post('/comercios/{comercio:slug}/menus/update-vista-clasica', [App\Http\Controllers\MenuController::class, 'updateVistaClasica'])->name('menus.update.vista.clasica');

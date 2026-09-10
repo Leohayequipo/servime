@@ -382,12 +382,14 @@ class MenuController extends Controller
             $comercio->save();
         }
 
-        // Actualizar estado de pedidos
-        $nuevoEstadoPedidos = $request->boolean('pedido_habilitado');
-        if ($comercio->pedido_habilitado !== $nuevoEstadoPedidos) {
-            $comercio->pedido_habilitado = $nuevoEstadoPedidos;
-            $comercio->save();
-        }
+        // El pedido en línea NO se toca acá. Se guarda solo al mover el interruptor
+        // (`updateChatbotConfig`, que ya usa `has()` para distinguir "vino en false" de
+        // "no vino").
+        //
+        // Antes se leía de este request con `boolean()`, y como el checkbox de la vista
+        // nunca tuvo atributo `name`, el campo no llegaba nunca: cada vez que el comercio
+        // guardaba su menú, el pedido en línea se apagaba solo. Con las comandas arriba,
+        // eso además dejaba mudas las pantallas del mozo.
 
         // SIEMPRE guardar promociones (incluso si el array está vacío, para eliminar las que fueron borradas)
         $promocionesData = $request->input('promociones', []);
@@ -2803,6 +2805,38 @@ class MenuController extends Controller
      * Se guarda la preferencia aunque no haya archivo; el modelo resuelve ese caso
      * mostrando la lista igual (ver `Comercio::vistaMenuClasico`).
      */
+    /**
+     * Guarda el nombre del menú por su cuenta, sin pasar por "Actualizar menú".
+     *
+     * Ese botón dispara el procesamiento con IA, que tarda y cuesta: cambiarle el nombre a
+     * un menú no tiene por qué depender de él. El resto de la pantalla —chatbot, reseñas,
+     * menú clásico— ya se guardaba solo; esto lo empareja.
+     *
+     * Sólo en edición: al crear todavía no existe la fila, así que ahí el nombre viaja con
+     * el formulario.
+     */
+    public function updateNombre(Request $request, Comercio $comercio, Menu $menu)
+    {
+        $user = auth()->user();
+
+        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permiso para actualizar este menú.'], 403);
+        }
+
+        if ($menu->comercio_id !== $comercio->id) {
+            return response()->json(['error' => 'Ese menú no es de este comercio.'], 404);
+        }
+
+        $validated = $request->validate(
+            ['nombre' => 'required|string|max:255'],
+            ['nombre.required' => 'Poné un nombre para identificar este menú.']
+        );
+
+        $menu->update(['nombre' => trim($validated['nombre'])]);
+
+        return response()->json(['success' => true, 'nombre' => $menu->nombre]);
+    }
+
     public function updateVistaClasica(Request $request, Comercio $comercio)
     {
         $user = auth()->user();
