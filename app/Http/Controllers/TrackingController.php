@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comercio;
+use App\Models\Mesa;
 use App\Models\TrackingEvent;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -51,6 +52,9 @@ class TrackingController extends Controller
 
         TrackingEvent::create([
             'comercio_id' => $comercio->id,
+            // La mesa sale de la sesión (la puso ResolverMesa al escanear el QR), no del
+            // body: así el cliente no puede atribuirle su actividad a otra mesa.
+            'mesa_id' => Mesa::idDeSesion($comercio->id),
             'session_id' => $validated['session_id'] ?? null,
             'event' => $validated['event'],
             'data' => $validated['data'] ?? null,

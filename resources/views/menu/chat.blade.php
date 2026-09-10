@@ -126,6 +126,15 @@
             transition: color .18s ease, border-color .18s ease;
         }
         .lang-btn:hover { color: var(--text); border-color: rgba(255,255,255,.22); }
+
+        /* Mesa detectada por el QR. Usa el acento del comercio y no un color propio:
+           es un dato del local, no una marca de ServiME dentro del menú del cliente. */
+        .mesa-chip {
+            display: inline-flex; align-items: center;
+            padding: 5px 11px; border-radius: 9999px;
+            background: var(--surface-2); border: 1px solid var(--accent);
+            color: var(--text); font-size: 12px; font-weight: 700; white-space: nowrap;
+        }
         .lang-menu {
             position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
             min-width: 132px; padding: 5px; border-radius: 12px;
@@ -409,6 +418,12 @@
             flex-wrap: wrap;
         }
         .wish-header h4 { font-size: 14px; font-weight: 700; color: var(--text); margin: 0; }
+        /* Más grande que el título que lo acompaña: a un metro de distancia se tiene que
+           leer el número, no el encabezado. */
+        .wish-mesa {
+            display: block; margin-top: 2px;
+            font-size: 19px; font-weight: 800; color: var(--accent); letter-spacing: .01em;
+        }
         .wish-header-buttons { display: flex; gap: 8px; }
         .wish-btn {
             padding: 6px 10px; border-radius: 9999px; border: 1px solid var(--line-2);
@@ -417,6 +432,44 @@
         .wish-btn-clear { background: var(--surface-2); color: #C98B86; margin-right: 6px; }
         .wish-btn-clear.armed { background: #7A2E2E; color: #fff; border-color: rgba(255,255,255,.3); }
         .wish-btn-close { background: var(--surface-2); color: var(--text); }
+        /* Ya pedido: se distingue del carrito por el borde en el acento, para que de un
+           vistazo se vea qué está confirmado y qué todavía se está eligiendo. */
+        .pedido-hecho {
+            margin-bottom: 10px; padding: 10px; border-radius: 10px;
+            background: var(--surface-2); border: 1px solid var(--accent);
+        }
+        .pedido-hecho-titulo {
+            font-size: 12px; font-weight: 700; color: var(--accent);
+            text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px;
+        }
+        .pedido-hecho-item {
+            display: flex; justify-content: space-between; gap: 8px;
+            font-size: 14px; color: var(--text); padding: 3px 0;
+        }
+        .pedido-hecho-nota { font-size: 12px; color: var(--text-dim); }
+
+        .btn-pedir {
+            width: 100%; margin-top: 12px; padding: 13px;
+            border: 0; border-radius: 12px; cursor: pointer;
+            background: var(--accent); color: #fff;
+            font-size: 16px; font-weight: 800; letter-spacing: .01em;
+        }
+        .btn-pedir[disabled] { opacity: .55; cursor: default; }
+        .pedir-ayuda { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); text-align: center; }
+        /* El error queda pegado al botón que se tocó, en vez de sacarlo de la pantalla
+           con un alert del navegador. */
+        .pedido-error {
+            margin: 8px 0 0; padding: 9px 12px; border-radius: 9px;
+            background: rgba(201,139,134,.14); border: 1px solid rgba(201,139,134,.4);
+            color: #E8C4C0; font-size: 13px; text-align: center;
+        }
+        /* Aviso, no error: el cliente no hizo nada mal, sólo entró por otra puerta. */
+        .pedir-aviso {
+            margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+            background: var(--surface-2); border: 1px dashed var(--line-2);
+            font-size: 13px; color: var(--text-dim); text-align: center;
+        }
+
         .wish-list {
             display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto;
         }
@@ -489,6 +542,15 @@
                     <h1 class="text-text-primary font-semibold text-lg leading-tight truncate">{{ $comercio->nombre }}</h1>
                     <p class="text-text-secondary text-sm leading-tight truncate" id="preview-chatbot-name">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</p>
                 </div>
+
+                {{-- Mesa reconocida por el QR. No es decorativo: es lo que le permite al
+                     cliente darse cuenta de que escaneó el cartel de la mesa de al lado,
+                     antes de que su pedido termine en otra mesa. --}}
+                @if(!empty($mesaActual))
+                    <span class="mesa-chip flex-none" title="{{ __('Mesa detectada por el código QR') }}">
+                        {{ __('Mesa') }} {{ $mesaActual->numero }}
+                    </span>
+                @endif
 
                 {{-- Selector de idioma. Sin banderas a propósito: una bandera es un país,
                      no un idioma (¿español es España o Argentina?). Van los nombres en su
@@ -618,13 +680,45 @@
         <div id="wishPanel" class="wish-panel">
             <div class="wish-panel-inner">
                 <div class="wish-header">
-                    <h4>{{ __('Resumen para el camarero') }}</h4>
+                    {{-- Con mesa reconocida, el número va en el título y no en un rincón:
+                         esta pantalla se la muestra el cliente al mozo, y el mozo la mira
+                         un segundo. Es el dato que le ahorra preguntar "¿qué mesa son?". --}}
+                    <h4>
+                        {{ __('Resumen para el camarero') }}
+                        @if(!empty($mesaActual))
+                            <span class="wish-mesa">{{ __('Mesa') }} {{ $mesaActual->numero }}</span>
+                        @endif
+                    </h4>
                     <div class="wish-header-buttons">
                         <button id="wishClear" class="wish-btn wish-btn-clear">{{ __('Vaciar') }}</button>
                         <button id="wishClose" class="wish-btn wish-btn-close">{{ __('Cerrar') }}</button>
                     </div>
                 </div>
+                {{-- Lo que la mesa YA pidió, que es lo que el mozo tiene que traer. Va
+                     arriba de la lista que el cliente está armando porque esta pantalla
+                     se le muestra al mozo, y lo primero que él mira es lo confirmado. --}}
+                @if($puedePedir)
+                    <div id="pedidoHecho" class="pedido-hecho" hidden></div>
+                @endif
+
                 <div id="wishList" class="wish-list"></div>
+
+                {{-- El paso que convierte la lista privada en pedido. Sin él, el mozo vería
+                     en su tablet cada plato que alguien tocó por curiosidad y descartó. --}}
+                @if($puedePedir)
+                    <button id="btnPedir" class="btn-pedir" type="button">
+                        {{ __('Pedir') }}
+                    </button>
+                    <p class="pedir-ayuda">{{ __('El mozo lo ve al toque en su pantalla.') }}</p>
+                @elseif($comercio->tieneFeature('comandas'))
+                    {{-- El local toma pedidos desde el teléfono, pero este cliente entró sin
+                         mesa (por el QR general, las redes o un link que le pasaron). Sin
+                         este aviso el botón simplemente no está y no tiene cómo enterarse
+                         de que escaneando el QR de su mesa sí podría pedir. --}}
+                    <p class="pedir-aviso">
+                        {{ __('Escaneá el código QR de tu mesa para poder pedir desde el teléfono.') }}
+                    </p>
+                @endif
             </div>
         </div>
     @endif
@@ -706,6 +800,11 @@
                 'vaciar' => __('Vaciar'),
                 'vaciar_confirmar' => __('¿Vaciar?'),
                 'quitar' => __('Quitar'),
+                'ya_pediste' => __('Ya pediste'),
+                'lo_agrego_el_mozo' => __('lo agregó el mozo'),
+                'enviando' => __('Enviando…'),
+                'pedido_enviado' => __('¡Pedido enviado!'),
+                'no_se_pudo_pedir' => __('No se pudo enviar el pedido. Probá de nuevo o avisale al mozo.'),
             ];
         @endphp
         const T = @json($t);
@@ -1379,6 +1478,121 @@
             list.querySelectorAll('.wdel').forEach(b=>b.addEventListener('click',()=>delWish(parseInt(b.getAttribute('data-idx'),10))));
         }
 
+        // ===== Pedido confirmado (comanda de la mesa) =====
+        //
+        // El carrito de arriba es la lista privada del cliente; esto es lo que ya mandó y
+        // el mozo ve en su pantalla. Son dos cosas distintas a propósito: si cada "Lo
+        // quiero" fuera un pedido, el mozo vería seis platos por cada uno que la mesa
+        // termina pidiendo de verdad.
+        const puedePedir = @json($puedePedir ?? false);
+
+        function pedirHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            };
+        }
+
+        function renderPedidoHecho(items) {
+            const caja = document.getElementById('pedidoHecho');
+            if (!caja) return;
+
+            if (!items || !items.length) {
+                caja.hidden = true;
+                caja.innerHTML = '';
+                return;
+            }
+
+            const filas = items.map(it => {
+                const nota = it.nota ? `<div class="pedido-hecho-nota">${it.nota}</div>` : '';
+                const quien = it.del_mozo ? ` <span class="pedido-hecho-nota">(${T.lo_agrego_el_mozo})</span>` : '';
+                return `<div class="pedido-hecho-item"><div>${it.nombre}${quien}${nota}</div><div>×${it.qty}</div></div>`;
+            }).join('');
+
+            caja.innerHTML = `<div class="pedido-hecho-titulo">${T.ya_pediste}</div>${filas}`;
+            caja.hidden = false;
+        }
+
+        async function cargarPedidoHecho() {
+            if (!puedePedir) return;
+            try {
+                const r = await fetch('/api/comanda/mia', {
+                    method: 'POST',
+                    headers: pedirHeaders(),
+                    body: JSON.stringify({ comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId() }),
+                });
+                const data = await r.json();
+                // Sin comanda abierta (o con la mesa ya cerrada por el mozo) la caja
+                // desaparece, en vez de dejar colgado un pedido que ya no existe.
+                renderPedidoHecho(data.pedido || []);
+            } catch (e) {
+                // El pedido ya está hecho del lado del servidor: no poder mostrarlo no es
+                // motivo para alarmar al cliente en medio de la comida.
+            }
+        }
+
+        async function enviarPedido() {
+            const btn = document.getElementById('btnPedir');
+            if (!btn || btn.disabled) return;
+
+            // Bloquear mientras el request está en vuelo: sin esto, un doble toque manda
+            // dos rondas iguales y el mozo ve el pedido duplicado.
+            btn.disabled = true;
+            const textoOriginal = btn.textContent;
+            btn.textContent = T.enviando;
+
+            try {
+                const r = await fetch('/api/comanda/pedir', {
+                    method: 'POST',
+                    headers: pedirHeaders(),
+                    body: JSON.stringify({ comercio_id: {{ $comercio->id }}, session_id: getOrCreateSessionId() }),
+                });
+                const data = await r.json();
+
+                if (!data.success) {
+                    btn.textContent = textoOriginal;
+                    btn.disabled = false;
+                    mostrarErrorPedido(data.message || T.no_se_pudo_pedir);
+                    return;
+                }
+
+                // El carrito se vació en el servidor: se limpia también el espejo local,
+                // o el cliente vuelve a ver lo mismo y lo manda de nuevo.
+                saveWish([]);
+                renderPedidoHecho(data.pedido || []);
+                btn.textContent = T.pedido_enviado;
+
+                setTimeout(() => { btn.textContent = textoOriginal; btn.disabled = false; }, 2500);
+            } catch (e) {
+                btn.textContent = textoOriginal;
+                btn.disabled = false;
+                mostrarErrorPedido(T.no_se_pudo_pedir);
+            }
+        }
+
+        /**
+         * El error va dentro del panel, no en un alert del navegador.
+         *
+         * El alert nativo no matchea la estética (regla del proyecto) y además saca al
+         * cliente de la pantalla justo cuando está tratando de pedir. Acá el mensaje
+         * aparece pegado al botón que tocó.
+         */
+        function mostrarErrorPedido(mensaje) {
+            let caja = document.getElementById('pedidoError');
+
+            if (!caja) {
+                caja = document.createElement('p');
+                caja.id = 'pedidoError';
+                caja.className = 'pedido-error';
+                document.getElementById('btnPedir')?.insertAdjacentElement('afterend', caja);
+            }
+
+            caja.textContent = mensaje;
+            caja.hidden = false;
+            clearTimeout(caja.dataset.t);
+            caja.dataset.t = setTimeout(() => { caja.hidden = true; }, 6000);
+        }
+
         // Mostrar indicador de escritura
         function showTypingIndicator() {
             const chatMessages = document.getElementById('chatMessages');
@@ -1480,8 +1694,13 @@
             if (abriendo) {
                 const items = loadWish().reduce((s, it) => s + (Number(it.qty) || 1), 0);
                 window.smTrack?.('order_summary', { items: items });
+                // Se consulta al abrir y no en un polling: lo que cambia mientras el panel
+                // está cerrado no le sirve a nadie, y son clientes en un local con wifi
+                // compartido.
+                cargarPedidoHecho();
             }
         });
+        document.getElementById('btnPedir')?.addEventListener('click', enviarPedido);
         document.getElementById('wishClose')?.addEventListener('click', () => closePanel());
         if (fabCategories) fabCategories.addEventListener('click', toggleCategories);
         document.getElementById('closeCategories')?.addEventListener('click', () => closePanel());

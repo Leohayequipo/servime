@@ -109,6 +109,16 @@
                             <input type="checkbox" name="features[]" value="customizacion" @checked(in_array('customizacion', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
                             Portada personalizada del menú
                         </label>
+                        <label class="flex items-center gap-3 text-text-primary text-sm">
+                            <input type="checkbox" name="features[]" value="mesas" @checked(in_array('mesas', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                            Mesas con QR propio (y métricas por mesa)
+                        </label>
+                        {{-- Separada de `mesas` a propósito: hay comercios que sólo quieren
+                             el QR por mesa y no una pantalla en vivo que sostener. --}}
+                        <label class="flex items-center gap-3 text-text-primary text-sm">
+                            <input type="checkbox" name="features[]" value="comandas" @checked(in_array('comandas', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                            Comandas y pantalla del mozo (requiere mesas)
+                        </label>
                     </div>
                 </div>
 

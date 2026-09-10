@@ -9,6 +9,8 @@
     "Filtrar por Tags": "Filtrar por tags",
     "Pedido": "Pedido",
     "Resumen para el camarero": "Resumo para o garçom",
+    "Mesa": "Mesa",
+    "Mesa detectada por el código QR": "Mesa detectada pelo código QR",
     "Vaciar": "Limpar",
     "Cerrar": "Fechar",
     "Ver más opciones": "Ver mais opções",
@@ -33,5 +35,15 @@
     "No hay ítems agregados.": "Nenhum item adicionado.",
     "Total estimado:": "Total estimado:",
     "¿Vaciar?": "Limpar?",
-    "Quitar": "Remover"
+    "Quitar": "Remover",
+    "Pedir": "Pedir",
+    "El mozo lo ve al toque en su pantalla.": "O garçom vê na hora na tela dele.",
+    "Ya pediste": "Já pediu",
+    "lo agregó el mozo": "adicionado pelo garçom",
+    "Enviando…": "Enviando…",
+    "¡Pedido enviado!": "Pedido enviado!",
+    "No se pudo enviar el pedido. Probá de nuevo o avisale al mozo.": "Não foi possível enviar o pedido. Tente de novo ou avise o garçom.",
+    "Todavía no elegiste nada.": "Você ainda não escolheu nada.",
+    "Escaneá el código QR de tu mesa para poder pedir.": "Escaneie o QR code da sua mesa para pedir.",
+    "Escaneá el código QR de tu mesa para poder pedir desde el teléfono.": "Escaneie o QR code da sua mesa para pedir pelo celular."
 }

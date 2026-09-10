@@ -9,6 +9,7 @@ class ChatConversation extends Model
 {
     protected $fillable = [
         'comercio_id',
+        'mesa_id',
         'session_id',
         'user_message',
         'origen',

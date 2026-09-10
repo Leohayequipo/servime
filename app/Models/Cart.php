@@ -10,11 +10,11 @@ class Cart extends Model
     use HasFactory;
 
     protected $fillable = [
-        'comercio_id', 'session_id', 'total_centavos', 'meta_json'
+        'comercio_id', 'mesa_id', 'session_id', 'total_centavos', 'meta_json',
     ];
 
     protected $casts = [
-        'meta_json' => 'array'
+        'meta_json' => 'array',
     ];
 
     public function items()
@@ -22,5 +22,3 @@ class Cart extends Model
         return $this->hasMany(CartItem::class);
     }
 }
-
-

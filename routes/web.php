@@ -139,6 +139,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio:slug}/portada/estado', [ComercioController::class, 'portadaEstado'])->name('comercios.portada.estado');
     Route::post('/comercios/{comercio:slug}/portada/reintentar', [ComercioController::class, 'portadaReintentar'])->name('comercios.portada.reintentar')->middleware('throttle:10,1');
 
+    // Mesas del local y sus QR. Van con la feature `mesas`: el comercio que no la tiene
+    // sigue usando el QR único de siempre, que no se toca.
+    Route::middleware('plan.feature:mesas')->group(function () {
+        Route::get('/comercios/{comercio:slug}/mesas', [App\Http\Controllers\MesaController::class, 'index'])->name('mesas.index');
+        Route::post('/comercios/{comercio:slug}/mesas/sincronizar', [App\Http\Controllers\MesaController::class, 'sincronizar'])->name('mesas.sincronizar');
+        Route::get('/comercios/{comercio:slug}/mesas/imprimir', [App\Http\Controllers\MesaController::class, 'imprimir'])->name('mesas.imprimir');
+        Route::put('/comercios/{comercio:slug}/mesas/{mesa}', [App\Http\Controllers\MesaController::class, 'update'])->name('mesas.update');
+        Route::post('/comercios/{comercio:slug}/mesas/{mesa}/rotar', [App\Http\Controllers\MesaController::class, 'rotarToken'])->name('mesas.rotar');
+        Route::post('/comercios/{comercio:slug}/mesas/{mesa}/toggle', [App\Http\Controllers\MesaController::class, 'toggleActiva'])->name('mesas.toggle');
+        Route::get('/comercios/{comercio:slug}/mesas/{mesa}/qr.png', [App\Http\Controllers\MesaController::class, 'qr'])->name('mesas.qr');
+    });
+
+    // Acceso a la pantalla del mozo: lo administra el dueño desde la pantalla de mesas,
+    // pero es parte de las comandas, así que va con esa feature.
+    Route::middleware('plan.feature:comandas')->group(function () {
+        Route::post('/comercios/{comercio:slug}/mozo/activar', [App\Http\Controllers\MesaController::class, 'activarMozo'])->name('mozo.activar');
+        Route::post('/comercios/{comercio:slug}/mozo/rotar', [App\Http\Controllers\MesaController::class, 'rotarLinkMozo'])->name('mozo.rotar');
+        Route::post('/comercios/{comercio:slug}/mozo/desactivar', [App\Http\Controllers\MesaController::class, 'desactivarMozo'])->name('mozo.desactivar');
+        Route::get('/comercios/{comercio:slug}/mozo/qr.png', [App\Http\Controllers\MesaController::class, 'qrMozo'])->name('mozo.qr');
+    });
+
     // Rutas de Menús (usando slug para comercio)
     Route::get('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'index'])->name('menus.index');
     Route::get('/comercios/{comercio:slug}/menus/create', [App\Http\Controllers\MenuController::class, 'create'])->name('menus.create');
@@ -170,6 +191,10 @@ Route::middleware('auth')->group(function () {
     // Reseñas de Google: va con `analytics` igual que los chips, y por el mismo motivo
     // (activarlas sin poder ver cuántos las tocan es a ciegas).
     Route::post('/comercios/{comercio:slug}/menus/update-resenas', [App\Http\Controllers\MenuController::class, 'updateResenas'])->name('menus.update.resenas')->middleware('plan.feature:analytics');
+
+    // Con qué abre el menú clásico. Sin feature: es cómo se muestra el menú que el
+    // comercio ya tiene, no una función aparte.
+    Route::post('/comercios/{comercio:slug}/menus/update-vista-clasica', [App\Http\Controllers\MenuController::class, 'updateVistaClasica'])->name('menus.update.vista.clasica');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promo-imagen', [App\Http\Controllers\MenuController::class, 'deletePromocionImagen'])->name('menus.delete.promo.imagen')->middleware('plan.feature:promociones');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-promocion', [App\Http\Controllers\MenuController::class, 'deletePromocion'])->name('menus.delete.promocion')->middleware('plan.feature:promociones');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/save-promociones', [App\Http\Controllers\MenuController::class, 'savePromocionesAjax'])->name('menus.save.promociones')->middleware('plan.feature:promociones');
@@ -248,20 +273,26 @@ Route::post('/api/visit-confirm', function (\Illuminate\Http\Request $request) {
     return response()->noContent();
 })->middleware('throttle:30,1')->name('visit.confirm');
 
-// Rutas públicas (sin autenticación, usando slug)
-Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
-Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');
-Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
-// Chat con IA. Los límites 'chat-ia'/'tracking'/'carrito' van por dispositivo y no por IP:
-// todos los clientes de un local salen por el mismo wifi (ver AppServiceProvider).
-Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])
-    ->middleware('throttle:chat-ia')->name('chat.api');
-Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
-    ->middleware('throttle:chat-ia')->name('chat.stream');
+// Rutas públicas (sin autenticación, usando slug).
+//
+// Todas pasan por ResolverMesa: si el request trae el `?m=<token>` del QR de una mesa,
+// la mesa queda guardada en la sesión y de ahí la leen el tracking, el carrito y el chat
+// sin que el front tenga que mandarla nunca.
+Route::middleware(\App\Http\Middleware\ResolverMesa::class)->group(function () {
+    Route::get('/menu/{comercio:slug}', [App\Http\Controllers\PublicMenuController::class, 'choose'])->name('menu.public');
+    Route::get('/menu/{comercio:slug}/chat', [App\Http\Controllers\PublicMenuController::class, 'chat'])->name('menu.chat');
+    Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
+    // Chat con IA. Los límites 'chat-ia'/'tracking'/'carrito' van por dispositivo y no por IP:
+    // todos los clientes de un local salen por el mismo wifi (ver AppServiceProvider).
+    Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])
+        ->middleware('throttle:chat-ia')->name('chat.api');
+    Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
+        ->middleware('throttle:chat-ia')->name('chat.stream');
 
-// Tracking de eventos del menú público (sin auth, por sesión)
-Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
-    ->middleware('throttle:tracking')->name('track');
+    // Tracking de eventos del menú público (sin auth, por sesión)
+    Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
+        ->middleware('throttle:tracking')->name('track');
+});
 
 // API ligera para carrito (por sesión, sin auth)
 Route::prefix('api/cart')->middleware('throttle:carrito')->group(function () {
@@ -269,6 +300,38 @@ Route::prefix('api/cart')->middleware('throttle:carrito')->group(function () {
     Route::post('/incr', [App\Http\Controllers\CartController::class, 'incr'])->name('api.cart.incr');
     Route::post('/remove', [App\Http\Controllers\CartController::class, 'remove'])->name('api.cart.remove');
     Route::post('/clear', [App\Http\Controllers\CartController::class, 'clear'])->name('api.cart.clear');
+});
+
+// Confirmar el pedido: es el paso que lo hace visible para el mozo, así que va con su
+// propio limitador (mucho más ajustado que el del carrito, ver AppServiceProvider).
+Route::post('/api/comanda/pedir', [App\Http\Controllers\ComandaClienteController::class, 'pedir'])
+    ->middleware('throttle:pedir')->name('api.comanda.pedir');
+Route::post('/api/comanda/mia', [App\Http\Controllers\ComandaClienteController::class, 'mia'])
+    ->middleware('throttle:carrito')->name('api.comanda.mia');
+
+// Pantalla del mozo. No usa el login de Laravel: entra por un link secreto del comercio
+// más un PIN, porque en un local la tablet la usa el que esté en el turno y dar de alta
+// un usuario por empleado, con la rotación que hay, termina en una cuenta compartida
+// igual pero con más trabajo. Ver App\Http\Middleware\MozoAutenticado.
+Route::prefix('mozo/{token}')->name('mozo.')->group(function () {
+    // 'abierto': las únicas dos rutas a las que se llega sin haber puesto el PIN.
+    Route::get('/', [App\Http\Controllers\MozoController::class, 'pin'])
+        ->middleware('mozo:abierto')->name('pin');
+    Route::post('/pin', [App\Http\Controllers\MozoController::class, 'validarPin'])
+        ->middleware(['mozo:abierto', 'throttle:20,1'])->name('pin.validar');
+
+    Route::middleware(['mozo', 'throttle:mozo'])->group(function () {
+        Route::get('/tablero', [App\Http\Controllers\MozoController::class, 'tablero'])->name('tablero');
+        Route::get('/estado', [App\Http\Controllers\MozoController::class, 'estado'])->name('estado');
+        Route::post('/salir', [App\Http\Controllers\MozoController::class, 'salir'])->name('salir');
+        Route::post('/mesa/{mesa}/abrir', [App\Http\Controllers\MozoController::class, 'abrirMesa'])->name('mesa.abrir');
+        Route::post('/comanda/{comanda}/item', [App\Http\Controllers\MozoController::class, 'agregarItem'])->name('item.agregar');
+        Route::patch('/comanda/{comanda}/item/{item}', [App\Http\Controllers\MozoController::class, 'cambiarCantidad'])->name('item.cantidad');
+        Route::delete('/comanda/{comanda}/item/{item}', [App\Http\Controllers\MozoController::class, 'borrarItem'])->name('item.borrar');
+        Route::post('/comanda/{comanda}/cerrar', [App\Http\Controllers\MozoController::class, 'cerrar'])->name('comanda.cerrar');
+        Route::post('/comanda/{comanda}/reabrir', [App\Http\Controllers\MozoController::class, 'reabrir'])->name('comanda.reabrir');
+        Route::get('/cerradas', [App\Http\Controllers\MozoController::class, 'cerradas'])->name('cerradas');
+    });
 });
 
 // Rutas de Analytics (requieren autenticación, usando slug)

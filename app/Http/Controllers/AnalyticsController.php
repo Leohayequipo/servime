@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ClassifyIntentsJob;
 use App\Models\ChatConversation;
+use App\Models\Comanda;
 use App\Models\Comercio;
 use App\Models\IntentClassificationRun;
 use App\Models\Menu;
@@ -250,9 +251,23 @@ class AnalyticsController extends Controller
         // viven acá, con el resto de las métricas.
         $resenaStats = $comercio->estadisticasResenas($periodo);
 
+        // Actividad por mesa. Sólo tiene sentido para el que usa los QR por mesa; el
+        // resto ni ve la sección.
+        $mesaStats = $comercio->tieneFeature('mesas')
+            ? $this->getMesaMetrics($comercio)
+            : null;
+
+        // Resumen del servicio. Va con `comandas` y no con `mesas`: sin la pantalla del
+        // mozo no hay comandas de las que sacar nada.
+        $servicioStats = $comercio->tieneFeature('comandas')
+            ? $this->getComandaMetrics($comercio)
+            : null;
+
         return view('analytics.comercio', compact(
             'chipStats',
             'resenaStats',
+            'mesaStats',
+            'servicioStats',
             'comercio',
             'threads',
             'threadsTotal',
@@ -272,6 +287,150 @@ class AnalyticsController extends Controller
             'fallasDelAsistente',
             'ultimaClasificacion'
         ));
+    }
+
+    /**
+     * Cómo viene el servicio: cuántas mesas se atendieron, cuánto duraron y cuánto sumaron.
+     *
+     * Sólo cuenta las comandas que tuvieron al menos un pedido. Una mesa que el mozo abrió
+     * y cerró sin cargar nada no es una mesa atendida, y metida en los promedios los tira
+     * abajo sin que se entienda por qué.
+     *
+     * NO devuelve cuánto dura una mesa, y no es un olvido. El cierre automático dispara
+     * tres horas después del último pedido, así que toda mesa que nadie cerró mide
+     * ~3 horas de más y arrastra el promedio de las demás. Medirlas hasta el último
+     * pedido era una opción, pero mezcla dos formas de medir en un mismo número y lo
+     * muestra igual que uno real. Un dato que no se puede sostener es peor que ninguno.
+     *
+     * @return array{
+     *     mesas: int, total_centavos: int, ticket_centavos: int,
+     *     items_promedio: float, cerradas_solas: int, abiertas: int, dias: int
+     * }|null
+     */
+    private function getComandaMetrics(Comercio $comercio, int $dias = 30): ?array
+    {
+        $comandas = Comanda::where('comercio_id', $comercio->id)
+            ->where('abierta_at', '>=', now()->subDays($dias))
+            ->withCount('items')
+            ->get();
+
+        $conPedidos = $comandas->where('items_count', '>', 0);
+
+        if ($conPedidos->isEmpty()) {
+            return null;
+        }
+
+        $cerradas = $conPedidos->where('estado', Comanda::CERRADA);
+
+        return [
+            'mesas' => $conPedidos->count(),
+            'total_centavos' => (int) $conPedidos->sum('total_centavos'),
+            'ticket_centavos' => (int) round($conPedidos->avg('total_centavos')),
+            'items_promedio' => round($conPedidos->avg('items_count'), 1),
+            // Las que nadie cerró y cerró el sistema por inactividad. Es un problema
+            // operativo real: mientras la comanda sigue abierta, la mesa figura ocupada en
+            // el tablero y el grupo que se sienta después no puede pedir.
+            'cerradas_solas' => $cerradas->where('cerrada_por', 'auto')->count(),
+            'abiertas' => $conPedidos->where('estado', Comanda::ABIERTA)->count(),
+            'dias' => $dias,
+        ];
+    }
+
+    /**
+     * Actividad por mesa: cuáles trabajan y cuáles no registran a nadie.
+     *
+     * La lista que de verdad sirve es la última: una mesa en servicio de la que no entró
+     * nadie en un mes casi nunca significa que nadie se sentó ahí, significa que el
+     * cartel se despegó, quedó tapado por el salero o salió mal impreso. Es el único
+     * número de este panel que se traduce en una acción de dos minutos.
+     *
+     * @return array{
+     *     ranking: \Illuminate\Support\Collection,
+     *     sinActividad: \Illuminate\Support\Collection,
+     *     mesasEnServicio: int,
+     *     visitasConMesa: int,
+     *     visitasSinMesa: int,
+     *     alertaConfiable: bool,
+     *     dias: int
+     * }
+     */
+    private function getMesaMetrics(Comercio $comercio, int $dias = 30): array
+    {
+        $mesas = $comercio->mesas()->activas()->get();
+
+        if ($mesas->isEmpty()) {
+            return [
+                'ranking' => collect(),
+                'sinActividad' => collect(),
+                'mesasEnServicio' => 0,
+                'visitasConMesa' => 0,
+                'visitasSinMesa' => 0,
+                'alertaConfiable' => false,
+                'dias' => $dias,
+            ];
+        }
+
+        // Se traen TAMBIÉN los eventos sin mesa, en la misma consulta. No es un capricho:
+        // sin ese número, "no entró nadie de la mesa 3" es una conclusión imposible de
+        // sacar. Todo el que entra por el QR general del local, por el link de las redes
+        // o por una URL compartida cae sin mesa, y si eso es la mayoría del tráfico
+        // entonces las mesas "muertas" no lo están: simplemente nadie usó SU cartel.
+        $eventos = TrackingEvent::forComercio($comercio->id)
+            ->recent($dias)
+            ->get(['event', 'data', 'session_id', 'mesa_id', 'user_agent', 'created_at']);
+
+        // Se cuenta por VISITA y no por evento: una mesa donde alguien tocó veinte platos
+        // no trabajó veinte veces más que la de al lado. Se reusa el mismo corte por
+        // inactividad que el resto del panel para que los números sean comparables.
+        $visitas = $this->agruparVisitas($eventos);
+
+        $visitasPorMesa = [];
+        $pedidosPorMesa = [];
+        $visitasSinMesa = 0;
+
+        foreach ($visitas as $eventosDeLaVisita) {
+            // La mesa se toma del primer evento con mesa de la visita: el cliente puede
+            // escanear el QR a mitad de camino (entró por el link y después usó el QR).
+            $mesaId = $eventosDeLaVisita->first(fn ($e) => $e->mesa_id !== null)?->mesa_id;
+
+            if ($mesaId === null) {
+                $visitasSinMesa++;
+
+                continue;
+            }
+
+            $visitasPorMesa[$mesaId] = ($visitasPorMesa[$mesaId] ?? 0) + 1;
+
+            if ($eventosDeLaVisita->contains(fn ($e) => $e->event === 'order_summary')) {
+                $pedidosPorMesa[$mesaId] = ($pedidosPorMesa[$mesaId] ?? 0) + 1;
+            }
+        }
+
+        $ranking = $mesas
+            ->map(fn ($mesa) => [
+                'numero' => $mesa->numero,
+                'etiqueta' => $mesa->etiqueta,
+                'visitas' => $visitasPorMesa[$mesa->id] ?? 0,
+                'pedidos' => $pedidosPorMesa[$mesa->id] ?? 0,
+            ])
+            ->sortByDesc('visitas')
+            ->values();
+
+        $conMesa = array_sum($visitasPorMesa);
+
+        return [
+            'ranking' => $ranking,
+            'sinActividad' => $ranking->where('visitas', 0)->pluck('numero')->values(),
+            'mesasEnServicio' => $mesas->count(),
+            'visitasConMesa' => $conMesa,
+            'visitasSinMesa' => $visitasSinMesa,
+            // Mandar a alguien a revisar carteles que están bien es peor que no avisarle:
+            // la próxima vez ignora el aviso. Sólo se afirma que el cartel falla cuando la
+            // mayoría del tráfico SÍ entra por QR de mesa; si no, se muestra el dato pero
+            // sin conclusión.
+            'alertaConfiable' => $conMesa > $visitasSinMesa,
+            'dias' => $dias,
+        ];
     }
 
     /**

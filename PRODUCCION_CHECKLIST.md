@@ -152,6 +152,23 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
       base local hay 13 filas huérfanas del 06/07/2026. No rompe nada, es basura que se
       acumula. Se arregla con una migración que agregue la FK con `cascadeOnDelete` y limpie
       lo viejo. El reset de actividad ya los borra a mano para no depender de esto.
+- [ ] **El QR de una mesa sirve para pedir desde cualquier lado, para siempre.** El `token`
+      de `mesas` es la única credencial y no vence: quien lo fotografíe o guarde la URL
+      (`/menu/{slug}?m=<token>`) puede volver desde su casa y abrirle una comanda a esa
+      mesa. No hay cobro, así que no es un robo — el daño es que el mozo ve entrar pedidos
+      que nadie hizo y **deja de confiar en la pantalla**, que es lo único que no se puede
+      permitir. Hoy lo único que lo frena es el limitador `pedir` (6/min por dispositivo,
+      40/min por IP), que acota el volumen pero no impide el pedido; y como paliativo
+      reactivo, el mozo puede borrar la ronda y el comercio rotar el token de esa mesa
+      desde el panel.
+      **Defensas evaluadas** (ninguna implementada, decisión del usuario 07/09/2026):
+      *(a)* no dejar abrir comanda con el local cerrado, usando `Comercio::estaAbierto()`
+      —corta el caso de la madrugada sin fricción para el cliente legítimo, pero no el
+      del que jode en horario—; *(b)* un switch por comercio "las mesas las abre el mozo",
+      que lo cierra del todo a cambio de perder lo que da valor al producto: que el cliente
+      pida sin esperar a nadie. **Descartadas:** rotar tokens automáticamente (rompe todos
+      los carteles impresos) y filtrar por la IP del local (los clientes usan datos
+      móviles, no el wifi: falsos positivos masivos).
 
 ## 🟢 8. Limpieza y cierre
 

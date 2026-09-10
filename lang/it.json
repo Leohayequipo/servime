@@ -9,6 +9,8 @@
     "Filtrar por Tags": "Filtra per tag",
     "Pedido": "Ordine",
     "Resumen para el camarero": "Riepilogo per il cameriere",
+    "Mesa": "Tavolo",
+    "Mesa detectada por el código QR": "Tavolo rilevato dal codice QR",
     "Vaciar": "Svuota",
     "Cerrar": "Chiudi",
     "Ver más opciones": "Altre opzioni",
@@ -33,5 +35,15 @@
     "No hay ítems agregados.": "Nessun articolo aggiunto.",
     "Total estimado:": "Totale stimato:",
     "¿Vaciar?": "Svuotare?",
-    "Quitar": "Rimuovi"
+    "Quitar": "Rimuovi",
+    "Pedir": "Ordina",
+    "El mozo lo ve al toque en su pantalla.": "Il cameriere lo vede subito sul suo schermo.",
+    "Ya pediste": "Già ordinato",
+    "lo agregó el mozo": "aggiunto dal cameriere",
+    "Enviando…": "Invio…",
+    "¡Pedido enviado!": "Ordine inviato!",
+    "No se pudo enviar el pedido. Probá de nuevo o avisale al mozo.": "Impossibile inviare l'ordine. Riprova o avvisa il cameriere.",
+    "Todavía no elegiste nada.": "Non hai ancora scelto nulla.",
+    "Escaneá el código QR de tu mesa para poder pedir.": "Scansiona il codice QR del tuo tavolo per ordinare.",
+    "Escaneá el código QR de tu mesa para poder pedir desde el teléfono.": "Scansiona il codice QR del tuo tavolo per ordinare dal telefono."
 }

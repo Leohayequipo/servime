@@ -9,6 +9,8 @@
     "Filtrar por Tags": "Filter by tags",
     "Pedido": "Order",
     "Resumen para el camarero": "Summary for the waiter",
+    "Mesa": "Table",
+    "Mesa detectada por el código QR": "Table detected from the QR code",
     "Vaciar": "Clear",
     "Cerrar": "Close",
     "Ver más opciones": "See more options",
@@ -33,5 +35,15 @@
     "No hay ítems agregados.": "No items added yet.",
     "Total estimado:": "Estimated total:",
     "¿Vaciar?": "Clear it?",
-    "Quitar": "Remove"
+    "Quitar": "Remove",
+    "Pedir": "Order",
+    "El mozo lo ve al toque en su pantalla.": "The waiter sees it right away on their screen.",
+    "Ya pediste": "Already ordered",
+    "lo agregó el mozo": "added by the waiter",
+    "Enviando…": "Sending…",
+    "¡Pedido enviado!": "Order sent!",
+    "No se pudo enviar el pedido. Probá de nuevo o avisale al mozo.": "Could not send the order. Try again or let the waiter know.",
+    "Todavía no elegiste nada.": "You haven't chosen anything yet.",
+    "Escaneá el código QR de tu mesa para poder pedir.": "Scan your table's QR code to order.",
+    "Escaneá el código QR de tu mesa para poder pedir desde el teléfono.": "Scan your table's QR code to order from your phone."
 }

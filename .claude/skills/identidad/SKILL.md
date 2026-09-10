@@ -31,9 +31,9 @@ Todo el color pasa por variables CSS declaradas en `resources/css/app.css`, que
     --c-ok:           11 122  87;  /* #0B7A57 éxito       — semántico      */
     --c-danger:      179  38  30;  /* #B3261E error       — semántico      */
     --c-warn:        138 101   8;  /* #8A6508 atención    — semántico      */
-    --c-line:        225 217 201;  /* #E1D9C9 bordes                       */
+    --c-line:        197 183 155;  /* #C5B79B bordes            (2,0:1)    */
     --c-elev-1:      242 237 227;  /* #F2EDE3 superficie base              */
-    --c-elev-2:      251 249 245;  /* #FBF9F5 papel: tarjetas y modales    */
+    --c-elev-2:      255 255 255;  /* #FFFFFF papel: tarjetas y modales    */
     --c-ink:          40  66  54;  /* #284236 verde profundo               */
     --c-ink-soft:     85 112  95;  /* #55705F salvia oscuro                */
     --c-bg:          242 237 227;  /* #F2EDE3 crema                        */
@@ -92,6 +92,28 @@ No son estimaciones: están medidos con la fórmula de luminancia relativa.
 | Éxito `#0B7A57` | 4,57:1 |
 | Error `#B3261E` | 5,60:1 |
 | Atención `#8A6508` | 4,56:1 |
+
+⚠️ **`--c-bg` no se toca sin recalibrar los semánticos.** Salvia, éxito y atención pasan
+AA por una décima: con el fondo en `#EDE7DA` caen a 4,40 / 4,33 / 4,32, los tres por
+debajo del mínimo. Si hay que oscurecer el crema, esos tres se ajustan en la misma pasada.
+
+**La separación entre capas la hace el borde, no el brillo.** Fondo y tarjeta están a
+1,17:1 —imperceptible— y subir ese número exige oscurecer el fondo, que es justo lo que
+rompe los semánticos. Por eso `--c-line` se llevó a `#C5B79B` (2,0:1 contra la tarjeta):
+el límite se ve sin mover un solo contraste de texto. Ese es el resorte a usar si en el
+futuro el panel vuelve a sentirse plano.
+
+| Sobre la tarjeta `#FFFFFF` | |
+|---|---|
+| Verde profundo `#284236` | 10,92:1 |
+| Salvia oscuro `#55705F` | 5,43:1 |
+| Terracota `#C0563A` | 4,53:1 |
+| Éxito `#0B7A57` | 5,34:1 |
+| Error `#B3261E` | 6,54:1 |
+| Atención `#8A6508` | 5,32:1 |
+
+> El papel pasó de `#FBF9F5` a blanco puro y **todos** subieron. Terracota estaba en
+> 4,31:1 —por debajo de AA— y ahora pasa: el cambio arregló un contraste que fallaba.
 
 > ⚠️ **Los semánticos NO son los mismos que en una paleta oscura.** Sobre crema, el
 > emerald `#10B981` da 2,17:1 y el ámbar `#EAB308` 1,64:1: invisibles. Un color que

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatConversation;
 use App\Models\Comercio;
+use App\Models\Mesa;
 use App\Services\ChatbotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -349,6 +350,8 @@ class ChatbotController extends Controller
 
             ChatConversation::create([
                 'comercio_id' => $comercio->id,
+                // Desde qué mesa se hizo la consulta (la puso ResolverMesa al escanear el QR).
+                'mesa_id' => Mesa::idDeSesion($comercio->id),
                 'session_id' => $sessionId,
                 'user_message' => $message,
                 // Todo lo que no sea 'escrito' lo armó la interfaz al tocar un botón, y los

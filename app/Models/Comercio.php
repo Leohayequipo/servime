@@ -47,6 +47,20 @@ class Comercio extends Model
         'resenas_activo',
         'resena_titulo',
         'resena_texto',
+        'mozo_token',
+        'mozo_pin_hash',
+        'mozo_token_rotado_at',
+        'menu_clasico_vista',
+    ];
+
+    /** Las dos formas de mostrar el menú clásico. */
+    public const VISTA_ARCHIVO = 'archivo';
+
+    public const VISTA_LISTA = 'lista';
+
+    /** El hash del PIN del mozo no sale nunca en un json ni en un dump. */
+    protected $hidden = [
+        'mozo_pin_hash',
     ];
 
     /**
@@ -470,6 +484,102 @@ class Comercio extends Model
     public function menus()
     {
         return $this->hasMany(Menu::class);
+    }
+
+    /** Mesas del local, en el orden en que están numeradas. */
+    public function mesas()
+    {
+        return $this->hasMany(Mesa::class)->orderBy('numero');
+    }
+
+    public function comandas()
+    {
+        return $this->hasMany(Comanda::class);
+    }
+
+    /** ¿Está activada la pantalla del mozo? */
+    public function tieneAccesoMozo(): bool
+    {
+        return filled($this->mozo_token) && filled($this->mozo_pin_hash);
+    }
+
+    /**
+     * Activa (o reconfigura) la pantalla del mozo con un PIN nuevo.
+     *
+     * El token sólo se genera la primera vez: cambiar el PIN no tiene por qué invalidar
+     * el link que ya está abierto en la tablet de la barra.
+     */
+    public function activarAccesoMozo(string $pin): void
+    {
+        $this->update([
+            'mozo_token' => $this->mozo_token ?: Str::random(24),
+            'mozo_pin_hash' => \Illuminate\Support\Facades\Hash::make($pin),
+            'mozo_token_rotado_at' => $this->mozo_token_rotado_at ?: now(),
+        ]);
+    }
+
+    /** Link nuevo: las tablets abiertas con el anterior quedan afuera. */
+    public function rotarTokenMozo(): void
+    {
+        $this->update([
+            'mozo_token' => Str::random(24),
+            'mozo_token_rotado_at' => now(),
+        ]);
+    }
+
+    public function desactivarAccesoMozo(): void
+    {
+        $this->update([
+            'mozo_token' => null,
+            'mozo_pin_hash' => null,
+            'mozo_token_rotado_at' => null,
+        ]);
+    }
+
+    public function pinMozoValido(string $pin): bool
+    {
+        return $this->mozo_pin_hash
+            && \Illuminate\Support\Facades\Hash::check($pin, $this->mozo_pin_hash);
+    }
+
+    /**
+     * ¿Hay un archivo de menú que se pueda mostrar?
+     *
+     * Mira el DISCO y no sólo la base: la ruta puede estar guardada y el archivo no
+     * existir (pasa al bajar una base de producción sin los archivos, o si se pierde en
+     * un deploy).
+     *
+     * Vive en el modelo y no en un controlador porque la vista del menú la renderizan
+     * tres sitios distintos —`MenuController::create`, `::edit` y `AdminController::editMenu`—
+     * y pasar el dato desde cada uno ya falló una vez: el admin tiraba
+     * "Undefined variable" porque era el único que no lo mandaba.
+     */
+    public function tieneArchivoDeMenu(): bool
+    {
+        $menu = $this->menus()->where('procesado', true)->where('activo', true)->first()
+            ?: $this->menus()->where('procesado', true)->latest()->first();
+
+        return $menu
+            && filled($menu->archivo_original)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($menu->archivo_original);
+    }
+
+    /**
+     * Qué se muestra en el menú clásico, resolviendo el caso imposible.
+     *
+     * Si el comercio eligió "archivo" pero no hay archivo (lo cargó por Excel, o el
+     * archivo se perdió), se muestra la lista igual: es preferible a dejarlo con el
+     * cartel de "menú no disponible" teniendo todos los platos cargados.
+     */
+    public function vistaMenuClasico(bool $hayArchivo): string
+    {
+        if (! $hayArchivo) {
+            return self::VISTA_LISTA;
+        }
+
+        return $this->menu_clasico_vista === self::VISTA_LISTA
+            ? self::VISTA_LISTA
+            : self::VISTA_ARCHIVO;
     }
 
     /**

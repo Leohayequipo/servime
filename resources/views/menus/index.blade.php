@@ -135,7 +135,7 @@
                                 <span class="mr-3">📱</span>
                                 QR Simple
                             </button>
-                            <button onclick="generateQRWithLogo()" 
+                            <button onclick="generateQRWithLogo()"
                                     class="w-full text-left px-4 py-3 text-sm text-text-primary hover:bg-primary-dark transition-colors duration-200 flex items-center">
                                 <span class="mr-3">🎨</span>
                                 QR con Logo
@@ -143,6 +143,16 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- El QR de arriba es el del local (vidriera, flyer, redes) y se queda como
+                     está. Éste lleva a los QR por mesa, que son otra cosa. --}}
+                @if($comercio->tieneFeature('mesas') || auth()->user()->isSuperAdmin())
+                    <a href="{{ route('mesas.index', $comercio) }}"
+                       class="btn-secondary">
+                        <span class="mr-2">🪑</span>
+                        Mesas y QR
+                    </a>
+                @endif
             </div>
 
             @if($menus->count() > 0)
