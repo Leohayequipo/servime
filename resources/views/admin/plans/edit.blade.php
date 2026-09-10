@@ -88,37 +88,20 @@
                 <div>
                     <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-3">Features incluidas</label>
                     @php $featuresActuales = old('features', $plan->features ?? []); @endphp
+                    {{-- Se recorren desde el modelo: cuando los checkboxes estaban escritos
+                         a mano acá y la lista válida en el `Rule::in` del controlador, sumar
+                         una feature a esta vista sin tocar la otra hacía que el panel la
+                         ofreciera y guardar fallara. Ahora agregar una es una línea en
+                         `Plan::FEATURES` y aparece en los dos lados. --}}
                     <div class="space-y-2">
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="analytics" @checked(in_array('analytics', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Analytics (panel de conversaciones)
-                        </label>
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="excel" @checked(in_array('excel', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Exportar / importar menú a Excel
-                        </label>
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="promociones" @checked(in_array('promociones', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Promociones del día
-                        </label>
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="intencion_ia" @checked(in_array('intencion_ia', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Clasificación de intención con IA (analytics)
-                        </label>
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="customizacion" @checked(in_array('customizacion', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Portada personalizada del menú
-                        </label>
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="mesas" @checked(in_array('mesas', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Mesas con QR propio (y métricas por mesa)
-                        </label>
-                        {{-- Separada de `mesas` a propósito: hay comercios que sólo quieren
-                             el QR por mesa y no una pantalla en vivo que sostener. --}}
-                        <label class="flex items-center gap-3 text-text-primary text-sm">
-                            <input type="checkbox" name="features[]" value="comandas" @checked(in_array('comandas', $featuresActuales)) class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                            Comandas y pantalla del mozo (requiere mesas)
-                        </label>
+                        @foreach(\App\Models\Plan::FEATURES as $clave => $etiqueta)
+                            <label class="flex items-center gap-3 text-text-primary text-sm">
+                                <input type="checkbox" name="features[]" value="{{ $clave }}"
+                                       @checked(in_array($clave, $featuresActuales))
+                                       class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                                {{ $etiqueta }}
+                            </label>
+                        @endforeach
                     </div>
                 </div>
 

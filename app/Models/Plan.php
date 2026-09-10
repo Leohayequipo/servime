@@ -26,6 +26,27 @@ class Plan extends Model
     ];
 
     /**
+     * Las features que se pueden activar por plan, con su etiqueta para el panel.
+     *
+     * Fuente única a propósito. Antes la lista estaba escrita a mano DOS veces —los
+     * checkboxes de la vista y el `Rule::in` del validador— y se desincronizaron: al sumar
+     * `mesas` y `comandas` se tocó sólo la vista, así que el panel las ofrecía y guardar
+     * fallaba con "The selected features.5 is invalid". El super admin veía la opción,
+     * la marcaba, y el plan no cambiaba.
+     *
+     * Al agregar una feature nueva, va acá y nada más.
+     */
+    public const FEATURES = [
+        'analytics' => 'Analytics (panel de conversaciones)',
+        'excel' => 'Exportar / importar menú a Excel',
+        'promociones' => 'Promociones del día',
+        'intencion_ia' => 'Clasificación de intención con IA (analytics)',
+        'customizacion' => 'Portada personalizada del menú',
+        'mesas' => 'Mesas con QR propio (y métricas por mesa)',
+        'comandas' => 'Comandas y pantalla del mozo (requiere mesas)',
+    ];
+
+    /**
      * Los modelos del desplegable, con el que ya tiene el plan siempre incluido.
      *
      * Sin esto, un plan con un modelo cargado por SQL que no esté en la lista muestra el

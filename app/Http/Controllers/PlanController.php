@@ -106,7 +106,10 @@ class PlanController extends Controller
             'modelo_ia' => ['required', 'string', 'max:50'],
             'max_tokens_chat' => ['required', 'integer', 'min:50', 'max:4000'],
             'features' => ['nullable', 'array'],
-            'features.*' => ['string', Rule::in(['analytics', 'excel', 'promociones', 'intencion_ia', 'customizacion'])],
+            // Del modelo y no escrita acá: cuando la lista vivía en dos lugares, sumar una
+            // feature a la vista sin tocar este `in` hacía que el panel la ofreciera y
+            // guardar fallara con "The selected features.N is invalid".
+            'features.*' => ['string', Rule::in(array_keys(Plan::FEATURES))],
             'orden' => ['nullable', 'integer', 'min:0'],
             'activo' => ['nullable', 'boolean'],
         ]);
