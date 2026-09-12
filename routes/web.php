@@ -139,6 +139,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/comercios/{comercio:slug}/portada/estado', [ComercioController::class, 'portadaEstado'])->name('comercios.portada.estado');
     Route::post('/comercios/{comercio:slug}/portada/reintentar', [ComercioController::class, 'portadaReintentar'])->name('comercios.portada.reintentar')->middleware('throttle:10,1');
 
+    // La portada se configura desde la pantalla del menú, que guarda por AJAX de a
+    // pedazos. El throttle es más alto que el del reintento porque acá entra también
+    // el encuadre, que se guarda cada vez que sueltan el marcador.
+    Route::post('/comercios/{comercio:slug}/portada', [ComercioController::class, 'portadaGuardar'])->name('comercios.portada.guardar')->middleware('throttle:30,1');
+
     // Mesas del local y sus QR. Van con la feature `mesas`: el comercio que no la tiene
     // sigue usando el QR único de siempre, que no se toca.
     Route::middleware('plan.feature:mesas')->group(function () {

@@ -2862,17 +2862,36 @@ class MenuController extends Controller
             return response()->json(['error' => 'No tienes permiso para actualizar la configuración.'], 403);
         }
 
-        // Parcial a propósito: el interruptor manda `activo` y los textos van por su
-        // propio botón. Cada uno pisa solo lo suyo.
+        // Parcial a propósito: el interruptor manda `activo`, los textos van por su
+        // propio botón y el link por el suyo. Cada uno pisa solo lo suyo.
         $validated = $request->validate([
             'activo' => 'sometimes|boolean',
             'titulo' => 'sometimes|nullable|string|max:80',
             'texto' => 'sometimes|nullable|string|max:200',
+
+            // Restringido a http/https a propósito: termina como `href` en el menú
+            // público, y `url` a secas deja pasar `javascript:` con ciertos formatos.
+            'google_review_url' => 'sometimes|nullable|url:http,https|max:255',
         ]);
+
+        // El link se guarda ANTES de mirar el interruptor: si vienen juntos (se pega
+        // el link y se activa en el mismo request) el chequeo de abajo tiene que ver
+        // el valor nuevo, no el que había.
+        if ($request->has('google_review_url')) {
+            $comercio->google_review_url = filled($validated['google_review_url'] ?? null)
+                ? trim($validated['google_review_url'])
+                : null;
+
+            // Sin link no hay nada que mostrar: el interruptor se apaga solo para que
+            // no quede "activo" apuntando a la nada.
+            if (blank($comercio->google_review_url)) {
+                $comercio->resenas_activo = false;
+            }
+        }
 
         if (($validated['activo'] ?? false) && blank($comercio->google_review_url)) {
             return response()->json([
-                'error' => 'Primero cargá el link de reseñas en los datos del comercio.',
+                'error' => 'Primero cargá el link de reseñas de Google, acá arriba.',
             ], 422);
         }
 
@@ -2896,6 +2915,9 @@ class MenuController extends Controller
                 'success' => true,
                 'activo' => $comercio->resenas_activo,
                 'por_defecto' => blank($comercio->resena_titulo) && blank($comercio->resena_texto),
+                // El interruptor arranca deshabilitado sin link; con esto el front lo
+                // habilita al guardarlo, sin recargar.
+                'tiene_link' => filled($comercio->google_review_url),
             ]);
         } catch (\Exception $e) {
             Log::error('Error al guardar reseñas: '.$e->getMessage());

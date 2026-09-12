@@ -31,11 +31,7 @@
                 </div>
             </div>
 
-            @if(session('success'))
-                <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 mb-6 text-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
+            <x-flash />
 
             {{-- Tarjetas de métrica. Ver components/stat.blade.php: el color aparece solo
                  cuando comunica algo, y el número va acompañado de su variación y su
@@ -226,11 +222,11 @@
                         // directo al chat o al clásico no la ve, y sin ese paso el salto a
                         // "eligieron" parecía una caída enorme que no existía.
                         $pasos = [
-                            ['Visitaron el menú', $fv, 'bg-blue-500'],
+                            ['Visitaron el menú', $fv, 'bg-accent-blue'],
                             ['Pasaron por la pantalla inicial', $fc, 'bg-accent-blue'],
                             ['Eligieron una opción', $fe, 'bg-warning'],
-                            ['Mostraron interés ("Lo quiero")', $fi, 'bg-green-500'],
-                            ['Revisaron su pedido', $fp, 'bg-emerald-600'],
+                            ['Mostraron interés ("Lo quiero")', $fi, 'bg-accent-green'],
+                            ['Revisaron su pedido', $fp, 'bg-accent-green'],
                         ];
                     @endphp
                     @if($fv > 0)
@@ -333,7 +329,7 @@
                                                         <span class="text-xs opacity-70">(−{{ $chip['abandonos'] }})</span>
                                                     @endif
                                                 </td>
-                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-warning') }}">
+                                                <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-accent-green' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-warning') }}">
                                                     {{ $chip['con_platos'] }} <span class="text-xs opacity-70">({{ $chip['efectividad'] }}%)</span>
                                                 </td>
                                             </tr>
@@ -366,7 +362,7 @@
                                         <div class="text-xs text-text-secondary mt-0.5">Se les mostró</div>
                                     </div>
                                     <div>
-                                        <div class="text-2xl font-bold text-green-500 tabular-nums">{{ $resenaStats['clicks'] }}</div>
+                                        <div class="text-2xl font-bold text-accent-green tabular-nums">{{ $resenaStats['clicks'] }}</div>
                                         <div class="text-xs text-text-secondary mt-0.5">Fueron a Google</div>
                                     </div>
                                     <div>
@@ -627,7 +623,7 @@
                                 <span class="truncate">{{ $promo }}</span><b>{{ $count }}</b>
                             </div>
                             <div class="h-2 bg-accent-gray/40 rounded">
-                                <div class="h-2 bg-red-500 rounded" style="width: {{ round($count / $promoMax * 100) }}%"></div>
+                                <div class="h-2 bg-danger rounded" style="width: {{ round($count / $promoMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
@@ -655,7 +651,7 @@
                                 <span class="truncate">{{ $dish }}</span><b>{{ $count }}</b>
                             </div>
                             <div class="h-2 bg-accent-gray/40 rounded">
-                                <div class="h-2 bg-green-500 rounded" style="width: {{ round($count / $dishMax * 100) }}%"></div>
+                                <div class="h-2 bg-accent-green rounded" style="width: {{ round($count / $dishMax * 100) }}%"></div>
                             </div>
                         </div>
                     @empty
@@ -848,7 +844,7 @@
                                              lista de números sueltos. Verde = el asistente resolvió;
                                              ámbar = no encontró nada del menú para ofrecer. --}}
                                         <div class="h-1.5 bg-accent-gray/40 rounded overflow-hidden">
-                                            <div class="h-1.5 rounded {{ $question->resuelta === false ? 'bg-warning' : 'bg-blue-500' }}"
+                                            <div class="h-1.5 rounded {{ $question->resuelta === false ? 'bg-warning' : 'bg-accent-blue' }}"
                                                  style="width: {{ round($question->frequency / $qMax * 100) }}%"></div>
                                         </div>
                                         @if($question->resuelta === false)

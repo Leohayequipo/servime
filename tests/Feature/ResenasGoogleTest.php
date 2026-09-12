@@ -188,6 +188,67 @@ class ResenasGoogleTest extends TestCase
         $this->assertTrue($comercio->refresh()->resenas_activo);
     }
 
+    public function test_el_link_se_guarda_desde_la_pantalla_del_menu(): void
+    {
+        $user = User::factory()->create();
+        $comercio = $this->comercioConPlan(attrs: [
+            'user_id' => $user->id,
+            'google_review_url' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/comercios/{$comercio->slug}/menus/update-resenas", [
+                'google_review_url' => 'https://g.page/r/abc',
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true, 'tiene_link' => true]);
+
+        $this->assertSame('https://g.page/r/abc', $comercio->refresh()->google_review_url);
+    }
+
+    public function test_el_link_y_el_switch_pueden_venir_juntos(): void
+    {
+        $user = User::factory()->create();
+        $comercio = $this->comercioConPlan(attrs: [
+            'user_id' => $user->id,
+            'google_review_url' => null,
+        ]);
+
+        // El chequeo de "no se puede activar sin link" tiene que mirar el link que
+        // viene en este request, no el que había: si no, pegar el link y activarlo
+        // de una devolvía 422 sobre un dato que sí estaba llegando.
+        $this->actingAs($user)
+            ->postJson("/comercios/{$comercio->slug}/menus/update-resenas", [
+                'google_review_url' => 'https://g.page/r/abc',
+                'activo' => true,
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true, 'activo' => true]);
+
+        $this->assertTrue($comercio->refresh()->resenas_activo);
+    }
+
+    public function test_vaciar_el_link_desde_el_menu_apaga_el_switch(): void
+    {
+        $user = User::factory()->create();
+        $comercio = $this->comercioConPlan(attrs: [
+            'user_id' => $user->id,
+            'google_review_url' => 'https://g.page/r/abc',
+            'resenas_activo' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/comercios/{$comercio->slug}/menus/update-resenas", [
+                'google_review_url' => '',
+            ])
+            ->assertOk()
+            ->assertJson(['tiene_link' => false, 'activo' => false]);
+
+        $comercio->refresh();
+        $this->assertNull($comercio->google_review_url);
+        $this->assertFalse($comercio->resenas_activo);
+    }
+
     public function test_no_se_puede_tocar_el_switch_de_otro_comercio(): void
     {
         $ajeno = User::factory()->create();
@@ -226,13 +287,15 @@ class ResenasGoogleTest extends TestCase
 
         $this->actingAs($user)
             ->get("/comercios/{$comercio->slug}/edit")
-            ->assertOk()
-            ->assertSee('Link de reseñas de Google', false);
+            ->assertOk();
 
+        // El link y el interruptor están en la misma pantalla: tenerlos separados
+        // obligaba a cargar el link en el comercio para volver acá a activarlo.
         $this->actingAs($user)
             ->get("/comercios/{$comercio->slug}/menus/create")
             ->assertOk()
-            ->assertSee('resenas-switch', false);
+            ->assertSee('resenas-switch', false)
+            ->assertSee('Link de reseñas de Google', false);
     }
 
     public function test_el_switch_no_aparece_sin_la_feature_del_plan(): void

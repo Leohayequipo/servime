@@ -69,14 +69,7 @@ class ComercioController extends Controller
     {
         $user = auth()->user();
 
-        // Validar los datos
-        $validationRules = [
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'direccion' => 'nullable|string|max:255',
-            'horario' => 'nullable|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ];
+        $validationRules = $this->reglasBasicas();
 
         if ($user->isSuperAdmin()) {
             $validationRules['user_id'] = 'required|exists:users,id';
@@ -103,9 +96,13 @@ class ComercioController extends Controller
         }
         $comercio->nombre = $validated['nombre'];
         $comercio->slug = Comercio::generarSlugUnico($validated['nombre']);
-        $comercio->descripcion = $validated['descripcion'];
-        $comercio->direccion = $validated['direccion'];
-        $comercio->horario = $validated['horario'];
+
+        // `?? null`: los campos opcionales pueden no venir en el request. El formulario
+        // los manda siempre —vacíos, pero los manda—, así que leerlos directo funcionaba
+        // por casualidad; un alta con sólo el nombre tiraba "Undefined array key" y 500.
+        $comercio->descripcion = $validated['descripcion'] ?? null;
+        $comercio->direccion = $validated['direccion'] ?? null;
+        $comercio->horario = $validated['horario'] ?? null;
 
         // Asignar plan: el elegido por admin, o Pro por defecto
         if ($user->isSuperAdmin() && ! empty($validated['plan_id'])) {
@@ -128,8 +125,15 @@ class ComercioController extends Controller
             $comercio->save();
         }
 
-        // Redirigir con mensaje de éxito
-        return redirect()->route('dashboard')->with('success', 'Comercio creado exitosamente');
+        // A los menús del comercio recién creado, no al dashboard.
+        //
+        // El alta pide cuatro datos y el menú que ve el cliente necesita bastante más:
+        // la carta, la portada, los horarios. Terminar en el dashboard con un "creado
+        // exitosamente" dejaba al comerciante sin saber que faltaba todo eso ni dónde
+        // se cargaba. Ahí lo espera `x-comercios.pendientes` con la lista y los links.
+        return redirect()
+            ->route('menus.index', $comercio)
+            ->with('success', "Listo, «{$comercio->nombre}» ya existe. Ahora cargá tu menú.");
     }
 
     /**
@@ -138,6 +142,29 @@ class ComercioController extends Controller
     public function show(string $id)
     {
         //
+    }
+
+    /**
+     * Los campos que se piden igual al crear y al editar.
+     *
+     * Estaban escritos dos veces, una en store() y otra en update(). El tope del logo
+     * era el mismo en los dos lados por costumbre, no porque algo lo garantizara: bajarlo
+     * en una pantalla y no en la otra pasaba sin que ningún test se quejara.
+     *
+     * Los acompaña el componente `x-comercios.datos-basicos`, que dibuja estos mismos
+     * campos en las dos vistas.
+     *
+     * @return array<string, string>
+     */
+    private function reglasBasicas(): array
+    {
+        return [
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'direccion' => 'nullable|string|max:255',
+            'horario' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ];
     }
 
     /**
@@ -170,18 +197,12 @@ class ComercioController extends Controller
             abort(403, 'No tienes permiso para editar este comercio.');
         }
 
-        $validated = $request->validate([
-            // Información básica del comercio
-            'nombre' => 'required|string|max:255',
-
+        $validated = $request->validate($this->reglasBasicas() + [
             // URL pública. Sólo la aplica el super admin (ver update()); si la
             // manda un usuario común, se ignora.
             'slug' => 'nullable|string|max:255|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
 
-            'descripcion' => 'nullable|string',
             'tagline' => 'nullable|string|max:80',
-            'direccion' => 'nullable|string|max:255',
-            'horario' => 'nullable|string|max:255',
 
             // Horarios estructurados: 7 días (ISO), hasta 2 turnos cada uno.
             // El campo `horario` de arriba sigue siendo el texto que se muestra.
@@ -258,7 +279,6 @@ class ComercioController extends Controller
         // tira "Undefined array key" y devuelve un 500. El formulario los manda
         // siempre, pero cualquier request parcial (AJAX, integración) rompía.
         $comercio->descripcion = $validated['descripcion'] ?? null;
-        $comercio->tagline = $validated['tagline'] ?? null;
         $comercio->direccion = $validated['direccion'] ?? null;
         $comercio->horario = $validated['horario'] ?? null;
         $comercio->horarios = $this->armarHorarios($validated['horarios'] ?? null);
@@ -289,10 +309,18 @@ class ComercioController extends Controller
             $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
         }
 
-        // Este NO usa `?? null` como sus vecinos, a propósito. Hay requests parciales que
-        // reusan este endpoint —borrar el logo manda su propio FormData con un puñado de
-        // campos—, y con el patrón de al lado borrar el logo le borraba al comercio el
-        // link de reseñas sin que nadie tocara ese campo. Solo se escribe si vino.
+        // La frase del menú se configura en la pantalla del menú, con el resto de la
+        // portada, así que este formulario ya no la manda. Con `?? null` —el patrón de
+        // sus vecinos— guardar los datos del comercio se la borraba al comercio sin que
+        // nadie tocara ese campo. Sólo se escribe si vino.
+        if ($request->has('tagline')) {
+            $comercio->tagline = $validated['tagline'] ?? null;
+        }
+
+        // Este NO usa `?? null` como sus vecinos, por lo mismo: hay requests parciales
+        // que reusan este endpoint —borrar el logo manda su propio FormData con un
+        // puñado de campos—, y con aquel patrón borrar el logo le borraba al comercio el
+        // link de reseñas. Solo se escribe si vino.
         if ($request->has('google_review_url')) {
             $comercio->google_review_url = $validated['google_review_url'] ?? null;
 
@@ -693,6 +721,72 @@ class ComercioController extends Controller
         GenerateBrandThemeJob::dispatch($comercio);
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Guarda la portada desde la pantalla del menú, por AJAX.
+     *
+     * Vive en este controlador, y no en MenuController, porque toda la
+     * maquinaria de la portada —guardar el original, borrar los derivados,
+     * generar el tema, publicar en public_html— ya está acá, igual que
+     * `portadaEstado` y `portadaReintentar`.
+     *
+     * Es PARCIAL a propósito, al revés que update(): cada campo se escribe
+     * sólo si vino. La pantalla del menú guarda de a pedazos (el encuadre
+     * solo al soltar el marcador, el tagline solo con su botón), así que un
+     * endpoint que exigiera el formulario entero —nombre, colores, chatbot—
+     * no servía. Ese es justamente el motivo por el que la portada no podía
+     * salir del formulario grande hasta ahora.
+     */
+    public function portadaGuardar(Request $request, Comercio $comercio)
+    {
+        $this->autorizarComercio($comercio);
+
+        // Mismos límites que en update(): el máximo no es por el peso del
+        // archivo sino por la memoria de GD (ancho × alto × 4 bytes).
+        $validated = $request->validate([
+            'portada' => 'nullable|image|max:8192|dimensions:max_width=8000,max_height=8000',
+            'portada_focal_x' => 'nullable|integer|min:0|max:100',
+            'portada_focal_y' => 'nullable|integer|min:0|max:100',
+            'tagline' => 'nullable|string|max:80',
+        ]);
+
+        if ($request->boolean('delete_portada')) {
+            // No se bloquea por plan: si el comercio bajó de plan tiene que
+            // poder sacar su portada igual.
+            $this->limpiarPortada($comercio);
+        } elseif ($request->hasFile('portada')) {
+            if (! auth()->user()->isSuperAdmin() && ! $comercio->puedePersonalizarPortada()) {
+                return response()->json([
+                    'error' => 'La portada personalizada no está disponible en el plan actual.',
+                ], 403);
+            }
+
+            $this->guardarPortada($comercio, $request->file('portada'));
+        }
+
+        if ($request->filled('portada_focal_x')) {
+            $comercio->portada_focal_x = (int) $validated['portada_focal_x'];
+            $comercio->portada_focal_y = (int) ($validated['portada_focal_y'] ?? 50);
+        }
+
+        if ($request->has('tagline')) {
+            $comercio->tagline = $validated['tagline'] ?? null;
+        }
+
+        $comercio->save();
+
+        // Después del save() para que portada_url ya esté persistida.
+        if ($comercio->portada_estado === 'procesando') {
+            $this->generarTemaDePortada($comercio);
+        }
+
+        return response()->json([
+            'success' => true,
+            // `fresh()`: generarTemaDePortada() puede haber resuelto el tema en
+            // caliente y dejado el estado en 'listo' por su cuenta.
+            'estado' => $comercio->fresh()->portada_estado,
+        ]);
     }
 
     /** Super admin con cualquiera; el resto, sólo con lo suyo. */

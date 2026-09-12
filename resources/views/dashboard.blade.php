@@ -65,43 +65,17 @@
                                 <span class="text-text-secondary/70">({{ $pctC }}%)</span>
                             </p>
                             <div class="w-full h-2 bg-accent-gray/40 rounded-full overflow-hidden">
-                                <div class="h-2 rounded-full {{ $pctC >= 100 ? 'bg-red-500' : ($pctC >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pctC }}%"></div>
+                                <div class="h-2 rounded-full {{ $pctC >= 100 ? 'bg-danger' : ($pctC >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pctC }}%"></div>
                             </div>
                             @if($pctC >= 100)
-                                <p class="text-xs text-red-300 mt-2">Llegaste al límite del mes. El asistente se reactiva el mes que viene o ampliando tu plan.</p>
+                                <p class="text-xs text-danger mt-2">Llegaste al límite del mes. El asistente se reactiva el mes que viene o ampliando tu plan.</p>
                             @endif
                         @endif
                     </div>
                 @endforeach
             @endunless
 
-            <!-- Flash Messages -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="relative overflow-hidden bg-green-900/20 border border-green-500/30 rounded-2xl p-5">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span class="text-lg">✓</span>
-                            </div>
-                            <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                        </div>
-                        <div class="absolute bottom-0 left-0 h-0.5 w-full bg-accent-green hover:brightness-95 animate-progress-bar"></div>
-                    </div>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="mb-8">
-                    <div class="relative overflow-hidden bg-red-900/20 border border-red-500/30 rounded-2xl p-5">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span class="text-lg">⚠️</span>
-                            </div>
-                            <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                        </div>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             <!-- Métricas -->
             @if(auth()->user()->isSuperAdmin())

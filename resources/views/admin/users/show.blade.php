@@ -52,7 +52,7 @@
                             @if($user->email_verified_at)
                                 <p class="text-accent-green font-medium">✓ Verificado <span class="text-text-secondary text-xs font-normal">· {{ $user->email_verified_at->format('d/m/Y H:i') }}</span></p>
                             @else
-                                <p class="text-red-400 font-medium">✗ No verificado</p>
+                                <p class="text-danger font-medium">✗ No verificado</p>
                             @endif
                         </div>
                     </div>

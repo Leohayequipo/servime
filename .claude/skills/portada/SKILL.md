@@ -59,7 +59,33 @@ no mandar píxeles que ninguna pantalla va a mostrar.
 > el comercio no controlaba ninguno. El hero pasó de ~51 KB a ~95 KB y es el precio de eso.
 
 En el panel: vista previa con la proporción real del celular + la foto entera con un marcador
-que se clickea o arrastra (`pointerdown/move`, anda con mouse y con dedo).
+que se clickea o arrastra (`pointerdown/move`, anda con mouse y con dedo). Se persiste al
+**soltar**, no en cada `pointermove`: arrastrar dispara decenas de eventos por segundo.
+
+## Dónde se configura: en la pantalla del MENÚ, no en la del comercio
+
+`menus/create.blade.php` (la pantalla grande de gestión del menú, que se llama `create` pero
+también edita), tarjeta **`#bloque-portada`**. Ahí están la foto, el encuadre, el tagline, la
+paleta detectada y el botón del acento sugerido.
+
+**No está en `comercios/edit`**, que es donde vivía hasta sep-2026. Los campos siguen siendo de
+`comercios` —igual que `primary_color`, `chips` y las reseñas, que ya se editaban desde acá—,
+pero lo que se configura es *la pantalla que el cliente ve al escanear el QR*, así que va con el
+resto de eso. Repartido en dos pantallas, dejar una sola cosa lista obligaba a ir y volver: el
+caso testigo era el interruptor de reseñas, que mostraba un cartel mandando a «los datos del
+comercio» a buscar el link que lo habilita.
+
+Guarda por **`POST /comercios/{slug}/portada`** (`ComercioController::portadaGuardar`,
+`comercios.portada.guardar`, throttle 30/min), no con el formulario de la pantalla. Es **parcial
+a propósito**, al revés que `update()`: cada campo se escribe sólo si vino, porque cada pedazo
+tiene su propio botón. El endpoint vive en `ComercioController` y no en `MenuController` porque
+toda la maquinaria de la portada ya está ahí, igual que `portadaEstado` y `portadaReintentar`.
+
+> ⚠️ **Al sacar un campo del formulario del comercio, revisar `update()`.** Sus campos se
+> escriben con `$validated['x'] ?? null`, así que un campo que el form ya no manda se **borra
+> solo** en cada guardado. Le pasó a `tagline` al mudarlo; ahora va con guarda `$request->has()`,
+> como `google_review_url` y `pedido_habilitado`, que ya habían tropezado con lo mismo. Hay un
+> test que lo fija.
 
 **4 · Paleta:**
 - **Base** = promedio de *todos* los píxeles, con el **tono intacto** (es lo único que el
@@ -134,6 +160,22 @@ configurable: la lista de candidatos se arma en este orden y se cortan los 3 pri
 
 Cada chip no filtra: **manda una pregunta al chat** (`/chat?q=...`), y el front la dispara como
 un mensaje normal.
+
+> ⚠️ **De qué menú salen, cuando hay varios.** Un comercio puede tener N menús pero sólo uno
+> **activo** (el primero nace activo, los demás no; `activar()` desactiva al resto). La regla
+> para resolver cuál se muestra es **`Comercio::menuVigente()`**: el activo, o **el último
+> procesado si ninguno quedó activo**.
+>
+> Ese plan B estaba copiado en cuatro lugares y a uno le faltaba: `getCategoriasDelMenu()` y
+> `getTagsDelMenu()` exigían `activo` y devolvían vacío. Se veía como que la carta y el chat
+> funcionaban bien pero los chips caían al genérico 🍽️ «¿Qué tienen?», sin nada en el log.
+> Ahora la regla vive en un solo método (`tests/Feature/MenuVigenteTest.php`).
+>
+> El desempate es `created_at` y después **`id`**: dos menús subidos en el mismo segundo
+> comparten `created_at` y con sólo `latest()` el "último" podía ser el anterior.
+>
+> `ChatbotService::menusParaContexto()` sigue con su propia versión, porque devuelve una
+> colección y además filtra por `contexto_gpt`. Tiene el mismo plan B.
 
 Dos cosas medidas en Azopardo (26 candidatos, 22 de ellos categorías):
 
@@ -354,4 +396,30 @@ ya están, con `--force` para que no borre nada sin pedirlo.
   día, la hora y si el local está abierto, y el mensaje de respaldo también los usa.
 - **No hay aviso de cola frenada**: si el worker está caído, se descubre a mano.
 - El **cron del worker en producción no está en el repo**, vive sólo en el hPanel de Hostinger.
-- `store()` no maneja portada: se configura después de crear, desde editar (decisión, no olvido).
+- `store()` no maneja portada: se configura después de crear, desde la pantalla del menú
+  (decisión, no olvido). No podría manejarla aunque se quisiera: el archivo se guarda en
+  `comercios/{id}/portada`, el encuadre se elige sobre la imagen **ya procesada** y el polling
+  de estado necesita el slug. Nada de eso existe antes del `save()`.
+- ~~Crear un comercio no lleva a ningún lado~~ **(resuelto).** `store()` ahora redirige a
+  `menus.index` del comercio nuevo, y ahí lo espera **`x-comercios.pendientes`** con el estado
+  de la configuración. La lista sale de **`Comercio::pasosConfiguracion()`** —menú, portada,
+  horarios, logo—, que devuelve **los cuatro pasos siempre** con un flag `completo`;
+  `pasosPendientes()` es el filtro de los que faltan. La portada sólo se ofrece si el plan la
+  incluye, y cada paso lleva ancla (`#bloque-portada`, `#horariosGrilla`) porque si no hay dos
+  links al mismo lado y el segundo parece un error.
+
+  **El bloque se muestra siempre, en dos estados.** Con algo pendiente, el checklist entero:
+  lo hecho tildado y tachado, lo que falta con su link. Con todo hecho, una sola línea
+  («Tu menú está configurado»). Se probaron las dos puntas y ninguna servía sola: esconderlo
+  al terminar borraba el progreso y hacía que la lista cambiara de tamaño sola, y dejar los
+  cuatro renglones tildados para siempre es ruido permanente en una pantalla de trabajo.
+- ~~Los 5 campos comunes de crear y editar están duplicados~~ **(resuelto).** Van en
+  **`x-comercios.datos-basicos`** (nombre, descripción, dirección, horario) y
+  **`x-comercios.logo`**, los dos con `$comercio` null al crear. Las reglas salen de
+  **`ComercioController::reglasBasicas()`**, que usan `store()` y `update()`.
+  El markup de editar repetía a mano las diez clases que `.input-field` ya agrupa.
+
+  > Al unificar apareció un bug de `store()`: leía `$validated['descripcion']` sin `?? null`,
+  > así que un alta con sólo el nombre tiraba **500**. No se notaba porque el formulario
+  > manda los campos siempre, vacíos pero presentes. Mismo patrón que ya había mordido en
+  > `update()` con `tagline` y `google_review_url`.

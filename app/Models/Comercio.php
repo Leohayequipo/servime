@@ -556,12 +556,81 @@ class Comercio extends Model
      */
     public function tieneArchivoDeMenu(): bool
     {
-        $menu = $this->menus()->where('procesado', true)->where('activo', true)->first()
-            ?: $this->menus()->where('procesado', true)->latest()->first();
+        $menu = $this->menuVigente();
 
         return $menu
             && filled($menu->archivo_original)
             && \Illuminate\Support\Facades\Storage::disk('public')->exists($menu->archivo_original);
+    }
+
+    /**
+     * Los pasos para que el menú público del comercio esté completo, cada uno con si
+     * ya está hecho o no.
+     *
+     * Existe porque crear un comercio dejaba al comerciante en el dashboard con un
+     * "creado exitosamente" y nada más: sin menú, sin portada, sin horarios y sin
+     * ninguna señal de que faltaba todo eso. El alta pide cuatro datos; el menú que ve
+     * el cliente necesita bastante más.
+     *
+     * Devuelve los cuatro pasos siempre, completos o no: la vista los usa para mostrar
+     * un checklist con lo que falta resaltado y lo hecho tildado, no sólo lo pendiente.
+     *
+     * El orden es el del recorrido real: sin menú cargado, la portada no tiene sentido.
+     *
+     * @return list<array{texto: string, detalle: string, ruta: string, completo: bool}>
+     */
+    public function pasosConfiguracion(): array
+    {
+        $pasos = [
+            [
+                'texto' => 'Cargá tu menú',
+                'detalle' => 'Subí el PDF o la foto de tu carta y la IA extrae los platos.',
+                'ruta' => route('menus.create', $this),
+                'completo' => $this->menus()->where('procesado', true)->exists(),
+            ],
+        ];
+
+        // La portada es feature de plan: al que no la tiene no se le ofrece algo que no
+        // puede hacer.
+        if ($this->puedePersonalizarPortada()) {
+            $pasos[] = [
+                'texto' => 'Subí una portada',
+                'detalle' => 'De esa foto salen el fondo y los colores de tu menú.',
+                // Misma pantalla que el paso anterior, pero con ancla: sin esto son dos
+                // links al mismo lado y el segundo parece un error.
+                'ruta' => route('menus.create', $this).'#bloque-portada',
+                'completo' => $this->tienePortada(),
+            ];
+        }
+
+        $pasos[] = [
+            'texto' => 'Cargá tus horarios',
+            'detalle' => 'Con esto el menú muestra si estás abierto; sin esto no muestra nada.',
+            'ruta' => route('comercios.edit', $this).'#horariosGrilla',
+            'completo' => filled($this->horarios),
+        ];
+
+        $pasos[] = [
+            'texto' => 'Subí tu logo',
+            'detalle' => 'Se usa en el panel y en el QR con logo.',
+            'ruta' => route('comercios.edit', $this).'#logo',
+            'completo' => filled($this->logo_url),
+        ];
+
+        return $pasos;
+    }
+
+    /**
+     * Sólo lo que falta, de `pasosConfiguracion()`.
+     *
+     * @return list<array{texto: string, detalle: string, ruta: string, completo: bool}>
+     */
+    public function pasosPendientes(): array
+    {
+        return array_values(array_filter(
+            $this->pasosConfiguracion(),
+            fn (array $paso) => ! $paso['completo']
+        ));
     }
 
     /**
@@ -778,14 +847,38 @@ class Comercio extends Model
     }
 
     /**
-     * Obtener categorías del menú activo
+     * El menú que se le muestra al cliente: el activo, o el último procesado.
+     *
+     * El plan B no es un detalle. Un comercio puede quedarse sin ningún menú marcado
+     * como activo —borrando el que lo estaba, por ejemplo—, y ahí la pregunta "¿cuál
+     * muestro?" se responde en cuatro lugares distintos del sistema. Tres tenían este
+     * plan B y uno no: `getCategoriasDelMenu()` y `getTagsDelMenu()` exigían `activo`
+     * y devolvían vacío.
+     *
+     * Se veía así: el cliente entraba, la carta se mostraba bien y el chat respondía
+     * bien, pero los tres chips de la portada caían al genérico "¿Qué tienen?" en vez
+     * de ofrecer las promos y las categorías del comercio. Sin ningún error en el log.
+     *
+     * Por eso vive acá y no copiado en cada lugar: la regla es una sola.
+     */
+    public function menuVigente(): ?Menu
+    {
+        return $this->menus()->where('procesado', true)->where('activo', true)->first()
+            ?: $this->menus()->where('procesado', true)
+                ->orderByDesc('created_at')
+                // Desempate por id: dos menús subidos en el mismo segundo comparten
+                // `created_at` y el orden queda librado a lo que devuelva la base. Con
+                // sólo `latest()` el "último" podía ser el anterior.
+                ->orderByDesc('id')
+                ->first();
+    }
+
+    /**
+     * Obtener categorías del menú que se le muestra al cliente
      */
     public function getCategoriasDelMenu(): array
     {
-        $menuActivo = $this->menus()
-            ->where('activo', true)
-            ->where('procesado', true)
-            ->first();
+        $menuActivo = $this->menuVigente();
 
         if (! $menuActivo || ! $menuActivo->contexto_gpt) {
             return [];
@@ -838,15 +931,12 @@ class Comercio extends Model
     }
 
     /**
-     * Obtener todos los tags únicos del menú activo
+     * Obtener todos los tags únicos del menú que se le muestra al cliente
      */
     public function getTagsDelMenu(): array
     {
         try {
-            $menuActivo = $this->menus()
-                ->where('activo', true)
-                ->where('procesado', true)
-                ->first();
+            $menuActivo = $this->menuVigente();
 
             if (! $menuActivo || ! $menuActivo->contexto_gpt) {
                 return [];

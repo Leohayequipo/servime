@@ -36,91 +36,37 @@
                 </div>
             </div>
 
-            <!-- Success Messages -->
-            @if(session('success'))
-                <div class="mb-8 animate-fade-in-down js-flash">
-                    <div class="relative overflow-hidden bg-accent-green/15 border border-green-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <!-- Animated background -->
-                        <div class="absolute inset-0 bg-accent-green/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-accent-green hover:brightness-95 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                                    <span class="text-white text-xl">✨</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-green-100 mb-1">¡Éxito!</h3>
-                                <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-accent-green hover:brightness-95 rounded-full animate-progress-bar"></div>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
-            <!-- Error Messages -->
-            @if(session('error'))
-                <div class="mb-8 animate-fade-in-down js-flash">
-                    <div class="relative overflow-hidden bg-danger/15 border border-red-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                        <!-- Animated background -->
-                        <div class="absolute inset-0 bg-danger/10 animate-pulse"></div>
-                        
-                        <div class="relative flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-danger hover:brightness-95 rounded-full flex items-center justify-center shadow-lg animate-shake">
-                                    <span class="text-white text-xl">⚠️</span>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="text-lg font-bold text-red-100 mb-1">Error</h3>
-                                <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Progress bar -->
-                        <div class="absolute bottom-0 left-0 h-1 bg-danger hover:brightness-95 rounded-full animate-progress-bar"></div>
-                    </div>
-                </div>
-            @endif
-
-            <script>
-                // Auto-cerrar los carteles flash a los 3s (sincronizado con la barra de progreso)
-                document.addEventListener('DOMContentLoaded', function () {
-                    document.querySelectorAll('.js-flash').forEach(function (el) {
-                        setTimeout(function () {
-                            el.style.transition = 'opacity .5s ease';
-                            el.style.opacity = '0';
-                            setTimeout(function () { el.remove(); }, 500);
-                        }, 3000);
-                    });
-                });
-            </script>
+            {{-- Lo que falta configurar. Se esconde solo cuando está todo. --}}
+            <x-comercios.pendientes :comercio="$comercio" />
 
             <!-- Action Buttons -->
+            {{-- Una sola acción con fondo lleno y el resto en secundario.
+                 Antes eran cuatro bloques de color en fila —verde, terracota, terracota,
+                 blanco— y no se entendía cuál era la acción principal: todos gritaban lo
+                 mismo. Crear el menú es lo que se viene a hacer acá; ver la página y sacar
+                 el QR son consultas.
+
+                 El verde de `btn-success` además no era de marca: es el semántico de
+                 éxito, y usarlo como color de acción le saca el significado (ver la skill
+                 `identidad`). --}}
             <div class="flex flex-wrap gap-4 mb-8">
-                <a href="{{ route('menus.create', $comercio) }}" 
-                   class="btn-success inline-flex items-center">
+                <a href="{{ route('menus.create', $comercio) }}"
+                   class="btn-primary inline-flex items-center">
                     <span class="mr-2">➕</span>
                     Crear Menú
                 </a>
-                <a href="{{ route('menu.public', $comercio) }}" 
+                <a href="{{ route('menu.public', $comercio) }}"
                    target="_blank"
-                   class="btn-primary inline-flex items-center">
+                   class="btn-secondary inline-flex items-center">
                     <span class="mr-2">👁️</span>
                     Ver Página Pública
                 </a>
-                <!-- QR Dropdown -->
+                {{-- QR Dropdown. Era el único escrito a mano, y le había quedado tinta
+                     sobre terracota: 2,41:1, la mitad del mínimo legible. --}}
                 <div class="relative group">
-                    <button class="bg-accent-blue hover:brightness-95 text-text-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg inline-flex items-center">
+                    <button class="btn-secondary">
                         <span class="mr-2">📱</span>
                         Generar QR
                         <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,8 +135,8 @@
                                             <span class="text-accent-green text-sm">✓</span>
                                         </div>
                                     @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
-                                        <div class="w-8 h-8 bg-red-500/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Error al procesar">
-                                            <span class="text-red-400 text-sm">⚠️</span>
+                                        <div class="w-8 h-8 bg-danger/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Error al procesar">
+                                            <span class="text-danger text-sm">⚠️</span>
                                         </div>
                                     @else
                                         <div class="w-8 h-8 bg-warning/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Procesando">
@@ -208,8 +154,8 @@
                                             {{ $menu->nombre ?? 'Menú sin nombre' }}
                                         </h3>
                                         @if($menu->activo)
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green">
+                                                <span class="w-1.5 h-1.5 bg-accent-green rounded-full mr-1.5"></span>
                                                 Activo
                                             </span>
                                         @endif
@@ -227,7 +173,7 @@
                                         @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
                                             <span class="px-2 py-1 rounded-full text-xs bg-accent-green/20 text-accent-green">Listo</span>
                                         @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
-                                            <span class="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400">Error — volvé a subirlo</span>
+                                            <span class="px-2 py-1 rounded-full text-xs bg-danger/20 text-danger">Error — volvé a subirlo</span>
                                         @else
                                             <span class="px-2 py-1 rounded-full text-xs bg-warning/20 text-warning">Procesando…</span>
                                         @endif
@@ -272,7 +218,7 @@
                                             <form method="POST" action="{{ route('menus.activar', [$comercio, $menu]) }}" class="w-full">
                                                 @csrf
                                                 <button type="submit" 
-                                                        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm">
+                                                        class="w-full bg-accent-green hover:brightness-95 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm">
                                                     <span class="mr-1">⭐</span>
                                                     Activar Menú
                                                 </button>
@@ -285,7 +231,7 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="w-full bg-secondary-dark hover:bg-red-500/20 hover:text-red-400 text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
+                                                    class="w-full bg-secondary-dark hover:bg-danger/20 hover:text-danger text-text-primary font-medium py-2 px-3 rounded-lg transition-all duration-300 flex items-center justify-center text-sm border border-accent-gray">
                                                 <span class="mr-1">🗑️</span>
                                                 Eliminar
                                             </button>
@@ -304,8 +250,10 @@
                     </div>
                     <h3 class="text-3xl font-bold text-text-primary mb-4">No tienes menús aún</h3>
                     <p class="text-xl text-text-secondary mb-8">Crea tu primer menú digital para comenzar a ofrecer una experiencia interactiva a tus clientes</p>
-                    <a href="{{ route('menus.create', $comercio) }}" 
-                       class="btn-success inline-flex items-center text-lg px-8 py-4 rounded-xl">
+                    {{-- Misma acción que el botón de arriba, así que el mismo color: en
+                         verde quedaba distinta de sí misma según hubiera menús o no. --}}
+                    <a href="{{ route('menus.create', $comercio) }}"
+                       class="btn-primary inline-flex items-center text-lg px-8 py-4 rounded-xl">
                         <span class="mr-2">➕</span>
                         Crear mi primer menú
                     </a>
@@ -369,7 +317,7 @@
             };
             
             img.onerror = function() {
-                qrCodeDiv.innerHTML = '<div class="text-red-500 text-center p-4"><p>Error generando QR</p><p class="text-sm">Verifica tu conexión a internet</p></div>';
+                qrCodeDiv.innerHTML = '<div class="text-danger text-center p-4"><p>Error generando QR</p><p class="text-sm">Verifica tu conexión a internet</p></div>';
             };
         }
         

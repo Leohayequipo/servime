@@ -51,7 +51,7 @@
             {{-- La variación se colorea por dirección, no por gusto: es el único color
                  que aporta información en la tarjeta. --}}
             <span class="flex-none inline-flex items-center gap-0.5 text-xs font-semibold
-                         {{ $delta > 0 ? 'text-emerald-500' : ($delta < 0 ? 'text-rose-400' : 'text-text-secondary') }}">
+                         {{ $delta > 0 ? 'text-accent-green' : ($delta < 0 ? 'text-danger' : 'text-text-secondary') }}">
                 @if($delta > 0)▲@elseif($delta < 0)▼@endif{{ abs($delta) }}%
             </span>
         @endif

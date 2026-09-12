@@ -26,6 +26,12 @@ export default {
             colors: {
                 'accent-blue':    'rgb(var(--c-accent) / <alpha-value>)',
                 'accent-amber':   'rgb(var(--c-accent) / <alpha-value>)',   // alias semántico
+
+                // El terracota para TEXTO sobre el crema. `accent-blue` ahí da 3,88:1 y no
+                // llega a AA: sirve como fondo de botón (4,53:1 con blanco) y como texto
+                // sobre tarjeta blanca (4,53:1), pero no sobre el fondo de página. Éste da
+                // 5,03:1 sobre crema. La variable ya existía; faltaba exponerla.
+                'accent-deep':    'rgb(var(--c-accent-deep) / <alpha-value>)',
                 'accent-green':   'rgb(var(--c-ok) / <alpha-value>)',
                 'accent-gray':    'rgb(var(--c-line) / <alpha-value>)',
                 'primary-dark':   'rgb(var(--c-elev-1) / <alpha-value>)',

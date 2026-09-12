@@ -16,14 +16,7 @@
             </div>
 
             <!-- Flash -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             {{-- Credenciales iniciales, solo al crear el usuario.
                  Va acá y no en users/show porque showUser() redirige a esta vista. --}}
@@ -151,7 +144,7 @@
                             @if($user->email_verified_at)
                                 <p class="text-accent-green font-medium">✓ Verificado <span class="text-text-secondary text-xs font-normal">· {{ $user->email_verified_at->format('d/m/Y H:i') }}</span></p>
                             @else
-                                <p class="text-red-400 font-medium">✗ No verificado</p>
+                                <p class="text-danger font-medium">✗ No verificado</p>
                             @endif
                         </div>
                         <div>

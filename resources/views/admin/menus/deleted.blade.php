@@ -14,23 +14,7 @@
             </div>
 
             <!-- Flash -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="mb-8">
-                    <div class="bg-red-900/20 border border-red-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">✗</div>
-                        <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             <!-- Info -->
             <div class="bg-warning/10 border border-warning/30 rounded-2xl p-5 mb-8 flex items-start gap-4">
@@ -46,7 +30,7 @@
             <!-- Lista -->
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6">
                 <div class="flex items-center gap-3 mb-6">
-                    <div class="w-9 h-9 bg-red-500/20 rounded-lg flex items-center justify-center">
+                    <div class="w-9 h-9 bg-danger/20 rounded-lg flex items-center justify-center">
                         <span>🗑️</span>
                     </div>
                     <h3 class="font-bold text-text-primary">Menús Eliminados ({{ $menus->total() }})</h3>

@@ -20,7 +20,7 @@
                 {{ __('Detalles del Menú') }} - {{ $comercio->nombre }}
             </h2>
             <div class="flex space-x-2">
-                <a href="{{ route('menus.edit', [$comercio, $menu]) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                <a href="{{ route('menus.edit', [$comercio, $menu]) }}" class="inline-flex items-center px-4 py-2 bg-accent-blue border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:brightness-95 focus:brightness-95 active:brightness-90 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150">
                     {{ __('Editar') }}
                 </a>
                 <a href="{{ route('menus.index', $comercio) }}" class="inline-flex items-center px-4 py-2 bg-accent-gray border border-transparent rounded-md font-semibold text-xs text-text-primary uppercase tracking-widest hover:bg-accent-gray focus:bg-accent-gray active:bg-accent-gray focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 transition ease-in-out duration-150">
@@ -53,7 +53,7 @@
                     <!-- Estado Procesado abajo -->
                     <div class="flex justify-end mb-4">
                         @if($menu->procesado)
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent-green/15 text-accent-green">
                                 <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                                 </svg>

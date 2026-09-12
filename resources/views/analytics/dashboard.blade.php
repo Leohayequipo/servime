@@ -21,8 +21,8 @@
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="w-8 h-8 bg-accent-blue/15 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                     </svg>
                                 </div>
@@ -40,8 +40,8 @@
                     <div class="p-6">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="w-8 h-8 bg-accent-green/15 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
                                 </div>
@@ -101,7 +101,7 @@
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-text-secondary">Respuestas con IA</span>
-                                <span class="text-sm font-medium text-green-600">{{ $stats['openai_usage'] }}</span>
+                                <span class="text-sm font-medium text-accent-green">{{ $stats['openai_usage'] }}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-text-secondary">Respuestas básicas</span>
@@ -112,7 +112,7 @@
                                     $total = $stats['openai_usage'] + $stats['fallback_usage'];
                                     $openaiPercentage = $total > 0 ? round(($stats['openai_usage'] / $total) * 100) : 0;
                                 @endphp
-                                <div class="bg-green-600 h-2 rounded-full" style="width: {{ $openaiPercentage }}%"></div>
+                                <div class="bg-accent-green h-2 rounded-full" style="width: {{ $openaiPercentage }}%"></div>
                             </div>
                             <p class="text-xs text-text-secondary">{{ $openaiPercentage }}% usa IA</p>
                         </div>
@@ -137,7 +137,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-sm text-text-secondary">Chats hoy</span>
-                                <span class="text-sm font-medium text-green-600">{{ $stats['conversations_today'] }}</span>
+                                <span class="text-sm font-medium text-accent-green">{{ $stats['conversations_today'] }}</span>
                             </div>
                         </div>
                     </div>
@@ -197,12 +197,12 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-blue/15 text-accent-blue">
                                                 {{ $comercio->menus_count }} menús
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green">
                                                 {{ $comercio->chat_conversations_count }} chats
                                             </span>
                                         </td>
@@ -266,7 +266,7 @@
                                             <td class="py-2 pr-3 text-text-primary">{{ $chip['label'] }}</td>
                                             <td class="py-2 text-right text-text-primary">{{ $chip['clicks'] }}</td>
                                             <td class="py-2 text-right text-text-secondary">{{ $chip['comercios'] }}</td>
-                                            <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-green-500' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-warning') }}">
+                                            <td class="py-2 text-right whitespace-nowrap {{ $chip['efectividad'] >= 60 ? 'text-accent-green' : ($chip['efectividad'] > 0 ? 'text-text-secondary' : 'text-warning') }}">
                                                 {{ $chip['efectividad'] }}%
                                             </td>
                                         </tr>
@@ -334,7 +334,7 @@
                                 <a href="{{ route('analytics.dashboard', ['dias' => $d, 'bots' => $web['incluir_bots'] ? 1 : null]) }}#trafico-web"
                                    class="px-3 py-1.5 rounded-lg text-sm transition-all
                                           {{ $web['dias'] === $d
-                                             ? 'bg-accent-blue text-text-primary font-semibold'
+                                             ? 'bg-accent-blue text-white font-semibold'
                                              : 'text-text-secondary border border-accent-gray hover:border-accent-blue/40' }}">
                                     {{ $txt }}
                                 </a>
@@ -344,7 +344,7 @@
                             <a href="{{ route('analytics.dashboard', ['dias' => $web['dias'], 'bots' => $web['incluir_bots'] ? null : 1]) }}#trafico-web"
                                class="ml-2 px-3 py-1.5 rounded-lg text-sm transition-all
                                       {{ $web['incluir_bots']
-                                         ? 'bg-red-500/20 text-red-300 border border-red-500/40 font-semibold'
+                                         ? 'bg-danger/20 text-danger border border-danger/40 font-semibold'
                                          : 'text-text-secondary border border-accent-gray hover:border-accent-blue/40' }}">
                                 🤖 {{ $web['incluir_bots'] ? 'Ocultar bots' : 'Ver bots' }}
                             </a>
@@ -473,11 +473,11 @@
                                                     </td>
                                                     <td class="px-4 py-3 whitespace-nowrap">
                                                         @if($v->humano)
-                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-400">
+                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent-green/15 text-accent-green">
                                                                 👤 Persona
                                                             </span>
                                                         @else
-                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">
+                                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-danger/15 text-danger">
                                                                 🤖 Bot
                                                             </span>
                                                         @endif

@@ -85,18 +85,10 @@ class PublicMenuController extends Controller
      */
     public function classic(Comercio $comercio)
     {
-        $menuActivo = $comercio->menus()
-            ->where('activo', true)
-            ->where('procesado', true)
-            ->first();
-
-        // Si no hay menú activo, buscar el último procesado
-        if (! $menuActivo) {
-            $menuActivo = $comercio->menus()
-                ->where('procesado', true)
-                ->orderBy('created_at', 'desc')
-                ->first();
-        }
+        // El activo, o el último procesado si ninguno quedó activo. La regla vive en
+        // `Comercio::menuVigente()`: estaba copiada en varios lugares y en uno de ellos
+        // le faltaba el caso de "ninguno activo".
+        $menuActivo = $comercio->menuVigente();
 
         // Que el campo tenga una ruta NO quiere decir que el archivo esté. La vista lo mete
         // en un <iframe>, así que con el archivo faltante el cliente sentado en la mesa ve

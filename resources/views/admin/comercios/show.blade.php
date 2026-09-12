@@ -19,14 +19,7 @@
             </div>
 
             <!-- Flash -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             <!-- Info del comercio -->
             <div class="bg-secondary-dark border border-accent-gray rounded-2xl p-6 mb-6">
@@ -103,7 +96,7 @@
                                     <div class="flex items-center justify-between">
                                         <span class="text-text-secondary text-xs">Formato</span>
                                         <span class="px-2 py-0.5 text-xs rounded-full
-                                            {{ $menu->formato === 'pdf' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20' }}">
+                                            {{ $menu->formato === 'pdf' ? 'bg-danger/20 text-danger border border-danger/30' : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20' }}">
                                             {{ strtoupper($menu->formato) }}
                                         </span>
                                     </div>

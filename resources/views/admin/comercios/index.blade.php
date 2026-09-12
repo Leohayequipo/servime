@@ -12,14 +12,7 @@
             </div>
 
             <!-- Flash -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             <!-- Estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -123,7 +116,7 @@
                                                   onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('Se va a borrar TODA la actividad de «{{ $comercio->nombre }}»: conversaciones del chatbot, estadísticas, carritos y el consumo de IA del mes. El menú y la configuración no se tocan. No se puede deshacer. ¿Seguimos?', r=>{ if(r) f.submit(); }, 'Borrando actividad...');">
                                                 @csrf
                                                 <button type="submit"
-                                                        class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition-colors">
+                                                        class="px-3 py-1.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded-lg text-xs font-medium transition-colors">
                                                     Resetear
                                                 </button>
                                             </form>

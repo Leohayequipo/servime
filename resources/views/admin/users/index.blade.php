@@ -19,23 +19,7 @@
             </div>
 
             <!-- Flash Messages -->
-            @if(session('success'))
-                <div class="mb-8">
-                    <div class="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                        <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
-            @if(session('error'))
-                <div class="mb-8">
-                    <div class="bg-red-900/20 border border-red-500/30 rounded-2xl p-5 flex items-center gap-4">
-                        <div class="w-9 h-9 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">⚠️</div>
-                        <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                    </div>
-                </div>
-            @endif
-
+            <x-flash />
             <!-- Métricas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
                 <div class="metric-card">
@@ -179,7 +163,7 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit"
-                                                            class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition-colors">
+                                                            class="px-3 py-1.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded-lg text-xs font-medium transition-colors">
                                                         Eliminar
                                                     </button>
                                                 </form>
@@ -244,7 +228,7 @@
                                           class="flex-1">
                                         @csrf @method('DELETE')
                                         <button type="submit"
-                                                class="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-sm font-medium transition-colors">
+                                                class="w-full py-2 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded-lg text-sm font-medium transition-colors">
                                             Eliminar
                                         </button>
                                     </form>

@@ -17,8 +17,8 @@
             <x-input-label for="update_password_current_password" :value="'Contraseña Actual'" />
             <x-text-input id="update_password_current_password" name="current_password" type="password" class="mt-1 block w-full px-3 py-2" autocomplete="current-password" />
             @if($errors->updatePassword->get('current_password'))
-                <div class="mt-2 bg-red-100 border-2 border-red-500 p-2 rounded">
-                    <p class="text-red-800 font-bold">⚠️ {{ $errors->updatePassword->get('current_password')[0] }}</p>
+                <div class="mt-2 bg-danger/15 border-2 border-danger p-2 rounded">
+                    <p class="text-danger font-bold">⚠️ {{ $errors->updatePassword->get('current_password')[0] }}</p>
                 </div>
             @endif
         </div>
@@ -27,8 +27,8 @@
             <x-input-label for="update_password_password" :value="'Nueva Contraseña'" />
             <x-text-input id="update_password_password" name="password" type="password" class="mt-1 block w-full px-3 py-2" autocomplete="new-password" />
             @if($errors->updatePassword->get('password'))
-                <div class="mt-2 bg-red-100 border-2 border-red-500 p-2 rounded">
-                    <p class="text-red-800 font-bold">⚠️ {{ $errors->updatePassword->get('password')[0] }}</p>
+                <div class="mt-2 bg-danger/15 border-2 border-danger p-2 rounded">
+                    <p class="text-danger font-bold">⚠️ {{ $errors->updatePassword->get('password')[0] }}</p>
                 </div>
             @endif
         </div>
@@ -37,8 +37,8 @@
             <x-input-label for="update_password_password_confirmation" :value="'Confirmar Contraseña'" />
             <x-text-input id="update_password_password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full px-3 py-2" autocomplete="new-password" />
             @if($errors->updatePassword->get('password_confirmation'))
-                <div class="mt-2 bg-red-100 border-2 border-red-500 p-2 rounded">
-                    <p class="text-red-800 font-bold">⚠️ {{ $errors->updatePassword->get('password_confirmation')[0] }}</p>
+                <div class="mt-2 bg-danger/15 border-2 border-danger p-2 rounded">
+                    <p class="text-danger font-bold">⚠️ {{ $errors->updatePassword->get('password_confirmation')[0] }}</p>
                 </div>
             @endif
         </div>

@@ -14,14 +14,7 @@
                 <a href="{{ route('menus.index', $comercio) }}" class="btn-secondary">← Volver a los menús</a>
             </div>
 
-            @if(session('success'))
-                <div class="mb-8 animate-fade-in-down js-flash">
-                    <div class="bg-accent-green/15 border border-accent-green/30 rounded-2xl p-5 flex items-center gap-4">
-                        <span class="text-2xl">✅</span>
-                        <p class="text-text-primary font-medium">{{ session('success') }}</p>
-                    </div>
-                </div>
-            @endif
+            <x-flash />
 
             @if($errors->any())
                 <div class="mb-8">
@@ -223,16 +216,7 @@
     </div>
 
     <script>
-        // Auto-cerrar el cartel de éxito, igual que en el resto del panel
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.js-flash').forEach(function (el) {
-                setTimeout(function () {
-                    el.style.transition = 'opacity .5s ease';
-                    el.style.opacity = '0';
-                    setTimeout(function () { el.remove(); }, 500);
-                }, 4000);
-            });
-        });
+        // El auto-cierre del cartel de éxito lo trae el componente de avisos.
 
         // Bajar la cantidad saca mesas de servicio: se avisa antes, con el número exacto.
         // Subirla o dejarla igual no necesita confirmación.

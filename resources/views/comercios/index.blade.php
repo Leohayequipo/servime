@@ -35,19 +35,7 @@
     @endif
 
     <!-- Flash messages -->
-    @if(session('success'))
-        <div class="mb-6 bg-accent-green/10 border border-accent-green/30 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span class="text-accent-green text-lg">✓</span>
-            <p class="text-accent-green text-sm font-medium">{{ session('success') }}</p>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span class="text-red-400 text-lg">✗</span>
-            <p class="text-red-400 text-sm font-medium">{{ session('error') }}</p>
-        </div>
-    @endif
-
+    <x-flash />
     @if($comercios->count() > 0)
 
         <!-- Buscador (solo si hay más de un comercio que filtrar) -->
@@ -146,8 +134,8 @@
                                 @csrf @method('DELETE')
                                 <button type="submit"
                                         class="px-3 py-2 rounded-xl text-sm border border-accent-gray
-                                               text-text-secondary hover:text-red-400 hover:border-red-500/40
-                                               hover:bg-red-500/10 transition-all"
+                                               text-text-secondary hover:text-danger hover:border-danger/40
+                                               hover:bg-danger/10 transition-all"
                                         title="Eliminar">🗑️</button>
                             </form>
                         @else
@@ -156,8 +144,8 @@
                                 @csrf @method('DELETE')
                                 <button type="submit"
                                         class="px-3 py-2 rounded-xl text-sm border border-accent-gray
-                                               text-text-secondary hover:text-red-400 hover:border-red-500/40
-                                               hover:bg-red-500/10 transition-all"
+                                               text-text-secondary hover:text-danger hover:border-danger/40
+                                               hover:bg-danger/10 transition-all"
                                         title="Eliminar">🗑️</button>
                             </form>
                         @endif

@@ -15,19 +15,7 @@
             </div>
 
             <!-- Flash -->
-            @if(session('success'))
-                <div class="mb-6 bg-green-900/20 border border-green-500/30 rounded-2xl p-5 flex items-center gap-4">
-                    <div class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">✓</div>
-                    <p class="text-green-200 font-medium">{{ session('success') }}</p>
-                </div>
-            @endif
-            @if(session('error'))
-                <div class="mb-6 bg-red-900/20 border border-red-500/30 rounded-2xl p-5 flex items-center gap-4">
-                    <div class="w-9 h-9 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">!</div>
-                    <p class="text-red-200 font-medium">{{ session('error') }}</p>
-                </div>
-            @endif
-
+            <x-flash />
             <!-- Planes -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 @foreach($plans as $plan)
@@ -50,7 +38,7 @@
                             <a href="{{ route('admin.plans.edit', $plan) }}" class="flex-1 text-center px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">Editar</a>
                             <form method="POST" action="{{ route('admin.plans.destroy', $plan) }}" onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Eliminar el plan {{ addslashes($plan->nombre) }}? Esta acción no se puede deshacer.', r => { if(r) f.submit(); }, 'Eliminando...');">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/20 rounded-lg text-xs font-medium transition-colors">Eliminar</button>
+                                <button type="submit" class="px-3 py-1.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded-lg text-xs font-medium transition-colors">Eliminar</button>
                             </form>
                         </div>
                     </div>
@@ -104,7 +92,7 @@
                                         @else
                                             <p class="text-text-primary text-sm mb-1">{{ number_format($usados) }} / {{ number_format($limite) }}</p>
                                             <div class="w-32 h-1.5 bg-accent-gray/40 rounded-full overflow-hidden">
-                                                <div class="h-full {{ $pct >= 100 ? 'bg-red-500' : ($pct >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pct }}%"></div>
+                                                <div class="h-full {{ $pct >= 100 ? 'bg-danger' : ($pct >= 80 ? 'bg-warning' : 'bg-accent-green') }}" style="width: {{ $pct }}%"></div>
                                             </div>
                                         @endif
                                     </td>

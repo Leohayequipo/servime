@@ -206,7 +206,7 @@
                                     <div class="font-semibold text-text-primary">Actualizando menú: "{{ $menuEditando->nombre }}"</div>
                                 </div>
                                 <p class="text-sm text-text-secondary mt-2">
-                                    <strong class="text-red-400">El contenido de este menú será REEMPLAZADO COMPLETAMENTE</strong> con los datos del Excel.
+                                    <strong class="text-danger">El contenido de este menú será REEMPLAZADO COMPLETAMENTE</strong> con los datos del Excel.
                                 </p>
                             </div>
                         @else
@@ -217,7 +217,7 @@
                                 </div>
                                 <p class="text-sm text-text-secondary mt-2">
                                     @if($menusExistentes->isNotEmpty())
-                                        <strong class="text-red-400">Se actualizará un menú existente y su contenido será REEMPLAZADO COMPLETAMENTE.</strong>
+                                        <strong class="text-danger">Se actualizará un menú existente y su contenido será REEMPLAZADO COMPLETAMENTE.</strong>
                                     @else
                                         Se creará un nuevo menú con el contenido importado.
                                     @endif
@@ -225,9 +225,9 @@
                             </div>
                         @endif
 
-                        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                        <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 mb-6">
                             <p class="text-sm text-text-primary">
-                                <strong class="text-red-400">⚠️ Todos los datos actuales del menú serán eliminados y reemplazados por los datos del Excel.</strong>
+                                <strong class="text-danger">⚠️ Todos los datos actuales del menú serán eliminados y reemplazados por los datos del Excel.</strong>
                             </p>
                         </div>
 

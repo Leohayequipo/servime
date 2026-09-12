@@ -7,12 +7,8 @@
                 </h2>
                 <p class="text-sm text-text-secondary mt-1">Crear un nuevo comercio para gestionar menús digitales</p>
             </div>
-            <div class="flex space-x-3">
-                <a href="{{ route('comercios.index') }}" 
-                   class="bg-accent-gray hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg transition-all duration-300">
-                    🔄 Cancelar
-                </a>
-            </div>
+            {{-- El cancelar está al pie, junto a «Crear comercio». Acá había otro, con un
+                 🔄 que no significa cancelar y un hover del mismo color que el fondo. --}}
         </div>
     </x-slot>
 
@@ -60,33 +56,8 @@
                             </div>
                         @endif
 
-                        <!-- Nombre del Comercio -->
-                        <div class="md:col-span-2">
-                            <x-input-label for="nombre" :value="__('Nombre del Comercio')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="nombre" class="input-field w-full" type="text" name="nombre" :value="old('nombre')" required autofocus />
-                            <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                        </div>
-
-                        <!-- Descripción -->
-                        <div class="md:col-span-2">
-                            <x-input-label for="descripcion" :value="__('Descripción')" class="text-text-primary font-medium mb-2" />
-                            <textarea id="descripcion" name="descripcion" rows="3" class="input-field w-full resize-none">{{ old('descripcion') }}</textarea>
-                            <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
-                        </div>
-
-                        <!-- Dirección -->
-                        <div>
-                            <x-input-label for="direccion" :value="__('Dirección')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="direccion" class="input-field w-full" type="text" name="direccion" :value="old('direccion')" />
-                            <x-input-error :messages="$errors->get('direccion')" class="mt-2" />
-                        </div>
-
-                        <!-- Horario -->
-                        <div>
-                            <x-input-label for="horario" :value="__('Horario de Atención')" class="text-text-primary font-medium mb-2" />
-                            <x-text-input id="horario" class="input-field w-full" type="text" name="horario" :value="old('horario')" placeholder="Ej: Lunes a Viernes 9:00 - 18:00" />
-                            <x-input-error :messages="$errors->get('horario')" class="mt-2" />
-                        </div>
+                        {{-- Los mismos campos que en editar: un solo archivo. --}}
+                        <x-comercios.datos-basicos />
                     </div>
                 </div>
 
@@ -99,20 +70,21 @@
                         <h3 class="text-xl font-bold text-text-primary">Logo del Comercio</h3>
                     </div>
                     
-                    <div>
-                        <x-input-label for="logo" :value="__('Subir Logo')" class="text-text-primary font-medium mb-2" />
-                        <input type="file" id="logo" name="logo" accept="image/*" class="input-field w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-white hover:file:bg-blue-600" />
-                        <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                        <p class="mt-2 text-sm text-text-secondary">Formatos permitidos: JPEG, PNG, JPG, GIF. Tamaño máximo: 2MB</p>
-                    </div>
+                    <x-comercios.logo />
                 </div>
 
-                <!-- Botón Flotante Guardar Cambios -->
-                <div class="fixed bottom-6 right-6 z-50">
-                    <button type="submit" 
-                            class="bg-accent-blue hover:brightness-95 text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-3">
-                        <span class="text-2xl">💾</span>
-                        <span>Guardar Cambios</span>
+                {{-- Al pie del formulario y no flotante: el alta entra en una pantalla, y
+                     un botón fijo abajo a la derecha tapaba los últimos campos en vez de
+                     ayudar. Estilo por `.btn-primary`, no escrito a mano.
+
+                     Y dice «Crear comercio»: acá todavía no hay ningún cambio que guardar
+                     —el texto venía copiado de la pantalla de edición—. --}}
+                <div class="flex items-center justify-end gap-3">
+                    <a href="{{ route('comercios.index') }}" class="btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        Crear comercio
                     </button>
                 </div>
             </form>
