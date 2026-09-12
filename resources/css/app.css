@@ -7,11 +7,10 @@
    RGB sueltos (no en hex) porque Tailwind necesita inyectarles el alfa para
    las utilidades con opacidad: accent-blue/20, accent-gray/50, etc.
 
-   El panel sigue siendo oscuro —es lo cómodo para trabajar muchas horas—
-   pero el negro con ámbar pasó al verde profundo con terracota de la marca.
-
-   Contrastes verificados contra WCAG AA sobre el fondo: crema 12,58:1,
-   salvia 7,27:1, terracota 6,17:1, y el texto oscuro sobre terracota 7,45:1.
+   El panel es claro, igual que la landing: crema de fondo, verde profundo de
+   texto y terracota de acento. (Este comentario decía que el panel «sigue siendo
+   oscuro» mucho después de que dejara de serlo, y los contrastes que citaba eran
+   los de la paleta vieja: los buenos están abajo, medidos sobre el crema.)
 
    Una pantalla puede redefinir estas variables con un :root propio y cambiar
    solo ella, sin recompilar ni tocar el resto.
@@ -54,33 +53,34 @@
     --c-ink:          40  66  54;  /* #284236 verde profundo                 */
     --c-ink-soft:     85 112  95;  /* #55705F salvia oscuro                  */
     --c-bg:          242 237 227;  /* #F2EDE3 crema                          */
+
+    /* ── Decorativos ──
+       Vivían sólo en el <style> de la landing, con los mismos hex copiados en el
+       login, el «olvidé mi contraseña» y el reseteo: cuatro archivos que había que
+       editar a mano para cambiar un color, y que ya se habían desincronizado.
+       Están acá para que la regla valga también para esas pantallas.
+
+       ⚠ NINGUNO sirve para texto sobre crema: salvia claro 3,18:1, terracota de
+       marca 2,53:1 y madera 1,8:1. Son fondos, bordes, íconos y placeholders. Para
+       texto van `--c-ink-soft` y `--c-accent-deep`. */
+    --c-sage:        107 140 122;  /* #6B8C7A salvia claro                   */
+    --c-sage-soft:   167 188 168;  /* #A7BCA8 salvia pálido                  */
+    --c-wood:        212 176 140;  /* #D4B08C madera                         */
+    --c-accent-soft: 224 122  95;  /* #E07A5F terracota de marca             */
+    --c-bg-2:        234 227 213;  /* #EAE3D5 crema apagado: zonas alternas  */
 }
 
-/* ─── Animations ─────────────────────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────────────────────────
+   Sólo las que usa alguna vista. Se borraron `shake`, `progress-bar`, `float` y el
+   shimmer de `.loading-button` con sus keyframes: ninguna aparecía en una vista ni
+   en el JS, y estaban desde la etapa oscura. */
 @keyframes fade-in-down {
     from { opacity: 0; transform: translateY(-16px); }
     to   { opacity: 1; transform: translateY(0);     }
 }
-@keyframes shake {
-    0%,100%             { transform: translateX(0);  }
-    10%,30%,50%,70%,90% { transform: translateX(-2px); }
-    20%,40%,60%,80%     { transform: translateX(2px);  }
-}
-@keyframes progress-bar {
-    from { width: 0%; }
-    to   { width: 100%; }
-}
-@keyframes float {
-    0%,100% { transform: translateY(0);    }
-    50%     { transform: translateY(-8px); }
-}
 @keyframes spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
-}
-@keyframes loading-shimmer {
-    0%   { left: -100%; }
-    100% { left:  100%; }
 }
 @keyframes typing-bounce {
     0%,80%,100% { transform: scale(0.8); opacity: 0.5; }
@@ -88,19 +88,8 @@
 }
 
 .animate-fade-in-down  { animation: fade-in-down 0.5s ease-out; }
-.animate-shake         { animation: shake 0.5s ease-in-out; }
-.animate-progress-bar  { animation: progress-bar 3s ease-out; }
-.animate-float         { animation: float 3s ease-in-out infinite; }
 .animate-spin          { animation: spin 1s linear infinite; }
 .typing-indicator      { animation: typing-bounce 1.4s infinite ease-in-out both; }
-
-.loading-button { position: relative; overflow: hidden; }
-.loading-button::after {
-    content: '';
-    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(40,66,54,.10), transparent);
-    animation: loading-shimmer 2s infinite;
-}
 
 /* ─── Component layer ────────────────────────────────────────────────────── */
 @layer components {
@@ -114,21 +103,21 @@
         border-radius: 1rem;
     }
 
-    .card-glass {
-        background: rgb(var(--c-elev-2));
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgb(var(--c-line));
-        border-radius: 1rem;
-    }
+    /* Sin :hover. La tarjeta subía 4px y tiraba una sombra de 24px al pasar el mouse:
+       en una grilla se metía sobre la tarjeta de arriba, y como `transform` crea un
+       contexto de apilado, la de abajo se dibujaba ENCIMA de su vecina. Se veía como
+       si las secciones se solaparan.
 
+       Tampoco corresponde: de los 45 usos, 42 son bloques de contenido que no llevan
+       a ningún lado, y moverlos al pasar el mouse los hace parecer clickeables. Las 3
+       tarjetas del dashboard que sí son links declaran su propio hover de borde en la
+       vista, así que no pierden el aviso.
+
+       Bonus: `transform` en un ancestro rompe el `position: fixed` de los hijos. Era
+       la causa del rodeo que tiene el selector de emojis en menus/create. */
     .metric-card {
         @apply border border-accent-gray rounded-2xl p-6 transition-all duration-300;
         background: rgb(var(--c-elev-2));
-    }
-    .metric-card:hover {
-        @apply -translate-y-1 border-accent-blue/40;
-        box-shadow: 0 8px 24px rgb(var(--c-accent) / .15);
     }
 
     /* Buttons */
@@ -180,30 +169,33 @@
     .nav-link {
         @apply transition-all duration-200 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary;
     }
-    .nav-link:hover  { @apply text-accent-blue; }
+    .nav-link:hover  { @apply text-accent-deep; }
+
+    /* El activo se marca con el color del texto y un subrayado, no con un bloque.
+       Antes era un pill terracota lleno con texto blanco: pesaba como un botón —
+       invitaba a hacerle clic para ir a algún lado, cuando justamente marca dónde
+       ya estás— y competía con la acción principal de cada pantalla.
+
+       El subrayado no sobra: si la única diferencia fuera el color, quien no lo
+       distingue se queda sin saber en qué sección está. Va con `inset` en vez de
+       `border-bottom` para no mover el texto un píxel al activarse.
+
+       `accent-deep` y no `accent-blue`: el terracota de botón da 3,88:1 como texto
+       sobre el crema del header y no llega a AA. Éste da 5,03:1. */
     .nav-link.active {
-        @apply text-white font-semibold;
-        background: rgb(var(--c-accent));
+        @apply text-accent-deep font-semibold;
+        box-shadow: inset 0 -2px 0 rgb(var(--c-accent));
+        border-radius: 0;
     }
 
     /* Glow utilities */
     .neon-glow   { box-shadow: 0 0 18px rgb(var(--c-accent) / .35); }
-    .hover-lift  { @apply transition-all duration-300; }
-    .hover-lift:hover { @apply -translate-y-1; box-shadow: 0 12px 28px rgb(var(--c-accent) / .2); }
 
-    /* ── Chat component classes (menu/chat.blade.php) ── */
-    .chat-message {
-        @apply rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] shadow-sm;
-    }
-    .chat-message-bot  { @apply chat-message bg-secondary-dark  text-text-primary self-start; }
-    .chat-message-user { @apply chat-message bg-accent-blue     text-white        self-end; }
-
-    .fab-button {
-        @apply w-14 h-14 rounded-full flex items-center justify-center
-               border-0 cursor-pointer transition-all duration-200
-               hover:-translate-y-1;
-        box-shadow: 0 8px 20px rgba(40,66,54,.18);
-    }
+    /* Acá vivían `.hover-lift`, `.chat-message`/`-bot`/`-user` y `.fab-button`. Las
+       tres últimas decían ser de `menu/chat.blade.php` y ahí no se usaban: el chat
+       público arma su markup por su cuenta. Ninguna aparecía en una vista ni en el JS,
+       así que el comentario mandaba a buscar donde no era. `.hover-lift` hacía lo
+       mismo que el :hover que se le sacó a `.metric-card`, y por el mismo motivo. */
 
     /* Modales de SweetAlert2 (confirmaciones, avisos y las ayudas «?» del panel).
        Se llama `.dark-modal` por herencia: el panel era oscuro. Los colores ya NO son

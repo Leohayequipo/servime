@@ -22,23 +22,28 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        /* Identidad ServiME. Los tokens repiten los de la landing para que el comercio
-           que llega desde "Quiero sumarme" no sienta que cambió de producto.
+        /* Identidad ServiME. Los nombres cortos son alias locales: los valores salen
+           de los tokens de app.css, que esta pantalla ya carga con Vite. Antes eran
+           los hex copiados a mano y cambiar un color de marca obligaba a editar cuatro
+           archivos — que para cuando se revisó ya estaban desincronizados: acá el papel
+           había quedado en #FBF9F5, el viejo, cuando el resto ya usaba blanco puro.
 
-           Los estilos son propios y no usan .btn-primary / .input-field de app.css:
-           esas clases las comparte todo el panel, que sigue en la estética anterior. */
+           Los estilos siguen siendo propios y no usan .btn-primary / .input-field:
+           esta pantalla tiene su propio diseño, pero no su propia paleta. */
         :root {
-            --ground:      #F2EDE3;
-            --surface:     #FBF9F5;
-            --ink:         #284236;
-            --muted:       #55705F;
-            --line:        rgba(40, 66, 54, 0.14);
-            --accent:      #C0563A;
-            --accent2:     #A8462C;
-            --accent-ink:  #B4462A;
-            --sage:        #6B8C7A;
-            --wood:        #D4B08C;
-            --shadow-md:   0 2px 6px rgba(40, 66, 54, .07), 0 12px 32px rgba(40, 66, 54, .07);
+            --ground:      rgb(var(--c-bg));
+            --surface:     rgb(var(--c-elev-2));
+            --ink:         rgb(var(--c-ink));
+            --muted:       rgb(var(--c-ink-soft));
+            --line:        rgb(var(--c-ink) / .14);
+            --accent:      rgb(var(--c-accent));
+            --accent2:     rgb(var(--c-accent-deep));
+            /* Era #B4462A, un cuarto terracota que existía sólo acá. `accent-deep` es
+               el mismo rol (texto sobre crema) y mide mejor: 5,03:1 contra 4,67:1. */
+            --accent-ink:  rgb(var(--c-accent-deep));
+            --sage:        rgb(var(--c-sage));
+            --wood:        rgb(var(--c-wood));
+            --shadow-md:   0 2px 6px rgb(var(--c-ink) / .07), 0 12px 32px rgb(var(--c-ink) / .07);
         }
 
         html, body { min-height: 100%; }

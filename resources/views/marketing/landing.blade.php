@@ -189,35 +189,43 @@
                para texto ni para el fondo de un botón (el mínimo WCAG es 4.5:1).
                Queda como color decorativo, y para todo lo que se lee van los dos
                derivados oscurecidos. Mismo caso con el salvia. */
+            /* Los nombres de acá son alias: los valores salen de los tokens de app.css,
+               que la landing ya carga con Vite. Antes eran hex escritos a mano y los mismos
+               colores estaban copiados en el login, el «olvidé mi contraseña» y el reseteo,
+               así que cambiar el terracota eran cuatro ediciones a mano. Las variantes
+               (--dark-*, --line-soft, los shadows) se derivan del mismo token con alfa en
+               vez de tener su propio hex: así no pueden quedar desfasadas del color base. */
             :root {
-                --ground:       #F2EDE3;  /* crema: fondo dominante */
-                --ground-2:     #EAE3D5;  /* crema apagado: zonas alternas */
-                --surface:      #FBF9F5;  /* papel: tarjetas sobre el crema */
-                --ink:          #284236;  /* verde profundo: texto principal */
-                --muted:        #55705F;  /* salvia oscurecido: texto secundario  (4.65:1) */
-                --line:         rgba(40, 66, 54, 0.14);
-                --line-soft:    rgba(40, 66, 54, 0.07);
+                --ground:       rgb(var(--c-bg));        /* crema: fondo dominante */
+                --ground-2:     rgb(var(--c-bg-2));      /* crema apagado: zonas alternas */
+                --surface:      rgb(var(--c-elev-2));    /* papel: tarjetas sobre el crema */
+                --ink:          rgb(var(--c-ink));       /* verde profundo: texto principal */
+                --muted:        rgb(var(--c-ink-soft));  /* salvia oscurecido: texto secundario (4,65:1) */
+                --line:         rgb(var(--c-ink) / .14);
+                --line-soft:    rgb(var(--c-ink) / .07);
 
-                --accent:       #C0563A;  /* terracota acción: fondo de CTA        (4.53:1 con blanco) */
-                --accent2:      #A8462C;  /* terracota acción en hover */
-                --accent-ink:   #B4462A;  /* terracota texto: links y acentos      (4.67:1 sobre crema) */
-                --accent-soft:  #E07A5F;  /* terracota de marca: solo decorativo */
-                --on-accent:    #FFFFFF;
+                --accent:       rgb(var(--c-accent));       /* terracota acción: fondo de CTA (4,53:1 con blanco) */
+                --accent2:      rgb(var(--c-accent-deep));  /* terracota acción en hover */
+                /* Era #B4462A (4,67:1). `accent-deep` cumple el mismo rol —terracota para
+                   texto sobre crema— y mide 5,03:1, así que sobraba tener un cuarto. */
+                --accent-ink:   rgb(var(--c-accent-deep));  /* terracota texto: links y acentos */
+                --accent-soft:  rgb(var(--c-accent-soft));  /* terracota de marca: solo decorativo */
+                --on-accent:    rgb(var(--c-elev-2));
 
-                --sage:         #6B8C7A;
-                --sage-soft:    #A7BCA8;
-                --wood:         #D4B08C;
+                --sage:         rgb(var(--c-sage));
+                --sage-soft:    rgb(var(--c-sage-soft));
+                --wood:         rgb(var(--c-wood));
 
                 /* Zonas de contraste: verde profundo de fondo, crema de texto */
-                --dark-ground:  #284236;
-                --dark-ink:     #F2EDE3;
-                --dark-muted:   #A7BCA8;
-                --dark-line:    rgba(242, 237, 227, 0.16);
-                --dark-surface: rgba(242, 237, 227, 0.06);
+                --dark-ground:  rgb(var(--c-ink));
+                --dark-ink:     rgb(var(--c-bg));
+                --dark-muted:   rgb(var(--c-sage-soft));
+                --dark-line:    rgb(var(--c-bg) / .16);
+                --dark-surface: rgb(var(--c-bg) / .06);
 
-                --shadow-sm: 0 1px 2px rgba(40, 66, 54, .06), 0 4px 12px rgba(40, 66, 54, .05);
-                --shadow-md: 0 2px 6px rgba(40, 66, 54, .07), 0 12px 32px rgba(40, 66, 54, .07);
-                --shadow-lg: 0 8px 24px rgba(40, 66, 54, .10), 0 24px 60px rgba(40, 66, 54, .10);
+                --shadow-sm: 0 1px 2px rgb(var(--c-ink) / .06), 0 4px 12px rgb(var(--c-ink) / .05);
+                --shadow-md: 0 2px 6px rgb(var(--c-ink) / .07), 0 12px 32px rgb(var(--c-ink) / .07);
+                --shadow-lg: 0 8px 24px rgb(var(--c-ink) / .10), 0 24px 60px rgb(var(--c-ink) / .10);
             }
 
             body {

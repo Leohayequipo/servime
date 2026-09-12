@@ -8,11 +8,23 @@
             border: 2px solid rgb(var(--c-ok) / .3) !important;
         }
         
-        #btn-actualizar-menu:hover,
-        .btn-actualizar-menu:hover {
+        #btn-actualizar-menu:hover:not(:disabled),
+        .btn-actualizar-menu:hover:not(:disabled) {
             background-color: rgb(var(--c-ok) / .85) !important;
         }
-        
+
+        /* Apagado: no hay archivo nuevo que procesar. Gris plano, sin sombra ni
+           movimiento, para que se lea como "todavía no" y no como un botón roto. */
+        #btn-actualizar-menu:disabled,
+        .btn-actualizar-menu:disabled {
+            background-color: rgb(var(--c-line)) !important;
+            border-color: rgb(var(--c-line)) !important;
+            color: rgb(var(--c-ink-soft)) !important;
+            box-shadow: none !important;
+            transform: none !important;
+            cursor: not-allowed;
+        }
+
         /* Forzar estilos para inputs */
         input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
         select,
@@ -203,7 +215,7 @@
                                 @if($puedeExportar)
                                     <a href="{{ route('menus.export', [$comercio, $menu]) }}"
                                        class="flex items-start gap-3 px-4 py-3 hover:bg-accent-gray/50 transition-colors duration-200">
-                                        <svg class="w-5 h-5 mt-0.5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 mt-0.5 text-accent-green flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                         </svg>
                                         <div>
@@ -335,8 +347,8 @@
                                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div class="flex items-center space-x-4 flex-1 min-w-0">
                                             @if($menu->formato === 'pdf')
-                                                <div class="w-14 h-14 bg-danger/20 border border-red-500/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-red-400 text-2xl">📄</span>
+                                                <div class="w-14 h-14 bg-danger/20 border border-danger/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-danger text-2xl">📄</span>
                                                 </div>
                                             @else
                                                 <div class="w-14 h-14 bg-accent-blue/10 border border-accent-blue/30 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
@@ -372,17 +384,22 @@
                                 </div>
                             @endif
 
-                            <!-- Archivo del Menú -->
-                    <div class="mb-6">
+                            {{-- Archivo del Menú.
+                                 El botón vive acá adentro, pegado al archivo, porque es lo
+                                 único que dispara: manda el archivo a la IA. Todo lo demás de
+                                 la pantalla (nombre, promociones, pedidos, chatbot, clásico,
+                                 reseñas) se guarda solo. Antes estaba suelto al final de la
+                                 sección y se leía como un "Guardar todo" que no es. --}}
+                    <div class="mb-6 bg-secondary-dark border border-accent-gray rounded-xl p-6">
                                 <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
                                     {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
                                 </label>
-                                <input type="file" 
-                                       id="archivo" 
-                                       name="archivo" 
-                                       accept=".pdf,.jpeg,.jpg,.png,.gif" 
-                                       {{ $isEdit ? '' : 'required' }} 
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
+                                <input type="file"
+                                       id="archivo"
+                                       name="archivo"
+                                       accept=".pdf,.jpeg,.jpg,.png,.gif"
+                                       {{ $isEdit ? '' : 'required' }}
+                                       class="w-full px-4 py-3 bg-background border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
                                 <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
                                 <p class="mt-2 text-sm text-text-secondary">
                                     @if($isEdit)
@@ -391,29 +408,55 @@
                                         Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
                                     @endif
                                 </p>
-                            </div>
 
-                            <!-- Información sobre el procesamiento -->
-                    <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mb-6">
-                                <div class="flex">
-                                    <div class="flex-shrink-0">
-                                        <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
-                                            <span class="text-accent-blue text-sm">ℹ️</span>
+                                <!-- Información sobre el procesamiento -->
+                                <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mt-5">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
+                                                <span class="text-accent-blue text-sm">ℹ️</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h3 class="text-sm font-medium text-accent-blue">
-                                            Procesamiento Automático
-                                        </h3>
-                                        <div class="mt-2 text-sm text-text-secondary">
-                                            <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
+                                        <div class="ml-3">
+                                            <h3 class="text-sm font-medium text-accent-blue">
+                                                Procesamiento Automático
+                                            </h3>
+                                            <div class="mt-2 text-sm text-text-secondary">
+                                                <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+
+                                {{-- El botón arranca apagado y se prende cuando hay algo real
+                                     que procesar: un archivo elegido, o un menú que quedó sin
+                                     procesar (error) y se puede reintentar. --}}
+                                <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                                    <p id="procesar-ayuda" class="text-xs text-text-secondary sm:text-right sm:flex-1"></p>
+                                    {{-- Sin style inline: el color y el hover salen del CSS de
+                                         arriba, que es el único lugar donde se puede apagar. --}}
+                                    <button type="submit"
+                                            id="btn-actualizar-menu"
+                                            data-necesita-reproceso="{{ $isEdit && $menu && ! $menu->procesado ? '1' : '0' }}"
+                                            class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center justify-center gap-3">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {{-- "Procesar" y no "Guardar": lo que hace es mandar el archivo a
+                                             la IA para que extraiga los platos, no guardar la pantalla. --}}
+                                        <span>{{ $isEdit ? 'Procesar menú nuevo' : 'Crear y procesar menú' }}</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            @if($isEdit)
-                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-6 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                </div>
+            </form>
+
+            {{-- Pedidos en Línea queda FUERA del formulario a propósito: el interruptor se
+                 guarda solo por AJAX y no viaja en el submit. Adentro, y justo encima del
+                 botón, parecía que había que apretar "Procesar" para confirmarlo. --}}
+            @if($isEdit)
+                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-8 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
                                     <div class="relative p-6">
                                         <!-- Texto arriba -->
                                         <div class="mb-5">
@@ -457,32 +500,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            @endif
-
-                    {{-- El botón dispara el PROCESAMIENTO del menú con IA, que tarda. Se
-                         dice qué abarca porque debajo siguen otras secciones que se guardan
-                         solas, y sin la aclaración parecía un "Guardar todo" que no es. --}}
-                    <div class="flex flex-wrap items-center justify-end gap-4">
-                        <p class="text-xs text-text-secondary text-right flex-1 min-w-[200px]">
-                            Procesa el nombre, el archivo y las promociones de esta sección.
-                            Lo de más abajo —chatbot, menú clásico y reseñas— se guarda solo.
-                        </p>
-                        <button type="submit"
-                                id="btn-actualizar-menu"
-                                style="background-color: rgb(var(--c-ok)) !important; border: 2px solid rgb(var(--c-ok) / .3) !important;"
-                                class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center gap-3 hover:opacity-90"
-                                onmouseover="this.style.backgroundColor='rgb(var(--c-ok) / .85)'"
-                                onmouseout="this.style.backgroundColor='rgb(var(--c-ok))'">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            {{-- "Procesar" y no "Guardar": lo que hace es mandar el archivo a
-                                 la IA para que extraiga los platos, no guardar la pantalla. --}}
-                            <span>{{ $isEdit ? 'Procesar menú' : 'Crear y procesar menú' }}</span>
-                        </button>
-                    </div>
-                </div>
-            </form>
+            @endif
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 
@@ -701,6 +719,252 @@
                 </div>
             </div>
 
+            {{-- 🏪 Portada: la foto de la que salen el fondo, el hero y los colores del
+                 menú público. Vive acá, con el resto de lo que ve el cliente, y no en
+                 "datos del comercio": el dato se guarda en `comercios`, igual que los
+                 colores, los atajos y las reseñas, pero lo que se configura es la
+                 pantalla que el cliente ve al escanear el QR.
+
+                 Guarda por AJAX contra `comercios.portada.guardar`, no con el
+                 formulario de esta pantalla: el encuadre y el tagline se guardan cada
+                 uno por su lado.
+
+                 Feature de plan. El super admin siempre la ve, y un comercio que ya
+                 tiene portada la sigue viendo aunque haya bajado de plan, para poder
+                 borrarla. --}}
+            @if(auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada() || $comercio->portada_url)
+            @php $puedeEditarPortada = auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada(); @endphp
+
+            <div class="metric-card" id="bloque-portada"
+                 data-url-guardar="{{ route('comercios.portada.guardar', $comercio) }}"
+                 data-url-estado="{{ route('comercios.portada.estado', $comercio) }}"
+                 data-url-reintentar="{{ route('comercios.portada.reintentar', $comercio) }}"
+                 data-estado="{{ $comercio->portada_estado }}">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
+                            <span class="text-lg">🏪</span>
+                        </div>
+                        <h3 class="text-xl font-semibold text-text-primary">Portada</h3>
+                    </div>
+                    @if($comercio->portada_url)
+                        <button type="button" onclick="eliminarPortada()"
+                                class="bg-danger hover:brightness-95 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200">
+                            🗑️ Eliminar
+                        </button>
+                    @endif
+                </div>
+
+                <p class="text-xs text-text-secondary mb-4">
+                    Es lo primero que ve el cliente al escanear el QR. De esta foto salen
+                    el fondo y los colores del menú, así que conviene una del local o de
+                    un plato — no el menú escaneado.
+                </p>
+
+                {{-- Estado del procesado. Se consulta solo: sin esto decía
+                     "recargá en unos segundos" para siempre, y si la cola estaba
+                     caída el comerciante no tenía forma de enterarse. --}}
+                <div class="mb-4 hidden" id="portadaProgreso">
+                    <div class="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-warning">Generando el tema…</p>
+                            <span class="text-xs text-warning/70" id="portadaSegundos"></span>
+                        </div>
+                        <div class="h-1 w-full overflow-hidden rounded-full bg-warning/40">
+                            <div class="progreso-barra h-full w-1/3 rounded-full bg-warning"></div>
+                        </div>
+                        <p class="mt-2 hidden text-xs text-warning" id="portadaDemora">
+                            Está tardando más de lo normal.
+                            <button type="button" id="portadaReintentar"
+                                    class="underline hover:text-accent-blue">Reintentar</button>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-4 hidden rounded-lg border border-danger/30 bg-danger/10 px-3 py-2"
+                     id="portadaError">
+                    <p class="text-xs text-danger">
+                        No pudimos procesar esta imagen. Probá con otra foto.
+                        <button type="button" id="portadaReintentar2"
+                                class="underline hover:text-accent-blue">Reintentar</button>
+                    </p>
+                </div>
+
+                <style>
+                    /* Indeterminada a propósito: el procesado tarda distinto según
+                       la imagen, así que un porcentaje sería inventado. */
+                    @keyframes progreso-idas {
+                        0%   { transform: translateX(-100%); }
+                        100% { transform: translateX(300%); }
+                    }
+                    .progreso-barra { animation: progreso-idas 1.4s ease-in-out infinite; }
+                    @media (prefers-reduced-motion: reduce) {
+                        .progreso-barra { animation: none; width: 100%; opacity: .6; }
+                    }
+                </style>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    {{-- Izquierda: cómo se ve y qué parte se muestra --}}
+                    <div>
+                        @if($comercio->tienePortada())
+                            {{-- Encuadre. La imagen se guarda entera y acá se elige qué parte
+                                 queda a la vista: son dos números que van a `object-position`,
+                                 así que mover esto no regenera nada. --}}
+                            <div id="portadaActual">
+                                <p class="text-xs text-text-secondary mb-1">Así se ve en el celular</p>
+                                <div class="w-full max-w-xs overflow-hidden rounded-lg border border-accent-gray"
+                                     style="aspect-ratio: 376 / 238;">
+                                    <img id="focoPreview"
+                                         src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
+                                         alt="Vista previa del encuadre"
+                                         onerror="document.getElementById('portadaActual').remove()"
+                                         class="w-full h-full object-cover"
+                                         style="object-position: {{ $comercio->focoPortada() }};">
+                                </div>
+
+                                <p class="text-xs text-text-secondary mt-3 mb-1">
+                                    Tocá lo que no puede faltar (el cartel, un plato…)
+                                </p>
+                                <div id="focoPicker" class="relative w-full max-w-xs cursor-crosshair select-none rounded-lg overflow-hidden border border-accent-gray">
+                                    <img src="{{ asset('storage/' . $comercio->portada_hero_url) }}"
+                                         alt="Elegir el punto focal" draggable="false"
+                                         class="w-full block opacity-80">
+                                    <span id="focoMarca"
+                                          class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,.5)]"
+                                          style="left: {{ $comercio->portada_focal_x ?? 50 }}%; top: {{ $comercio->portada_focal_y ?? 50 }}%;"></span>
+                                </div>
+
+                                <div class="mt-1 flex max-w-xs items-center justify-between">
+                                    <span id="focoValor" class="text-xs text-text-secondary">
+                                        {{ $comercio->portada_focal_x ?? 50 }}% · {{ $comercio->portada_focal_y ?? 50 }}%
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-text-secondary" id="focoEstado"></span>
+                                        <button type="button" id="focoCentrar"
+                                                class="text-xs text-text-secondary hover:text-accent-blue underline transition-colors duration-200">
+                                            Centrar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Aviso persistente: la subió igual, pero conviene que sepa
+                                 por qué se ve borrosa cada vez que entra acá. --}}
+                            @if($comercio->tema_derivado['baja_calidad'] ?? false)
+                                <div class="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+                                    <p class="text-xs text-warning">
+                                        <strong>Calidad baja.</strong>
+                                        La imagen es de {{ $comercio->tema_derivado['ancho'] }}×{{ $comercio->tema_derivado['alto'] }}
+                                        y se recomienda 900×600 o más. Se ve borrosa en el menú.
+                                        Podés reemplazarla cuando quieras.
+                                    </p>
+                                </div>
+                            @endif
+
+                            <div class="mt-3 flex items-center gap-2">
+                                <span class="h-5 w-5 rounded border border-white/20"
+                                      style="background: {{ $comercio->tema_derivado['base'] }}"
+                                      title="Tono base: {{ $comercio->tema_derivado['base'] }}"></span>
+                                <span class="h-5 w-5 rounded border border-white/20"
+                                      style="background: {{ $comercio->tema_derivado['acento_sugerido'] }}"
+                                      title="Acento sugerido: {{ $comercio->tema_derivado['acento_sugerido'] }}"></span>
+                                <p class="text-xs text-text-secondary">Tono y acento detectados</p>
+                            </div>
+
+                            @if($comercio->tieneAcentoSugeridoDistinto())
+                                {{-- Se propone, no se pisa: el color elegido en el selector de
+                                     temas manda, y el extraído suele traer la madera o la comida
+                                     en vez de la marca. --}}
+                                <button type="button"
+                                        onclick="usarAcentoSugerido('{{ $comercio->tema_derivado['acento_sugerido'] }}')"
+                                        class="w-full max-w-xs mt-3 px-2 py-1.5 rounded-lg border border-accent-gray text-xs text-text-primary hover:bg-white/5 transition-all duration-200">
+                                    Usar {{ $comercio->tema_derivado['acento_sugerido'] }} como acento
+                                </button>
+                            @endif
+                        @else
+                            <div class="flex h-full min-h-[8rem] items-center justify-center rounded-lg border border-dashed border-accent-gray bg-secondary-dark p-4">
+                                <p class="text-xs text-text-secondary text-center">
+                                    Todavía no hay portada.<br>
+                                    El menú abre con el diseño estándar.
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Derecha: subir la foto y la frase --}}
+                    <div>
+                        @if($puedeEditarPortada)
+                            <div class="mb-3 hidden" id="portadaPreviewWrap">
+                                <img id="portadaPreview" alt="Portada nueva"
+                                     class="w-full max-w-xs h-24 object-cover rounded-lg border-2 border-accent-blue">
+                                <p class="text-xs text-accent-blue mt-1" id="portadaMedidas"></p>
+                            </div>
+
+                            {{-- Informativo: nunca impide subirla. Rechazar una foto chica
+                                 dejaba al comercio sin portada. --}}
+                            <div class="mb-3 hidden rounded-lg border border-warning/40 bg-warning/10 px-3 py-2"
+                                 id="portadaAviso">
+                                <p class="text-xs text-warning">
+                                    <strong>Calidad baja.</strong>
+                                    <span id="portadaAvisoDetalle"></span>
+                                    Se va a ver borrosa en el menú. Podés subirla igual y cambiarla cuando quieras.
+                                </p>
+                            </div>
+
+                            <label for="portada" class="block text-sm font-medium text-text-secondary mb-2">
+                                {{ $comercio->portada_url ? 'Cambiar la foto' : 'Subir una foto' }}
+                            </label>
+                            <input type="file"
+                                   id="portada"
+                                   accept="image/*"
+                                   class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-text-primary text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-accent-blue file:text-white hover:file:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200">
+                            <p class="text-xs text-text-secondary mt-1">
+                                JPG o PNG, hasta 8 MB. Recomendado: 900×600 o más.
+                            </p>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <button type="button" id="portadaSubir" disabled
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                                    Subir portada
+                                </button>
+                                <span class="text-xs text-text-secondary" id="portadaSubirEstado"></span>
+                            </div>
+                        @else
+                            <p class="text-xs text-text-secondary mb-4">
+                                Cambiar la portada requiere un plan que incluya personalización.
+                            </p>
+                        @endif
+
+                        {{-- Frase corta bajo el nombre, en la portada. Va aparte de la
+                             descripción del comercio porque recortar un párrafo largo deja
+                             la frase cortada al medio. --}}
+                        <div class="mt-6 pt-6 border-t border-accent-gray">
+                            <label for="tagline" class="block text-sm font-medium text-text-secondary mb-2">
+                                Frase del menú
+                            </label>
+                            <input type="text"
+                                   id="tagline"
+                                   maxlength="80"
+                                   value="{{ $comercio->tagline }}"
+                                   placeholder="Ej: Experiencia, sabor e inteligencia en tu mesa."
+                                   class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                            <div class="mt-2 flex items-center gap-2">
+                                <button type="button" onclick="guardarTagline(this)"
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">
+                                    Guardar frase
+                                </button>
+                                <span class="text-xs text-text-secondary" id="tagline-estado"></span>
+                            </div>
+                            <p class="text-xs text-text-secondary/70 mt-2">
+                                Aparece bajo el nombre del comercio. Máx. 80 caracteres.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             {{-- Atajos y Reseñas van a lo ANCHO, fuera de la grilla de dos columnas.
                  Estaban en la columna izquierda y ahí sobraba la mitad de la pantalla:
                  la derecha tiene una sola tarjeta. Además, en media columna los inputs
@@ -825,24 +1089,30 @@
 
                         <div class="space-y-2 chips-lista">
                             @foreach($lista as $chip)
-                                <div class="chip-fila flex gap-2 items-start">
+                                {{-- Los cuatro controles miden lo mismo (h-10) y van centrados:
+                                     el emoji era 48×40, los inputs 38 por el padding y la × 32×36,
+                                     así que cada fila terminaba en tres alturas escalonadas y dos
+                                     botones de proporciones distintas. --}}
+                                <div class="chip-fila flex gap-2 items-center">
                                     {{-- El emoji se elige de una grilla: tipearlo requiere
                                          acordarse de Win + . y en el celular es peor. --}}
                                     <button type="button" onclick="abrirEmojis(this)"
-                                            class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue"
+                                            class="chip-emoji-btn w-10 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg leading-none hover:border-accent-blue"
                                             title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
                                     <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
                                     <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
-                                           class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                           class="chip-label flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
                                     <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
-                                           class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                           class="chip-q flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
                                     <button type="button" onclick="quitarChip(this)"
-                                            class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
+                                            class="flex-none w-10 h-10 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10" title="Quitar">×</button>
                                 </div>
                             @endforeach
                         </div>
 
-                        <div class="flex items-center gap-2 mt-2">
+                        {{-- mt-3 y no mt-2: arriba de la lista hay 12px (el mb-3 de la ayuda),
+                             así que con 8px abajo el bloque quedaba descentrado. --}}
+                        <div class="flex items-center gap-2 mt-3">
                             <button type="button" onclick="agregarChip(this)"
                                     class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
                             <button type="button" onclick="guardarChips(this)"
@@ -864,18 +1134,21 @@
                         @endforeach
                     </div>
                     <button type="button" onclick="elegirEmoji('')"
-                            class="w-full mt-1 text-xs text-text-secondary hover:text-red-400 py-1">Sin ícono</button>
+                            class="w-full mt-1 text-xs text-text-secondary hover:text-danger py-1">Sin ícono</button>
                 </div>
             </div>
 
             {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
                  porque es donde el comercio configura lo que ve el cliente; pero
                  el dato se guarda en `comercios`, no en el menú: el link es de la
-                 ficha del negocio y no se tiene que perder al subir otra carta. --}}
+                 ficha del negocio y no se tiene que perder al subir otra carta.
+
+                 El campo del link también está acá. Estaba en "datos del comercio", y
+                 eso dejaba el interruptor apagado con un cartel que mandaba a otra
+                 pantalla a buscar lo único que lo habilita. --}}
             @php $tieneLink = filled($comercio->google_review_url); @endphp
 
-            <div class="metric-card" id="bloque-resenas"
-                 data-url-comercio="{{ route('comercios.edit', $comercio) }}">
+            <div class="metric-card" id="bloque-resenas">
                 <div class="flex items-center mb-6">
                     <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
                         <span class="text-lg">⭐</span>
@@ -883,13 +1156,37 @@
                     <h3 class="text-xl font-semibold text-text-primary">Reseñas en Google</h3>
                 </div>
 
-                <label class="block text-sm font-medium text-text-secondary mb-1">Reseñas en Google</label>
                 <p class="text-xs text-text-secondary mb-4">
                     Al cliente que usó el asistente y ya lleva un rato en la mesa se le
                     ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
                 </p>
 
-                <div class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
+                <div class="mb-3">
+                    <label for="google-review-url" class="block text-sm font-medium text-text-secondary mb-2">
+                        Link de reseñas de Google
+                    </label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="url"
+                               id="google-review-url"
+                               maxlength="255"
+                               value="{{ $comercio->google_review_url }}"
+                               placeholder="https://g.page/r/..."
+                               class="flex-1 min-w-[16rem] h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                        {{-- h-10 como el input que tiene al lado: con py-1.5 quedaba 10px
+                             más bajo y la fila se veía desparejo. --}}
+                        <button type="button" onclick="guardarLinkResenas(this)"
+                                class="flex-none h-10 text-xs px-4 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">
+                            Guardar link
+                        </button>
+                        <span class="text-xs text-text-secondary" id="link-resenas-estado"></span>
+                    </div>
+                    <p class="text-xs text-text-secondary/70 mt-1">
+                        Se saca del perfil del negocio en Google, en «Pedir reseñas».
+                    </p>
+                </div>
+
+                <div id="resenas-caja"
+                     class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
                             {{ $tieneLink ? '' : 'opacity-60' }}">
                     <button type="button"
                             id="resenas-switch"
@@ -899,7 +1196,7 @@
                             onclick="alternarResenas(this)"
                             @disabled(! $tieneLink)
                             class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
-                                   {{ $comercio->resenas_activo ? 'bg-green-500' : 'bg-accent-gray' }}">
+                                   {{ $comercio->resenas_activo ? 'bg-accent-green' : 'bg-accent-gray' }}">
                         <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
                                      {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
                     </button>
@@ -907,8 +1204,7 @@
                         <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
                         <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
                             @if(! $tieneLink)
-                                Cargá primero el link en
-                                <a href="{{ route('comercios.edit', $comercio) }}" class="text-accent-blue hover:underline">los datos del comercio</a>.
+                                Cargá el link acá arriba para poder activarlo.
                             @elseif($comercio->resenas_activo)
                                 Activo — se le muestra a quien cumpla las condiciones.
                             @else
@@ -1065,7 +1361,7 @@
                                                                      id="promo-imagen-{{ $promoId }}">
                                                                 <button type="button"
                                                                         onclick="removePromocionImagen({{ $promoId }}, '{{ $promo['imagen'] }}')"
-                                                                        class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                                                        class="absolute -top-2 -right-2 bg-danger hover:brightness-95 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                                                     ×
                                                                 </button>
                                                             </div>
@@ -1088,7 +1384,7 @@
                                                 <div class="md:col-span-1 flex items-end">
                                                     <button type="button" 
                                                             onclick="removePromocion({{ $promoId }})"
-                                                            class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                                                            class="w-full bg-danger hover:brightness-95 text-white px-3 py-2 rounded-lg text-sm transition-colors">
                                                         🗑️
                                                     </button>
                                                 </div>
@@ -1217,7 +1513,7 @@
                                                                     <!-- Eliminar producto -->
                                                                     <button type="button"
                                                                             onclick="event.stopPropagation(); eliminarPlato({{ $categoriaIndex }}, {{ $platoIndex }}, @js($nombrePlato))"
-                                                                            class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                                            class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
                                                                             title="Eliminar producto">
                                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -1254,7 +1550,7 @@
                                                                                     </label>
                                                                                     <button type="button"
                                                                                             onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
-                                                                                            class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                                                                            class="inline-flex items-center justify-center w-7 h-7 bg-danger hover:brightness-95 text-white rounded transition-colors cursor-pointer shadow-xl"
                                                                                             title="Eliminar imagen">
                                                                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1612,6 +1908,23 @@
                 saveThemeColors({ primary: color });
             }
 
+            // El acento que salió de la portada. Es una SUGERENCIA: se aplica sólo si
+            // el comercio toca el botón, porque la extracción por frecuencia suele
+            // devolver la madera o la comida y no la marca.
+            window.usarAcentoSugerido = function (hex) {
+                document.getElementById('primary_color').value = hex;
+
+                // Puede coincidir con uno de los predefinidos o no; si no, quedan todos
+                // sin marcar en vez de dejar marcado el anterior, que ya no es el vigente.
+                const predefinido = Object.keys(ACENTOS).find(
+                    k => ACENTOS[k].toLowerCase() === hex.toLowerCase()
+                );
+
+                updatePreview();
+                updateActiveSwatch(predefinido || null);
+                saveThemeColors({ primary: hex });
+            };
+
             // Función para guardar los colores automáticamente
             async function saveThemeColors(colors) {
                 try {
@@ -1667,9 +1980,9 @@
                 
                 // Estilos según el tipo
                 if (type === 'success') {
-                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-green-500 text-white';
+                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-accent-green text-white';
                 } else {
-                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-red-500 text-white';
+                    messageEl.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-danger text-white';
                 }
                 
                 messageEl.textContent = message;
@@ -1694,9 +2007,9 @@
                 
                 // Estilos según el tipo
                 if (type === 'success') {
-                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-500 text-white flex items-center gap-2 animate-fade-in';
+                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-accent-green text-white flex items-center gap-2 animate-fade-in';
                 } else {
-                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-red-500 text-white flex items-center gap-2 animate-fade-in';
+                    notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-danger text-white flex items-center gap-2 animate-fade-in';
                 }
                 
                 notification.innerHTML = `<span>${message}</span>`;
@@ -1940,14 +2253,17 @@
                     return;
                 }
 
+                // ⚠ Estas clases son las mismas que las de la fila que imprime Blade más
+                // arriba: si cambian allá, cambian acá. Con markup distinto, la fila recién
+                // agregada queda con otra altura que las que ya estaban.
                 const fila = document.createElement('div');
-                fila.className = 'chip-fila flex gap-2 items-start';
+                fila.className = 'chip-fila flex gap-2 items-center';
                 fila.innerHTML = `
-                    <button type="button" onclick="abrirEmojis(this)" class="chip-emoji-btn w-12 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg hover:border-accent-blue" title="Elegir ícono">🍽️</button>
+                    <button type="button" onclick="abrirEmojis(this)" class="chip-emoji-btn w-10 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg leading-none hover:border-accent-blue" title="Elegir ícono">🍽️</button>
                     <input type="hidden" class="chip-emoji">
-                    <input type="text" maxlength="40" placeholder="Lo que se ve" class="chip-label flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                    <input type="text" maxlength="200" placeholder="La pregunta que ejecuta" class="chip-q flex-1 min-w-0 px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                    <button type="button" onclick="quitarChip(this)" class="flex-none w-8 h-9 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10" title="Quitar">×</button>
+                    <input type="text" maxlength="40" placeholder="Lo que se ve" class="chip-label flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                    <input type="text" maxlength="200" placeholder="La pregunta que ejecuta" class="chip-q flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                    <button type="button" onclick="quitarChip(this)" class="flex-none w-10 h-10 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10" title="Quitar">×</button>
                 `;
                 lista.appendChild(fila);
                 actualizarContadorChips(bloque);
@@ -1963,10 +2279,11 @@
                 if (!picker) return;
                 emojiDestino = btn;
 
-                // El picker se cuelga del <body> la primera vez. Nace dentro de .metric-card,
-                // que en :hover aplica -translate-y-1, y un ancestro con `transform` hace que
-                // `position: fixed` se posicione contra ESE elemento y no contra la ventana:
-                // la grilla terminaba fuera de la pantalla y parecía que no abría.
+                // El picker se cuelga del <body> la primera vez. Nace dentro de una tarjeta,
+                // y un ancestro con `transform` hace que `position: fixed` se posicione contra
+                // ESE elemento y no contra la ventana: la grilla terminaba fuera de la pantalla
+                // y parecía que no abría. La .metric-card ya no se transforma en :hover, pero
+                // esto se queda: cualquier ancestro con transform lo vuelve a romper.
                 if (picker.parentElement !== document.body) {
                     document.body.appendChild(picker);
                 }
@@ -2058,15 +2375,57 @@
             // solo booleano y esperar un "Guardar" para un interruptor confunde.
             // Con qué abre el menú clásico. Se guarda al toque, sin botón de confirmar:
             // es una preferencia de dos opciones y no hay nada que revisar antes.
+            // ── El botón que procesa ───────────────────────────────────────────────
+            //
+            // Lo único que hace es mandar el archivo a la IA. El nombre, las promociones,
+            // el interruptor de pedidos y todo lo de más abajo se guardan solos. Por eso
+            // arranca apagado y solo se prende cuando hay algo real que procesar: un
+            // archivo elegido, o un menú que quedó sin procesar y se puede reintentar.
+            // Apagado explica por qué, así nadie lo busca creyendo que hay que "guardar".
+            window.actualizarBotonProcesar = function () {
+                const boton = document.getElementById('btn-actualizar-menu');
+                const ayuda = document.getElementById('procesar-ayuda');
+                if (!boton) return;
+
+                const campoNombre = document.getElementById('nombre');
+                const campoArchivo = document.getElementById('archivo');
+                const esEdicion = {{ $isEdit ? 'true' : 'false' }};
+
+                const faltaNombre = campoNombre && campoNombre.value.trim() === '';
+                const hayArchivo = !!(campoArchivo && campoArchivo.files && campoArchivo.files.length > 0);
+                const puedeReintentar = boton.dataset.necesitaReproceso === '1';
+
+                let motivo = '';
+                if (faltaNombre) {
+                    motivo = 'Poné un nombre para el menú.';
+                } else if (!hayArchivo && esEdicion && !puedeReintentar) {
+                    motivo = 'Elegí un archivo nuevo para reemplazar el menú. Todo lo demás de esta pantalla se guarda solo.';
+                } else if (!hayArchivo && !esEdicion) {
+                    motivo = 'Elegí el archivo del menú para poder procesarlo.';
+                }
+
+                boton.disabled = motivo !== '';
+                boton.title = motivo;
+
+                if (ayuda) {
+                    if (motivo) {
+                        ayuda.textContent = motivo;
+                    } else if (hayArchivo && esEdicion) {
+                        ayuda.textContent = 'Se va a reemplazar el menú actual por el archivo elegido.';
+                    } else if (puedeReintentar) {
+                        ayuda.textContent = 'Este menú quedó sin procesar. Podés reintentar o subir otro archivo.';
+                    } else {
+                        ayuda.textContent = '';
+                    }
+                }
+            };
+
             // ── Nombre del menú ────────────────────────────────────────────────────
             //
-            // Es obligatorio y se guarda solo. Mientras esté vacío, el botón que procesa
-            // el menú queda bloqueado: si el nombre hace falta, mejor pedirlo antes de
-            // gastar una llamada a la IA que después.
+            // Es obligatorio y se guarda solo.
             (function () {
                 const campo = document.getElementById('nombre');
                 const estado = document.getElementById('nombre-estado');
-                const botonProcesar = document.getElementById('btn-actualizar-menu');
                 if (!campo) return;
 
                 let ultimoGuardado = campo.value.trim();
@@ -2074,12 +2433,7 @@
                 function pintarFalta(falta) {
                     campo.classList.toggle('border-danger', falta);
                     campo.classList.toggle('border-accent-gray', !falta);
-                    if (botonProcesar) {
-                        botonProcesar.disabled = falta;
-                        botonProcesar.classList.toggle('opacity-50', falta);
-                        botonProcesar.classList.toggle('cursor-not-allowed', falta);
-                        botonProcesar.title = falta ? 'Poné un nombre para el menú' : '';
-                    }
+                    window.actualizarBotonProcesar();
                     if (falta) estado.textContent = 'Poné un nombre para identificar este menú.';
                 }
 
@@ -2125,6 +2479,9 @@
                 pintarFalta(campo.value.trim() === '');
             })();
 
+            // Estado inicial del botón, aunque el campo de nombre no esté en la pantalla.
+            window.actualizarBotonProcesar();
+
             window.guardarVistaClasica = async function(vista) {
                 const estado = document.getElementById('vista-clasica-estado');
                 estado.textContent = 'Guardando…';
@@ -2152,6 +2509,10 @@
                 }
             };
 
+            {{-- Igual que el bloque de reseñas, que sólo se renderiza con la feature del
+                 plan. Sin este @if, el JS nombraba elementos que no existen y el panel
+                 del plan básico venía con código muerto. --}}
+            @if($comercio->tieneFeature('analytics'))
             window.alternarResenas = async function(btn) {
                 const activo = btn.getAttribute('aria-checked') === 'true';
                 const nuevo = !activo;
@@ -2162,7 +2523,7 @@
                 // interruptor tiene que sentirse inmediato.
                 const pintar = (on) => {
                     btn.setAttribute('aria-checked', on ? 'true' : 'false');
-                    btn.classList.toggle('bg-green-500', on);
+                    btn.classList.toggle('bg-accent-green', on);
                     btn.classList.toggle('bg-accent-gray', !on);
                     perilla.classList.toggle('translate-x-5', on);
                     ayuda.textContent = on
@@ -2243,6 +2604,352 @@
                     btn.disabled = false;
                 }
             };
+
+            // Guarda el link de reseñas y habilita el interruptor en el acto. Antes el
+            // campo vivía en "datos del comercio" y había que ir, volver y recargar.
+            window.guardarLinkResenas = async function(btn) {
+                const campo = document.getElementById('google-review-url');
+                const estado = document.getElementById('link-resenas-estado');
+                const sw = document.getElementById('resenas-switch');
+                const caja = document.getElementById('resenas-caja');
+                const ayuda = document.getElementById('resenas-ayuda');
+
+                btn.disabled = true;
+                estado.textContent = 'Guardando...';
+
+                try {
+                    const response = await fetch(`{{ route('menus.update.resenas', ['comercio' => $comercio->slug]) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ google_review_url: campo.value.trim() })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        // 422 de validación: el mensaje útil está en `errors`, no en `error`.
+                        showError(data.error || data.message || 'No se pudo guardar el link');
+                        estado.textContent = '';
+                        return;
+                    }
+
+                    sw.disabled = !data.tiene_link;
+                    caja.classList.toggle('opacity-60', !data.tiene_link);
+
+                    if (!data.tiene_link) {
+                        // Sin link el servidor apaga el interruptor: se refleja acá para
+                        // que no quede pintado en verde sobre un dato que ya no está.
+                        sw.setAttribute('aria-checked', 'false');
+                        sw.classList.remove('bg-accent-green');
+                        sw.classList.add('bg-accent-gray');
+                        sw.querySelector('span').classList.remove('translate-x-5');
+                        ayuda.textContent = 'Cargá el link acá arriba para poder activarlo.';
+                    } else if (!data.activo) {
+                        ayuda.textContent = 'Listo para activar.';
+                    }
+
+                    estado.textContent = '✓ Guardado';
+                    showTemporaryMessage(data.tiene_link ? 'Link guardado' : 'Link borrado', 'success');
+                    setTimeout(() => { estado.textContent = ''; }, 4000);
+                } catch (error) {
+                    console.error('Error al guardar el link de reseñas:', error);
+                    showError('Error al guardar el link');
+                    estado.textContent = '';
+                }
+
+                btn.disabled = false;
+            };
+            @endif
+
+            // ── Portada ──────────────────────────────────────────────────────
+            // Todo lo de la portada guarda contra su propio endpoint y de a pedazos:
+            // el encuadre al soltar el marcador, la frase con su botón, la foto con
+            // el suyo. Por eso no cuelga del formulario de esta pantalla.
+            (function () {
+                const bloque = document.getElementById('bloque-portada');
+                if (!bloque) return;
+
+                const URL_GUARDAR = bloque.dataset.urlGuardar;
+                const URL_ESTADO = bloque.dataset.urlEstado;
+                const URL_REINTENTAR = bloque.dataset.urlReintentar;
+                const TOKEN = '{{ csrf_token() }}';
+
+                /** Envía al endpoint de portada. `extra` arma el FormData. */
+                async function guardar(extra) {
+                    const fd = new FormData();
+                    fd.append('_token', TOKEN);
+                    extra(fd);
+
+                    const r = await fetch(URL_GUARDAR, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': TOKEN, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        body: fd
+                    });
+
+                    const data = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(data.error || data.message || 'No se pudo guardar');
+                    return data;
+                }
+
+                // ── Punto focal ──────────────────────────────────────────────
+                // Mover esto no regenera ninguna imagen: son dos números que van a
+                // `object-position`, así que se guardan solos al soltar.
+                (function () {
+                    const picker = document.getElementById('focoPicker');
+                    if (!picker) return;
+
+                    const marca = document.getElementById('focoMarca');
+                    const preview = document.getElementById('focoPreview');
+                    const valor = document.getElementById('focoValor');
+                    const estado = document.getElementById('focoEstado');
+
+                    let x = {{ $comercio->portada_focal_x ?? 50 }};
+                    let y = {{ $comercio->portada_focal_y ?? 50 }};
+
+                    function aplicar(nx, ny) {
+                        x = Math.max(0, Math.min(100, Math.round(nx)));
+                        y = Math.max(0, Math.min(100, Math.round(ny)));
+
+                        marca.style.left = x + '%';
+                        marca.style.top = y + '%';
+                        preview.style.objectPosition = x + '% ' + y + '%';
+                        valor.textContent = x + '% · ' + y + '%';
+                    }
+
+                    async function persistir() {
+                        estado.textContent = 'Guardando…';
+                        try {
+                            await guardar(fd => {
+                                fd.append('portada_focal_x', x);
+                                fd.append('portada_focal_y', y);
+                            });
+                            estado.textContent = '✓ Guardado';
+                            setTimeout(() => { estado.textContent = ''; }, 2500);
+                        } catch (e) {
+                            estado.textContent = 'No se pudo guardar';
+                        }
+                    }
+
+                    function desdeEvento(e) {
+                        const r = picker.getBoundingClientRect();
+                        const p = e.touches ? e.touches[0] : e;
+                        aplicar(((p.clientX - r.left) / r.width) * 100, ((p.clientY - r.top) / r.height) * 100);
+                    }
+
+                    let arrastrando = false;
+
+                    picker.addEventListener('pointerdown', function (e) {
+                        arrastrando = true;
+                        picker.setPointerCapture(e.pointerId);
+                        desdeEvento(e);
+                    });
+                    picker.addEventListener('pointermove', function (e) {
+                        if (arrastrando) desdeEvento(e);
+                    });
+                    // Se persiste al soltar y no en cada `pointermove`: arrastrar el
+                    // marcador dispara decenas de eventos por segundo.
+                    picker.addEventListener('pointerup', function () {
+                        if (!arrastrando) return;
+                        arrastrando = false;
+                        persistir();
+                    });
+                    picker.addEventListener('pointercancel', function () { arrastrando = false; });
+
+                    document.getElementById('focoCentrar')?.addEventListener('click', function () {
+                        aplicar(50, 50);
+                        persistir();
+                    });
+                })();
+
+                // ── Seguimiento del procesado ────────────────────────────────
+                const progreso = document.getElementById('portadaProgreso');
+                const errorBox = document.getElementById('portadaError');
+                const segundosTxt = document.getElementById('portadaSegundos');
+                const demora = document.getElementById('portadaDemora');
+
+                let desde = null;
+                let timer = null;
+
+                function tick() {
+                    if (!desde) return;
+                    const seg = Math.round((Date.now() - desde) / 1000);
+                    if (segundosTxt) segundosTxt.textContent = seg + 's';
+
+                    // A los 30s dejamos de prometer que ya viene: casi siempre
+                    // significa que la cola no está corriendo.
+                    if (seg >= 30 && demora) demora.classList.remove('hidden');
+                }
+
+                function detener() {
+                    clearInterval(timer);
+                    timer = null;
+                    progreso.classList.add('hidden');
+                }
+
+                async function consultar() {
+                    try {
+                        const r = await fetch(URL_ESTADO, { headers: { 'Accept': 'application/json' } });
+                        if (!r.ok) return;
+
+                        const data = await r.json();
+
+                        if (data.estado === 'listo') {
+                            detener();
+                            window.location.reload();   // la tarjeta se arma en el server
+                            return;
+                        }
+
+                        if (data.estado === 'error') {
+                            detener();
+                            errorBox.classList.remove('hidden');
+                        }
+                    } catch (e) {
+                        // Sin conexión: se reintenta en el próximo ciclo.
+                    }
+                }
+
+                function arrancar() {
+                    if (timer) return;
+                    desde = Date.now();
+                    progreso.classList.remove('hidden');
+                    errorBox.classList.add('hidden');
+                    if (demora) demora.classList.add('hidden');
+                    tick();
+                    timer = setInterval(function () { tick(); consultar(); }, 2000);
+                }
+
+                async function reintentar() {
+                    detener();
+                    try {
+                        await fetch(URL_REINTENTAR, {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': TOKEN, 'Accept': 'application/json' },
+                        });
+                        arrancar();
+                    } catch (e) {
+                        errorBox.classList.remove('hidden');
+                    }
+                }
+
+                document.getElementById('portadaReintentar')?.addEventListener('click', reintentar);
+                document.getElementById('portadaReintentar2')?.addEventListener('click', reintentar);
+
+                if (bloque.dataset.estado === 'procesando') arrancar();
+                if (bloque.dataset.estado === 'error') errorBox.classList.remove('hidden');
+
+                // ── Elegir y subir la foto ───────────────────────────────────
+                const input = document.getElementById('portada');
+                const botonSubir = document.getElementById('portadaSubir');
+
+                if (input && botonSubir) {
+                    const MIN_ANCHO = {{ \App\Services\BrandThemeService::ANCHO_RECOMENDADO }};
+                    const MIN_ALTO  = {{ \App\Services\BrandThemeService::ALTO_RECOMENDADO }};
+
+                    const wrap = document.getElementById('portadaPreviewWrap');
+                    const img = document.getElementById('portadaPreview');
+                    const medidasTxt = document.getElementById('portadaMedidas');
+                    const aviso = document.getElementById('portadaAviso');
+                    const avisoDetalle = document.getElementById('portadaAvisoDetalle');
+                    const estadoSubir = document.getElementById('portadaSubirEstado');
+
+                    input.addEventListener('change', function () {
+                        const archivo = this.files && this.files[0];
+                        botonSubir.disabled = !archivo;
+                        aviso.classList.add('hidden');
+
+                        if (!archivo || !archivo.type.startsWith('image/')) {
+                            wrap.classList.add('hidden');
+                            return;
+                        }
+
+                        // Se libera la URL anterior para no acumular blobs si el
+                        // usuario prueba varias imágenes seguidas.
+                        if (img.dataset.blob) URL.revokeObjectURL(img.dataset.blob);
+
+                        const url = URL.createObjectURL(archivo);
+                        img.dataset.blob = url;
+                        img.src = url;
+                        wrap.classList.remove('hidden');
+
+                        img.onload = function () {
+                            medidasTxt.textContent =
+                                img.naturalWidth + '×' + img.naturalHeight + ' · ' +
+                                (archivo.size / 1024 / 1024).toFixed(1) + ' MB';
+
+                            // Informativo: nunca impide subirla.
+                            if (img.naturalWidth < MIN_ANCHO || img.naturalHeight < MIN_ALTO) {
+                                avisoDetalle.textContent =
+                                    'La imagen es de ' + img.naturalWidth + '×' + img.naturalHeight +
+                                    ' y se recomienda ' + MIN_ANCHO + '×' + MIN_ALTO + '.';
+                                aviso.classList.remove('hidden');
+                            }
+                        };
+                    });
+
+                    botonSubir.addEventListener('click', async function () {
+                        const archivo = input.files && input.files[0];
+                        if (!archivo) return;
+
+                        botonSubir.disabled = true;
+                        estadoSubir.textContent = 'Subiendo…';
+
+                        try {
+                            const data = await guardar(fd => fd.append('portada', archivo));
+
+                            // Una foto de celular normal se procesa en el mismo request y
+                            // vuelve 'listo'; las gigantes van a la cola y ahí sí hay que
+                            // esperar con la barra.
+                            if (data.estado === 'listo') {
+                                window.location.reload();
+                                return;
+                            }
+
+                            estadoSubir.textContent = '';
+                            arrancar();
+                        } catch (e) {
+                            estadoSubir.textContent = '';
+                            botonSubir.disabled = false;
+                            showError(e.message);
+                        }
+                    });
+                }
+
+                // ── Eliminar ─────────────────────────────────────────────────
+                window.eliminarPortada = function () {
+                    showConfirmWithLoader('¿Eliminar la portada? El menú público vuelve al diseño estándar.', async r => {
+                        if (!r) return;
+                        try {
+                            await guardar(fd => fd.append('delete_portada', '1'));
+                            window.location.reload();
+                        } catch (e) {
+                            showError(e.message);
+                        }
+                    }, 'Eliminando...');
+                };
+
+                // ── Frase del menú ───────────────────────────────────────────
+                window.guardarTagline = async function (btn) {
+                    const estado = document.getElementById('tagline-estado');
+                    btn.disabled = true;
+                    estado.textContent = 'Guardando...';
+
+                    try {
+                        await guardar(fd => fd.append('tagline', document.getElementById('tagline').value.trim()));
+                        estado.textContent = '✓ Guardado';
+                        showTemporaryMessage('Frase guardada', 'success');
+                        setTimeout(() => { estado.textContent = ''; }, 4000);
+                    } catch (e) {
+                        estado.textContent = '';
+                        showError(e.message);
+                    }
+
+                    btn.disabled = false;
+                };
+            })();
 
             // Marca/desmarca un plato como estrella desde su propia tarjeta.
             // Se guarda en el JSON del menú, junto al plato, no en una lista aparte.
@@ -2835,9 +3542,12 @@
         // ========================================
         
         async function handleFileSelection(event) {
+            // Elegir (o deselegir) archivo es lo que prende y apaga el botón que procesa.
+            if (window.actualizarBotonProcesar) window.actualizarBotonProcesar();
+
             const file = event.target.files[0];
             if (!file) return;
-            
+
             // NO convertir PDF a imagen - procesarlo directamente
             // El backend procesará el PDF completo directamente con IA
             convertedImageFile = null;
@@ -3147,7 +3857,7 @@
                             </label>
                             <button type="button"
                                     onclick="removePlatoImagen(${categoriaIndex}, ${platoIndex}, null)"
-                                    class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                    class="inline-flex items-center justify-center w-7 h-7 bg-danger hover:brightness-95 text-white rounded transition-colors cursor-pointer shadow-xl"
                                     title="Eliminar imagen">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -3236,7 +3946,7 @@
                                     </label>
                                     <button type="button"
                                             onclick="removePlatoImagen(${categoriaIndex}, ${platoIndex}, null)"
-                                            class="inline-flex items-center justify-center w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                            class="inline-flex items-center justify-center w-7 h-7 bg-danger hover:brightness-95 text-white rounded transition-colors cursor-pointer shadow-xl"
                                             title="Eliminar imagen">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -3472,7 +4182,7 @@
                     // Mostrar éxito
                     if (statusElement) {
                         statusElement.textContent = '✓';
-                        statusElement.className = 'text-green-500 text-xs';
+                        statusElement.className = 'text-accent-green text-xs';
                     }
                     
                     // El backend devuelve el precio ya formateado ("$4.500"): el input muestra
@@ -3504,7 +4214,7 @@
                 // Mostrar error
                 if (statusElement) {
                     statusElement.textContent = '✗';
-                    statusElement.className = 'text-red-500 text-xs';
+                    statusElement.className = 'text-danger text-xs';
                     setTimeout(() => {
                         statusElement.textContent = '';
                     }, 3000);
@@ -3669,7 +4379,7 @@
                 // Mostrar éxito
                 if (statusElement) {
                     statusElement.textContent = '✓';
-                    statusElement.className = 'text-green-500 text-xs';
+                    statusElement.className = 'text-accent-green text-xs';
                     setTimeout(() => {
                         statusElement.textContent = '';
                     }, 2000);
@@ -3683,7 +4393,7 @@
                 // Mostrar error
                 if (statusElement) {
                     statusElement.textContent = '✗';
-                    statusElement.className = 'text-red-500 text-xs';
+                    statusElement.className = 'text-danger text-xs';
                     setTimeout(() => {
                         statusElement.textContent = '';
                     }, 3000);
@@ -4033,8 +4743,8 @@
                 title: 'Nuevo producto',
                 html: `
                     <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left;">
-                        <p style="color: #9CA3AF; font-size: 0.85rem; margin: 0;">
-                            Se agrega en <strong style="color: #CCCCCC;">${nombreCategoria}</strong>
+                        <p style="color: rgb(var(--c-ink-soft)); font-size: 0.85rem; margin: 0;">
+                            Se agrega en <strong style="color: rgb(var(--c-ink));">${nombreCategoria}</strong>
                         </p>
                         <input id="nuevo-plato-nombre" class="swal2-input" style="margin: 0; width: 100%;"
                                placeholder="Nombre del producto" maxlength="255" autocomplete="off">
@@ -4042,7 +4752,7 @@
                                placeholder="Precio (opcional)" inputmode="decimal" maxlength="50" autocomplete="off">
                         <textarea id="nuevo-plato-descripcion" class="swal2-textarea" style="margin: 0; width: 100%;"
                                   placeholder="Descripción (opcional)" maxlength="1000"></textarea>
-                        <label for="nuevo-plato-imagen" style="display: flex; align-items: center; gap: 0.75rem; margin: 0; padding: 0.6rem 0.75rem; border: 2px dashed rgba(59, 130, 246, 0.4); border-radius: 0.5rem; color: #3B82F6; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <label for="nuevo-plato-imagen" style="display: flex; align-items: center; gap: 0.75rem; margin: 0; padding: 0.6rem 0.75rem; border: 2px dashed rgb(var(--c-accent) / 0.4); border-radius: 0.5rem; color: rgb(var(--c-accent-deep)); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
                             <img id="nuevo-plato-imagen-preview" alt=""
                                  style="display: none; width: 48px; height: 48px; object-fit: cover; border-radius: 0.375rem; flex-shrink: 0;">
                             <span id="nuevo-plato-imagen-texto">📷 Agregar foto (opcional)</span>
@@ -4249,7 +4959,7 @@
             
             // Crear notificación visual
             const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
+            notification.className = 'fixed top-4 right-4 bg-accent-green text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
             notification.innerHTML = `
                 <span>✓</span>
                 <span>${message}</span>
@@ -4271,7 +4981,7 @@
             
             // Crear notificación de error
             const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
+            notification.className = 'fixed top-4 right-4 bg-danger text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in';
             notification.innerHTML = `
                 <span>✗</span>
                 <span>${message}</span>
@@ -4395,7 +5105,7 @@
                     title: title,
                     html: `
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
-                            <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                            <p style="color: rgb(var(--c-ink)); font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
                                 ${message}
                             </p>
                         </div>
@@ -4420,9 +5130,8 @@
                     backdrop: true,
                     customClass: {
                         popup: 'dark-modal',
-                        title: 'text-white',
                         content: 'text-text-secondary',
-                        confirmButton: 'bg-green-600 hover:bg-green-700'
+                        confirmButton: 'bg-accent-green hover:brightness-95'
                     }
                 }).then(() => {
                     // Limpiar el mensaje de sesión para que no se muestre de nuevo
@@ -4440,7 +5149,7 @@
                     title: 'Error',
                     html: `
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem 0;">
-                            <p style="color: #CCCCCC; font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
+                            <p style="color: rgb(var(--c-ink)); font-size: 1.125rem; font-weight: 500; text-align: center; margin: 0; line-height: 1.6;">
                                 ${errorMessage}
                             </p>
                         </div>
@@ -4453,9 +5162,8 @@
                     padding: '2rem',
                     customClass: {
                         popup: 'dark-modal',
-                        title: 'text-white',
                         content: 'text-text-secondary',
-                        confirmButton: 'bg-red-600 hover:bg-red-700'
+                        confirmButton: 'bg-danger hover:brightness-95'
                     }
                 });
             });
@@ -4565,7 +5273,7 @@
                     <div class="md:col-span-1 flex items-end">
                         <button type="button" 
                                 onclick="removePromocion(${nuevoId})"
-                                class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                                class="w-full bg-danger hover:brightness-95 text-white px-3 py-2 rounded-lg text-sm transition-colors">
                             🗑️
                         </button>
                     </div>
@@ -5093,7 +5801,7 @@
                                  id="promo-imagen-${promoId}">
                             <button type="button"
                                     onclick="removePromocionImagen(${promoId}, '${data.imagen_path}')"
-                                    class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                    class="absolute -top-2 -right-2 bg-danger hover:brightness-95 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                 ×
                             </button>
                         </div>

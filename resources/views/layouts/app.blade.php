@@ -70,43 +70,50 @@
     <div class="min-h-screen flex flex-col">
         @php $miComercio = auth()->user()->getComercio(); @endphp
         <!-- Navigation -->
-        <nav class="bg-background border-b border-accent-gray md:sticky md:top-0 z-50">
+        {{-- La barra va en papel (`secondary-dark` = --c-elev-2, blanco) y no en el crema
+             del fondo: con los dos iguales el header y la página se leían como una sola
+             mancha y sólo los separaba el borde. En blanco la barra se despega sola, que
+             es lo que se espera de algo que queda fijo arriba al hacer scroll. --}}
+        <nav class="bg-secondary-dark border-b border-accent-gray md:sticky md:top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-3">
+                <div class="flex justify-between items-center py-2">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <a href="{{ route('dashboard') }}" class="hover:opacity-80 transition-opacity duration-200">
-                                <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" style="height:140px;width:auto;">
+                                {{-- 140px de alto inline dejaban un header de ~164px: ocupaba
+                                     un cuarto de la pantalla antes de empezar a trabajar. A
+                                     56px el texto del logo todavía se lee. --}}
+                                <img src="{{ asset('images/logo_servime.png') }}" alt="ServiME" class="h-12 sm:h-14 w-auto">
                             </a>
                         </div>
                         <div class="hidden md:block ml-10">
                             <div class="flex items-baseline space-x-4">
                                 <a href="{{ route('dashboard') }}" 
-                                   class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('dashboard') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                   class="nav-link {{ request()->routeIs('dashboard') ? 'active' : 'hover:text-accent-deep' }}">
                                     Dashboard
                                 </a>
                                 
                                 <!-- Navegación común para todos los usuarios -->
                                 <a href="{{ route('comercios.index') }}" 
-                                   class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('comercios.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                   class="nav-link {{ request()->routeIs('comercios.*') ? 'active' : 'hover:text-accent-deep' }}">
                                     Comercios
                                 </a>
                                 @if(Auth::user()->isSuperAdmin())
                                     <a href="{{ route('admin.users.index') }}"
-                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.users.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                       class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Usuarios
                                     </a>
                                     <a href="{{ route('admin.menus.index') }}"
-                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                       class="nav-link {{ request()->routeIs('admin.menus.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Menús
                                     </a>
                                     <a href="{{ route('admin.plans.index') }}"
-                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                       class="nav-link {{ request()->routeIs('admin.plans.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Planes
                                     </a>
                                 @elseif($miComercio)
                                     <a href="{{ route('menus.index', $miComercio) }}"
-                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('menus.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                       class="nav-link {{ request()->routeIs('menus.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Menús
                                     </a>
                                 @endif
@@ -114,7 +121,7 @@
                                 {{-- Analytics: super admin siempre; comercio con la feature 'analytics' --}}
                                 @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
                                     <a href="{{ route('analytics.dashboard') }}"
-                                       class="nav-link px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('analytics.*') ? 'active' : 'text-text-secondary hover:text-accent-blue' }}">
+                                       class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Analytics
                                     </a>
                                 @endif
@@ -125,16 +132,16 @@
                     <div class="flex items-center">
                         <!-- Hamburguesa (solo mobile) -->
                         <button type="button" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')"
-                                class="md:hidden mr-1 p-2 rounded-lg text-text-secondary hover:text-accent-blue hover:bg-secondary-dark transition-colors"
+                                class="md:hidden mr-1 p-2 rounded-lg hover:text-accent-deep hover:bg-primary-dark transition-colors"
                                 aria-label="Menú">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
                         </button>
                         <div class="relative group hidden md:block">
-                            <button class="flex items-center space-x-3 hover:bg-secondary-dark px-3 py-2 rounded-lg transition-all duration-300">
+                            <button class="flex items-center space-x-3 hover:bg-primary-dark px-3 py-2 rounded-lg transition-all duration-300">
                                 <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center">
-                                    <span class="text-sm font-bold text-text-primary">
+                                    <span class="text-sm font-bold text-white">
                                         {{ substr(auth()->user()->name, 0, 1) }}
                                     </span>
                                 </div>
@@ -159,7 +166,7 @@
                                     <div class="py-2">
                                         <!-- Perfil -->
                                         <a href="{{ route('profile.edit') }}" 
-                                           class="flex items-center px-4 py-3 text-sm text-text-secondary hover:text-accent-blue hover:bg-primary-dark transition-all duration-300">
+                                           class="flex items-center px-4 py-3 text-sm hover:text-accent-deep hover:bg-primary-dark transition-all duration-300">
                                             <span class="text-lg mr-3">👤</span>
                                             Perfil
                                         </a>
@@ -171,7 +178,7 @@
                                         <form method="POST" action="{{ route('logout') }}" class="block">
                                             @csrf
                                             <button type="submit" 
-                                                    class="flex items-center w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300">
+                                                    class="flex items-center w-full px-4 py-3 text-sm text-danger hover:bg-danger/10 transition-all duration-300">
                                                 <span class="text-lg mr-3">🚪</span>
                                                 Cerrar sesión
                                             </button>
@@ -185,25 +192,25 @@
 
                 <!-- Menú mobile (hamburguesa) -->
                 <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-1">
-                    <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('dashboard') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Dashboard</a>
-                    <a href="{{ route('comercios.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('comercios.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Comercios</a>
+                    <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('dashboard') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Dashboard</a>
+                    <a href="{{ route('comercios.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('comercios.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Comercios</a>
                     @if(Auth::user()->isSuperAdmin())
-                        <a href="{{ route('admin.users.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.users.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Usuarios</a>
-                        <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
-                        <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Planes</a>
+                        <a href="{{ route('admin.users.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.users.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Usuarios</a>
+                        <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
+                        <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Planes</a>
                     @elseif($miComercio)
-                        <a href="{{ route('menus.index', $miComercio) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Menús</a>
+                        <a href="{{ route('menus.index', $miComercio) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
                     @endif
                     @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
-                        <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-blue bg-secondary-dark' : 'text-text-secondary' }} hover:bg-secondary-dark">Analytics</a>
+                        <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Analytics</a>
                     @endif
 
                     <!-- Usuario (mobile, colapsable) -->
                     <div class="border-t border-accent-gray my-2"></div>
                     <button type="button" onclick="document.getElementById('mobileUser').classList.toggle('hidden')"
-                            class="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary-dark">
+                            class="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary-dark">
                         <div class="w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-sm font-bold text-text-primary">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                            <span class="text-sm font-bold text-white">{{ substr(auth()->user()->name, 0, 1) }}</span>
                         </div>
                         <div class="min-w-0 flex-1 text-left">
                             <p class="text-sm font-medium text-text-primary truncate">{{ auth()->user()->name }}</p>
@@ -214,10 +221,10 @@
                         </svg>
                     </button>
                     <div id="mobileUser" class="hidden pl-2">
-                        <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-secondary-dark">👤 Perfil</a>
+                        <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-primary-dark">👤 Perfil</a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">🚪 Cerrar sesión</button>
+                            <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-danger hover:bg-danger/10">🚪 Cerrar sesión</button>
                         </form>
                     </div>
                 </div>

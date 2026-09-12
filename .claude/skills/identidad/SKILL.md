@@ -37,11 +37,79 @@ Todo el color pasa por variables CSS declaradas en `resources/css/app.css`, que
     --c-ink:          40  66  54;  /* #284236 verde profundo               */
     --c-ink-soft:     85 112  95;  /* #55705F salvia oscuro                */
     --c-bg:          242 237 227;  /* #F2EDE3 crema                        */
+
+    /* Decorativos — NINGUNO sirve para texto sobre crema */
+    --c-sage:        107 140 122;  /* #6B8C7A salvia claro      (3,18:1)   */
+    --c-sage-soft:   167 188 168;  /* #A7BCA8 salvia pálido                */
+    --c-wood:        212 176 140;  /* #D4B08C madera                       */
+    --c-accent-soft: 224 122  95;  /* #E07A5F terracota de marca (2,53:1)  */
+    --c-bg-2:        234 227 213;  /* #EAE3D5 crema apagado                */
 }
 ```
 
 **Cambiar cualquier color del panel es editar una línea de ahí.** Antes de este sistema
 había ~1.900 usos con nombre más 400 escritos a mano; ahora no hay ninguno suelto.
+
+### La landing y las pantallas de auth usan alias, no su propia paleta
+
+`marketing/landing`, `auth/login`, `auth/forgot-password` y `auth/reset-password` tienen
+diseño propio y un `:root` local con nombres cortos (`--ground`, `--surface`, `--ink`,
+`--accent`…). **Esos nombres son alias: los valores salen de los tokens.**
+
+```css
+:root {
+    --ground:  rgb(var(--c-bg));
+    --surface: rgb(var(--c-elev-2));
+    --line:    rgb(var(--c-ink) / .14);   /* las variantes se derivan con alfa */
+}
+```
+
+Hasta sep-2026 eran los mismos hex copiados en los cuatro archivos, y ya se habían
+desincronizado: el papel había quedado en `#FBF9F5` —el viejo— cuando el resto ya estaba
+en blanco puro, justo el cambio que había arreglado un contraste por debajo de AA. En la
+misma pasada se eliminó `#B4462A`, un cuarto terracota que existía sólo ahí: `accent-deep`
+cumple el mismo rol (texto sobre crema) y mide mejor, 5,03:1 contra 4,67:1.
+
+Las variantes que antes tenían hex propio (`--dark-*`, `--line-soft`, los `--shadow-*`)
+ahora se derivan del token base con alfa, así no pueden quedar desfasadas del color del
+que salen.
+
+### `PaletaTest` lo fija — y es la única red que hay
+
+`tests/Feature/PaletaTest.php` escanea las vistas y falla nombrando archivo y clase si
+alguien vuelve a escribir `text-red-400` o `bg-green-100`. Exime `menu/` (el público),
+`emails/` y `errors/`, que son los tres casos donde el token no llega.
+
+Existe porque **la regla se venía incumpliendo en silencio**: sep-2026 quedaban 164 clases
+genéricas repartidas en 25 vistas, restos de la etapa oscura que sobrevivieron a las
+pasadas de migración. Se veían como un `text-green-200` (casi blanco) sobre
+`bg-green-900/20` (casi crema): el cartel de "Comercio creado exitosamente" era ilegible
+en producción, y nadie se enteró porque los tests verifican lógica, no contraste.
+
+#### ⚠ Su punto ciego: los hex dentro del JavaScript
+
+`PaletaTest` busca **clases de Tailwind**. No ve un `style="color: #CCCCCC"` escrito a
+mano, y menos si vive dentro de un template string de JS. Ahí sobrevivió la paleta oscura
+hasta sep-2026, en los modales de SweetAlert que se arman por JS:
+
+| Dónde | Qué tenía | Contraste sobre el modal blanco |
+|---|---|---|
+| Modal de **error** de `menus/create` | `color:#CCCCCC` | **1,61:1** — el mensaje era invisible |
+| Modal de éxito, mismo archivo | `color:#CCCCCC` | **1,61:1** |
+| "Nuevo producto" | `#9CA3AF` y `#3B82F6` | 2,54:1 y azul de la paleta descartada |
+| "Eliminar cuenta" (`profile/`) | `color:#e5e7eb` | **1,24:1** |
+
+**Un `color` inline en un hijo le gana al `!important` del contenedor.** `.dark-modal
+.swal2-html-container` pinta el contenedor; el `<div>` inyectado adentro con su propio
+`color` se queda con el suyo. Por eso la migración que arregló los modales no tocó esto.
+
+Adentro de SweetAlert los tokens **sí funcionan** (`style="color: rgb(var(--c-ink))"`):
+son estilos inline y el navegador los resuelve contra el `:root`. Al tocar un modal,
+buscar hex en el `html:` además de en las clases.
+
+> ⚠️ **No escribir `@vite` (ni ninguna directiva Blade) dentro de un comentario CSS o JS
+> de una vista.** Blade no mira el contexto: compila la directiva igual y la página
+> revienta con un `ParseError`. Mismo caso que el `<x-flash>` de más abajo.
 
 ### Por qué los valores están en RGB suelto y no en hex
 
@@ -125,13 +193,30 @@ futuro el panel vuelve a sentirse plano.
 > Por eso hay tres terracotas y no uno: `#E07A5F` decorativo, `#C0563A` para fondos de
 > botón (4,53:1 con blanco) y `#B4462A` para texto sobre crema (4,67:1).
 
+### `text-accent-blue` depende de qué tiene abajo
+
+| Terracota `#C0563A` | |
+|---|---|
+| Como fondo de botón, con texto blanco | 4,53:1 ✅ |
+| Como **texto sobre tarjeta blanca** (`metric-card`) | 4,53:1 ✅ |
+| Como **texto sobre el crema de la página** | **3,88:1 ❌** |
+
+Casi todo el panel lo usa dentro de tarjetas, y ahí pasa. Pero un `text-accent-blue`
+suelto sobre el fondo de página no llega a AA. Para ese caso está **`accent-deep`**
+(`#A8462C`, 5,03:1 sobre crema), que existía como variable y no estaba expuesto como
+token: se agregó en sep-2026 a `tailwind.config.js`.
+
+Antes de poner terracota en un texto, mirar qué hay abajo: `metric-card` es
+`--c-elev-2` (blanco puro), el `<body>` es `--c-bg` (crema).
+
 Mismo caso con el salvia: `#6B8C7A` da 3,18:1 sobre crema, así que para texto va `#55705F`.
 
 ## Sin degradados
 
 La identidad no los usa. Se sacaron del nav activo, los avatares, los modales de
-SweetAlert, botones e íconos. El único que queda es el *shimmer* de las animaciones de
-carga, que no es decorativo: indica que algo está pasando.
+SweetAlert, botones e íconos. Quedaba el *shimmer* de `.loading-button`, que se justificaba
+por no ser decorativo —indica que algo está pasando—, pero en sep-2026 se comprobó que esa
+clase **no la usaba ninguna vista**: se borró junto con su keyframe. Hoy no hay ninguno.
 
 ### El panel no tiene modo oscuro
 
@@ -202,9 +287,32 @@ Poppins es la tipografía más usada de internet y habría reintroducido el prob
 rediseño vino a resolver. En los emails, donde no se pueden cargar fuentes, Georgia hace
 de sustituta.
 
+## Los carteles de sesión salen de un solo componente
+
+`<x-flash />` (`components/flash.blade.php`) imprime lo que haya en sesión —`success`,
+`error`, `warning`, `info`— y nada si no hay nada. Está en las 15 vistas del panel que
+mostraban avisos.
+
+Antes el mismo cartel estaba copiado con **cinco markups distintos**, cada uno con su
+propio color: tres de la etapa oscura, uno en `green-100/green-800` y uno ya migrado.
+Arreglar el ilegible en una vista no arreglaba las otras cuatro.
+
+Dos decisiones dentro del componente:
+
+- **El texto va en tinta** (`text-text-primary`, 9,36:1) y el color semántico queda en el
+  ícono y el borde. Un párrafo entero en verde de éxito se lee peor y no comunica más.
+- **Sólo el éxito se auto-cierra** a los 4s (clase `js-flash`). Un error tiene que poder
+  leerse con calma. Ese temporizador estaba duplicado en dos vistas y ahora vive acá.
+
+> ⚠️ **No escribir `<x-flash>` dentro de un comentario de JavaScript.** Blade no
+> distingue el contexto: renderiza el componente ahí, mete el HTML dentro del `<script>`
+> y deja la pantalla en 500. Dentro de un comentario Blade `{{-- --}}` sí es seguro,
+> porque esos se eliminan antes de compilar las directivas.
+
 ## Cómo probar un cambio de color
 
-Los **264 tests no detectan un color ilegible** — verifican lógica. La verificación es a
+`PaletaTest` atrapa una clase genérica, pero **ningún test detecta un color ilegible
+armado con tokens** — verifican lógica y nombres de clase, no contraste. La verificación es a
 ojo, y conviene cubrir:
 
 - El recorrido completo del comercio: landing → login → recuperar contraseña → panel.

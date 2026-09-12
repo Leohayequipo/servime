@@ -22,21 +22,28 @@
             const email = '{{ env("SUPPORT_EMAIL", "info.servime@gmail.com") }}';
             const whatsapp = '{{ env("SUPPORT_WHATSAPP", "5492257526706") }}';
             
+            // Los colores van por tokens, como en el resto de los modales. Antes estaban
+            // escritos a mano y eran de la etapa oscura: el cuerpo en #e5e7eb daba 1,24:1
+            // sobre el blanco del modal —texto invisible— y los links en #60a5fa, 2,54:1.
+            // No los salvaba el `!important` de `.dark-modal .swal2-html-container`: ese
+            // pinta el contenedor, y un `color` inline en un hijo le gana igual.
+            // Acá funciona `rgb(var(--x))` porque son estilos inline y el navegador los
+            // resuelve contra el :root del documento.
             let htmlContent = `
-                <div style="text-align: left; color: #e5e7eb;">
+                <div style="text-align: left;">
                     <p style="margin-bottom: 15px;">
-                        Para eliminar tu cuenta, necesitas contactar con el administrador del sistema. 
+                        Para eliminar tu cuenta, necesitas contactar con el administrador del sistema.
                         Por favor, envía un correo electrónico o mensaje con tu solicitud.
                     </p>
-                    <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                    <div style="background: rgb(var(--c-elev-1)); border-left: 4px solid rgb(var(--c-accent)); padding: 12px; border-radius: 6px; margin-top: 15px;">
                         <p style="margin-bottom: 8px;">
                             <strong>📧 Email:</strong><br>
-                            <a href="mailto:${email}" style="color: #60a5fa; text-decoration: underline;">${email}</a>
+                            <a href="mailto:${email}" style="color: rgb(var(--c-accent-deep)); text-decoration: underline;">${email}</a>
                         </p>
                         ${whatsapp ? `
                         <p>
                             <strong>💬 WhatsApp:</strong><br>
-                            <a href="https://wa.me/${whatsapp}" target="_blank" style="color: #60a5fa; text-decoration: underline;">${whatsapp}</a>
+                            <a href="https://wa.me/${whatsapp}" target="_blank" style="color: rgb(var(--c-accent-deep)); text-decoration: underline;">${whatsapp}</a>
                         </p>
                         ` : ''}
                     </div>
@@ -47,8 +54,11 @@
                 background: 'rgb(var(--c-elev-2))',
                 color: 'rgb(var(--c-ink))',
                 customClass: {
+                    // Sin `title: 'text-white'`: era blanco sobre el blanco del modal.
+                    // Hoy no se nota porque `.dark-modal .swal2-title` lo pisa con
+                    // !important, pero es una trampa esperando a que alguien saque ese
+                    // !important o el modal pierda la clase. El color lo pone el CSS.
                     popup: 'dark-modal',
-                    title: 'text-white',
                     htmlContainer: 'text-text-secondary',
                 },
                 title: 'Contacta con el Administrador',

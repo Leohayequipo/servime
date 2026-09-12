@@ -22,19 +22,19 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        /* Mismos tokens que el login y la landing. Estilos propios y locales: las clases
-           .btn-primary / .input-field de app.css las comparte el panel entero. */
+        /* Alias locales sobre los tokens de app.css, igual que el login. No repetir los
+           hex acá es lo que hace que cambiar un color de marca sea editar una línea. */
         :root {
-            --ground:      #F2EDE3;
-            --surface:     #FBF9F5;
-            --ink:         #284236;
-            --muted:       #55705F;
-            --line:        rgba(40, 66, 54, 0.14);
-            --accent:      #C0563A;
-            --accent2:     #A8462C;
-            --accent-ink:  #B4462A;
-            --sage:        #6B8C7A;
-            --shadow-md:   0 2px 6px rgba(40, 66, 54, .07), 0 12px 32px rgba(40, 66, 54, .07);
+            --ground:      rgb(var(--c-bg));
+            --surface:     rgb(var(--c-elev-2));
+            --ink:         rgb(var(--c-ink));
+            --muted:       rgb(var(--c-ink-soft));
+            --line:        rgb(var(--c-ink) / .14);
+            --accent:      rgb(var(--c-accent));
+            --accent2:     rgb(var(--c-accent-deep));
+            --accent-ink:  rgb(var(--c-accent-deep));
+            --sage:        rgb(var(--c-sage));
+            --shadow-md:   0 2px 6px rgb(var(--c-ink) / .07), 0 12px 32px rgb(var(--c-ink) / .07);
             --velo: .76;
         }
 
