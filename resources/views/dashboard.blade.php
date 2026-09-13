@@ -1,12 +1,18 @@
 @php
-    function parseBotResponse($text) {
+    // Closure y no `function`: una función declarada acá va al espacio global del proceso,
+    // y al segundo render dentro del mismo proceso PHP explota con "Cannot redeclare".
+    // Servido por FPM no se nota —un proceso por request— pero mata cualquier test que
+    // abra el dashboard dos veces, y se llevaría puesta la pantalla en un runtime
+    // persistente. Como variable se puede redefinir todas las veces que haga falta.
+    $parseBotResponse = function ($text) {
         $text = e($text);
         $text = nl2br($text);
         $text = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $text);
         $text = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $text);
         $text = preg_replace('/\[IMAGEN:([^\]]+)\]/', '<img src="$1" alt="Imagen" class="w-full max-w-xs rounded-lg shadow-lg object-cover" style="max-height: 200px;" onerror="this.style.display=\'none\'">', $text);
+
         return $text;
-    }
+    };
 @endphp
 
 <x-app-layout>
@@ -96,7 +102,7 @@
                         </div>
                     </a>
 
-                    <a href="{{ route('admin.comercios.index') }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
+                    <a href="{{ route('comercios.index') }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
                         <div class="flex items-center gap-4">
                             <div class="w-11 h-11 bg-accent-green/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-accent-green/20 transition-colors">
                                 <span class="text-xl">🏪</span>
@@ -134,6 +140,21 @@
                 </div>
 
             @else
+                @php
+                    // Cada tarjeta lleva a la misma pantalla que su item del menú de arriba:
+                    // el número que muestra se explica ahí. `misComercios()` es el mismo helper
+                    // que usa el nav, así que "Menús" abre exactamente lo que abre el menú.
+                    // Con un solo comercio va derecho a sus menús; con varios (o con ninguno
+                    // todavía) cae al listado, que es donde se elige o se crea el primero.
+                    $misComercios = auth()->user()->misComercios();
+                    $rutaMenus = $misComercios->count() === 1
+                        ? route('menus.index', $misComercios->first())
+                        : route('comercios.index');
+
+                    // Analytics está detrás de la feature del plan: sin ella, la pantalla
+                    // rebota, así que la tarjeta no se ofrece como link.
+                    $puedeAnalytics = auth()->user()->comercios->contains(fn ($c) => $c->tieneFeature('analytics'));
+                @endphp
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                     <a href="{{ route('comercios.index') }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
                         <div class="flex items-center gap-4">
@@ -146,7 +167,7 @@
                             </div>
                         </div>
                     </a>
-                    <div class="metric-card">
+                    <a href="{{ $rutaMenus }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
                         <div class="flex items-center gap-4">
                             <div class="w-11 h-11 bg-accent-green/10 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <span class="text-xl">📋</span>
@@ -156,18 +177,32 @@
                                 <p class="text-2xl font-bold text-text-primary">{{ $menus->count() }}</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <span class="text-xl">⚡</span>
+                    </a>
+                    @if($puedeAnalytics)
+                        <a href="{{ route('analytics.dashboard') }}" class="metric-card hover:border-accent-blue/40 transition-all duration-200 group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <span class="text-xl">⚡</span>
+                                </div>
+                                <div>
+                                    <p class="text-text-secondary text-xs mb-1">Actividad (90d)</p>
+                                    <p class="text-2xl font-bold text-text-primary">{{ $allConversaciones->count() }}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-text-secondary text-xs mb-1">Actividad (90d)</p>
-                                <p class="text-2xl font-bold text-text-primary">{{ $allConversaciones->count() }}</p>
+                        </a>
+                    @else
+                        <div class="metric-card">
+                            <div class="flex items-center gap-4">
+                                <div class="w-11 h-11 bg-accent-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <span class="text-xl">⚡</span>
+                                </div>
+                                <div>
+                                    <p class="text-text-secondary text-xs mb-1">Actividad (90d)</p>
+                                    <p class="text-2xl font-bold text-text-primary">{{ $allConversaciones->count() }}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 </div>
             @endif
 
@@ -227,7 +262,7 @@
                                     <p class="text-text-secondary text-xs">Últimos comercios creados</p>
                                 </div>
                             </div>
-                            <a href="{{ route('admin.comercios.index') }}" class="text-accent-blue hover:opacity-70 text-sm font-medium transition-opacity">
+                            <a href="{{ route('comercios.index') }}" class="text-accent-blue hover:opacity-70 text-sm font-medium transition-opacity">
                                 Ver todos →
                             </a>
                         </div>
@@ -311,8 +346,10 @@
                                     class="px-3 py-2 bg-secondary-dark text-text-secondary rounded-lg text-sm border border-accent-gray hover:border-accent-blue/50 transition-colors">
                                 Hoy
                             </button>
+                            {{-- Las mismas clases base que los otros: el estado activo lo
+                                 pone `active-filter`, no clases sueltas en el markup. --}}
                             <button onclick="filterByTime('week')" id="filter-week"
-                                    class="px-3 py-2 bg-accent-blue text-black rounded-lg text-sm font-medium active-filter">
+                                    class="px-3 py-2 rounded-lg text-sm active-filter">
                                 Esta semana
                             </button>
                             <button onclick="filterByTime('month')" id="filter-month"
@@ -428,7 +465,7 @@
                                                             @endif
                                                         </div>
                                                         <div class="text-text-secondary text-sm ml-8 leading-relaxed">
-                                                            {!! Str::limit(parseBotResponse($conversacion->bot_response), 300) !!}
+                                                            {!! Str::limit($parseBotResponse($conversacion->bot_response), 300) !!}
                                                         </div>
                                                     </div>
                                                 @endif
@@ -453,9 +490,14 @@
             from { opacity: 0; transform: translateY(-8px); }
             to   { opacity: 1; transform: translateY(0); }
         }
+        /* `var(--accent-blue)` no existía: ese es el nombre de la clase de Tailwind, no el
+           de la variable, que es `--c-accent`. El background resolvía a nada y el filtro
+           activo quedaba sin pastilla, como texto negro suelto sobre el crema: el único
+           que parecía NO seleccionado era justamente el seleccionado.
+           Blanco sobre terracota da 4,53:1. */
         .active-filter {
-            background: var(--accent-blue) !important;
-            color: #000 !important;
+            background: rgb(var(--c-accent)) !important;
+            color: #fff !important;
             border-color: transparent !important;
             font-weight: 600;
         }

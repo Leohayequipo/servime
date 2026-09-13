@@ -113,7 +113,7 @@
                                 @endif
                                 <div class="flex items-center justify-between pt-3 border-t border-accent-gray/30">
                                     <span class="text-text-secondary text-xs">{{ $comercio->menus->count() }} menú(s)</span>
-                                    <a href="{{ route('admin.comercios.show', $comercio) }}"
+                                    <a href="{{ route('menus.index', $comercio) }}"
                                        class="px-3 py-1.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-lg text-xs font-medium transition-colors">
                                         Ver detalles
                                     </a>

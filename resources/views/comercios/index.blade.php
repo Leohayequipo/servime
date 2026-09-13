@@ -67,26 +67,39 @@
 
                 <!-- Imagen -->
                 <div class="relative h-40 bg-primary-dark flex-shrink-0 overflow-hidden">
+                    {{-- Placeholder de fondo: se ve cuando el comercio no tiene logo, y también
+                         cuando el archivo no está en disco (la <img> se quita sola con el onerror;
+                         una imagen rota deja el texto del alt suelto y se ve peor que ninguna).
+                         El logo de ServiME no sirve acá: es cuadrado 400×400 y object-cover en un
+                         recuadro panorámico le corta la mitad. Además la card es del comercio. --}}
+                    <div class="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                        <span class="w-16 h-16 rounded-2xl bg-accent-blue/10 border border-accent-blue/15
+                                     text-accent-deep text-2xl font-bold flex items-center justify-center">
+                            {{ strtoupper(mb_substr($comercio->nombre, 0, 1)) }}
+                        </span>
+                    </div>
+
                     @if($comercio->logo_url)
                         <img src="{{ asset('storage/' . $comercio->logo_url) }}"
                              alt="{{ $comercio->nombre }}"
-                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
-                    @else
-                        <img src="{{ asset('images/logo_empresa_default.png') }}"
-                             alt="{{ $comercio->nombre }}"
-                             class="w-full h-full object-cover opacity-40">
+                             onerror="this.remove()"
+                             class="relative w-full h-full object-cover hover:scale-105 transition-transform duration-500">
                     @endif
 
                     <!-- Chip dueño (solo super admin) -->
                     @if(auth()->user()->isSuperAdmin() && $comercio->user)
-                        <div class="absolute bottom-2 left-3">
-                            <span class="inline-flex items-center gap-1.5 bg-black/60 backdrop-blur-sm
-                                         text-text-secondary text-xs px-2.5 py-1 rounded-full">
-                                <span class="w-4 h-4 rounded-full bg-accent-blue/20 text-accent-blue
-                                             flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                        <div class="absolute bottom-2 left-3 right-3 z-10">
+                            {{-- Fondo de marca opaco y texto blanco: 10,9:1. Antes era `bg-black/60`
+                                 —negro, que no es de la paleta— con `text-text-secondary`, y ese
+                                 salvia está calibrado para leerse sobre crema: encima de una foto
+                                 clara el chip quedaba gris sobre gris. --}}
+                            <span class="inline-flex max-w-full items-center gap-1.5 bg-text-primary/90
+                                         backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full">
+                                <span class="w-4 h-4 rounded-full bg-white/25 flex items-center
+                                             justify-center text-[9px] font-bold flex-shrink-0">
                                     {{ strtoupper(substr($comercio->user->name, 0, 1)) }}
                                 </span>
-                                {{ $comercio->user->name }}
+                                <span class="truncate">{{ $comercio->user->name }}</span>
                             </span>
                         </div>
                     @endif
@@ -129,6 +142,18 @@
                             ✏️
                         </a>
                         @if(auth()->user()->isSuperAdmin())
+                            {{-- Empezar de nuevo: borra la actividad (conversaciones, estadísticas,
+                                 carritos) y pone la cuota de IA en cero. No toca el menú ni la
+                                 configuración. No tiene vuelta atrás, por eso sólo lo ve el admin. --}}
+                            <form method="POST" action="{{ route('admin.comercios.reset-actividad', $comercio) }}"
+                                  onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('Se va a borrar TODA la actividad de «{{ addslashes($comercio->nombre) }}»: conversaciones del chatbot, estadísticas, carritos y el consumo de IA del mes. El menú y la configuración no se tocan. No se puede deshacer. ¿Seguimos?', r=>{ if(r) f.submit(); }, 'Borrando actividad...');">
+                                @csrf
+                                <button type="submit"
+                                        class="px-3 py-2 rounded-xl text-sm border border-accent-gray
+                                               text-text-secondary hover:text-danger hover:border-danger/40
+                                               hover:bg-danger/10 transition-all"
+                                        title="Resetear actividad">♻️</button>
+                            </form>
                             <form method="POST" action="{{ route('admin.comercios.destroy', $comercio) }}"
                                   onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Eliminar {{ addslashes($comercio->nombre) }}?', r=>{ if(r) f.submit(); }, 'Eliminando...');">
                                 @csrf @method('DELETE')

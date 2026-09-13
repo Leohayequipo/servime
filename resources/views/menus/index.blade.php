@@ -22,17 +22,13 @@
                     </div>
                 </div>
                 <div class="flex space-x-3">
-                    @if(auth()->user()->isSuperAdmin())
-                        <a href="{{ route('admin.comercios.index') }}" 
-                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                            ← Volver
-                        </a>
-                    @else
-                        <a href="{{ route('comercios.index') }}" 
-                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
-                            ← Volver
-                        </a>
-                    @endif
+                    {{-- Misma lista para todos: `/comercios` muestra los del usuario, y al
+                         super admin le muestra todos. Antes había una lista aparte en
+                         `/admin/comercios` que repetía lo mismo con menos acciones. --}}
+                    <a href="{{ route('comercios.index') }}"
+                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-3 px-6 rounded-xl transition-all duration-300 border border-accent-gray">
+                        ← Volver
+                    </a>
                 </div>
             </div>
 

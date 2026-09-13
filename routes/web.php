@@ -103,10 +103,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/comercios/{comercio:slug}/plan', [App\Http\Controllers\PlanController::class, 'assignToComercio'])->name('comercios.assign-plan');
         Route::post('/comercios/{comercio:slug}/reset-ia', [App\Http\Controllers\PlanController::class, 'resetIaUsage'])->name('comercios.reset-ia');
 
-        // Gestión de Comercios (usando slug)
-        Route::get('/comercios', [App\Http\Controllers\AdminController::class, 'comercios'])->name('comercios.index');
-        Route::get('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'showComercio'])->name('comercios.show');
-        Route::put('/comercios/{comercio:slug}', [App\Http\Controllers\AdminController::class, 'updateComercio'])->name('comercios.update');
+        // Gestión de Comercios (usando slug).
+        // La lista de comercios del admin vive en `/comercios` (ComercioController@index, que
+        // para super admin trae todos): no hay una copia acá. Lo que sigue son las acciones
+        // que sólo el admin puede hacer sobre un comercio.
 
         // Borra la ACTIVIDAD del comercio (conversaciones, tracking, carritos, intents) y
         // le pone la cuota de IA en cero. No toca la configuración ni el menú. Es

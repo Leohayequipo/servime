@@ -157,30 +157,6 @@ class AdminController extends Controller
     }
 
     /**
-     * Lista de todos los comercios
-     */
-    public function comercios()
-    {
-        $comercios = Comercio::with('user')->withCount('menus')->latest()->paginate(20);
-
-        return view('admin.comercios.index', compact('comercios'));
-    }
-
-    /**
-     * Ver detalles de un comercio
-     */
-    public function showComercio(Comercio $comercio)
-    {
-        return redirect()->route('menus.index', $comercio);
-    }
-
-    public function updateComercio(Request $request, Comercio $comercio)
-    {
-        // Redirigir al método update del ComercioController con los parámetros correctos
-        return redirect()->route('comercios.update', $comercio);
-    }
-
-    /**
      * Dejar al comercio "como nuevo": borra toda su actividad y le resetea la cuota de IA.
      *
      * Borra ACTIVIDAD, no CONFIGURACIÓN: el menú, los platos, las promociones, la portada,
@@ -223,7 +199,7 @@ class AdminController extends Controller
             'borrado' => $borrado,
         ]);
 
-        return redirect()->route('admin.comercios.index')
+        return redirect()->route('comercios.index')
             ->with('success', "Se borró la actividad de «{$comercio->nombre}»: {$borrado['conversaciones']} conversación(es) y {$borrado['eventos']} evento(s). La cuota de IA quedó en cero.");
     }
 
@@ -328,7 +304,7 @@ class AdminController extends Controller
         // Eliminar el comercio (esto también eliminará los menús asociados por la relación)
         $comercio->delete();
 
-        return redirect()->route('admin.comercios.index')->with('success', 'Comercio eliminado exitosamente');
+        return redirect()->route('comercios.index')->with('success', 'Comercio eliminado exitosamente');
     }
 
     /**

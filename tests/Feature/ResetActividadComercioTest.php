@@ -76,7 +76,7 @@ class ResetActividadComercioTest extends TestCase
     {
         $comercio = $this->comercioConActividad();
 
-        $this->resetear($comercio)->assertRedirect(route('admin.comercios.index'));
+        $this->resetear($comercio)->assertRedirect(route('comercios.index'));
 
         $this->assertSame(0, ChatConversation::where('comercio_id', $comercio->id)->count());
         $this->assertSame(0, TrackingEvent::where('comercio_id', $comercio->id)->count());
@@ -169,7 +169,7 @@ class ResetActividadComercioTest extends TestCase
         $comercio = $this->comercioConActividad();
 
         $this->actingAs($this->admin())
-            ->get('/admin/comercios')
+            ->get('/comercios')
             ->assertOk()
             ->assertSee(route('admin.comercios.reset-actividad', $comercio), false);
     }
@@ -180,6 +180,6 @@ class ResetActividadComercioTest extends TestCase
         $comercio = $this->comercioConActividad();
 
         $this->resetear($comercio);
-        $this->resetear($comercio)->assertRedirect(route('admin.comercios.index'));
+        $this->resetear($comercio)->assertRedirect(route('comercios.index'));
     }
 }

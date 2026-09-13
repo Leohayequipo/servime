@@ -127,14 +127,20 @@ class User extends Authenticatable
     }
 
     /**
-     * Obtener el comercio del usuario (solo para usuarios comunes)
+     * Los comercios del usuario común, para armarle la navegación.
+     *
+     * Devuelve una colección y no "el" comercio a propósito: un usuario puede tener
+     * más de uno. El límite de uno solo aplica nada más al alta que hace el propio
+     * usuario (ver ComercioController@create y @store); el super admin le puede
+     * asignar los que quiera, y cuando lo hacía, el link "Menús" del nav —que salía
+     * de un `comercios()->first()`— se quedaba clavado en el primero y a los demás
+     * sólo se llegaba por Comercios → Ver menús.
+     *
+     * Para el super admin va vacía: su nav apunta a las pantallas de /admin, no a
+     * un comercio propio.
      */
-    public function getComercio()
+    public function misComercios()
     {
-        if ($this->isRegularUser()) {
-            return $this->comercios()->first();
-        }
-
-        return null;
+        return $this->isRegularUser() ? $this->comercios : collect();
     }
 }

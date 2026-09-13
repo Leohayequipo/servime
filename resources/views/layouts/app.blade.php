@@ -68,7 +68,7 @@
     </head>
 <body class="text-text-primary min-h-screen">
     <div class="min-h-screen flex flex-col">
-        @php $miComercio = auth()->user()->getComercio(); @endphp
+        @php $misComercios = auth()->user()->misComercios(); @endphp
         <!-- Navigation -->
         {{-- La barra va en papel (`secondary-dark` = --c-elev-2, blanco) y no en el crema
              del fondo: con los dos iguales el header y la página se leían como una sola
@@ -111,8 +111,38 @@
                                        class="nav-link {{ request()->routeIs('admin.plans.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Planes
                                     </a>
-                                @elseif($miComercio)
-                                    <a href="{{ route('menus.index', $miComercio) }}"
+                                @elseif($misComercios->count() > 1)
+                                    {{-- Con más de un comercio no existe "el" menú: hay que dejar
+                                         elegir cuál. El dropdown va sin `mt-` y con el hueco hecho
+                                         de padding, porque un margen deja una franja muerta entre el
+                                         botón y el panel y el hover se corta al cruzarla. --}}
+                                    <div class="relative group">
+                                        <button type="button"
+                                                class="nav-link inline-flex items-center gap-1 {{ request()->routeIs('menus.*') ? 'active' : 'hover:text-accent-deep' }}">
+                                            Menús
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+                                        <div class="absolute left-0 top-full pt-2 w-60 opacity-0 invisible
+                                                    group-hover:opacity-100 group-hover:visible
+                                                    group-focus-within:opacity-100 group-focus-within:visible
+                                                    transition-all duration-200 z-50">
+                                            <div class="bg-secondary-dark border border-accent-gray rounded-xl shadow-lg py-2">
+                                                @foreach($misComercios as $comercioNav)
+                                                    <a href="{{ route('menus.index', $comercioNav) }}"
+                                                       class="block px-4 py-2.5 text-sm truncate transition-colors
+                                                              {{ request()->routeIs('menus.*') && request()->route('comercio')?->is($comercioNav)
+                                                                 ? 'text-accent-deep bg-primary-dark'
+                                                                 : 'text-text-primary hover:text-accent-deep hover:bg-primary-dark' }}">
+                                                        {{ $comercioNav->nombre }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+                                @elseif($misComercios->isNotEmpty())
+                                    <a href="{{ route('menus.index', $misComercios->first()) }}"
                                        class="nav-link {{ request()->routeIs('menus.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Menús
                                     </a>
@@ -198,8 +228,16 @@
                         <a href="{{ route('admin.users.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.users.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Usuarios</a>
                         <a href="{{ route('admin.menus.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
                         <a href="{{ route('admin.plans.index') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('admin.plans.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Planes</a>
-                    @elseif($miComercio)
-                        <a href="{{ route('menus.index', $miComercio) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
+                    @elseif($misComercios->count() > 1)
+                        {{-- En mobile no hay hover: los comercios van como sub-items desplegados,
+                             que además es un toque menos que abrir y elegir. --}}
+                        <p class="px-3 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-text-secondary">Menús</p>
+                        @foreach($misComercios as $comercioNav)
+                            <a href="{{ route('menus.index', $comercioNav) }}"
+                               class="block pl-6 pr-3 py-2 rounded-md text-base font-medium truncate {{ request()->routeIs('menus.*') && request()->route('comercio')?->is($comercioNav) ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">{{ $comercioNav->nombre }}</a>
+                        @endforeach
+                    @elseif($misComercios->isNotEmpty())
+                        <a href="{{ route('menus.index', $misComercios->first()) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
                     @endif
                     @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
                         <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Analytics</a>
