@@ -39,7 +39,18 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+
+            /*
+             * Tiene que ser MAYOR que el timeout del job más lento, que hoy es
+             * ProcessMenuJob (700s). Pasado este tiempo la cola da el job por abandonado y
+             * se lo entrega a otro worker: con los 90 que venían por defecto, un menú que
+             * tardara más de un minuto y medio —y tardan— se procesaba DOS veces, con dos
+             * llamadas a la IA cobradas y dos mails al comercio.
+             *
+             * El costo de que sea alto es que, si un worker muere de verdad, su job espera
+             * todo esto antes de reintentarse. Preferible a pagar el procesamiento doble.
+             */
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 720),
             'after_commit' => false,
         ],
 
