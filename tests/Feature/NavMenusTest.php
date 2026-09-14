@@ -47,7 +47,9 @@ class NavMenusTest extends TestCase
         // El que fallaba es el segundo: el nav se quedaba con el primero de la lista.
         $html->assertSee(route('menus.index', $primero), false)
             ->assertSee(route('menus.index', $segundo), false)
-            ->assertSee($segundo->nombre, false);
+            // Con escape: el nombre del comercio sale por Blade, y los que genera el
+            // factory traen apóstrofes cada tanto.
+            ->assertSee($segundo->nombre);
     }
 
     public function test_sin_comercios_el_nav_no_ofrece_menus(): void

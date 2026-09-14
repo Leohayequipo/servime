@@ -174,6 +174,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
+
+    // El editor le pregunta a `estado` si la IA ya terminó, en vez de obligar a recargar.
+    // `reintentar` vuelve a encolar el MISMO archivo cuando el job falló: cuesta una
+    // llamada a la IA, de ahí el throttle (igual que la portada).
+    Route::get('/comercios/{comercio:slug}/menus/{menu}/estado', [App\Http\Controllers\MenuController::class, 'estado'])->name('menus.estado');
+    Route::post('/comercios/{comercio:slug}/menus/{menu}/reintentar', [App\Http\Controllers\MenuController::class, 'reintentar'])->name('menus.reintentar')->middleware('throttle:10,1');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/upload-plato-imagen', [App\Http\Controllers\MenuController::class, 'uploadPlatoImagen'])->name('menus.upload.plato.imagen');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}/delete-plato-imagen', [App\Http\Controllers\MenuController::class, 'deletePlatoImagen'])->name('menus.delete.plato.imagen');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/update-plato-precio', [App\Http\Controllers\MenuController::class, 'updatePlatoPrecio'])->name('menus.update.plato.precio');

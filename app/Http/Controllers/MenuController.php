@@ -190,8 +190,71 @@ class MenuController extends Controller
 
         Log::info('📋 Procesamiento encolado', ['menu_id' => $menu->id]);
 
-        return redirect()->route('menus.index', $comercio)
-            ->with('success', 'Menú subido correctamente. La IA lo está procesando en segundo plano — en unos minutos estará listo.');
+        // Al editor de ESTE menú y no a la lista: es donde el comercio va a terminar de
+        // todos modos, y es la única pantalla que puede mostrar el progreso real y hacer
+        // aparecer los platos cuando la IA termina. Antes lo devolvía a la lista con un
+        // cartel de "en unos minutos estará listo" y una tarjeta que no se actualizaba
+        // sola: había que recargar a mano hasta adivinar que había terminado.
+        //
+        // Mientras la IA lee el archivo, `edit()` no muestra el editor sino la pantalla de
+        // progreso. Tampoco va un flash de éxito: ese cartel existía porque la pantalla de
+        // destino no contaba nada, y ahora lo cuenta ella, en vivo.
+        return redirect()->route('menus.edit', [$comercio, $menu]);
+    }
+
+    /**
+     * Estado del procesamiento, para que el editor lo siga sin recargar.
+     *
+     * Mismo papel que `comercios.portada.estado`: el trabajo pesado se hace en la cola y
+     * la pantalla necesita algo barato a qué preguntarle "¿ya está?".
+     */
+    public function estado(Comercio $comercio, Menu $menu)
+    {
+        $this->autorizarMenu($comercio, $menu);
+
+        return response()->json([
+            'estado' => $menu->estado,
+            'listo' => $menu->estaListo(),
+            'error' => $menu->tuvoError(),
+        ]);
+    }
+
+    /**
+     * Vuelve a encolar el procesamiento del mismo archivo.
+     *
+     * El archivo ya está guardado: cuando el job falla no hace falta volver a subirlo,
+     * que es lo que pedía la pantalla antes ("Error — volvé a subirlo"). Un reintento
+     * cuesta una llamada a la IA, así que va con throttle en la ruta.
+     */
+    public function reintentar(Comercio $comercio, Menu $menu)
+    {
+        $this->autorizarMenu($comercio, $menu);
+
+        if (blank($menu->archivo_original)) {
+            return response()->json(['ok' => false, 'motivo' => 'sin_archivo'], 422);
+        }
+
+        $menu->update(['estado' => Menu::ESTADO_PROCESANDO, 'procesado' => false]);
+        \App\Jobs\ProcessMenuJob::dispatch($menu);
+
+        Log::info('📋 Reprocesamiento pedido a mano', ['menu_id' => $menu->id]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * El permiso de siempre —dueño o super admin, y que el menú sea de ese comercio—,
+     * que el resto de los métodos repite inline.
+     */
+    private function autorizarMenu(Comercio $comercio, Menu $menu): void
+    {
+        if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
+            abort(403, 'No tienes permiso para ver los menús de este comercio.');
+        }
+
+        if ($menu->comercio_id !== $comercio->id) {
+            abort(404, 'Menú no encontrado en este comercio.');
+        }
     }
 
     /**
@@ -229,6 +292,15 @@ class MenuController extends Controller
 
         if ($menu->comercio_id !== $comercio->id) {
             abort(404, 'Menú no encontrado en este comercio.');
+        }
+
+        // Mientras la IA lee el archivo no se muestra el editor, sólo el progreso.
+        //
+        // El editor guarda con un update sobre este mismo menú, que es justo lo que el job
+        // está escribiendo: tocar "Actualizar" en el medio pisaba el contenido recién
+        // extraído. Y tampoco hay nada que editar todavía, porque los platos no existen.
+        if ($menu->estado === Menu::ESTADO_PROCESANDO) {
+            return view('menus.procesando', compact('comercio', 'menu'));
         }
 
         // Asegurar que el archivo del menú esté disponible en public_html (si existe)
@@ -2659,6 +2731,11 @@ class MenuController extends Controller
                 }
                 $menu->formato = 'excel';
                 $menu->procesado = true;
+                // El Excel ya trae el contenido: no hay nada que la IA tenga que leer. Sin
+                // esto el menú se quedaba con el estado que tuviera de antes —y la columna
+                // arranca en 'procesando' por defecto—, así que el editor lo mandaba a la
+                // pantalla de progreso a esperar un job que nunca iba a correr.
+                $menu->estado = Menu::ESTADO_LISTO;
                 $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 $menu->activo = $estabaActivo; // Mantener estado activo
                 $menu->save();
@@ -2671,6 +2748,8 @@ class MenuController extends Controller
                 $menu->nombre = $request->input('nombre') ?: 'Menú Importado '.date('Y-m-d');
                 $menu->formato = 'excel';
                 $menu->procesado = true;
+                // Ídem: nace listo. La columna `estado` tiene default 'procesando'.
+                $menu->estado = Menu::ESTADO_LISTO;
                 $menu->contexto_gpt = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 $menu->activo = false; // No activar automáticamente
                 $menu->save();

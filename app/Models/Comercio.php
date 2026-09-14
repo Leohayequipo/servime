@@ -1019,6 +1019,24 @@ class Comercio extends Model
     ];
 
     /** Texto sembrado por defecto como mensaje de bienvenida del chat. */
+    /**
+     * La personalidad que el asistente YA tiene cuando el comercio no eligió ninguna.
+     *
+     * No es una preferencia inventada para la pantalla: son los valores con los que está
+     * escrito el prompt base de ChatbotService, que es lo que se usa cuando
+     * `chatbot_config` viene vacío ("sos entusiasta... en prosa natural y cálida", todo en
+     * voseo, "un emoji de categoría queda bien, con moderación"). Por eso marcarlos en la
+     * pantalla no le cambia nada al chat: antes aparecían todos sin elegir, y parecía que el
+     * asistente no tenía personalidad cuando en realidad hablaba así.
+     *
+     * Si se cambia el prompt base, esto se cambia con él. `ChatbotConfigTest` lo verifica.
+     */
+    public const PERSONALIDAD_POR_DEFECTO = [
+        'tono' => 'calido_atento',
+        'trato' => 'voseo',
+        'emojis' => 'moderado',
+    ];
+
     public const BIENVENIDA_POR_DEFECTO = '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?';
 
     /**

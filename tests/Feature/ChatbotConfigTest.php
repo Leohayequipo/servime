@@ -118,4 +118,70 @@ class ChatbotConfigTest extends TestCase
 
         $this->assertSame(array_keys(ChatbotService::FOCOS), $comercio->fresh()->chatbot_config['focos']);
     }
+
+    public function test_sin_personalidad_elegida_la_pantalla_marca_la_que_ya_usa_el_chat(): void
+    {
+        // Antes aparecían todos los chips sin marcar y parecía que el asistente no tenía
+        // personalidad, cuando en realidad hablaba con la del prompt base.
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create(['chatbot_config' => null]);
+        $menu = Menu::factory()->for($comercio)->create();
+
+        $html = $this->actingAs($user)
+            ->get(route('menus.edit', [$comercio, $menu]))
+            ->assertOk()
+            ->getContent();
+
+        foreach (['tono', 'trato', 'emojis'] as $campo) {
+            $valor = Comercio::PERSONALIDAD_POR_DEFECTO[$campo];
+            $this->assertMatchesRegularExpression(
+                '/name="cfg_'.$campo.'" value="'.$valor.'"[^>]*checked/',
+                $html,
+                "El chip de {$campo} por defecto ({$valor}) no aparece marcado."
+            );
+        }
+    }
+
+    public function test_si_eligio_una_personalidad_se_marca_la_suya_y_no_la_de_defecto(): void
+    {
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'chatbot_config' => ['tono' => 'canchero', 'trato' => 'tuteo', 'emojis' => 'ninguno'],
+        ]);
+        $menu = Menu::factory()->for($comercio)->create();
+
+        $html = $this->actingAs($user)
+            ->get(route('menus.edit', [$comercio, $menu]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/name="cfg_tono" value="canchero"[^>]*checked/', $html);
+        $this->assertDoesNotMatchRegularExpression('/name="cfg_tono" value="calido_atento"[^>]*checked/', $html);
+        $this->assertMatchesRegularExpression('/name="cfg_trato" value="tuteo"[^>]*checked/', $html);
+        $this->assertMatchesRegularExpression('/name="cfg_emojis" value="ninguno"[^>]*checked/', $html);
+    }
+
+    public function test_la_personalidad_por_defecto_es_la_del_prompt_base(): void
+    {
+        // Marcar estos chips "no cambia nada" SÓLO si el prompt base habla así. Si alguien
+        // reescribe el prompt (lo vuelve formal, le saca el voseo o los emojis), este test
+        // avisa que la pantalla quedó mostrando una personalidad que el chat ya no tiene.
+        $comercio = Comercio::factory()->create(['chatbot_config' => null]);
+
+        $servicio = new ChatbotService;
+        $metodo = new \ReflectionMethod($servicio, 'promptSistema');
+        $metodo->setAccessible(true);
+        $prompt = $metodo->invoke($servicio, $comercio, '');
+
+        $this->assertSame(
+            ['tono' => 'calido_atento', 'trato' => 'voseo', 'emojis' => 'moderado'],
+            Comercio::PERSONALIDAD_POR_DEFECTO
+        );
+        $this->assertStringContainsString('cálida', $prompt, 'tono: el prompt base ya no es cálido');
+        $this->assertMatchesRegularExpression('/\bSos\b/', $prompt, 'trato: el prompt base ya no está en voseo');
+        $this->assertStringContainsString('con moderación', $prompt, 'emojis: el prompt base ya no los pide con moderación');
+
+        // Y sin personalidad elegida no se agrega ninguna indicación: manda el prompt base.
+        $this->assertStringNotContainsString('Hablá en un tono', $this->indicaciones($comercio));
+    }
 }

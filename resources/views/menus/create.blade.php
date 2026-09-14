@@ -502,6 +502,21 @@
                                 </div>
             @endif
 
+            {{-- Al CREAR un menú no se muestra la configuración (asistente, colores, portada,
+                 vista clásica, atajos, reseñas): todavía no hay menú, y ver todas esas opciones
+                 antes de subir el archivo desorienta. Aparecen en el editor cuando la IA termina.
+
+                 Se oculta con `hidden` y NO con un @if a propósito: el JavaScript de esta
+                 pantalla toca decenas de estos elementos sin chequear que existan
+                 (`chatbot_name.addEventListener`...), y sacarlos del HTML rompía los scripts.
+                 Queda fuera del <form>, así que tampoco viaja nada de acá al subir. --}}
+            @unless($isEdit)
+                <p class="text-center text-text-secondary text-sm mb-8">
+                    Cuando la IA termine de leer tu menú vas a poder configurar el asistente,
+                    los colores y la portada.
+                </p>
+            @endunless
+            <div class="{{ $isEdit ? '' : 'hidden' }}" id="configuracion-menu">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 
                 <!-- Columna Izquierda: Configuración del Chatbot -->
@@ -554,7 +569,7 @@
                                 <div class="flex flex-wrap gap-2 mb-4">
                                     @foreach(['cercano_divertido'=>'Cercano y divertido','calido_atento'=>'Cálido y atento','formal_elegante'=>'Formal y elegante','canchero'=>'Canchero'] as $val=>$label)
                                         <label class="cursor-pointer">
-                                            <input type="radio" name="cfg_tono" value="{{ $val }}" class="peer sr-only" @checked(($cfg['tono'] ?? '')===$val)>
+                                            <input type="radio" name="cfg_tono" value="{{ $val }}" class="peer sr-only" @checked(($cfg['tono'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['tono'])===$val)>
                                             <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
                                         </label>
                                     @endforeach
@@ -566,7 +581,7 @@
                                         <div class="flex flex-wrap gap-2">
                                             @foreach(['voseo'=>'Vos','tuteo'=>'Tú','neutro'=>'Neutro'] as $val=>$label)
                                                 <label class="cursor-pointer">
-                                                    <input type="radio" name="cfg_trato" value="{{ $val }}" class="peer sr-only" @checked(($cfg['trato'] ?? '')===$val)>
+                                                    <input type="radio" name="cfg_trato" value="{{ $val }}" class="peer sr-only" @checked(($cfg['trato'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['trato'])===$val)>
                                                     <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
                                                 </label>
                                             @endforeach
@@ -577,7 +592,7 @@
                                         <div class="flex flex-wrap gap-2">
                                             @foreach(['moderado'=>'Moderados','minimo'=>'Pocos','ninguno'=>'Ninguno'] as $val=>$label)
                                                 <label class="cursor-pointer">
-                                                    <input type="radio" name="cfg_emojis" value="{{ $val }}" class="peer sr-only" @checked(($cfg['emojis'] ?? '')===$val)>
+                                                    <input type="radio" name="cfg_emojis" value="{{ $val }}" class="peer sr-only" @checked(($cfg['emojis'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['emojis'])===$val)>
                                                     <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
                                                 </label>
                                             @endforeach
@@ -1242,6 +1257,7 @@
             </div>
 
             @endif
+            </div>{{-- /#configuracion-menu --}}
 
 
             <!-- Sección de Promociones del Día - ARRIBA DE CONTENIDO EXTRAÍDO, ANCHO COMPLETO -->
@@ -1718,6 +1734,11 @@
                     </div>
                 </div>
             @elseif($menu)
+                {{-- Acá no se llega estando en proceso: `MenuController@edit` corta antes y
+                     muestra `menus.procesando`. Quedan dos casos, el archivo que la IA no
+                     pudo leer y el menú viejo que nunca se procesó, y los dos se resuelven
+                     con el mismo botón: re-encolar el archivo que YA está guardado. Antes
+                     esta pantalla decía "vuelve más tarde" y mandaba a subirlo de nuevo. --}}
                 <div class="mt-12">
                     <div class="metric-card">
                         <div class="flex items-center mb-6">
@@ -1726,13 +1747,69 @@
                             </div>
                             <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
                         </div>
-                        <div class="text-center py-12">
-                            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-accent-blue mx-auto mb-6"></div>
-                            <h4 class="text-xl font-medium text-text-primary mb-3">Procesando menú...</h4>
-                            <p class="text-text-secondary">El menú se está procesando automáticamente. Vuelve más tarde para ver el contenido extraído.</p>
+
+                        <div class="py-10">
+                            <div class="max-w-md mx-auto text-center">
+                                @if($menu->tuvoError())
+                                    <div class="w-14 h-14 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="text-2xl">⚠️</span>
+                                    </div>
+                                    <h4 class="text-xl font-medium text-text-primary mb-2">No pudimos leer el menú</h4>
+                                    <p class="text-text-secondary mb-6">
+                                        El archivo quedó guardado, así que podés volver a intentarlo sin
+                                        subirlo de nuevo. Si vuelve a fallar, probá con una foto más
+                                        nítida o un PDF donde el texto se lea derecho.
+                                    </p>
+                                @else
+                                    <div class="w-14 h-14 bg-accent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="text-2xl">📋</span>
+                                    </div>
+                                    <h4 class="text-xl font-medium text-text-primary mb-2">Todavía no leímos este menú</h4>
+                                    <p class="text-text-secondary mb-6">
+                                        El archivo está subido, pero la IA nunca sacó los platos.
+                                        Podés pedírselo ahora.
+                                    </p>
+                                @endif
+
+                                @if($menu->archivo_original)
+                                    <button type="button" id="menuProcesoReintentar" class="btn-primary">
+                                        {{ $menu->tuvoError() ? 'Volver a intentar' : 'Procesar ahora' }}
+                                    </button>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <script>
+                    (function () {
+                        const boton = document.getElementById('menuProcesoReintentar');
+                        if (!boton) return;
+
+                        const URL_REINTENTAR = @json(route('menus.reintentar', [$comercio, $menu]));
+                        const TOKEN = @json(csrf_token());
+
+                        boton.addEventListener('click', async function () {
+                            boton.disabled = true;
+                            try {
+                                const r = await fetch(URL_REINTENTAR, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRF-TOKEN': TOKEN, 'Accept': 'application/json' },
+                                });
+                                if (r.ok) {
+                                    // El menú queda "procesando": al recargar, el controlador
+                                    // manda solo a la pantalla de progreso.
+                                    window.location.reload();
+                                    return;
+                                }
+                                showError('No se pudo reintentar. Probá recargando la página.');
+                            } catch (e) {
+                                showError('No se pudo reintentar. Revisá la conexión.');
+                            }
+                            boton.disabled = false;
+                        });
+                    })();
+                </script>
             @else
                 <div class="mt-12">
                     <div class="metric-card">

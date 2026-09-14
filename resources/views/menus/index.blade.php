@@ -169,7 +169,9 @@
                                         @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
                                             <span class="px-2 py-1 rounded-full text-xs bg-accent-green/20 text-accent-green">Listo</span>
                                         @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
-                                            <span class="px-2 py-1 rounded-full text-xs bg-danger/20 text-danger">Error — volvé a subirlo</span>
+                                            {{-- Ya no hay que volver a subir nada: el archivo quedó
+                                                 guardado y el editor tiene el botón de reintentar. --}}
+                                            <span class="px-2 py-1 rounded-full text-xs bg-danger/20 text-danger">Error — abrilo para reintentar</span>
                                         @else
                                             <span class="px-2 py-1 rounded-full text-xs bg-warning/20 text-warning">Procesando…</span>
                                         @endif
