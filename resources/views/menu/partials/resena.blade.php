@@ -14,32 +14,61 @@
 --}}
 <style>
     /* El valor estático va primero: si el navegador no soporta color-mix, gana ese y el
-       bloque igual se ve. Mismo criterio que --accent-soft en el resto del menú. */
+       bloque igual se ve. Mismo criterio que --accent-soft en el resto del menú.
+
+       Es el ÚNICO pedido que le hacemos al cliente en toda la visita, y llega cuando ya
+       comió: tiene que destacarse del resto de las burbujas del chat sin gritar. De ahí el
+       halo del color del local, el texto centrado —se lee como una invitación y no como un
+       mensaje más— y las estrellas grandes, que dicen de qué se trata antes de leer nada. */
     #bloque-resena .resena-caja {
         border: 1px solid rgba(255, 255, 255, .22);
-        border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+        border-color: color-mix(in srgb, var(--accent) 55%, transparent);
         background: rgba(255, 255, 255, .06);
         background: linear-gradient(168deg,
-            color-mix(in srgb, var(--accent) 16%, transparent),
-            color-mix(in srgb, var(--accent) 5%, transparent));
+            color-mix(in srgb, var(--accent) 20%, transparent),
+            color-mix(in srgb, var(--accent) 6%, transparent));
+        text-align: center;
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, .28),
+            0 0 0 1px rgba(255, 255, 255, .04) inset,
+            0 0 34px color-mix(in srgb, var(--accent) 22%, transparent);
     }
     #bloque-resena .resena-cta {
         background: var(--accent);
         color: #fff;
-        padding: 11px;
-        font-weight: 600;
-        font-size: 14px;
+        padding: 13px;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: .01em;
         text-decoration: none;
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 38%, transparent);
     }
     #bloque-resena .resena-cta:hover { filter: brightness(1.07); }
+    #bloque-resena .resena-cta:active { transform: translateY(1px); }
     #bloque-resena .resena-estrellas {
-        color: var(--accent);
-        font-size: 17px;
-        letter-spacing: 3px;
+        /* Doradas y NO en el color del comercio, que es la regla del resto del menú: cinco
+           estrellas verdes (#35DE7C es un acento real de un local) no se leen como una
+           calificación. El dorado es el de las estrellas de Google, que es justo adonde va
+           el cliente: la forma más rápida de que entienda qué le estamos pidiendo. */
+        color: #FBBC04;
+        font-size: 26px;
+        letter-spacing: 5px;
+        /* El espaciado va a la derecha de la última estrella y descentra el renglón. */
+        text-indent: 5px;
         line-height: 1;
+        text-shadow: 0 0 16px rgba(251, 188, 4, .38);
+        animation: resena-estrellas-entra .5s ease-out both;
     }
-    #bloque-resena .resena-titulo { font-size: 15px; font-weight: 600; margin: 9px 0 4px; }
-    #bloque-resena .resena-texto { font-size: 13.5px; line-height: 1.45; margin: 0 0 13px; }
+    @keyframes resena-estrellas-entra {
+        from { opacity: 0; transform: scale(.82); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+    /* Quien pidió menos movimiento ve el cartel igual, sin el rebote. */
+    @media (prefers-reduced-motion: reduce) {
+        #bloque-resena .resena-estrellas { animation: none; }
+    }
+    #bloque-resena .resena-titulo { font-size: 17px; font-weight: 700; margin: 12px 0 5px; }
+    #bloque-resena .resena-texto { font-size: 14px; line-height: 1.5; margin: 0 0 15px; opacity: .92; }
     /* Discreto a propósito: es la salida para el que no quiere, no una opción que compita
        con el botón. Igual con área tocable de sobra, que si no es una trampa en el celular. */
     #bloque-resena .resena-no {
@@ -94,7 +123,15 @@
         return { inicio: Date.now(), msgs: 0, mostrado: null };
     }
 
+    // Adentro del editor se muestra al instante: al comercio hay que dejarle ver el cartel
+    // que está escribiendo, y en la vida real aparece recién a los veinte minutos y después
+    // de que el cliente usó el chat, o sea nunca en una vista previa.
+    var VISTA_PREVIA = !!window.SM_VISTA_PREVIA;
+
     function guardar(s) {
+        // En vista previa no se guarda nada: si quedara marcado "ya se le pidió", el dueño
+        // dejaba de verlo en su propio menú de verdad, en ese teléfono.
+        if (VISTA_PREVIA) return;
         try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* no romper el chat */ }
     }
 
@@ -147,7 +184,9 @@
         // poder inyectar markup. El href igual, por propiedad y no interpolado en el HTML.
         div.querySelector('.resena-titulo').textContent = CFG.titulo;
         div.querySelector('.resena-texto').textContent = CFG.texto;
-        div.querySelector('#resena-cta').href = CFG.url;
+        // Sin link (sólo puede pasar en la vista previa del panel) el botón se ve pero no
+        // lleva a ninguna parte, en vez de navegar a la nada.
+        div.querySelector('#resena-cta').href = CFG.url || '#';
 
         cont.appendChild(div);
 
@@ -229,6 +268,9 @@
     // volver implicó recargar. Los dos terminan en el mismo lugar.
     document.addEventListener('visibilitychange', revisar);
     window.addEventListener('pageshow', revisar);
+
+    // El chat dibuja sus mensajes al cargar; el cartel va al final de esa lista.
+    if (VISTA_PREVIA) setTimeout(mostrar, 300);
 
     // Contador de mensajes, que llama el chat al mandar cada uno.
     window.smResena = {

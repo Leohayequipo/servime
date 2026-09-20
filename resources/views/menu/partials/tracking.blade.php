@@ -1,4 +1,8 @@
 {{-- Tracking de eventos del menú público. Requiere $comercio y opcional $trackView. --}}
+@if(\App\Support\VistaPrevia::activa($comercio))
+    {{-- Adentro del editor no se registra nada: cada edición sumaba visitas falsas. --}}
+    @include('menu.partials.vista-previa')
+@else
 <script>
 (function () {
     const url = @json(route('track', $comercio));
@@ -66,3 +70,4 @@
     });
 })();
 </script>
+@endif

@@ -768,7 +768,7 @@ class Comercio extends Model
      */
     public function getPromocionesDelMenu(): array
     {
-        $menuActivo = $this->menus()
+        $menuActivo = \App\Support\VistaPrevia::menu($this) ?? $this->menus()
             ->where('activo', true)
             ->where('procesado', true)
             ->first();
@@ -863,6 +863,11 @@ class Comercio extends Model
      */
     public function menuVigente(): ?Menu
     {
+        // En la vista previa del editor, el menú que se está editando (ver VistaPrevia::menu).
+        if ($enEdicion = \App\Support\VistaPrevia::menu($this)) {
+            return $enEdicion;
+        }
+
         return $this->menus()->where('procesado', true)->where('activo', true)->first()
             ?: $this->menus()->where('procesado', true)
                 ->orderByDesc('created_at')

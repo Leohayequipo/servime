@@ -624,7 +624,7 @@
                      enterkeyhint="send" hace que el teclado mobile muestre "Enviar". --}}
                 <input type="text"
                        id="messageInput"
-                       placeholder="{{ __('Escribe tu mensaje...') }}"
+                       placeholder="{{ \App\Support\VistaPrevia::activa($comercio) ? 'Vista previa: el chat no responde acá' : __('Escribe tu mensaje...') }}"
                        autocomplete="off"
                        autocapitalize="sentences"
                        spellcheck="false"
@@ -992,8 +992,31 @@
         }
 
         // Enviar mensaje (con streaming: la respuesta se escribe token a token)
+        // Cartelito para la vista previa del editor. Estilos a mano y no con clases: esta
+        // pantalla lleva el tema del comercio, y el aviso tiene que leerse sobre cualquiera.
+        function avisoVistaPrevia() {
+            if (document.getElementById('avisoVistaPrevia')) return;
+            const aviso = document.createElement('div');
+            aviso.id = 'avisoVistaPrevia';
+            aviso.textContent = 'Vista previa: el asistente responde en tu menú real, no acá.';
+            aviso.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);'
+                + 'z-index:9999;max-width:88%;padding:10px 16px;border-radius:999px;'
+                + 'background:rgba(24,18,12,.88);color:#F2EDE3;font-size:13px;text-align:center;'
+                + 'box-shadow:0 6px 20px rgba(0,0,0,.25);';
+            document.body.appendChild(aviso);
+            setTimeout(() => aviso.remove(), 2600);
+        }
+
         async function sendMessage(message, tipo, scope, esReconsulta, etiqueta, chipId) {
             if (isLoading) return;
+
+            // Adentro del editor (vista previa) el chat se ve pero no manda nada: cada
+            // mensaje es una llamada a la IA que se descuenta de la cuota del plan. Todas las
+            // entradas al chat —escribir, un atajo, una categoría— pasan por acá.
+            if (@json(\App\Support\VistaPrevia::activa($comercio))) {
+                avisoVistaPrevia();
+                return;
+            }
 
             // Las sugerencias de arranque son solo para la pantalla vacía
             document.getElementById('sugerencias')?.remove();
@@ -1909,7 +1932,9 @@
     @include('menu.partials.tracking', ['trackView' => 'chat'])
 
     {{-- Va DESPUÉS del tracking: el bloque usa window.smTrack para registrar que se mostró. --}}
-    @if($comercio->pideResena())
+    {{-- En vista previa se incluye aunque esté apagado o sin link: el comercio está
+         escribiendo esos textos y tiene que poder verlos. --}}
+    @if($comercio->pideResena() || \App\Support\VistaPrevia::activa($comercio))
         @include('menu.partials.resena')
     @endif
 </body>

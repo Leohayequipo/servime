@@ -148,6 +148,11 @@ class ChatbotService
      */
     private function menusParaContexto(Comercio $comercio)
     {
+        // En la vista previa del editor, sólo el menú que se está editando.
+        if ($enEdicion = \App\Support\VistaPrevia::menu($comercio)) {
+            return collect([$enEdicion]);
+        }
+
         $base = $comercio->menus()->where('procesado', true)->whereNotNull('contexto_gpt');
         $menus = (clone $base)->where('activo', true)->get();
         if ($menus->isEmpty()) {
