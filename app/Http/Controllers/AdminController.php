@@ -261,6 +261,12 @@ class AdminController extends Controller
         // Cargar las relaciones necesarias
         $menu->load(['comercio.user']);
 
+        // Igual que en MenuController@edit: mientras la IA lo lee, sólo el progreso. El
+        // editor guarda sobre el mismo menú que el job está escribiendo.
+        if ($menu->estado === Menu::ESTADO_PROCESANDO) {
+            return view('menus.procesando', ['comercio' => $menu->comercio, 'menu' => $menu]);
+        }
+
         // Asegurar que el archivo del menú esté disponible en public_html (si existe)
         if ($menu->archivo_original) {
             $this->ensureMenuFileInPublicHtml($menu->archivo_original);
@@ -271,24 +277,6 @@ class AdminController extends Controller
             'menu' => $menu,
             'isEdit' => true,
         ]);
-    }
-
-    public function updateMenu(Request $request, Menu $menu)
-    {
-        // Cargar la relación comercio si no está cargada
-        if (! $menu->relationLoaded('comercio')) {
-            $menu->load('comercio');
-        }
-
-        // Verificar que el comercio existe
-        if (! $menu->comercio) {
-            return redirect()->back()->with('error', 'No se encontró el comercio asociado al menú.');
-        }
-
-        // Llamar directamente al método update del MenuController
-        $menuController = new \App\Http\Controllers\MenuController;
-
-        return $menuController->update($request, $menu->comercio, $menu);
     }
 
     /**

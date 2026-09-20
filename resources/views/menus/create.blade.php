@@ -1,6 +1,27 @@
 <x-app-layout>
     <style>
-        /* Botón Actualizar Menú - Verde forzado */
+        /* ── Bloques dentro de una sección del editor ──────────────────────────
+           Sin cromo de tarjeta: adentro de una sección abierta, una tarjeta blanca con
+           borde, sombra, círculo de color y título grande se leía como OTRA sección, al
+           mismo nivel que la que se había abierto. Acá son partes de un panel: las separa
+           una línea fina, y el título es un rótulo chico. */
+        /* La separación la da el `space-y` del cuerpo de la sección; acá va sólo la línea,
+           y sólo entre bloques hermanos: algunos vienen envueltos en un div propio. */
+        .editor-bloque + .editor-bloque {
+            padding-top: 1.75rem;
+            border-top: 1px solid rgb(var(--c-line) / .6);
+        }
+
+        .editor-bloque-titulo {
+            font-size: .75rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: rgb(var(--c-ink-soft));
+            margin-bottom: 1rem;
+        }
+
+        /* Botón que manda el archivo a la IA al crear un menú - Verde forzado */
         #btn-actualizar-menu,
         .btn-actualizar-menu,
         button[type="submit"][id="btn-actualizar-menu"] {
@@ -174,17 +195,49 @@
         }
     </style>
     <div class="min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            
-            <!-- Header Section -->
-            <div class="flex items-center justify-between mb-12">
-                <div>
-                    <h1 class="text-3xl font-bold text-text-primary mb-2">
-                        {{ $isEdit ? 'Editar Menú' : 'Crear Menú' }}
-                    </h1>
-                    <p class="text-text-secondary mt-0.5">{{ $comercio->nombre }}</p>
+        <div class="{{ $isEdit ? 'max-w-[1400px]' : 'max-w-3xl' }} mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            {{-- Barra del editor. Fija arriba mientras se baja por las secciones, porque lo
+                 que responde es la pregunta que el comercio se hace todo el tiempo: ¿esto ya lo
+                 ven mis clientes? Antes el editor nunca decía si el menú estaba publicado, y
+                 activarlo sólo se podía desde la lista. --}}
+            <div class="{{ $isEdit ? 'md:sticky md:top-[73px] z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-background/95 backdrop-blur border-b border-accent-gray mb-6' : 'mb-10' }} flex flex-wrap items-center justify-between gap-4">
+                <div class="min-w-0">
+                    @if($isEdit && $menu)
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <h1 class="text-2xl font-bold text-text-primary truncate">{{ $menu->nombre ?: 'Menú sin nombre' }}</h1>
+                            @if($menu->activo)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-accent-green"></span>
+                                    Publicado
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-warning/50 text-text-primary">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                    Borrador · tus clientes todavía no lo ven
+                                </span>
+                            @endif
+                        </div>
+                        <p class="text-text-secondary text-sm mt-0.5">{{ $comercio->nombre }}</p>
+                    @else
+                        <h1 class="text-3xl font-bold text-text-primary mb-2">Crear Menú</h1>
+                        <p class="text-text-secondary mt-0.5">{{ $comercio->nombre }}</p>
+                    @endif
                 </div>
-                <div class="flex space-x-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    @if($isEdit && $menu)
+                        <a href="{{ route('menu.public', $comercio) }}" target="_blank" rel="noopener" class="btn-secondary">
+                            Ver menú ↗
+                        </a>
+                        @unless($menu->activo)
+                            <form method="POST" action="{{ route('menus.activar', [$comercio, $menu]) }}"
+                                  onsubmit="event.preventDefault(); const f=this; showConfirmWithLoader('¿Publicar este menú? Pasa a ser el que ven tus clientes al escanear el QR.', r=>{ if(r) f.submit(); }, 'Publicando...');">
+                                @csrf
+                                <input type="hidden" name="volver" value="editor">
+                                <button type="submit" class="btn-primary">Publicar</button>
+                            </form>
+                        @endunless
+                    @endif
                     @if(auth()->user()->isSuperAdmin() || $comercio->tieneFeature('excel'))
                     <!-- Dropdown Gestión Excel -->
                     <div class="relative" id="excelDropdown">
@@ -280,390 +333,485 @@
                 <div class="hidden" id="error-message" data-message="{{ session('error') }}"></div>
             @endif
 
-            <!-- Formulario Principal del Menú -->
+
             @php
-                // Determinar la ruta correcta según si estamos en admin o en comercio
-                $updateRoute = $isEdit 
-                    ? (request()->is('admin/*') 
-                        ? route('admin.menus.update', $menu) 
-                        : route('menus.update', [$comercio, $menu]))
-                    : route('menus.store', $comercio);
+                // Lo que dice cada sección cerrada. Sale de los mismos datos que ya muestra la
+                // pantalla; no hay consultas nuevas salvo lo que el menú ya trae decodificado.
+                $datosMenuEditor = $menu ? json_decode(preg_replace('/^```json\s*|```\s*$/', '', trim((string) $menu->contexto_gpt)), true) : null;
+                $categoriasEditor = is_array($datosMenuEditor['categorias'] ?? null) ? $datosMenuEditor['categorias'] : [];
+                $esCategoriaPromo = fn ($c) => in_array(mb_strtolower(trim($c['nombre'] ?? '')), ['promociones del día', 'promociones del dia'], true);
+                $platosEditor = collect($categoriasEditor)->reject($esCategoriaPromo)->flatMap(fn ($c) => $c['platos'] ?? []);
+                $cantidadCategorias = collect($categoriasEditor)->reject($esCategoriaPromo)->count();
+                $cantidadPromos = collect($categoriasEditor)->filter($esCategoriaPromo)->flatMap(fn ($c) => $c['platos'] ?? [])->count();
+                $sinDescripcion = $platosEditor->filter(fn ($p) => blank($p['descripcion'] ?? null))->count();
+                $sinFoto = $platosEditor->filter(fn ($p) => blank($p['imagen'] ?? null))->count();
+
+                // Lo que tiene y lo que le falta, de un vistazo y con la sección cerrada:
+                // "21 categorías · 149 platos · 87 sin descripción · 149 sin foto".
+                // Lo que ya está completo no se nombra: sólo suma ruido.
+                $resumenPlatos = $platosEditor->isEmpty()
+                    ? 'Todavía no hay platos'
+                    : collect([
+                        $cantidadCategorias.' '.($cantidadCategorias === 1 ? 'categoría' : 'categorías'),
+                        $platosEditor->count().' '.($platosEditor->count() === 1 ? 'plato' : 'platos'),
+                        $sinDescripcion ? $sinDescripcion.' sin descripción' : null,
+                        $sinFoto ? $sinFoto.' sin foto' : null,
+                    ])->filter()->implode(' · ');
+
+                $resumenAspecto = ($comercio->tienePortada() ? 'Con portada' : 'Sin portada')
+                    .' · Carta como '.($comercio->menu_clasico_vista === \App\Models\Comercio::VISTA_LISTA ? 'lista' : 'archivo');
+
+                $cfgEditor = $comercio->chatbot_config ?? [];
+                $tonosEditor = ['cercano_divertido' => 'Cercano y divertido', 'calido_atento' => 'Cálido y atento', 'formal_elegante' => 'Formal y elegante', 'canchero' => 'Canchero'];
+                $resumenAsistente = ($comercio->chatbot_name ?: 'Asistente IA').' · '
+                    .($tonosEditor[$cfgEditor['tono'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['tono']] ?? '');
+
+                $resumenVender = collect([
+                    $cantidadPromos ? $cantidadPromos.' promo'.($cantidadPromos === 1 ? '' : 's') : null,
+                    $comercio->pedido_habilitado ? 'Pedidos en línea' : null,
+                    $comercio->pideResena() ? 'Reseñas' : null,
+                ])->filter()->implode(' · ') ?: 'Promociones, atajos, pedidos y reseñas';
+
+                // URL del celular para cada sección: la pantalla pública real, en modo vista
+                // previa y con ESTE menú (ver App\Support\VistaPrevia).
+                $previaEditor = fn (string $ruta, array $extra = []) => $menu
+                    ? route($ruta, $comercio).'?'.http_build_query(array_merge(['preview' => 1, 'menu' => $menu->id], $extra))
+                    : null;
             @endphp
-            <form method="POST" action="{{ $updateRoute }}" enctype="multipart/form-data" class="space-y-6 mb-8" id="menu-form">
-                            @csrf
-                            @if($isEdit)
-                                @method('PUT')
-                <!-- Campo oculto para mantener el formato actual -->
-                @if($menu->formato)
-                    <input type="hidden" name="formato" value="{{ $menu->formato }}">
-                @endif
-                            @endif
-            
-            <!-- Campos ocultos del chatbot (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
-            <input type="hidden" id="chatbot_name_hidden" value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}">
-            <input type="hidden" id="welcome_message_hidden" value="{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}">
-            
-            <!-- Campos ocultos de colores (solo para lectura, NO se envían en el formulario - se guardan automáticamente) -->
-            <input type="hidden" id="primary_color" value="{{ $comercio->primary_color }}">
-            <input type="hidden" id="secondary_color" value="{{ $comercio->secondary_color }}">
-            <input type="hidden" id="accent_color" value="{{ $comercio->accent_color }}">
-            <input type="hidden" id="background_color" value="{{ $comercio->background_color }}">
-                            
-                            <!-- Información del Comercio -->
-                <div class="metric-card">
-                            <div class="bg-secondary-dark p-4 rounded-xl mb-6">
-                                <h3 class="text-lg font-medium text-text-primary mb-2">Comercio: {{ $comercio->nombre }}</h3>
-                                @if($comercio->descripcion)
-                                    <p class="text-sm text-text-secondary">{{ $comercio->descripcion }}</p>
-                                @endif
-                            </div>
 
-                            <!-- Nombre del Menú -->
-                    <div class="mb-6">
-                                <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Nombre del Menú <span class="text-danger">*</span>
-                                </label>
-                                {{-- En edición se guarda solo al salir del campo: ponerle otro
-                                     nombre a un menú no tiene por qué disparar el procesamiento
-                                     con IA, que tarda y cuesta. Al crear todavía no existe la
-                                     fila, así que ahí viaja con el formulario. --}}
-                                <input type="text"
-                                       id="nombre"
-                                       name="nombre"
-                                       value="{{ old('nombre', $menu->nombre ?? '') }}"
-                                       required
-                                       @if($isEdit && $menu)
-                                           data-guardar-en="{{ route('menus.update.nombre', [$comercio, $menu]) }}"
-                                       @endif
-                                       placeholder="Ej: Carta principal, Menú de la noche…"
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                                <p id="nombre-estado" class="text-xs text-text-secondary mt-2"></p>
-                                <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
-                            </div>
-
-                            <!-- Menú Actual (solo en edición) -->
-                            @if($isEdit && $menu && $menu->archivo_original)
-                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div class="flex items-center space-x-4 flex-1 min-w-0">
-                                            @if($menu->formato === 'pdf')
-                                                <div class="w-14 h-14 bg-danger/20 border border-danger/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-danger text-2xl">📄</span>
-                                                </div>
-                                            @else
-                                                <div class="w-14 h-14 bg-accent-blue/10 border border-accent-blue/30 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                                                    <span class="text-accent-blue text-2xl">🍽️</span>
-                                                </div>
-                                            @endif
-                                            <div class="min-w-0 flex-1">
-                                                <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                        {{ $menu->updated_at->format('d/m/Y') }}
-                                                    </span>
-                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
-                                                        {{ $menu->updated_at->format('H:i') }}
-                                                    </span>
-                                            </div>
-                                        </div>
-                                        </div>
-                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-                                            <button type="button"
-                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
-                                                    class="px-4 py-2.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap">
-                                                👁️ Ver
-                                            </button>
-                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                               download
-                                               class="px-4 py-2.5 bg-accent-gray/30 hover:bg-accent-gray/50 text-text-primary border border-accent-gray rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-2">
-                                                <span>📥</span>
-                                                <span>Descargar</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            {{-- Archivo del Menú.
-                                 El botón vive acá adentro, pegado al archivo, porque es lo
-                                 único que dispara: manda el archivo a la IA. Todo lo demás de
-                                 la pantalla (nombre, promociones, pedidos, chatbot, clásico,
-                                 reseñas) se guarda solo. Antes estaba suelto al final de la
-                                 sección y se leía como un "Guardar todo" que no es. --}}
-                    <div class="mb-6 bg-secondary-dark border border-accent-gray rounded-xl p-6">
-                                <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
-                                    {{ $isEdit ? 'Nuevo Archivo (opcional)' : 'Archivo del Menú' }}
-                                </label>
-                                <input type="file"
-                                       id="archivo"
-                                       name="archivo"
-                                       accept=".pdf,.jpeg,.jpg,.png,.gif"
-                                       {{ $isEdit ? '' : 'required' }}
-                                       class="w-full px-4 py-3 bg-background border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
-                                <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
-                                <p class="mt-2 text-sm text-text-secondary">
-                                    @if($isEdit)
-                                        Deja vacío para mantener el archivo actual. Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB
-                                    @else
-                                        Formatos permitidos: PDF, JPEG, PNG, JPG, GIF. Tamaño máximo: 10MB.
-                                    @endif
-                                </p>
-
-                                <!-- Información sobre el procesamiento -->
-                                <div class="bg-accent-blue/10 border border-accent-blue/30 rounded-xl p-4 mt-5">
-                                    <div class="flex">
-                                        <div class="flex-shrink-0">
-                                            <div class="w-6 h-6 bg-accent-blue/20 rounded-full flex items-center justify-center">
-                                                <span class="text-accent-blue text-sm">ℹ️</span>
-                                            </div>
-                                        </div>
-                                        <div class="ml-3">
-                                            <h3 class="text-sm font-medium text-accent-blue">
-                                                Procesamiento Automático
-                                            </h3>
-                                            <div class="mt-2 text-sm text-text-secondary">
-                                                <p>Una vez subido el archivo, nuestro sistema procesará automáticamente el menú para extraer la información y estructurarla.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- El botón arranca apagado y se prende cuando hay algo real
-                                     que procesar: un archivo elegido, o un menú que quedó sin
-                                     procesar (error) y se puede reintentar. --}}
-                                <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-                                    <p id="procesar-ayuda" class="text-xs text-text-secondary sm:text-right sm:flex-1"></p>
-                                    {{-- Sin style inline: el color y el hover salen del CSS de
-                                         arriba, que es el único lugar donde se puede apagar. --}}
-                                    <button type="submit"
-                                            id="btn-actualizar-menu"
-                                            data-necesita-reproceso="{{ $isEdit && $menu && ! $menu->procesado ? '1' : '0' }}"
-                                            class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-95 transform flex items-center justify-center gap-3">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        {{-- "Procesar" y no "Guardar": lo que hace es mandar el archivo a
-                                             la IA para que extraiga los platos, no guardar la pantalla. --}}
-                                        <span>{{ $isEdit ? 'Procesar menú nuevo' : 'Crear y procesar menú' }}</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                </div>
-            </form>
-
-            {{-- Pedidos en Línea queda FUERA del formulario a propósito: el interruptor se
-                 guarda solo por AJAX y no viaja en el submit. Adentro, y justo encima del
-                 botón, parecía que había que apretar "Procesar" para confirmarlo. --}}
-            @if($isEdit)
-                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-8 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
-                                    <div class="relative p-6">
-                                        <!-- Texto arriba -->
-                                        <div class="mb-5">
-                                            <div class="flex items-center gap-3 mb-2">
-                                                <h3 class="text-text-primary font-bold text-xl tracking-tight">Pedidos en Línea</h3>
-                                                @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent-green/15 backdrop-blur-sm border border-accent-green/40 rounded-lg">
-                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-accent-green rounded-full animate-pulse"></span>
-                                                        <span class="text-xs font-semibold text-accent-green">ACTIVO</span>
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            <p class="text-text-secondary text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
-                                        </div>
-                                        
-                                        <!-- Icono y botón abajo -->
-                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-accent-gray">
-                                            <div class="relative flex-shrink-0">
-                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green hover:brightness-95 shadow-lg shadow-green-500/50' : 'bg-accent-gray hover:brightness-95' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
-                                                    <span class="text-2xl filter drop-shadow-lg">🛒</span>
-                                                    @if(old('pedido_habilitado', $comercio->pedido_habilitado))
-                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-accent-green rounded-full border-3 border-secondary-dark animate-pulse"></div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="flex items-center gap-4 flex-1 justify-end">
-                                                <label class="relative inline-flex items-center cursor-pointer group">
-                                                    <input type="checkbox"
-                                                           id="pedido_habilitado"
-                                                           value="1"
-                                                           {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
-                                                           class="sr-only peer pedido-toggle"
-                                                           onchange="updatePedidoStatus(this.checked);">
-                                                    <div class="w-16 h-9 bg-accent-gray peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-accent-gray after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
-                                                </label>
-                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/15 text-accent-green border-2 border-accent-green/40 backdrop-blur-sm' : 'bg-accent-gray/30 text-text-secondary border-2 border-accent-gray/30' }}">
-                                                    {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-            @endif
-
-            {{-- Al CREAR un menú no se muestra la configuración (asistente, colores, portada,
-                 vista clásica, atajos, reseñas): todavía no hay menú, y ver todas esas opciones
-                 antes de subir el archivo desorienta. Aparecen en el editor cuando la IA termina.
-
-                 Se oculta con `hidden` y NO con un @if a propósito: el JavaScript de esta
-                 pantalla toca decenas de estos elementos sin chequear que existan
-                 (`chatbot_name.addEventListener`...), y sacarlos del HTML rompía los scripts.
-                 Queda fuera del <form>, así que tampoco viaja nada de acá al subir. --}}
+            {{-- Al crear, sólo nombre y archivo: todo lo demás aparece en el editor cuando la IA
+                 termina de leer el menú. Las otras secciones se renderizan igual pero ocultas,
+                 porque el JavaScript de esta pantalla usa sus elementos sin chequear que existan. --}}
             @unless($isEdit)
-                <p class="text-center text-text-secondary text-sm mb-8">
-                    Cuando la IA termine de leer tu menú vas a poder configurar el asistente,
-                    los colores y la portada.
+                <p class="text-text-secondary text-sm mb-6">
+                    Subí tu carta y la IA saca los platos. Cuando termine vas a poder revisarlos,
+                    configurar el asistente, los colores y la portada, todo desde la misma pantalla.
                 </p>
             @endunless
-            <div class="{{ $isEdit ? '' : 'hidden' }}" id="configuracion-menu">
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                
-                <!-- Columna Izquierda: Configuración del Chatbot -->
-                <div class="space-y-6">
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">🤖</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Chatbot</h3>
-                        </div>
+
+            <div class="{{ $isEdit ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start' : '' }}">
+            <div id="editor-secciones" class="min-w-0 space-y-4">
+
+            <div class="{{ $isEdit ? 'space-y-4' : 'hidden' }}">
+
+                <x-editor.seccion id="platos" titulo="Tus platos" icono="📋" :resumen="$resumenPlatos" :lista="$platosEditor->isNotEmpty()" :preview="$previaEditor('menu.classic', ['vista' => 'lista'])" preview-titulo="Así ven tu carta" :abierta="true">
+            <!-- 📋 Contenido Extraído del Menú - Sección de ancho completo -->
+            @if($menu && $menu->procesado && ($menu->texto_extraido || $menu->contexto_gpt))
+                <div>
+                    <div class="editor-bloque">
                         
-                        <div class="space-y-custom">
-                            <!-- Nombre del Chatbot -->
-                            <div>
-                                <label for="chatbot_name" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Nombre del Chatbot
-                                </label>
-                                <input type="text" 
-                                       id="chatbot_name" 
-                                       value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}"
-                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                            </div>
+                        @php
+                            // Obtener el contenido JSON desde contexto_gpt o texto_extraido
+                            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
                             
-                            <!-- Mensaje de Bienvenida -->
-                            <div>
-                                <label for="welcome_message" class="block text-sm font-medium text-text-secondary mb-3">
-                                    Mensaje de Bienvenida
-                                </label>
-                                <textarea id="welcome_message" 
-                                          rows="4"
-                                          maxlength="500"
-                                          class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</textarea>
-                                <p class="text-xs text-text-secondary mt-2">Máximo 500 caracteres</p>
+                            // Limpiar el contenido: remover ```json y ``` si están presentes
+                            $jsonContent = $rawContent;
+                            if (strpos($jsonContent, '```json') !== false) {
+                                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
+                                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
+                            }
+                            
+                            // Decodificar el JSON
+                            $contenido = json_decode(trim($jsonContent), true);
+                        @endphp
+                        
+                        @if($contenido && is_array($contenido))
+                            <div class="space-y-6">
+                                
+                                <!-- Categorías y platos -->
+                                @php
+                                    // Obtener categorías del formato unificado
+                                    $categorias = $contenido['categorias'] ?? null;
+                                @endphp
+                                
+                                @if($categorias && is_array($categorias))
+                                    {{-- Las categorías, plegadas y en UNA columna. Antes iban en una grilla de tres
+                                         columnas con cada plato como tarjeta alta: con 21 categorías y 150 platos la vista
+                                         saltaba de columna en columna y no se veía el conjunto. Ahora se ven todas de un
+                                         vistazo, con cuánto tienen y qué les falta, y se abre una a la vez.
+
+                                         Cada plato es una fila: nombre y precio, que es lo que más se corrige. Foto,
+                                         descripción y etiquetas van en el detalle que se abre con la flecha.
+
+                                         Los ids, `.plato-item`, `data-plato-index` y `#platos-container-N` NO se tocan:
+                                         de eso cuelgan la edición en el lugar, las fotos, las etiquetas y el reordenamiento
+                                         con arrastre. Los bloques con lógica están copiados tal cual. --}}
+                                    <div class="space-y-3" id="editor-categorias">
+                                        @foreach($categorias as $categoriaIndex => $categoria)
+                                            @php
+                                                // Filtrar "Promociones del Día" ya que tiene su propia sección dedicada
+                                                $nombreCategoria = strtolower(trim($categoria['nombre'] ?? ''));
+                                                if ($nombreCategoria === 'promociones del día') {
+                                                    continue;
+                                                }
+                                            @endphp
+                                        @php
+                                            $platosCat = is_array($categoria['platos'] ?? null) ? $categoria['platos'] : [];
+                                            $sinDescCat = collect($platosCat)->filter(fn ($p) => blank($p['descripcion'] ?? null))->count();
+                                        @endphp
+                                        <div class="editor-categoria border border-accent-gray rounded-xl overflow-hidden bg-secondary-dark" data-categoria-editor="{{ $categoriaIndex }}">
+                                            <button type="button" class="editor-categoria-cabecera w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 text-left hover:bg-primary-dark/60 transition-colors" aria-expanded="false">
+                                                <svg class="editor-categoria-flecha w-4 h-4 text-text-secondary flex-shrink-0 -rotate-90 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                <span class="flex-1 min-w-0 font-semibold text-text-primary truncate">{{ $categoria['nombre'] ?? 'Sin nombre' }}</span>
+                                                <span class="text-sm text-text-secondary flex-shrink-0">{{ count($platosCat) }} {{ count($platosCat) === 1 ? 'plato' : 'platos' }}</span>
+                                                @if($sinDescCat)
+                                                    <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary flex-shrink-0">{{ $sinDescCat }} sin descripción</span>
+                                                @endif
+                                            </button>
+
+                                            <div class="editor-categoria-cuerpo hidden border-t border-accent-gray">
+                                                <div class="divide-y divide-accent-gray/60" id="platos-container-{{ $categoriaIndex }}" data-categoria-index="{{ $categoriaIndex }}">
+                                                    @foreach($platosCat as $platoIndex => $plato)
+                                                            @php
+                                                                // Transformar nombre: eliminar guiones y normalizar capitalización
+                                                                $nombrePlato = $plato['nombre'] ?? 'Sin nombre';
+                                                                // Eliminar guiones y underscores
+                                                                $nombrePlato = str_replace(['-', '_'], ' ', $nombrePlato);
+                                                                // Normalizar: primera letra de cada palabra en mayúscula, resto en minúscula
+                                                                $nombrePlato = mb_convert_case($nombrePlato, MB_CASE_TITLE, 'UTF-8');
+                                                                // Limpiar espacios múltiples
+                                                                $nombrePlato = preg_replace('/\s+/', ' ', trim($nombrePlato));
+                                                            @endphp
+                                                        <div class="group plato-item bg-secondary-dark hover:bg-primary-dark/40 transition-colors cursor-move" data-plato-index="{{ $platoIndex }}">
+                                                            <div class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2">
+                                                                    <div class="flex items-center justify-center w-5 h-5 text-accent-blue opacity-50 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0">
+                                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                                            <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
+                                                                        </svg>
+                                                                    </div>
+                                                                    <h5 class="text-text-primary font-medium text-base leading-snug cursor-text hover:text-accent-blue transition-colors capitalize flex-1 min-w-0 truncate"
+                                                                        ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                        onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'nombre')"
+                                                                        id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        {{ $nombrePlato }}
+                                                                    </h5>
+                                                                @if(blank($plato['descripcion'] ?? null))
+                                                                    <button type="button" class="plato-detalle-toggle hidden md:inline-flex flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary hover:border-accent-blue/50 hover:text-accent-deep transition-colors" title="Agregar descripción">sin descripción</button>
+                                                                @endif
+                                                                    <!-- Precio (alineado a la derecha) -->
+                                                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                                                        <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
+                                                                            <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
+                                                                            {{-- El precio se muestra CON su formato. Antes iba un
+                                                                                 preg_replace('/[^0-9]/') que convertía "$5.700,00" en
+                                                                                 570000, y al perder el foco guardaba eso: pasar por el
+                                                                                 campo multiplicaba el precio por cien. --}}
+                                                                            <input type="text"
+                                                                                   value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
+                                                                                   placeholder="0"
+                                                                                   data-original-value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
+                                                                                   oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
+                                                                                   onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
+                                                                                   class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
+                                                                                   id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        </div>
+                                                                        <span class="text-accent-blue text-xs min-w-[16px]" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
+                                                                    </div>
+                                                                    <!-- Plato estrella: el asistente lo recomienda primero. Vive acá y no
+                                                                         en una lista aparte para que la marca viaje con el plato. -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); togglePlatoEstrella(this, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                            data-estrella="{{ ! empty($plato['estrella']) ? '1' : '0' }}"
+                                                                            id="estrella-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                            class="plato-estrella-btn flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors {{ ! empty($plato['estrella']) ? 'text-warning bg-warning/20' : 'text-text-secondary hover:text-warning hover:bg-warning/10' }}"
+                                                                            title="{{ ! empty($plato['estrella']) ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella' }}">
+                                                                        <svg class="w-5 h-5" fill="{{ ! empty($plato['estrella']) ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                                                        </svg>
+                                                                    </button>
+                                                                <!-- Abrir el detalle: foto, descripción y etiquetas -->
+                                                                <button type="button" class="plato-detalle-toggle flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-accent-deep hover:bg-accent-blue/10 rounded-lg transition-colors" aria-expanded="false" title="Foto, descripción y etiquetas">
+                                                                    <svg class="plato-detalle-flecha w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                                </button>
+                                                                    <!-- Botón de edición visible en móvil -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                            class="md:hidden flex-shrink-0 inline-flex items-center justify-center w-8 h-8 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
+                                                                            title="Editar nombre">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                        </svg>
+                                                                    </button>
+                                                                    <!-- Eliminar producto -->
+                                                                    <button type="button"
+                                                                            onclick="event.stopPropagation(); eliminarPlato({{ $categoriaIndex }}, {{ $platoIndex }}, @js($nombrePlato))"
+                                                                            class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                                                                            title="Eliminar producto">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                        </svg>
+                                                                    </button>
+                                                            </div>
+
+                                                            <div class="plato-detalle hidden flex flex-col sm:flex-row gap-4 px-4 pb-4 sm:pl-12 cursor-default">
+                                                                    <!-- Imagen -->
+                                                                    <div class="flex-shrink-0" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                        @if(isset($plato['imagen']) && !empty($plato['imagen']))
+                                                                            <div class="relative group/image">
+                                                                                <div class="w-20 h-20 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-md bg-secondary-dark">
+                                                                                    <img src="{{ asset($plato['imagen']) }}" 
+                                                                                         alt="{{ $nombrePlato }}"
+                                                                                         class="w-full h-full object-cover"
+                                                                                         id="plato-imagen-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                </div>
+                                                                                <!-- Overlay con botones al hover -->
+                                                                                <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
+                                                                                    <label class="cursor-pointer">
+                                                                                        <input type="file" 
+                                                                                               accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                                               class="hidden"
+                                                                                               onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                               id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:opacity-80 text-black text-xs font-semibold rounded transition-opacity cursor-pointer shadow-xl">
+                                                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                                                            </svg>
+                                                                                            Cambiar
+                                                                                        </span>
+                                                                                    </label>
+                                                                                    <button type="button"
+                                                                                            onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
+                                                                                            class="inline-flex items-center justify-center w-7 h-7 bg-danger hover:brightness-95 text-white rounded transition-colors cursor-pointer shadow-xl"
+                                                                                            title="Eliminar imagen">
+                                                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                                        </svg>
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        @else
+                                                                            <label class="cursor-pointer">
+                                                                                <input type="file" 
+                                                                                       accept="image/jpeg,image/png,image/jpg,image/gif"
+                                                                                       class="hidden"
+                                                                                       onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                       id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                <div class="w-20 h-20 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
+                                                                                    <svg class="w-5 h-5 mb-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                                                    </svg>
+                                                                                    <span class="text-[9px] font-semibold text-accent-blue">Imagen</span>
+                                                                                </div>
+                                                                            </label>
+                                                                        @endif
+                                                                    </div>
+                                                                <div class="flex-1 min-w-0 space-y-3">
+                                                                    <!-- Descripción -->
+                                                                    <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full relative">
+                                                                        @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
+                                                                            <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors w-full whitespace-normal pr-8"
+                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
+                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                {{ $plato['descripcion'] }}
+                                                                            </p>
+                                                                        @else
+                                                                            <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic w-full whitespace-normal pr-8"
+                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
+                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                                Click para agregar descripción...
+                                                                            </p>
+                                                                        @endif
+                                                                        <!-- Botón de edición visible en móvil -->
+                                                                        <button type="button"
+                                                                                onclick="event.stopPropagation(); enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                class="md:hidden absolute top-0 right-0 inline-flex items-center justify-center w-7 h-7 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
+                                                                                title="Editar descripción">
+                                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                    <!-- Tags -->
+                                                                    <div id="tags-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full">
+                                                                        <div class="flex flex-wrap gap-1.5 mb-1.5" id="tags-list-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                            @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
+                                                                                @foreach($plato['tags'] as $tagIndex => $tag)
+                                                                                    @if(!empty($tag))
+                                                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 hover:bg-accent-blue/30 transition-colors tag-item" 
+                                                                                              data-tag-index="{{ $tagIndex }}">
+                                                                                            {{ $tag }}
+                                                                                            <button type="button" 
+                                                                                                    onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
+                                                                                                    class="hover:text-accent-blue transition-colors p-0.5 rounded"
+                                                                                                    title="Eliminar tag">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                                                </svg>
+                                                                                            </button>
+                                                                                        </span>
+                                                                                    @endif
+                                                                                @endforeach
+                                                                            @endif
+                                                                        </div>
+                                                                        <div class="w-full max-w-xs">
+                                                                            <input type="text" 
+                                                                                   placeholder="Escribe un tag y presiona Enter o coma"
+                                                                                   title="Escribe el nombre del tag y presiona Enter o la tecla coma (,) para agregarlo"
+                                                                                   class="text-xs bg-secondary-dark border border-accent-gray/70 rounded-md px-2.5 py-1.5 text-text-secondary placeholder:text-accent-gray focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue/70 hover:border-accent-gray transition-all w-full"
+                                                                                   id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                                   onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
+                                                                                   autocomplete="off">
+                                                                            <p class="text-[10px] text-text-secondary mt-1 ml-0.5">💡 Presiona Enter o coma (,) para agregar</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+
+                                                <div class="px-4 py-3 border-t border-accent-gray/60">
+                                                    <button type="button"
+                                                        onclick="agregarPlato({{ $categoriaIndex }}, @js($categoria['nombre'] ?? 'esta categoría'))"
+                                                            class="inline-flex items-center gap-2 px-3 py-1.5 text-accent-deep hover:bg-accent-blue/10 rounded-lg text-sm font-semibold transition-colors">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                                        Agregar plato
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    </div>{{-- /#editor-categorias --}}
+                                @else
+                                    <div class="text-center py-8">
+                                        <p class="text-text-secondary">No se encontraron categorías de platos en el menú procesado.</p>
+                                        <p class="text-text-secondary text-sm mt-2">Claves disponibles: {{ implode(', ', array_keys($contenido)) }}</p>
+                                    </div>
+                                @endif
+                                
+                                <!-- Información adicional -->
+                                @if(isset($contenido['informacion_adicional']) && !empty($contenido['informacion_adicional']))
+                                    <div class="bg-secondary-dark border border-accent-gray rounded-lg p-4">
+                                        <h4 class="text-lg font-semibold text-text-primary mb-2">ℹ️ Información Adicional</h4>
+                                        <p class="text-text-secondary">{{ $contenido['informacion_adicional'] }}</p>
+                                    </div>
+                                @endif
                             </div>
+                        @else
+                            <!-- Fallback: mostrar JSON si no se puede parsear -->
+                            <div class="bg-secondary-dark rounded-lg p-6">
+                                <pre class="whitespace-pre-wrap text-sm text-text-secondary">{{ $rawContent }}</pre>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @elseif($menu && $menu->procesado)
+                <div>
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Contenido Extraído</h3>
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span class="text-text-secondary text-2xl">📄</span>
+                            </div>
+                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay contenido procesado</h4>
+                            <p class="text-text-secondary">El menú fue procesado pero no se extrajo contenido estructurado.</p>
+                        </div>
+                    </div>
+                </div>
+            @elseif($menu)
+                {{-- Acá no se llega estando en proceso: `MenuController@edit` corta antes y
+                     muestra `menus.procesando`. Quedan dos casos, el archivo que la IA no
+                     pudo leer y el menú viejo que nunca se procesó, y los dos se resuelven
+                     con el mismo botón: re-encolar el archivo que YA está guardado. Antes
+                     esta pantalla decía "vuelve más tarde" y mandaba a subirlo de nuevo. --}}
+                <div>
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Contenido Extraído</h3>
 
-                            <!-- 🤖 Personalidad del asistente -->
-                            @php
-                                $cfg = $comercio->chatbot_config ?? [];
-                                $chatbotService = new \App\Services\ChatbotService;
-                                $platosMenu = $chatbotService->platosDelMenu($comercio);
-                                $estrellasMenu = $chatbotService->platosEstrella($comercio);
-                                $focosElegidos = $cfg['focos'] ?? [];
-                            @endphp
-                            <div>
-                                <label class="block text-sm font-medium text-text-secondary mb-1">Personalidad del asistente</label>
-                                <p class="text-xs text-text-secondary mb-4">Cómo habla y qué querés que venda. Se guarda solo.</p>
-
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Tono</p>
-                                <div class="flex flex-wrap gap-2 mb-4">
-                                    @foreach(['cercano_divertido'=>'Cercano y divertido','calido_atento'=>'Cálido y atento','formal_elegante'=>'Formal y elegante','canchero'=>'Canchero'] as $val=>$label)
-                                        <label class="cursor-pointer">
-                                            <input type="radio" name="cfg_tono" value="{{ $val }}" class="peer sr-only" @checked(($cfg['tono'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['tono'])===$val)>
-                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Cómo trata</p>
-                                        <div class="flex flex-wrap gap-2">
-                                            @foreach(['voseo'=>'Vos','tuteo'=>'Tú','neutro'=>'Neutro'] as $val=>$label)
-                                                <label class="cursor-pointer">
-                                                    <input type="radio" name="cfg_trato" value="{{ $val }}" class="peer sr-only" @checked(($cfg['trato'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['trato'])===$val)>
-                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
-                                                </label>
-                                            @endforeach
-                                        </div>
+                        <div class="py-10">
+                            <div class="max-w-md mx-auto text-center">
+                                @if($menu->tuvoError())
+                                    <div class="w-14 h-14 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="text-2xl">⚠️</span>
                                     </div>
-                                    <div>
-                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Emojis</p>
-                                        <div class="flex flex-wrap gap-2">
-                                            @foreach(['moderado'=>'Moderados','minimo'=>'Pocos','ninguno'=>'Ninguno'] as $val=>$label)
-                                                <label class="cursor-pointer">
-                                                    <input type="radio" name="cfg_emojis" value="{{ $val }}" class="peer sr-only" @checked(($cfg['emojis'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['emojis'])===$val)>
-                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
-                                                </label>
-                                            @endforeach
-                                        </div>
+                                    <h4 class="text-xl font-medium text-text-primary mb-2">No pudimos leer el menú</h4>
+                                    <p class="text-text-secondary mb-6">
+                                        El archivo quedó guardado, así que podés volver a intentarlo sin
+                                        subirlo de nuevo. Si vuelve a fallar, probá con una foto más
+                                        nítida o un PDF donde el texto se lea derecho.
+                                    </p>
+                                @else
+                                    <div class="w-14 h-14 bg-accent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="text-2xl">📋</span>
                                     </div>
-                                </div>
+                                    <h4 class="text-xl font-medium text-text-primary mb-2">Todavía no leímos este menú</h4>
+                                    <p class="text-text-secondary mb-6">
+                                        El archivo está subido, pero la IA nunca sacó los platos.
+                                        Podés pedírselo ahora.
+                                    </p>
+                                @endif
 
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-1">Qué querés que destaque</p>
-                                <p class="text-xs text-text-secondary mb-3">
-                                    Lo que el asistente va a empujar mientras charla, como pedirle al camarero que ofrezca
-                                    postre antes de traer la cuenta. No filtra ni esconde nada del menú: el cliente
-                                    sigue viendo todo. Marcá solo lo que tu carta realmente tenga.
-                                </p>
-                                <div class="flex flex-wrap gap-2 mb-4">
-                                    @foreach(\App\Services\ChatbotService::FOCOS as $val => $foco)
-                                        <label class="cursor-pointer">
-                                            <input type="checkbox" name="cfg_focos" value="{{ $val }}" class="peer sr-only" @checked(in_array($val, $focosElegidos))>
-                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-green/20 peer-checked:border-accent-green peer-checked:text-accent-green transition-colors">{{ $foco['label'] }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-
-                                {{-- Los platos estrella se marcan con la ⭐ de cada plato, en "Contenido
-                                     Extraído". Acá solo se muestran: antes había un cajón con los 151
-                                     platos del menú y era imposible ver cuáles estaban marcados. --}}
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">
-                                    Platos estrella (los recomienda primero)
-                                    <span class="normal-case text-text-secondary/70">— <span id="estrellas-contador">{{ count($estrellasMenu) }}</span> de {{ \App\Http\Controllers\MenuController::MAX_ESTRELLAS }}</span>
-                                </p>
-                                <div id="estrellas-resumen" class="flex flex-wrap gap-2 mb-2">
-                                    @foreach($estrellasMenu as $nombre)
-                                        <span class="inline-block px-3 py-1.5 rounded-full border border-warning bg-warning/20 text-sm text-warning">⭐ {{ $nombre }}</span>
-                                    @endforeach
-                                </div>
-                                <p id="estrellas-vacio" class="text-sm text-text-secondary mb-4 {{ count($estrellasMenu) > 0 ? 'hidden' : '' }}">
-                                    @if(count($platosMenu) > 0)
-                                        Ninguno marcado. Tocá la ⭐ de un plato en «Contenido Extraído», más abajo.
-                                    @else
-                                        Activá un menú procesado para elegir tus platos estrella.
-                                    @endif
-                                </p>
-
-                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Detalles de tu local (opcional)</p>
-                                <textarea id="cfg_detalles" rows="3" maxlength="600"
-                                          class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none"
-                                          placeholder="Ej: Cervecería artesanal; recomendá siempre una cerveza para acompañar. La estrella es la Barrica Burger.">{{ $cfg['detalles'] ?? '' }}</textarea>
+                                @if($menu->archivo_original)
+                                    <button type="button" id="menuProcesoReintentar" class="btn-primary">
+                                        {{ $menu->tuvoError() ? 'Volver a intentar' : 'Procesar ahora' }}
+                                    </button>
+                                @endif
                             </div>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- Columna Derecha: Personalización -->
+                <script>
+                    (function () {
+                        const boton = document.getElementById('menuProcesoReintentar');
+                        if (!boton) return;
+
+                        const URL_REINTENTAR = @json(route('menus.reintentar', [$comercio, $menu]));
+                        const TOKEN = @json(csrf_token());
+
+                        boton.addEventListener('click', async function () {
+                            boton.disabled = true;
+                            try {
+                                const r = await fetch(URL_REINTENTAR, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRF-TOKEN': TOKEN, 'Accept': 'application/json' },
+                                });
+                                if (r.ok) {
+                                    // El menú queda "procesando": al recargar, el controlador
+                                    // manda solo a la pantalla de progreso.
+                                    window.location.reload();
+                                    return;
+                                }
+                                showError('No se pudo reintentar. Probá recargando la página.');
+                            } catch (e) {
+                                showError('No se pudo reintentar. Revisá la conexión.');
+                            }
+                            boton.disabled = false;
+                        });
+                    })();
+                </script>
+            @else
+                <div>
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Contenido Extraído</h3>
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span class="text-text-secondary text-2xl">📝</span>
+                            </div>
+                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay menú cargado</h4>
+                            <p class="text-text-secondary">Sube un archivo de menú para ver el contenido extraído aquí.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+                </x-editor.seccion>
+
+                <x-editor.seccion id="aspecto" titulo="Cómo se ve" icono="🎨" :resumen="$resumenAspecto" :lista="$comercio->tienePortada()" :preview="$previaEditor('menu.public')" preview-titulo="Lo que ven al escanear el QR" :local="true">
                 <div class="space-y-6">
                     
-                    <!-- 👁️ Vista Previa del Tema -->
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">👁️</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Vista Previa</h3>
-                        </div>
+                    <!-- 🎨 Color de la marca -->
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Color de tu marca</h3>
                         
                         {{-- Selector de acento. Antes eran 8 temas que seteaban 4 colores cada
                              uno (y en los oscuros `primary` era un casi-negro, no un acento).
                              Ahora es UN color: el resto de la interfaz son neutros cálidos
                              fijos, así cualquier elección queda bien. Ver Comercio::ACENTOS. --}}
                         <div class="mb-6">
-                            <p class="text-center text-text-secondary text-xs mb-3">Color de tu marca</p>
-                            <div class="flex items-center justify-center gap-3 flex-wrap">
+                            <p class="text-text-secondary text-sm mb-3">Botones, precios y detalles del menú salen de este color.</p>
+                            <div class="flex items-center gap-3 flex-wrap">
                                 @foreach(\App\Models\Comercio::ACENTOS as $key => $acento)
                                     <button type="button"
                                             class="theme-swatch w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-dark"
@@ -675,64 +823,8 @@
                                 @endforeach
                                     </div>
                         </div>
-                        
-                        <!-- Preview realista del chatbot móvil -->
-                        {{-- Previa del chat REAL. Antes mostraba el diseño viejo (banner con
-                             degradado, logo duplicado, "Menú Digital") y le mentía al comerciante
-                             sobre lo que ve su cliente. Usa la misma paleta que menu/chat.blade.php:
-                             neutros cálidos fijos + el acento elegido. --}}
-                        <div id="chatPreview" class="rounded-2xl p-4 max-w-sm mx-auto min-h-[440px] flex flex-col"
-                             style="background:#0F0D0C; border:1px solid rgba(255,255,255,.08);">
-                            {{-- Header: una fila, sin logo duplicado --}}
-                            <div class="flex items-center gap-2.5 mb-3">
-                                <img src="{{ $comercio->logo_url ? asset('storage/'.$comercio->logo_url) : asset('images/logo_empresa_default.png') }}"
-                                     alt="{{ $comercio->nombre }}" class="w-9 h-9 rounded-full object-cover flex-none">
-                                <div class="min-w-0">
-                                    <p class="font-semibold text-sm leading-tight truncate" style="color:#F5F2EF;">{{ $comercio->nombre }}</p>
-                                    <p class="text-xs leading-tight truncate" id="preview-chatbot-name" style="color:#A39A93;">{{ $comercio->chatbot_name ?? 'Asistente IA' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="space-y-2.5 flex-grow">
-                                <div class="rounded-2xl rounded-tl-md px-3 py-2.5" style="background:#1A1614;">
-                                    <p class="text-xs leading-normal" id="preview-welcome-message" style="color:#F5F2EF;">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual.' }}</p>
-                                </div>
-
-                                <div class="flex justify-end">
-                                    <div class="preview-accent-bg rounded-2xl rounded-tr-md px-3 py-2 max-w-[80%]">
-                                        <p class="text-xs text-white">algo dulce</p>
-                                    </div>
-                                </div>
-
-                                <div class="rounded-2xl rounded-tl-md px-3 py-2.5" style="background:#1A1614;">
-                                    <p class="text-xs leading-normal mb-2" style="color:#F5F2EF;">Te recomiendo el Flan casero, un clásico que nunca falla.</p>
-                                    {{-- Tarjeta de plato, igual que en el chat --}}
-                                    <div class="rounded-xl px-3 py-2.5" style="background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1);">
-                                        <div class="flex items-start justify-between gap-2">
-                                            <span class="font-semibold text-xs" style="color:#F5F2EF;">Flan casero</span>
-                                            <span class="preview-accent-text font-bold text-xs whitespace-nowrap">$5.500</span>
-                                        </div>
-                                        <button type="button" class="preview-accent-bg mt-2 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">Lo quiero</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Barra de input: micrófono neutro + enviar con el acento --}}
-                            <div class="flex items-center gap-2 mt-3">
-                                <span class="w-8 h-8 rounded-full flex-none flex items-center justify-center"
-                                      style="background:#241F1B; border:1px solid rgba(255,255,255,.12); color:#A39A93;">
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h-2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z"/></svg>
-                                </span>
-                                <div class="flex-1 rounded-full px-3 py-2 text-xs"
-                                     style="background:#241F1B; border:1px solid rgba(255,255,255,.12); color:#A39A93;">Escribe tu mensaje...</div>
-                                <span class="preview-accent-bg w-8 h-8 rounded-full flex-none flex items-center justify-center">
-                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="#fff"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
-                                </span>
-                            </div>
-                        </div>
                     </div>
                 </div>
-            </div>
 
             {{-- 🏪 Portada: la foto de la que salen el fondo, el hero y los colores del
                  menú público. Vive acá, con el resto de lo que ve el cliente, y no en
@@ -750,18 +842,14 @@
             @if(auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada() || $comercio->portada_url)
             @php $puedeEditarPortada = auth()->user()->isSuperAdmin() || $comercio->puedePersonalizarPortada(); @endphp
 
-            <div class="metric-card" id="bloque-portada"
+            <div class="editor-bloque" id="bloque-portada"
+                 data-preview="{{ $previaEditor('menu.public') }}" data-preview-titulo="La portada del QR"
                  data-url-guardar="{{ route('comercios.portada.guardar', $comercio) }}"
                  data-url-estado="{{ route('comercios.portada.estado', $comercio) }}"
                  data-url-reintentar="{{ route('comercios.portada.reintentar', $comercio) }}"
                  data-estado="{{ $comercio->portada_estado }}">
                 <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                            <span class="text-lg">🏪</span>
-                        </div>
-                        <h3 class="text-xl font-semibold text-text-primary">Portada</h3>
-                    </div>
+                    <h3 class="editor-bloque-titulo !mb-0">Portada</h3>
                     @if($comercio->portada_url)
                         <button type="button" onclick="eliminarPortada()"
                                 class="bg-danger hover:brightness-95 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200">
@@ -980,25 +1068,11 @@
             </div>
             @endif
 
-            {{-- Atajos y Reseñas van a lo ANCHO, fuera de la grilla de dos columnas.
-                 Estaban en la columna izquierda y ahí sobraba la mitad de la pantalla:
-                 la derecha tiene una sola tarjeta. Además, en media columna los inputs
-                 de los atajos quedaban tan angostos que la frase salía cortada. --}}
-
-            {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
-                 Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
-                 ser distintas ("Meriendas para compartir" puede disparar "¿qué
-                 tienen para merendar entre dos?"). Si no se configura ninguno,
-                 siguen saliendo automáticos del menú. --}}
             {{-- Con qué abre el "menú clásico", la opción de ver la carta sin el asistente. --}}
             @php $tieneArchivo = $comercio->tieneArchivoDeMenu(); @endphp
-            <div class="metric-card" id="bloque-vista-clasica">
-                <div class="flex items-center mb-6">
-                    <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                        <span class="text-lg">📖</span>
-                    </div>
-                    <h3 class="text-xl font-semibold text-text-primary">Menú clásico</h3>
-                </div>
+            <div class="editor-bloque" id="bloque-vista-clasica"
+                 data-preview="{{ $previaEditor('menu.classic', ['vista' => 'lista']) }}" data-preview-titulo="La carta del cliente">
+                <h3 class="editor-bloque-titulo">Menú clásico</h3>
 
                 <p class="text-xs text-text-secondary mb-4">
                     Es lo que ve el cliente cuando elige mirar la carta en vez de usar el
@@ -1048,218 +1122,131 @@
 
                 <p id="vista-clasica-estado" class="text-xs text-text-secondary mt-3"></p>
             </div>
+                </x-editor.seccion>
 
-            @if($comercio->tieneFeature('analytics'))
-                @php
-                    // En el orden en que los ve el cliente: primero la portada
-                    // (antes de entrar), después los del chat.
-                    $superficies = [
-                        'portada' => ['titulo' => 'Atajos de la portada', 'ayuda' => 'Lo primero que ve el cliente, antes de entrar al chat.'],
-                        'chat' => ['titulo' => 'Atajos del chat', 'ayuda' => 'Aparecen debajo del saludo, antes del primer mensaje.'],
-                    ];
-                    // Emojis de gastronomía para el selector: escribirlos a mano
-                    // es incómodo y en escritorio hay que acordarse de Win + .
-                    $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
-                @endphp
-            <div class="metric-card">
-                <div class="flex items-center mb-6">
-                    <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                        <span class="text-lg">⚡</span>
-                    </div>
-                    <h3 class="text-xl font-semibold text-text-primary">Atajos</h3>
-                </div>
+                <x-editor.seccion id="asistente" titulo="Tu asistente" icono="🤖" :resumen="$resumenAsistente" :preview="$previaEditor('menu.chat')" preview-titulo="Así los recibe tu asistente" :local="true">
+                <div class="space-y-6">
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Chatbot</h3>
+                        
+                        <div class="space-y-custom">
+                            <!-- Nombre del Chatbot -->
+                            <div>
+                                <label for="chatbot_name" class="block text-sm font-medium text-text-secondary mb-3">
+                                    Nombre del Chatbot
+                                </label>
+                                <input type="text" 
+                                       id="chatbot_name" 
+                                       value="{{ $comercio->chatbot_name ?? 'Asistente IA' }}"
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                            </div>
+                            
+                            <!-- Mensaje de Bienvenida -->
+                            <div>
+                                <label for="welcome_message" class="block text-sm font-medium text-text-secondary mb-3">
+                                    Mensaje de Bienvenida
+                                </label>
+                                <textarea id="welcome_message" 
+                                          rows="4"
+                                          maxlength="500"
+                                          class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none">{{ $comercio->welcome_message ?? '¡Hola! Soy tu asistente virtual. Puedo ayudarte con información sobre nuestro menú. ¿En qué puedo ayudarte?' }}</textarea>
+                                <p class="text-xs text-text-secondary mt-2">Máximo 500 caracteres</p>
+                            </div>
 
-                <p class="text-xs text-text-secondary mb-4">
-                    Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
-                    y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
-                </p>
+                            <!-- 🤖 Personalidad del asistente -->
+                            @php
+                                $cfg = $comercio->chatbot_config ?? [];
+                                $chatbotService = new \App\Services\ChatbotService;
+                                $platosMenu = $chatbotService->platosDelMenu($comercio);
+                                $estrellasMenu = $chatbotService->platosEstrella($comercio);
+                                $focosElegidos = $cfg['focos'] ?? [];
+                            @endphp
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-1">Personalidad del asistente</label>
+                                <p class="text-xs text-text-secondary mb-4">Cómo habla y qué querés que venda. Se guarda solo.</p>
 
-                {{-- Cada pantalla en su propia tarjeta. Antes los dos grupos iban
-                     uno abajo del otro sin nada que los separara y se leían como una
-                     sola lista larga: se editaban los de la portada creyendo que
-                     eran los del chat. Son dos pantallas distintas del cliente y se
-                     miden por separado, así que también se ven por separado. --}}
-                    {{-- Los dos grupos lado a lado: a lo ancho entran, y así se compara
-                         de un vistazo lo que ve el cliente antes de entrar contra lo que
-                         ve una vez adentro. --}}
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    @foreach($superficies as $superficie => $info)
-                    @php $lista = $comercio->chipsDe($superficie); @endphp
-                    <div class="p-4 bg-secondary-dark/60 border border-accent-gray rounded-xl"
-                         data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}">
-                        <div class="flex items-center justify-between gap-2 mb-1">
-                            <p class="text-sm font-semibold text-text-primary">{{ $info['titulo'] }}</p>
-                            {{-- Lo actualiza el JS al agregar o quitar: si fuera solo
-                                 el valor del servidor, mentiría apenas tocás una fila. --}}
-                            <span class="text-xs text-text-secondary/70 flex-none chips-contador">
-                                {{ count($lista) }}/{{ \App\Support\Chip::visibles($superficie) }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-text-secondary/70 mb-3">
-                            {{ $info['ayuda'] }}
-                            @if(empty($comercio->chips[$superficie] ?? null))
-                                <span class="text-accent-blue">Ahora son automáticos.</span>
-                            @endif
-                        </p>
-
-                        <div class="space-y-2 chips-lista">
-                            @foreach($lista as $chip)
-                                {{-- Los cuatro controles miden lo mismo (h-10) y van centrados:
-                                     el emoji era 48×40, los inputs 38 por el padding y la × 32×36,
-                                     así que cada fila terminaba en tres alturas escalonadas y dos
-                                     botones de proporciones distintas. --}}
-                                <div class="chip-fila flex gap-2 items-center">
-                                    {{-- El emoji se elige de una grilla: tipearlo requiere
-                                         acordarse de Win + . y en el celular es peor. --}}
-                                    <button type="button" onclick="abrirEmojis(this)"
-                                            class="chip-emoji-btn w-10 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg leading-none hover:border-accent-blue"
-                                            title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
-                                    <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
-                                    <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
-                                           class="chip-label flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                    <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
-                                           class="chip-q flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                                    <button type="button" onclick="quitarChip(this)"
-                                            class="flex-none w-10 h-10 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10" title="Quitar">×</button>
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Tono</p>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach(['cercano_divertido'=>'Cercano y divertido','calido_atento'=>'Cálido y atento','formal_elegante'=>'Formal y elegante','canchero'=>'Canchero'] as $val=>$label)
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="cfg_tono" value="{{ $val }}" class="peer sr-only" @checked(($cfg['tono'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['tono'])===$val)>
+                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
                                 </div>
-                            @endforeach
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Cómo trata</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach(['voseo'=>'Vos','tuteo'=>'Tú','neutro'=>'Neutro'] as $val=>$label)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="cfg_trato" value="{{ $val }}" class="peer sr-only" @checked(($cfg['trato'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['trato'])===$val)>
+                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Emojis</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach(['moderado'=>'Moderados','minimo'=>'Pocos','ninguno'=>'Ninguno'] as $val=>$label)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="cfg_emojis" value="{{ $val }}" class="peer sr-only" @checked(($cfg['emojis'] ?? \App\Models\Comercio::PERSONALIDAD_POR_DEFECTO['emojis'])===$val)>
+                                                    <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-blue/20 peer-checked:border-accent-blue peer-checked:text-accent-blue transition-colors">{{ $label }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-1">Qué querés que destaque</p>
+                                <p class="text-xs text-text-secondary mb-3">
+                                    Lo que el asistente va a empujar mientras charla, como pedirle al camarero que ofrezca
+                                    postre antes de traer la cuenta. No filtra ni esconde nada del menú: el cliente
+                                    sigue viendo todo. Marcá solo lo que tu carta realmente tenga.
+                                </p>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach(\App\Services\ChatbotService::FOCOS as $val => $foco)
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" name="cfg_focos" value="{{ $val }}" class="peer sr-only" @checked(in_array($val, $focosElegidos))>
+                                            <span class="inline-block px-3 py-1.5 rounded-full border border-accent-gray text-sm text-text-secondary peer-checked:bg-accent-green/20 peer-checked:border-accent-green peer-checked:text-accent-green transition-colors">{{ $foco['label'] }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                {{-- Los platos estrella se marcan con la ⭐ de cada plato, en "Contenido
+                                     Extraído". Acá solo se muestran: antes había un cajón con los 151
+                                     platos del menú y era imposible ver cuáles estaban marcados. --}}
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">
+                                    Platos estrella (los recomienda primero)
+                                    <span class="normal-case text-text-secondary/70">— <span id="estrellas-contador">{{ count($estrellasMenu) }}</span> de {{ \App\Http\Controllers\MenuController::MAX_ESTRELLAS }}</span>
+                                </p>
+                                <div id="estrellas-resumen" class="flex flex-wrap gap-2 mb-2">
+                                    @foreach($estrellasMenu as $nombre)
+                                        <span class="inline-block px-3 py-1.5 rounded-full border border-warning bg-warning/20 text-sm text-warning">⭐ {{ $nombre }}</span>
+                                    @endforeach
+                                </div>
+                                <p id="estrellas-vacio" class="text-sm text-text-secondary mb-4 {{ count($estrellasMenu) > 0 ? 'hidden' : '' }}">
+                                    @if(count($platosMenu) > 0)
+                                        Ninguno marcado. Tocá la ⭐ de un plato en «Contenido Extraído», más abajo.
+                                    @else
+                                        Activá un menú procesado para elegir tus platos estrella.
+                                    @endif
+                                </p>
+
+                                <p class="text-xs text-text-secondary uppercase tracking-wide mb-2">Detalles de tu local (opcional)</p>
+                                <textarea id="cfg_detalles" rows="3" maxlength="600"
+                                          class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200 resize-none"
+                                          placeholder="Ej: Cervecería artesanal; recomendá siempre una cerveza para acompañar. La estrella es la Barrica Burger.">{{ $cfg['detalles'] ?? '' }}</textarea>
+                            </div>
                         </div>
-
-                        {{-- mt-3 y no mt-2: arriba de la lista hay 12px (el mb-3 de la ayuda),
-                             así que con 8px abajo el bloque quedaba descentrado. --}}
-                        <div class="flex items-center gap-2 mt-3">
-                            <button type="button" onclick="agregarChip(this)"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
-                            <button type="button" onclick="guardarChips(this)"
-                                    class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar atajos</button>
-                            <span class="text-xs text-text-secondary chips-estado"></span>
-                        </div>
-                    </div>
-                    @endforeach
                     </div>
 
-                {{-- Grilla de emojis, una sola para toda la pantalla: se abre
-                     al lado del botón que la pidió. --}}
-                <div id="emoji-picker" class="hidden fixed z-50 bg-secondary-dark border border-accent-gray rounded-xl p-2 shadow-2xl"
-                     style="max-width: 260px">
-                    <div class="grid grid-cols-8 gap-1">
-                        @foreach($emojisSugeridos as $emoji)
-                            <button type="button" onclick="elegirEmoji(@js($emoji))"
-                                    class="w-7 h-7 rounded hover:bg-accent-blue/20 text-lg leading-none">{{ $emoji }}</button>
-                        @endforeach
-                    </div>
-                    <button type="button" onclick="elegirEmoji('')"
-                            class="w-full mt-1 text-xs text-text-secondary hover:text-danger py-1">Sin ícono</button>
                 </div>
-            </div>
+                </x-editor.seccion>
 
-            {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
-                 porque es donde el comercio configura lo que ve el cliente; pero
-                 el dato se guarda en `comercios`, no en el menú: el link es de la
-                 ficha del negocio y no se tiene que perder al subir otra carta.
-
-                 El campo del link también está acá. Estaba en "datos del comercio", y
-                 eso dejaba el interruptor apagado con un cartel que mandaba a otra
-                 pantalla a buscar lo único que lo habilita. --}}
-            @php $tieneLink = filled($comercio->google_review_url); @endphp
-
-            <div class="metric-card" id="bloque-resenas">
-                <div class="flex items-center mb-6">
-                    <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                        <span class="text-lg">⭐</span>
-                    </div>
-                    <h3 class="text-xl font-semibold text-text-primary">Reseñas en Google</h3>
-                </div>
-
-                <p class="text-xs text-text-secondary mb-4">
-                    Al cliente que usó el asistente y ya lleva un rato en la mesa se le
-                    ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
-                </p>
-
-                <div class="mb-3">
-                    <label for="google-review-url" class="block text-sm font-medium text-text-secondary mb-2">
-                        Link de reseñas de Google
-                    </label>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <input type="url"
-                               id="google-review-url"
-                               maxlength="255"
-                               value="{{ $comercio->google_review_url }}"
-                               placeholder="https://g.page/r/..."
-                               class="flex-1 min-w-[16rem] h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
-                        {{-- h-10 como el input que tiene al lado: con py-1.5 quedaba 10px
-                             más bajo y la fila se veía desparejo. --}}
-                        <button type="button" onclick="guardarLinkResenas(this)"
-                                class="flex-none h-10 text-xs px-4 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">
-                            Guardar link
-                        </button>
-                        <span class="text-xs text-text-secondary" id="link-resenas-estado"></span>
-                    </div>
-                    <p class="text-xs text-text-secondary/70 mt-1">
-                        Se saca del perfil del negocio en Google, en «Pedir reseñas».
-                    </p>
-                </div>
-
-                <div id="resenas-caja"
-                     class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
-                            {{ $tieneLink ? '' : 'opacity-60' }}">
-                    <button type="button"
-                            id="resenas-switch"
-                            role="switch"
-                            aria-checked="{{ $comercio->resenas_activo ? 'true' : 'false' }}"
-                            aria-label="Pedir reseña en Google"
-                            onclick="alternarResenas(this)"
-                            @disabled(! $tieneLink)
-                            class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
-                                   {{ $comercio->resenas_activo ? 'bg-accent-green' : 'bg-accent-gray' }}">
-                        <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
-                                     {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
-                    </button>
-                    <div class="min-w-0">
-                        <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
-                        <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
-                            @if(! $tieneLink)
-                                Cargá el link acá arriba para poder activarlo.
-                            @elseif($comercio->resenas_activo)
-                                Activo — se le muestra a quien cumpla las condiciones.
-                            @else
-                                Listo para activar.
-                            @endif
-                        </p>
-                    </div>
-                </div>
-
-                {{-- Los textos van vacíos cuando el comercio no los tocó, con el
-                     de fábrica como placeholder: así se ve qué va a salir sin
-                     tener que copiarlo, y borrar el campo vuelve al de fábrica. --}}
-                <div class="mt-3 space-y-2">
-                    <input type="text" id="resena-titulo" maxlength="80"
-                           value="{{ $comercio->resena_titulo }}"
-                           placeholder="{{ \App\Models\Comercio::RESENA_TITULO }}"
-                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
-                    <textarea id="resena-texto" maxlength="200" rows="2"
-                              placeholder="{{ \App\Models\Comercio::RESENA_TEXTO }}"
-                              class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary resize-none">{{ $comercio->resena_texto }}</textarea>
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="guardarTextosResena(this)"
-                                class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar textos</button>
-                        <span class="text-xs text-text-secondary" id="resena-estado"></span>
-                    </div>
-                    <p class="text-xs text-text-secondary/70">
-                        Vacío = se usa el texto por defecto. Ojo: lo que escribas se
-                        muestra tal cual, sin traducir al idioma del cliente.
-                    </p>
-                </div>
-
-                {{-- Los números NO van acá: esta pantalla es para configurar.
-                     Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
-                     junto al resto de las métricas del menú. --}}
-            </div>
-
-            @endif
-            </div>{{-- /#configuracion-menu --}}
-
-
+                <x-editor.seccion id="vender" titulo="Vender más" icono="🚀" :resumen="$resumenVender" :preview="$previaEditor('menu.chat')" preview-titulo="Promos y atajos en el chat" :local="true">
             <!-- Sección de Promociones del Día - ARRIBA DE CONTENIDO EXTRAÍDO, ANCHO COMPLETO -->
             @if($isEdit && $menu && (auth()->user()->isSuperAdmin() || $comercio->tieneFeature('promociones')))
                 @php
@@ -1297,15 +1284,10 @@
                     }
                 @endphp
                 
-                <div class="mt-12">
-                    <div class="metric-card">
+                <div>
+                    <div class="editor-bloque">
                         <div class="flex items-center justify-between mb-6">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-accent-blue/20 border border-accent-blue/30 rounded-xl flex items-center justify-center mr-3">
-                                    <span class="text-lg">🔥</span>
-                                </div>
-                                <h3 class="text-xl font-semibold text-text-primary">Promociones del Día</h3>
-                            </div>
+                            <h3 class="editor-bloque-titulo !mb-0">Promociones del Día</h3>
                             <div class="flex items-center gap-3">
                                 <button type="button" 
                                         onclick="addPromocion()"
@@ -1418,435 +1400,598 @@
                 </div>
             @endif
 
-            <!-- 📋 Contenido Extraído del Menú - Sección de ancho completo -->
-            @if($menu && $menu->procesado && ($menu->texto_extraido || $menu->contexto_gpt))
-                <div class="mt-12">
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">📋</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
+            {{-- Atajos y Reseñas van a lo ANCHO, fuera de la grilla de dos columnas.
+                 Estaban en la columna izquierda y ahí sobraba la mitad de la pantalla:
+                 la derecha tiene una sola tarjeta. Además, en media columna los inputs
+                 de los atajos quedaban tan angostos que la frase salía cortada. --}}
+
+            {{-- ⚡ Atajos: los botones que el cliente toca en vez de escribir.
+                 Llevan la frase que se VE y la pregunta que EJECUTA, que pueden
+                 ser distintas ("Meriendas para compartir" puede disparar "¿qué
+                 tienen para merendar entre dos?"). Si no se configura ninguno,
+                 siguen saliendo automáticos del menú. --}}
+            @if($comercio->tieneFeature('analytics'))
+                @php
+                    // En el orden en que los ve el cliente: primero la portada
+                    // (antes de entrar), después los del chat.
+                    $superficies = [
+                        'portada' => ['titulo' => 'Atajos de la portada', 'ayuda' => 'Lo primero que ve el cliente, antes de entrar al chat.'],
+                        'chat' => ['titulo' => 'Atajos del chat', 'ayuda' => 'Aparecen debajo del saludo, antes del primer mensaje.'],
+                    ];
+                    // Emojis de gastronomía para el selector: escribirlos a mano
+                    // es incómodo y en escritorio hay que acordarse de Win + .
+                    $emojisSugeridos = ['✨','🔥','⭐','🌾','🌱','🥗','🍕','🍔','🌭','🥪','🌮','🍟','🍝','🍜','🥘','🍳','🥐','🥖','🧀','🥩','🍗','🐟','🦐','🥑','🍰','🧁','🍦','🍪','☕','🧉','🍺','🍷','🥤','🧃','🍹','👨‍🍳','🎉','❤️'];
+                @endphp
+            <div class="editor-bloque">
+                <h3 class="editor-bloque-titulo">Atajos</h3>
+
+                <p class="text-xs text-text-secondary mb-4">
+                    Los botones que el cliente toca en vez de escribir. Podés poner una frase corta
+                    y que dispare otra pregunta. Si no cargás ninguno, se arman solos con tu menú.
+                </p>
+
+                {{-- Cada pantalla en su propia tarjeta. Antes los dos grupos iban
+                     uno abajo del otro sin nada que los separara y se leían como una
+                     sola lista larga: se editaban los de la portada creyendo que
+                     eran los del chat. Son dos pantallas distintas del cliente y se
+                     miden por separado, así que también se ven por separado. --}}
+                    {{-- Los dos grupos lado a lado: a lo ancho entran, y así se compara
+                         de un vistazo lo que ve el cliente antes de entrar contra lo que
+                         ve una vez adentro. --}}
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    @foreach($superficies as $superficie => $info)
+                    @php $lista = $comercio->chipsDe($superficie); @endphp
+                    <div class="p-4 bg-secondary-dark/60 border border-accent-gray rounded-xl"
+                         data-superficie="{{ $superficie }}" data-maximo="{{ \App\Support\Chip::visibles($superficie) }}"
+                         data-preview="{{ $superficie === 'portada' ? $previaEditor('menu.public') : $previaEditor('menu.chat') }}"
+                         data-preview-titulo="{{ $superficie === 'portada' ? 'Atajos de la portada' : 'Atajos del chat' }}">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <p class="text-sm font-semibold text-text-primary">{{ $info['titulo'] }}</p>
+                            {{-- Lo actualiza el JS al agregar o quitar: si fuera solo
+                                 el valor del servidor, mentiría apenas tocás una fila. --}}
+                            <span class="text-xs text-text-secondary/70 flex-none chips-contador">
+                                {{ count($lista) }}/{{ \App\Support\Chip::visibles($superficie) }}
+                            </span>
                         </div>
-                        
-                        @php
-                            // Obtener el contenido JSON desde contexto_gpt o texto_extraido
-                            $rawContent = $menu->contexto_gpt ?? $menu->texto_extraido;
-                            
-                            // Limpiar el contenido: remover ```json y ``` si están presentes
-                            $jsonContent = $rawContent;
-                            if (strpos($jsonContent, '```json') !== false) {
-                                $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
-                                $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
-                            }
-                            
-                            // Decodificar el JSON
-                            $contenido = json_decode(trim($jsonContent), true);
-                        @endphp
-                        
-                        @if($contenido && is_array($contenido))
-                            <div class="space-y-6">
-                                <!-- Información del restaurante -->
-                                @if(isset($contenido['restaurante']['nombre']) && $contenido['restaurante']['nombre'] !== 'No especificado')
-                                    <div class="bg-secondary-dark border border-accent-gray rounded-lg p-4">
-                                        <h3 class="text-lg font-semibold text-text-primary mb-2">🏪 {{ $contenido['restaurante']['nombre'] }}</h3>
-                                        @if(isset($contenido['restaurante']['descripcion']) && !empty($contenido['restaurante']['descripcion']))
-                                            <p class="text-text-secondary">{{ $contenido['restaurante']['descripcion'] }}</p>
-                                        @endif
-                                    </div>
-                                @endif
-                                
-                                <!-- Categorías y platos -->
-                                @php
-                                    // Obtener categorías del formato unificado
-                                    $categorias = $contenido['categorias'] ?? null;
-                                @endphp
-                                
-                                @if($categorias && is_array($categorias))
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        @foreach($categorias as $categoriaIndex => $categoria)
-                                            @php
-                                                // Filtrar "Promociones del Día" ya que tiene su propia sección dedicada
-                                                $nombreCategoria = strtolower(trim($categoria['nombre'] ?? ''));
-                                                if ($nombreCategoria === 'promociones del día') {
-                                                    continue;
-                                                }
-                                            @endphp
-                                            <div class="bg-secondary-dark rounded-lg p-6">
-                                                <h4 class="text-lg font-semibold text-text-primary mb-4 border-b border-accent-gray pb-3">
-                                                    {{ $categoria['nombre'] ?? 'Sin nombre' }}
-                                                </h4>
-                                                <div class="space-y-4" id="platos-container-{{ $categoriaIndex }}" data-categoria-index="{{ $categoriaIndex }}">
-                                                    @if(isset($categoria['platos']) && is_array($categoria['platos']))
-                                                        @foreach($categoria['platos'] as $platoIndex => $plato)
-                                                            @php
-                                                                // Transformar nombre: eliminar guiones y normalizar capitalización
-                                                                $nombrePlato = $plato['nombre'] ?? 'Sin nombre';
-                                                                // Eliminar guiones y underscores
-                                                                $nombrePlato = str_replace(['-', '_'], ' ', $nombrePlato);
-                                                                // Normalizar: primera letra de cada palabra en mayúscula, resto en minúscula
-                                                                $nombrePlato = mb_convert_case($nombrePlato, MB_CASE_TITLE, 'UTF-8');
-                                                                // Limpiar espacios múltiples
-                                                                $nombrePlato = preg_replace('/\s+/', ' ', trim($nombrePlato));
-                                                            @endphp
-                                                            <div class="group plato-item bg-primary-dark border-l-4 border-l-accent-blue border-r border-t border-b border-accent-gray/50 rounded-r-lg p-4 mb-3 hover:bg-primary-dark/90 hover:shadow-xl hover:border-accent-blue/60 transition-all duration-300 cursor-move shadow-lg" 
-                                                                 data-plato-index="{{ $platoIndex }}">
-                                                                <!-- Nombre del producto (arriba, línea completa) -->
-                                                                <div class="flex items-center gap-2 mb-3">
-                                                                    <!-- Drag Handle -->
-                                                                    <div class="flex items-center justify-center w-5 h-5 text-accent-blue opacity-50 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0">
-                                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                                            <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"></path>
-                                                                        </svg>
-                                                                    </div>
-                                                                    <h5 class="text-text-primary font-bold text-lg leading-tight cursor-text hover:text-accent-blue transition-colors capitalize whitespace-normal flex-1"
-                                                                        ondblclick="enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                        onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'nombre')"
-                                                                        id="nombre-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                        {{ $nombrePlato }}
-                                                                    </h5>
-                                                                    <!-- Plato estrella: el asistente lo recomienda primero. Vive acá y no
-                                                                         en una lista aparte para que la marca viaje con el plato. -->
-                                                                    <button type="button"
-                                                                            onclick="event.stopPropagation(); togglePlatoEstrella(this, {{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                            data-estrella="{{ ! empty($plato['estrella']) ? '1' : '0' }}"
-                                                                            id="estrella-{{ $categoriaIndex }}-{{ $platoIndex }}"
-                                                                            class="plato-estrella-btn flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors {{ ! empty($plato['estrella']) ? 'text-warning bg-warning/20' : 'text-text-secondary hover:text-warning hover:bg-warning/10' }}"
-                                                                            title="{{ ! empty($plato['estrella']) ? 'Es plato estrella: el asistente lo recomienda primero' : 'Marcar como plato estrella' }}">
-                                                                        <svg class="w-5 h-5" fill="{{ ! empty($plato['estrella']) ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                                                        </svg>
-                                                                    </button>
-                                                                    <!-- Botón de edición visible en móvil -->
-                                                                    <button type="button"
-                                                                            onclick="event.stopPropagation(); enableEditNombre({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                            class="md:hidden flex-shrink-0 inline-flex items-center justify-center w-8 h-8 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
-                                                                            title="Editar nombre">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                                        </svg>
-                                                                    </button>
-                                                                    <!-- Eliminar producto -->
-                                                                    <button type="button"
-                                                                            onclick="event.stopPropagation(); eliminarPlato({{ $categoriaIndex }}, {{ $platoIndex }}, @js($nombrePlato))"
-                                                                            class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                                                                            title="Eliminar producto">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                                        </svg>
-                                                                    </button>
-                                                                </div>
-                                                                
-                                                                <!-- Foto y Precio (misma línea) -->
-                                                                <div class="flex flex-row items-center gap-4 mb-4 pb-3 border-b border-accent-gray/40">
-                                                                    <!-- Imagen -->
-                                                                    <div class="flex-shrink-0" id="plato-imagen-container-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                        @if(isset($plato['imagen']) && !empty($plato['imagen']))
-                                                                            <div class="relative group/image">
-                                                                                <div class="w-20 h-20 rounded-lg overflow-hidden border-2 border-accent-blue/30 shadow-md bg-secondary-dark">
-                                                                                    <img src="{{ asset($plato['imagen']) }}" 
-                                                                                         alt="{{ $nombrePlato }}"
-                                                                                         class="w-full h-full object-cover"
-                                                                                         id="plato-imagen-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                </div>
-                                                                                <!-- Overlay con botones al hover -->
-                                                                                <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
-                                                                                    <label class="cursor-pointer">
-                                                                                        <input type="file" 
-                                                                                               accept="image/jpeg,image/png,image/jpg,image/gif"
-                                                                                               class="hidden"
-                                                                                               onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                               id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                        <span class="inline-flex items-center px-2.5 py-1 bg-accent-blue hover:opacity-80 text-black text-xs font-semibold rounded transition-opacity cursor-pointer shadow-xl">
-                                                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                                                            </svg>
-                                                                                            Cambiar
-                                                                                        </span>
-                                                                                    </label>
-                                                                                    <button type="button"
-                                                                                            onclick="removePlatoImagen({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $plato['imagen'] }}')"
-                                                                                            class="inline-flex items-center justify-center w-7 h-7 bg-danger hover:brightness-95 text-white rounded transition-colors cursor-pointer shadow-xl"
-                                                                                            title="Eliminar imagen">
-                                                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                                                        </svg>
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        @else
-                                                                            <label class="cursor-pointer">
-                                                                                <input type="file" 
-                                                                                       accept="image/jpeg,image/png,image/jpg,image/gif"
-                                                                                       class="hidden"
-                                                                                       onchange="uploadPlatoImagen(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                       id="imagen-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                <div class="w-20 h-20 rounded-lg border-2 border-dashed border-accent-blue/40 bg-secondary-dark/80 flex flex-col items-center justify-center text-text-secondary hover:border-accent-blue hover:bg-secondary-dark transition-all duration-200">
-                                                                                    <svg class="w-5 h-5 mb-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                                                    </svg>
-                                                                                    <span class="text-[9px] font-semibold text-accent-blue">Imagen</span>
-                                                                                </div>
-                                                                            </label>
-                                                                        @endif
-                                                                    </div>
-                                                                    
-                                                                    <!-- Precio (alineado a la derecha) -->
-                                                                    <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
-                                                                        <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
-                                                                            <span class="text-accent-blue font-bold text-sm px-2.5 py-1.5 border-r border-accent-blue/40 bg-accent-blue/10">$</span>
-                                                                            {{-- El precio se muestra CON su formato. Antes iba un
-                                                                                 preg_replace('/[^0-9]/') que convertía "$5.700,00" en
-                                                                                 570000, y al perder el foco guardaba eso: pasar por el
-                                                                                 campo multiplicaba el precio por cien. --}}
-                                                                            <input type="text"
-                                                                                   value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
-                                                                                   placeholder="0"
-                                                                                   data-original-value="{{ \App\Support\Precio::paraEditar($plato['precio'] ?? '') }}"
-                                                                                   oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
-                                                                                   onblur="updatePlatoPrecio({{ $categoriaIndex }}, {{ $platoIndex }}, this.value)"
-                                                                                   class="text-accent-blue font-bold text-base bg-transparent px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent-blue/50 transition-all w-20 text-right placeholder:text-accent-gray/50"
-                                                                                   id="precio-input-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                        </div>
-                                                                        <span class="text-accent-blue text-xs min-w-[16px]" id="precio-status-{{ $categoriaIndex }}-{{ $platoIndex }}"></span>
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                <!-- Bloque 2: Cuerpo (mt-2 o mt-4) -->
-                                                                <div class="mt-4 space-y-3">
-                                                                    <!-- Descripción -->
-                                                                    <div id="descripcion-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full relative">
-                                                                        @if(isset($plato['descripcion']) && !empty($plato['descripcion']))
-                                                                            <p class="text-text-secondary text-sm leading-relaxed cursor-text hover:text-text-primary transition-colors w-full whitespace-normal pr-8"
-                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
-                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                {{ $plato['descripcion'] }}
-                                                                            </p>
-                                                                        @else
-                                                                            <p class="text-accent-gray text-sm leading-relaxed cursor-text hover:text-accent-blue transition-colors italic w-full whitespace-normal pr-8"
-                                                                               ondblclick="enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                               onclick="handleEditClick(event, {{ $categoriaIndex }}, {{ $platoIndex }}, 'descripcion')"
-                                                                               id="descripcion-display-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                                Click para agregar descripción...
-                                                                            </p>
-                                                                        @endif
-                                                                        <!-- Botón de edición visible en móvil -->
-                                                                        <button type="button"
-                                                                                onclick="event.stopPropagation(); enableEditDescripcion({{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                class="md:hidden absolute top-0 right-0 inline-flex items-center justify-center w-7 h-7 bg-accent-blue/20 hover:bg-accent-blue/40 text-accent-blue rounded-lg transition-colors"
-                                                                                title="Editar descripción">
-                                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                                            </svg>
-                                                                        </button>
-                                                                    </div>
-                                                                    
-                                                                    <!-- Tags -->
-                                                                    <div id="tags-container-{{ $categoriaIndex }}-{{ $platoIndex }}" class="w-full">
-                                                                        <div class="flex flex-wrap gap-1.5 mb-1.5" id="tags-list-{{ $categoriaIndex }}-{{ $platoIndex }}">
-                                                                            @if(isset($plato['tags']) && is_array($plato['tags']) && !empty($plato['tags']))
-                                                                                @foreach($plato['tags'] as $tagIndex => $tag)
-                                                                                    @if(!empty($tag))
-                                                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 hover:bg-accent-blue/30 transition-colors tag-item" 
-                                                                                              data-tag-index="{{ $tagIndex }}">
-                                                                                            {{ $tag }}
-                                                                                            <button type="button" 
-                                                                                                    onclick="removeTag({{ $categoriaIndex }}, {{ $platoIndex }}, '{{ $tag }}')"
-                                                                                                    class="hover:text-accent-blue transition-colors p-0.5 rounded"
-                                                                                                    title="Eliminar tag">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                                                                </svg>
-                                                                                            </button>
-                                                                                        </span>
-                                                                                    @endif
-                                                                                @endforeach
-                                                                            @endif
-                                                                        </div>
-                                                                        <div class="w-full max-w-xs">
-                                                                            <input type="text" 
-                                                                                   placeholder="Escribe un tag y presiona Enter o coma"
-                                                                                   title="Escribe el nombre del tag y presiona Enter o la tecla coma (,) para agregarlo"
-                                                                                   class="text-xs bg-secondary-dark border border-accent-gray/70 rounded-md px-2.5 py-1.5 text-text-secondary placeholder:text-accent-gray focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue/70 hover:border-accent-gray transition-all w-full"
-                                                                                   id="tag-input-{{ $categoriaIndex }}-{{ $platoIndex }}"
-                                                                                   onkeydown="handleTagInput(event, {{ $categoriaIndex }}, {{ $platoIndex }})"
-                                                                                   autocomplete="off">
-                                                                            <p class="text-[10px] text-text-secondary mt-1 ml-0.5">💡 Presiona Enter o coma (,) para agregar</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        @endforeach
+                        <p class="text-xs text-text-secondary/70 mb-3">
+                            {{ $info['ayuda'] }}
+                            @if(empty($comercio->chips[$superficie] ?? null))
+                                <span class="text-accent-blue">Ahora son automáticos.</span>
+                            @endif
+                        </p>
+
+                        <div class="space-y-2 chips-lista">
+                            @foreach($lista as $chip)
+                                {{-- Los cuatro controles miden lo mismo (h-10) y van centrados:
+                                     el emoji era 48×40, los inputs 38 por el padding y la × 32×36,
+                                     así que cada fila terminaba en tres alturas escalonadas y dos
+                                     botones de proporciones distintas. --}}
+                                <div class="chip-fila flex gap-2 items-center">
+                                    {{-- El emoji se elige de una grilla: tipearlo requiere
+                                         acordarse de Win + . y en el celular es peor. --}}
+                                    <button type="button" onclick="abrirEmojis(this)"
+                                            class="chip-emoji-btn w-10 h-10 flex-none bg-secondary-dark border border-accent-gray rounded-lg text-lg leading-none hover:border-accent-blue"
+                                            title="Elegir ícono">{{ $chip['emoji'] ?: '🍽️' }}</button>
+                                    <input type="hidden" value="{{ $chip['emoji'] }}" class="chip-emoji">
+                                    <input type="text" value="{{ $chip['label'] }}" maxlength="40" placeholder="Lo que se ve"
+                                           class="chip-label flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                    <input type="text" value="{{ $chip['q'] }}" maxlength="200" placeholder="La pregunta que ejecuta"
+                                           class="chip-q flex-1 min-w-0 h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                                    <button type="button" onclick="quitarChip(this)"
+                                            class="flex-none w-10 h-10 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10" title="Quitar">×</button>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- mt-3 y no mt-2: arriba de la lista hay 12px (el mb-3 de la ayuda),
+                             así que con 8px abajo el bloque quedaba descentrado. --}}
+                        <div class="flex items-center gap-2 mt-3">
+                            <button type="button" onclick="agregarChip(this)"
+                                    class="text-xs px-3 py-1.5 rounded-lg border border-accent-gray text-text-secondary hover:border-accent-blue hover:text-accent-blue">+ Agregar</button>
+                            <button type="button" onclick="guardarChips(this)"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar atajos</button>
+                            <span class="text-xs text-text-secondary chips-estado"></span>
+                        </div>
+                    </div>
+                    @endforeach
+                    </div>
+
+                {{-- Grilla de emojis, una sola para toda la pantalla: se abre
+                     al lado del botón que la pidió. --}}
+                <div id="emoji-picker" class="hidden fixed z-50 bg-secondary-dark border border-accent-gray rounded-xl p-2 shadow-2xl"
+                     style="max-width: 260px">
+                    <div class="grid grid-cols-8 gap-1">
+                        @foreach($emojisSugeridos as $emoji)
+                            <button type="button" onclick="elegirEmoji(@js($emoji))"
+                                    class="w-7 h-7 rounded hover:bg-accent-blue/20 text-lg leading-none">{{ $emoji }}</button>
+                        @endforeach
+                    </div>
+                    <button type="button" onclick="elegirEmoji('')"
+                            class="w-full mt-1 text-xs text-text-secondary hover:text-danger py-1">Sin ícono</button>
+                </div>
+            </div>
+
+            {{-- Reseñas de Google. El interruptor vive acá, junto a los atajos,
+                 porque es donde el comercio configura lo que ve el cliente; pero
+                 el dato se guarda en `comercios`, no en el menú: el link es de la
+                 ficha del negocio y no se tiene que perder al subir otra carta.
+
+                 El campo del link también está acá. Estaba en "datos del comercio", y
+                 eso dejaba el interruptor apagado con un cartel que mandaba a otra
+                 pantalla a buscar lo único que lo habilita. --}}
+            @php $tieneLink = filled($comercio->google_review_url); @endphp
+
+            <div class="editor-bloque" id="bloque-resenas"
+                 data-preview="{{ $previaEditor('menu.chat') }}" data-preview-titulo="El pedido de reseña">
+                <div class="flex items-center gap-2 mb-1">
+                    <h3 class="editor-bloque-titulo !mb-0">Reseñas en Google</h3>
+                    {{-- En el celular de al lado el cartel se ve SIEMPRE y al instante, y eso
+                         no es lo que le pasa al cliente. Sin decirlo, el comercio piensa que
+                         a todos les aparece apenas entran. --}}
+                    <x-ayuda titulo="Cómo se ve esto de verdad"
+                             texto="En la vista previa de al lado el cartel aparece siempre y al toque, para que puedas ver los textos mientras los escribís. Al cliente sólo le aparece si usó el asistente y ya lleva un rato en la mesa, cuando vuelve a mirar el celular. Y a quien lo cierra con «Ahora no» no se le vuelve a mostrar por 15 días; en la vista previa reaparece cada vez."
+                             admin="Umbrales en config/servime.php (servime.resenas: mensajes, minutos, dias_gracia), iguales para todos los comercios. La vista previa llama directo a mostrar() y no guarda estado en localStorage, así no le apaga el pedido real al dueño en ese teléfono." />
+                </div>
+
+                <p class="text-xs text-text-secondary mb-4">
+                    Al cliente que usó el asistente y ya lleva un rato en la mesa se le
+                    ofrece dejar su reseña. Aparece cuando vuelve a mirar el celular.
+                </p>
+
+                <div class="mb-3">
+                    <label for="google-review-url" class="block text-sm font-medium text-text-secondary mb-2">
+                        Link de reseñas de Google
+                    </label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="url"
+                               id="google-review-url"
+                               maxlength="255"
+                               value="{{ $comercio->google_review_url }}"
+                               placeholder="https://g.page/r/..."
+                               class="flex-1 min-w-[16rem] h-10 px-3 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                        {{-- h-10 como el input que tiene al lado: con py-1.5 quedaba 10px
+                             más bajo y la fila se veía desparejo. --}}
+                        <button type="button" onclick="guardarLinkResenas(this)"
+                                class="flex-none h-10 text-xs px-4 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">
+                            Guardar link
+                        </button>
+                        <span class="text-xs text-text-secondary" id="link-resenas-estado"></span>
+                    </div>
+                    <p class="text-xs text-text-secondary/70 mt-1">
+                        Se saca del perfil del negocio en Google, en «Pedir reseñas».
+                    </p>
+                </div>
+
+                <div id="resenas-caja"
+                     class="flex items-start gap-3 p-3 rounded-lg bg-secondary-dark border border-accent-gray
+                            {{ $tieneLink ? '' : 'opacity-60' }}">
+                    <button type="button"
+                            id="resenas-switch"
+                            role="switch"
+                            aria-checked="{{ $comercio->resenas_activo ? 'true' : 'false' }}"
+                            aria-label="Pedir reseña en Google"
+                            onclick="alternarResenas(this)"
+                            @disabled(! $tieneLink)
+                            class="relative flex-none w-11 h-6 rounded-full transition-colors duration-200 disabled:cursor-not-allowed
+                                   {{ $comercio->resenas_activo ? 'bg-accent-green' : 'bg-accent-gray' }}">
+                        <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
+                                     {{ $comercio->resenas_activo ? 'translate-x-5' : '' }}"></span>
+                    </button>
+                    <div class="min-w-0">
+                        <p class="text-sm text-text-primary leading-tight">Pedir reseña en Google</p>
+                        <p class="text-xs text-text-secondary mt-1" id="resenas-ayuda">
+                            @if(! $tieneLink)
+                                Cargá el link acá arriba para poder activarlo.
+                            @elseif($comercio->resenas_activo)
+                                Activo — se le muestra a quien cumpla las condiciones.
+                            @else
+                                Listo para activar.
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Los textos van vacíos cuando el comercio no los tocó, con el
+                     de fábrica como placeholder: así se ve qué va a salir sin
+                     tener que copiarlo, y borrar el campo vuelve al de fábrica. --}}
+                <div class="mt-3 space-y-2">
+                    <input type="text" id="resena-titulo" maxlength="80"
+                           value="{{ $comercio->resena_titulo }}"
+                           placeholder="{{ \App\Models\Comercio::RESENA_TITULO }}"
+                           class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary">
+                    <textarea id="resena-texto" maxlength="200" rows="2"
+                              placeholder="{{ \App\Models\Comercio::RESENA_TEXTO }}"
+                              class="w-full px-3 py-2 bg-secondary-dark border border-accent-gray rounded-lg text-sm text-text-primary resize-none">{{ $comercio->resena_texto }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="guardarTextosResena(this)"
+                                class="text-xs px-3 py-1.5 rounded-lg bg-accent-blue/20 border border-accent-blue text-accent-blue hover:bg-accent-blue/30">Guardar textos</button>
+                        <span class="text-xs text-text-secondary" id="resena-estado"></span>
+                    </div>
+                    <p class="text-xs text-text-secondary/70">
+                        Vacío = se usa el texto por defecto. Ojo: lo que escribas se
+                        muestra tal cual, sin traducir al idioma del cliente.
+                    </p>
+                </div>
+
+                {{-- Los números NO van acá: esta pantalla es para configurar.
+                     Cuántos lo vieron y cuántos lo tocaron se miran en Analytics,
+                     junto al resto de las métricas del menú. --}}
+            </div>
+
+            @endif
+
+            {{-- Pedidos en Línea queda FUERA del formulario a propósito: el interruptor se
+                 guarda solo por AJAX y no viaja en el submit. Adentro, y justo encima del
+                 botón, parecía que había que apretar "Procesar" para confirmarlo. --}}
+            @if($isEdit)
+                                <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-8 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
+                                    <div class="relative p-6">
+                                        <!-- Texto arriba -->
+                                        <div class="mb-5">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <h3 class="text-text-primary font-bold text-xl tracking-tight">Pedidos en Línea</h3>
+                                                @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                    <span class="pedido-active-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent-green/15 backdrop-blur-sm border border-accent-green/40 rounded-lg">
+                                                        <span class="pedido-status-dot w-1.5 h-1.5 bg-accent-green rounded-full animate-pulse"></span>
+                                                        <span class="text-xs font-semibold text-accent-green">ACTIVO</span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <p class="text-text-secondary text-sm leading-relaxed">Los clientes podrán agregar platos al pedido directamente desde el menú digital</p>
+                                        </div>
+                                        
+                                        <!-- Icono y botón abajo -->
+                                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-accent-gray">
+                                            <div class="relative flex-shrink-0">
+                                                <div class="pedido-icon-container w-14 h-14 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green hover:brightness-95 shadow-lg shadow-green-500/50' : 'bg-accent-gray hover:brightness-95' }} rounded-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                                    <span class="text-2xl filter drop-shadow-lg">🛒</span>
+                                                    @if(old('pedido_habilitado', $comercio->pedido_habilitado))
+                                                        <div class="pedido-status-dot absolute -top-1 -right-1 w-4 h-4 bg-accent-green rounded-full border-3 border-secondary-dark animate-pulse"></div>
                                                     @endif
                                                 </div>
-                                                <!-- Agregar producto nuevo a esta categoría -->
-                                                <button type="button"
-                                                        onclick="agregarPlato({{ $categoriaIndex }}, @js($categoria['nombre'] ?? 'esta categoría'))"
-                                                        class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-accent-blue/40 text-accent-blue hover:border-accent-blue hover:bg-accent-blue/10 rounded-lg text-sm font-semibold transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                                    </svg>
-                                                    Agregar producto
-                                                </button>
                                             </div>
-                                        @endforeach
+                                            
+                                            <div class="flex items-center gap-4 flex-1 justify-end">
+                                                <label class="relative inline-flex items-center cursor-pointer group">
+                                                    <input type="checkbox"
+                                                           id="pedido_habilitado"
+                                                           value="1"
+                                                           {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'checked' : '' }}
+                                                           class="sr-only peer pedido-toggle"
+                                                           onchange="updatePedidoStatus(this.checked);">
+                                                    <div class="w-16 h-9 bg-accent-gray peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-accent-gray after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
+                                                </label>
+                                                <div id="pedido-status" class="flex items-center justify-center min-w-[100px] h-9 px-4 rounded-xl font-semibold text-sm transition-all duration-300 {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/15 text-accent-green border-2 border-accent-green/40 backdrop-blur-sm' : 'bg-accent-gray/30 text-text-secondary border-2 border-accent-gray/30' }}">
+                                                    {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? '✓ Activo' : '○ Inactivo' }}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                @else
-                                    <div class="text-center py-8">
-                                        <p class="text-text-secondary">No se encontraron categorías de platos en el menú procesado.</p>
-                                        <p class="text-text-secondary text-sm mt-2">Claves disponibles: {{ implode(', ', array_keys($contenido)) }}</p>
-                                    </div>
-                                @endif
-                                
-                                <!-- Información adicional -->
-                                @if(isset($contenido['informacion_adicional']) && !empty($contenido['informacion_adicional']))
-                                    <div class="bg-secondary-dark border border-accent-gray rounded-lg p-4">
-                                        <h4 class="text-lg font-semibold text-text-primary mb-2">ℹ️ Información Adicional</h4>
-                                        <p class="text-text-secondary">{{ $contenido['informacion_adicional'] }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                        @else
-                            <!-- Fallback: mostrar JSON si no se puede parsear -->
-                            <div class="bg-secondary-dark rounded-lg p-6">
-                                <pre class="whitespace-pre-wrap text-sm text-text-secondary">{{ $rawContent }}</pre>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            @elseif($menu && $menu->procesado)
-                <div class="mt-12">
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">📋</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
-                        </div>
-                        <div class="text-center py-12">
-                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
-                                <span class="text-text-secondary text-2xl">📄</span>
-                            </div>
-                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay contenido procesado</h4>
-                            <p class="text-text-secondary">El menú fue procesado pero no se extrajo contenido estructurado.</p>
-                        </div>
-                    </div>
-                </div>
-            @elseif($menu)
-                {{-- Acá no se llega estando en proceso: `MenuController@edit` corta antes y
-                     muestra `menus.procesando`. Quedan dos casos, el archivo que la IA no
-                     pudo leer y el menú viejo que nunca se procesó, y los dos se resuelven
-                     con el mismo botón: re-encolar el archivo que YA está guardado. Antes
-                     esta pantalla decía "vuelve más tarde" y mandaba a subirlo de nuevo. --}}
-                <div class="mt-12">
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">📋</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
-                        </div>
-
-                        <div class="py-10">
-                            <div class="max-w-md mx-auto text-center">
-                                @if($menu->tuvoError())
-                                    <div class="w-14 h-14 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <span class="text-2xl">⚠️</span>
-                                    </div>
-                                    <h4 class="text-xl font-medium text-text-primary mb-2">No pudimos leer el menú</h4>
-                                    <p class="text-text-secondary mb-6">
-                                        El archivo quedó guardado, así que podés volver a intentarlo sin
-                                        subirlo de nuevo. Si vuelve a fallar, probá con una foto más
-                                        nítida o un PDF donde el texto se lea derecho.
-                                    </p>
-                                @else
-                                    <div class="w-14 h-14 bg-accent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <span class="text-2xl">📋</span>
-                                    </div>
-                                    <h4 class="text-xl font-medium text-text-primary mb-2">Todavía no leímos este menú</h4>
-                                    <p class="text-text-secondary mb-6">
-                                        El archivo está subido, pero la IA nunca sacó los platos.
-                                        Podés pedírselo ahora.
-                                    </p>
-                                @endif
-
-                                @if($menu->archivo_original)
-                                    <button type="button" id="menuProcesoReintentar" class="btn-primary">
-                                        {{ $menu->tuvoError() ? 'Volver a intentar' : 'Procesar ahora' }}
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <script>
-                    (function () {
-                        const boton = document.getElementById('menuProcesoReintentar');
-                        if (!boton) return;
-
-                        const URL_REINTENTAR = @json(route('menus.reintentar', [$comercio, $menu]));
-                        const TOKEN = @json(csrf_token());
-
-                        boton.addEventListener('click', async function () {
-                            boton.disabled = true;
-                            try {
-                                const r = await fetch(URL_REINTENTAR, {
-                                    method: 'POST',
-                                    headers: { 'X-CSRF-TOKEN': TOKEN, 'Accept': 'application/json' },
-                                });
-                                if (r.ok) {
-                                    // El menú queda "procesando": al recargar, el controlador
-                                    // manda solo a la pantalla de progreso.
-                                    window.location.reload();
-                                    return;
-                                }
-                                showError('No se pudo reintentar. Probá recargando la página.');
-                            } catch (e) {
-                                showError('No se pudo reintentar. Revisá la conexión.');
-                            }
-                            boton.disabled = false;
-                        });
-                    })();
-                </script>
-            @else
-                <div class="mt-12">
-                    <div class="metric-card">
-                        <div class="flex items-center mb-6">
-                            <div class="w-10 h-10 bg-accent-blue/10 rounded-xl flex items-center justify-center mr-3">
-                                <span class="text-lg">📋</span>
-                            </div>
-                            <h3 class="text-xl font-semibold text-text-primary">Contenido Extraído</h3>
-                        </div>
-                        <div class="text-center py-12">
-                            <div class="w-16 h-16 bg-accent-gray rounded-full flex items-center justify-center mx-auto mb-6">
-                                <span class="text-text-secondary text-2xl">📝</span>
-                            </div>
-                            <h4 class="text-xl font-medium text-text-primary mb-3">No hay menú cargado</h4>
-                            <p class="text-text-secondary">Sube un archivo de menú para ver el contenido extraído aquí.</p>
-                        </div>
-                    </div>
-                </div>
+                                </div>
             @endif
+                </x-editor.seccion>
+
+            </div>
+
+                <x-editor.seccion id="archivo" titulo="Archivo del menú" icono="📄" resumen="Nombre del menú y archivo original" :preview="$previaEditor('menu.classic', ['vista' => 'archivo'])" preview-titulo="Tu archivo original" :sin-cabecera="! $isEdit" :abierta="! $isEdit">
+            {{-- El nombre del menú y su archivo.
+
+                 Al CREAR es el formulario que manda el archivo a la IA (MenuController@store).
+
+                 Al EDITAR ya no se puede reemplazar el archivo: se sube una carta nueva. Reprocesar
+                 encima de la misma pisaba en silencio todo lo trabajado a mano —precios,
+                 descripciones, etiquetas, estrellas— y borraba las promociones, que viven en el
+                 mismo JSON. Con una carta nueva la vieja queda intacta, y los clientes no ven nada
+                 a medio procesar: la nueva es un borrador hasta que se publica.
+
+                 Por eso en edición esto no es un <form>: todo lo de acá se guarda solo, y con un
+                 form un Enter en el nombre lo enviaba. --}}
+            @if($isEdit)
+                <div class="editor-bloque space-y-6">
+            @else
+                <form method="POST" action="{{ route('menus.store', $comercio) }}" enctype="multipart/form-data" class="metric-card space-y-6" id="menu-form">
+                    @csrf
+            @endif
+                            <!-- Nombre del Menú -->
+                    <div class="mb-6">
+                                <label for="nombre" class="block text-sm font-medium text-text-secondary mb-3">
+                                    Nombre del Menú <span class="text-danger">*</span>
+                                </label>
+                                {{-- En edición se guarda solo al salir del campo: ponerle otro
+                                     nombre a un menú no tiene por qué disparar el procesamiento
+                                     con IA, que tarda y cuesta. Al crear todavía no existe la
+                                     fila, así que ahí viaja con el formulario. --}}
+                                <input type="text"
+                                       id="nombre"
+                                       name="nombre"
+                                       value="{{ old('nombre', $menu->nombre ?? '') }}"
+                                       required
+                                       @if($isEdit && $menu)
+                                           data-guardar-en="{{ route('menus.update.nombre', [$comercio, $menu]) }}"
+                                       @endif
+                                       placeholder="Ej: Carta principal, Menú de la noche…"
+                                       class="w-full px-4 py-3 bg-secondary-dark border border-accent-gray rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200">
+                                <p id="nombre-estado" class="text-xs text-text-secondary mt-2"></p>
+                                <x-input-error :messages="$errors->get('nombre')" class="mt-2" />
+                            </div>
+
+                            <!-- Menú Actual (solo en edición) -->
+                            @if($isEdit && $menu && $menu->archivo_original)
+                                <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6 mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="flex items-center space-x-4 flex-1 min-w-0">
+                                            @if($menu->formato === 'pdf')
+                                                <div class="w-14 h-14 bg-danger/20 border border-danger/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-danger text-2xl">📄</span>
+                                                </div>
+                                            @else
+                                                <div class="w-14 h-14 bg-accent-blue/10 border border-accent-blue/30 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span class="text-accent-blue text-2xl">🍽️</span>
+                                                </div>
+                                            @endif
+                                            <div class="min-w-0 flex-1">
+                                                <h4 class="text-text-primary font-semibold text-lg mb-1">Menú Actual</h4>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('d/m/Y') }}
+                                                    </span>
+                                                    <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                        {{ $menu->updated_at->format('H:i') }}
+                                                    </span>
+                                            </div>
+                                        </div>
+                                        </div>
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+                                            <button type="button"
+                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
+                                                    class="px-4 py-2.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap">
+                                                👁️ Ver
+                                            </button>
+                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
+                                               download
+                                               class="px-4 py-2.5 bg-accent-gray/30 hover:bg-accent-gray/50 text-text-primary border border-accent-gray rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-2">
+                                                <span>📥</span>
+                                                <span>Descargar</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                    @if($isEdit)
+                        <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
+                            <h4 class="text-text-primary font-semibold text-lg mb-1">¿Cambió tu carta?</h4>
+                            <p class="text-sm text-text-secondary mb-4">
+                                Subila como una carta nueva. Esta queda como está, con sus fotos,
+                                promociones y platos estrella, y la nueva no la ven tus clientes
+                                hasta que la publiques.
+                            </p>
+                            <a href="{{ route('menus.create', $comercio) }}" class="btn-secondary inline-flex">
+                                Subir una carta nueva
+                            </a>
+                        </div>
+                    @else
+                        <div class="bg-secondary-dark border border-accent-gray rounded-xl p-6">
+                            <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
+                                Archivo del Menú
+                            </label>
+                                <input type="file"
+                                       id="archivo"
+                                       name="archivo"
+                                       accept=".pdf,.jpeg,.jpg,.png,.gif"
+                                       required
+                                       class="w-full px-4 py-3 bg-background border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
+                                <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
+                            <p class="mt-2 text-sm text-text-secondary">
+                                PDF o foto (JPG, PNG, GIF), hasta 10 MB. La IA lee los platos, las
+                                categorías y los precios: tarda entre medio minuto y un par de minutos.
+                            </p>
+
+                            {{-- El botón arranca apagado y se prende cuando están el nombre y el
+                                 archivo: así nadie lo aprieta para que le diga qué falta. --}}
+                            <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                                <p id="procesar-ayuda" class="text-xs text-text-secondary sm:text-right sm:flex-1"></p>
+                                {{-- Sin style inline: el color y el hover salen del CSS de arriba,
+                                     que es el único lugar donde se puede apagar. --}}
+                                <button type="submit"
+                                        id="btn-actualizar-menu"
+                                        class="btn-actualizar-menu text-white font-bold text-lg py-4 px-10 rounded-xl transition-all duration-300 shadow-2xl hover:shadow-accent-green/40 hover:scale-105 active:scale-95 transform flex items-center justify-center gap-3">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Crear y procesar menú</span>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+            @if($isEdit)
+                </div>
+            @else
+                </form>
+            @endif
+                </x-editor.seccion>
+
+            </div>{{-- /#editor-secciones --}}
+
+            @if($isEdit)
+                {{-- El celular de la vista previa: la pantalla pública REAL del comercio, la que
+                     corresponde a la sección abierta, cargada en modo vista previa (no suma
+                     estadísticas ni gasta IA). Se recarga sola después de cada guardado. --}}
+                <aside class="hidden lg:block lg:sticky lg:top-44" aria-label="Vista previa del menú">
+                    {{-- El celular carga la página a 390×844 —un teléfono real— y se achica
+                         con `scale` para entrar en la columna. Antes el iframe medía 296px de
+                         ancho, y a ese ancho el menú corta los textos y apila los botones de
+                         otra manera: la vista previa mostraba algo que ningún cliente veía.
+                         296/390 = 0,759, y 844 × 0,759 = 641px de alto ya escalado. --}}
+                    <div class="mx-auto w-[320px] h-[665px] rounded-[2.75rem] bg-text-primary p-3 shadow-xl">
+                      <div class="relative w-full h-full overflow-hidden rounded-[2.1rem] bg-secondary-dark">
+                        <iframe id="previewFrame"
+                                style="width: 390px; height: 844px; transform: scale(0.759); transform-origin: top left;"
+                                src="{{ $previaEditor('menu.classic', ['vista' => 'lista']) }}"
+                                data-src="{{ $previaEditor('menu.classic', ['vista' => 'lista']) }}"
+                                title="Vista previa de lo que ve tu cliente"
+                                class="absolute top-0 left-0 border-0 bg-secondary-dark"></iframe>
+                      </div>
+                    </div>
+                    <p class="text-center text-sm font-medium text-text-primary mt-4" id="previewTitulo">Así ven tu carta</p>
+                    <p class="text-center text-xs text-text-secondary mt-1">Se actualiza sola cuando guardás un cambio.</p>
+                </aside>
+            @endif
+            </div>
 
         </div>
     </div>
 
-    <!-- PDF.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    @if($isEdit)
     <script>
-        // Configurar PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        // ── Editor en secciones + celular de vista previa ─────────────────────────────
+        (function () {
+            const secciones = Array.from(document.querySelectorAll('.editor-seccion'));
+            const frame = document.getElementById('previewFrame');
+            const tituloPrevia = document.getElementById('previewTitulo');
+            const CLAVE = 'servime_editor_seccion_{{ $menu?->id }}';
+
+            const cuerpoDe = (sec) => sec.querySelector('.editor-seccion-cuerpo');
+            const estaAbierta = (sec) => !cuerpoDe(sec).classList.contains('hidden');
+
+            function mostrarEnCelular(origen) {
+                if (!frame || !origen || !origen.dataset.preview) return;
+                // Sólo si cambia la pantalla: recargar la misma al abrir otra sección que
+                // también usa el chat hacía parpadear el celular sin motivo.
+                if (frame.dataset.src !== origen.dataset.preview) {
+                    frame.dataset.src = origen.dataset.preview;
+                    frame.src = origen.dataset.preview;
+                }
+                if (tituloPrevia) tituloPrevia.textContent = origen.dataset.previewTitulo || 'Así lo ve tu cliente';
+            }
+
+            // Un bloque puede mostrar una pantalla distinta a la de su sección: los atajos de
+            // la portada se ven al escanear el QR, no en el chat, y editándolos con el chat en
+            // el celular no se veía lo que se estaba cambiando. Gana el bloque más cercano a
+            // lo que se toca; si no declara ninguna, queda la pantalla de la sección.
+            const secciones_ = document.getElementById('editor-secciones');
+            ['focusin', 'click'].forEach((evento) => {
+                secciones_?.addEventListener(evento, (e) => {
+                    if (e.target.closest('.editor-seccion-cabecera')) return;   // eso lo maneja la sección
+                    const bloque = e.target.closest('[data-preview]:not(.editor-seccion)');
+                    if (bloque) mostrarEnCelular(bloque);
+                });
+            });
+
+            function marcar(sec, abrir) {
+                cuerpoDe(sec).classList.toggle('hidden', !abrir);
+                sec.querySelector('.editor-seccion-cabecera').setAttribute('aria-expanded', abrir ? 'true' : 'false');
+                sec.querySelector('.editor-seccion-flecha')?.classList.toggle('rotate-180', abrir);
+            }
+
+            function abrir(sec, { recordar = true, desplazar = true } = {}) {
+                // Una abierta a la vez: la pantalla queda corta y el celular sabe qué mostrar.
+                secciones.forEach((s) => marcar(s, s === sec));
+                mostrarEnCelular(sec);
+                if (recordar) { try { localStorage.setItem(CLAVE, sec.dataset.seccion); } catch (e) {} }
+                if (desplazar) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            secciones.forEach((sec) => {
+                sec.querySelector('.editor-seccion-cabecera').addEventListener('click', () => {
+                    if (estaAbierta(sec)) {
+                        marcar(sec, false);
+                        try { localStorage.removeItem(CLAVE); } catch (e) {}
+                    } else {
+                        abrir(sec);
+                    }
+                });
+            });
+
+            // Al volver a la pantalla (por ejemplo después de guardar el formulario, que recarga)
+            // queda abierta la sección en la que estaba: si no, volvía siempre a los platos.
+            let guardada = null;
+            try { guardada = localStorage.getItem(CLAVE); } catch (e) {}
+            const porHash = location.hash.startsWith('#seccion-') ? document.querySelector(location.hash) : null;
+            const inicial = porHash || secciones.find((s) => s.dataset.seccion === guardada);
+            if (inicial) {
+                abrir(inicial, { recordar: false, desplazar: !!porHash });
+            } else {
+                const yaAbierta = secciones.find(estaAbierta);
+                if (yaAbierta) mostrarEnCelular(yaAbierta);
+            }
+
+            // ── Categorías de platos: una abierta a la vez ──────────────────────────────────
+            const CLAVE_CATEGORIA = 'servime_editor_categoria_{{ $menu?->id }}';
+
+            function abrirCategoria(cat, abrir) {
+                cat.querySelector('.editor-categoria-cuerpo').classList.toggle('hidden', !abrir);
+                cat.querySelector('.editor-categoria-cabecera').setAttribute('aria-expanded', abrir ? 'true' : 'false');
+                cat.querySelector('.editor-categoria-flecha').classList.toggle('-rotate-90', !abrir);
+            }
+
+            document.querySelectorAll('.editor-categoria').forEach((cat) => {
+                cat.querySelector('.editor-categoria-cabecera').addEventListener('click', () => {
+                    const abrir = cat.querySelector('.editor-categoria-cuerpo').classList.contains('hidden');
+                    document.querySelectorAll('.editor-categoria').forEach((c) => abrirCategoria(c, c === cat && abrir));
+                    try {
+                        abrir ? localStorage.setItem(CLAVE_CATEGORIA, cat.dataset.categoriaEditor)
+                              : localStorage.removeItem(CLAVE_CATEGORIA);
+                    } catch (e) {}
+                });
+            });
+
+            // Agregar, borrar o reordenar un plato recarga la pantalla: sin esto volvía todo
+            // plegado y había que buscar de nuevo la categoría en la que se estaba trabajando.
+            try {
+                const guardadaCat = localStorage.getItem(CLAVE_CATEGORIA);
+                const cat = guardadaCat !== null && document.querySelector(`.editor-categoria[data-categoria-editor="${guardadaCat}"]`);
+                if (cat) abrirCategoria(cat, true);
+            } catch (e) {}
+
+            // ── Detalle de cada plato (foto, descripción, etiquetas) ─────────────────────────
+            // Delegado: "sin descripción" y la flecha abren lo mismo.
+            document.addEventListener('click', (e) => {
+                const toggle = e.target.closest('.plato-detalle-toggle');
+                if (!toggle) return;
+                e.stopPropagation();
+                const item = toggle.closest('.plato-item');
+                const detalle = item.querySelector('.plato-detalle');
+                const abrir = detalle.classList.contains('hidden');
+                detalle.classList.toggle('hidden', !abrir);
+                item.querySelectorAll('.plato-detalle-toggle[aria-expanded]').forEach((b) => b.setAttribute('aria-expanded', abrir ? 'true' : 'false'));
+                item.querySelector('.plato-detalle-flecha')?.classList.toggle('rotate-180', abrir);
+                // Desde "sin descripción" se va directo a escribirla.
+                if (abrir && !toggle.hasAttribute('aria-expanded')) {
+                    const [, cat, plato] = item.querySelector('[id^="descripcion-display-"]').id.match(/(\d+)-(\d+)$/);
+                    if (typeof enableEditDescripcion === 'function') enableEditDescripcion(Number(cat), Number(plato));
+                }
+            });
+
+            // Recargar el celular después de cada guardado. Todos los guardados de esta pantalla
+            // van por fetch, así que se envuelve una sola vez en vez de tocar cada función.
+            if (frame) {
+                const fetchOriginal = window.fetch;
+                let espera = null;
+                window.fetch = function (input, init) {
+                    const metodo = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+                    return fetchOriginal.apply(this, arguments).then((respuesta) => {
+                        if (metodo !== 'GET' && respuesta.ok) {
+                            clearTimeout(espera);
+                            espera = setTimeout(() => {
+                                try { frame.contentWindow.location.reload(); } catch (e) { frame.src = frame.dataset.src; }
+                            }, 700);
+                        }
+                        return respuesta;
+                    });
+                };
+            }
+        })();
     </script>
+    @endif
+
     
     <!-- SortableJS for drag & drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
-        // Variable global para almacenar el archivo convertido
-        let convertedImageFile = null;
         
         // Función global para actualizar el estado visual del toggle de pedidos
         function updatePedidoStatus(isChecked) {
@@ -1925,48 +2070,24 @@
             }
             
             // Interceptar el input de archivo para procesar PDFs
+            // El formulario sólo existe al CREAR un menú: en edición el archivo no se
+            // reemplaza (se sube una carta nueva) y todo lo demás se guarda solo.
             const fileInput = document.getElementById('archivo');
             if (fileInput) {
-                fileInput.addEventListener('change', handleFileSelection);
+                // Elegir (o sacar) el archivo es lo que prende y apaga el botón.
+                fileInput.addEventListener('change', () => window.actualizarBotonProcesar());
             }
-            
-            // Interceptar el envío del formulario
+
             const menuForm = document.getElementById('menu-form');
             if (menuForm) {
-                menuForm.addEventListener('submit', function(event) {
-                    // PREVENIR el envío automático
+                let enviando = false;
+                menuForm.addEventListener('submit', function (event) {
                     event.preventDefault();
-                    
-                    // Sincronizar campos del chatbot con los campos ocultos ANTES de enviar
-                    const chatbotName = document.getElementById('chatbot_name');
-                    const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
-                    if (chatbotName && chatbotNameHidden) {
-                        chatbotNameHidden.value = chatbotName.value;
-                    }
-                    
-                    const welcomeMessage = document.getElementById('welcome_message');
-                    const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
-                    if (welcomeMessage && welcomeMessageHidden) {
-                        welcomeMessageHidden.value = welcomeMessage.value;
-                    }
-                    
-                    // Guardar promociones primero vía AJAX antes de enviar el formulario
-                    savePromocionesSilently().then(() => {
-                        // Esperar un momento para asegurar que el DOM se actualizó completamente
-                        setTimeout(() => {
-                            // Sincronizar promociones al formulario (por si acaso)
-                            syncPromocionesToForm();
-                            
-                            // Continuar con el envío normal del formulario
-                            setTimeout(() => {
-                                handleFormSubmit(event);
-                            }, 100);
-                        }, 100);
-                    }).catch((error) => {
-                        console.error('Error al guardar promociones:', error);
-                        showError('Error al guardar las promociones: ' + error.message);
-                        // No continuar con el envío si falla el guardado de promociones
-                    });
+                    // Un doble click mandaba el archivo dos veces: dos menús y dos llamadas a la IA.
+                    if (enviando) return;
+                    enviando = true;
+                    LoadingManager.showGlobalLoader('Subiendo menú...');
+                    menuForm.submit();
                 });
             }
             
@@ -1978,9 +2099,7 @@
                 const color = ACENTOS[theme];
                 if (!color) return;
 
-                document.getElementById('primary_color').value = color;
 
-                updatePreview();
                 updateActiveSwatch(theme);
                 saveThemeColors({ primary: color });
             }
@@ -1989,7 +2108,6 @@
             // el comercio toca el botón, porque la extracción por frecuencia suele
             // devolver la madera o la comida y no la marca.
             window.usarAcentoSugerido = function (hex) {
-                document.getElementById('primary_color').value = hex;
 
                 // Puede coincidir con uno de los predefinidos o no; si no, quedan todos
                 // sin marcar en vez de dejar marcado el anterior, que ya no es el vigente.
@@ -1997,7 +2115,6 @@
                     k => ACENTOS[k].toLowerCase() === hex.toLowerCase()
                 );
 
-                updatePreview();
                 updateActiveSwatch(predefinido || null);
                 saveThemeColors({ primary: hex });
             };
@@ -2111,22 +2228,6 @@
                 }, 3000);
             };
             
-            // Actualizar vista previa
-            function updatePreview() {
-                const acento = document.getElementById('primary_color').value;
-
-                // Un solo color en toda la previa: burbuja del cliente, precio,
-                // "Lo quiero" y enviar. Igual que en el chat real.
-                document.querySelectorAll('#chatPreview .preview-accent-bg')
-                    .forEach(el => el.style.background = acento);
-                document.querySelectorAll('#chatPreview .preview-accent-text')
-                    .forEach(el => el.style.color = acento);
-
-                const nombre = document.getElementById('chatbot_name');
-                const bienvenida = document.getElementById('welcome_message');
-                if (nombre) document.getElementById('preview-chatbot-name').textContent = nombre.value;
-                if (bienvenida) document.getElementById('preview-welcome-message').textContent = bienvenida.value;
-            }
             
             // Función para actualizar el estado activo de los swatches
             function updateActiveSwatch(activeTheme) {
@@ -2163,7 +2264,6 @@
             // de colores duplicado acá que se desincronice.
             function initializeActiveTheme() {
                 updateActiveSwatch(@json($comercio->acentoActual() ?? 'ambar'));
-                updatePreview();
             }
             
             // Inicializar después de que se cargue el DOM
@@ -2261,10 +2361,9 @@
                 }
             }
             
-            // Event listeners para guardar automáticamente y actualizar preview
+            // El nombre y la bienvenida del asistente se guardan solos al dejar de escribir.
             let chatbotNameTimeout;
             document.getElementById('chatbot_name').addEventListener('input', function() {
-                updatePreview();
                 // Guardar automáticamente después de 1 segundo sin escribir
                 clearTimeout(chatbotNameTimeout);
                 chatbotNameTimeout = setTimeout(() => {
@@ -2274,7 +2373,6 @@
             
             let welcomeMessageTimeout;
             document.getElementById('welcome_message').addEventListener('input', function() {
-                updatePreview();
                 // Guardar automáticamente después de 1 segundo sin escribir
                 clearTimeout(welcomeMessageTimeout);
                 welcomeMessageTimeout = setTimeout(() => {
@@ -2452,49 +2550,32 @@
             // solo booleano y esperar un "Guardar" para un interruptor confunde.
             // Con qué abre el menú clásico. Se guarda al toque, sin botón de confirmar:
             // es una preferencia de dos opciones y no hay nada que revisar antes.
-            // ── El botón que procesa ───────────────────────────────────────────────
+            // ── El botón que procesa (sólo al crear) ───────────────────────────────
             //
-            // Lo único que hace es mandar el archivo a la IA. El nombre, las promociones,
-            // el interruptor de pedidos y todo lo de más abajo se guardan solos. Por eso
-            // arranca apagado y solo se prende cuando hay algo real que procesar: un
-            // archivo elegido, o un menú que quedó sin procesar y se puede reintentar.
-            // Apagado explica por qué, así nadie lo busca creyendo que hay que "guardar".
+            // Manda el archivo a la IA. Arranca apagado y se prende cuando están el nombre
+            // y el archivo; apagado explica qué falta, así nadie lo aprieta para averiguarlo.
+            // En edición no existe: el archivo no se reemplaza, se sube una carta nueva.
             window.actualizarBotonProcesar = function () {
                 const boton = document.getElementById('btn-actualizar-menu');
-                const ayuda = document.getElementById('procesar-ayuda');
                 if (!boton) return;
 
+                const ayuda = document.getElementById('procesar-ayuda');
                 const campoNombre = document.getElementById('nombre');
                 const campoArchivo = document.getElementById('archivo');
-                const esEdicion = {{ $isEdit ? 'true' : 'false' }};
 
                 const faltaNombre = campoNombre && campoNombre.value.trim() === '';
                 const hayArchivo = !!(campoArchivo && campoArchivo.files && campoArchivo.files.length > 0);
-                const puedeReintentar = boton.dataset.necesitaReproceso === '1';
 
                 let motivo = '';
                 if (faltaNombre) {
                     motivo = 'Poné un nombre para el menú.';
-                } else if (!hayArchivo && esEdicion && !puedeReintentar) {
-                    motivo = 'Elegí un archivo nuevo para reemplazar el menú. Todo lo demás de esta pantalla se guarda solo.';
-                } else if (!hayArchivo && !esEdicion) {
+                } else if (!hayArchivo) {
                     motivo = 'Elegí el archivo del menú para poder procesarlo.';
                 }
 
                 boton.disabled = motivo !== '';
                 boton.title = motivo;
-
-                if (ayuda) {
-                    if (motivo) {
-                        ayuda.textContent = motivo;
-                    } else if (hayArchivo && esEdicion) {
-                        ayuda.textContent = 'Se va a reemplazar el menú actual por el archivo elegido.';
-                    } else if (puedeReintentar) {
-                        ayuda.textContent = 'Este menú quedó sin procesar. Podés reintentar o subir otro archivo.';
-                    } else {
-                        ayuda.textContent = '';
-                    }
-                }
+                if (ayuda) ayuda.textContent = motivo;
             };
 
             // ── Nombre del menú ────────────────────────────────────────────────────
@@ -2706,13 +2787,33 @@
                         body: JSON.stringify({ google_review_url: campo.value.trim() })
                     });
 
-                    const data = await response.json();
+                    // Una sesión vencida (419) contesta HTML, no JSON: sin esto reventaba el
+                    // `.json()` y el motivo real quedaba tapado por un "Error al guardar".
+                    let data = {};
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        if (response.status === 419) {
+                            showError('Se venció la sesión. Recargá la página y volvé a intentar.');
+                            estado.textContent = '⚠️ Sesión vencida';
+                            estado.classList.add('text-danger');
+                            return;
+                        }
+                    }
                     if (!response.ok) {
-                        // 422 de validación: el mensaje útil está en `errors`, no en `error`.
-                        showError(data.error || data.message || 'No se pudo guardar el link');
-                        estado.textContent = '';
+                        // El motivo queda TAMBIÉN al lado del campo: el cartel flotante se va
+                        // solo y el comercio se quedaba mirando un link que no se guardó sin
+                        // saber por qué. En un 422 el detalle está en `errors`, no en `error`.
+                        const motivo = data.error
+                            || Object.values(data.errors || {}).flat()[0]
+                            || data.message
+                            || 'No se pudo guardar el link';
+                        showError(motivo);
+                        estado.textContent = '⚠️ No se guardó';
+                        estado.classList.add('text-danger');
                         return;
                     }
+                    estado.classList.remove('text-danger');
 
                     sw.disabled = !data.tiene_link;
                     caja.classList.toggle('opacity-60', !data.tiene_link);
@@ -2734,11 +2835,15 @@
                     setTimeout(() => { estado.textContent = ''; }, 4000);
                 } catch (error) {
                     console.error('Error al guardar el link de reseñas:', error);
-                    showError('Error al guardar el link');
-                    estado.textContent = '';
+                    showError('No se pudo guardar el link. Revisá la conexión y probá de nuevo.');
+                    estado.textContent = '⚠️ No se guardó';
+                    estado.classList.add('text-danger');
+                } finally {
+                    // En `finally` y no al final: las salidas por error hacían `return` antes
+                    // de llegar acá, así que el botón quedaba deshabilitado para siempre y el
+                    // segundo intento no hacía nada.
+                    btn.disabled = false;
                 }
-
-                btn.disabled = false;
             };
             @endif
 
@@ -3111,8 +3216,6 @@
                 if (vacio) vacio.classList.toggle('hidden', marcados.length > 0);
             }
 
-            // Inicializar vista previa
-            setTimeout(updatePreview, 100);
             
             // Inicializar drag & drop para platos
             initializeSortable();
@@ -3204,359 +3307,8 @@
             }
         });
         
-        // Función para sincronizar promociones al form principal
-        function syncPromocionesToForm() {
-            const menuForm = document.getElementById('menu-form');
-            if (!menuForm) {
-                console.error('Formulario menu-form no encontrado');
-                return;
-            }
-            
-            
-            // PASO 1: Obtener SOLO los items de promociones que están VISIBLES en el contenedor
-            // IMPORTANTE: Hacer esto ANTES de eliminar inputs para asegurar que tenemos los datos
-            const container = document.getElementById('promociones-container');
-            if (!container) {
-                // Si no existe el contenedor, es un menú nuevo sin promociones aún
-                return;
-            }
-            
-            // Obtener TODOS los items del contenedor y verificar que realmente existen en el DOM
-            // IMPORTANTE: Hacer una consulta FRESCA del DOM en este momento para asegurar que tenemos items actualizados
-            const allItems = Array.from(container.querySelectorAll('.promocion-item'));
-            
-            // FILTRAR items que realmente están en el DOM ANTES de procesarlos
-            // Esto elimina cualquier referencia obsoleta a items que fueron eliminados
-            const realItems = allItems.filter(item => {
-                if (!item.isConnected) {
-                    console.warn(`⚠️ Item con índice ${item.getAttribute('data-promo-index')} NO está conectado al DOM - será ignorado`);
-                    return false;
-                }
-                if (!container.contains(item)) {
-                    console.warn(`⚠️ Item con índice ${item.getAttribute('data-promo-index')} NO está dentro del contenedor - será ignorado`);
-                    return false;
-                }
-                return true;
-            });
-            
-            console.log(`Items REALMENTE en el DOM: ${realItems.length} de ${allItems.length}`);
-            
-            // PASO 2: Recopilar datos de los items VISIBLES Y DESHABILITAR sus inputs para que no se envíen
-            const promocionesData = {};
-            
-            // Iterar sobre cada item REAL y recopilar sus datos
-            realItems.forEach(item => {
-                const index = item.getAttribute('data-promo-index');
-                if (!index) {
-                    console.warn('Item de promoción sin data-promo-index:', item);
-                    return;
-                }
-                
-                // Verificar que es visible
-                const style = window.getComputedStyle(item);
-                const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && item.offsetParent !== null;
-                
-                if (!isVisible) {
-                    console.warn(`⚠️ Item ${index} NO es visible - será ignorado`);
-                    return;
-                }
-                
-                console.log(`  ✓ Procesando item VISIBLE con índice: ${index}`);
-                
-                // Inicializar objeto para esta promoción
-                if (!promocionesData[index]) {
-                    promocionesData[index] = {};
-                }
-                
-                // Buscar TODOS los inputs dentro de este item (solo los que están VISIBLES)
-                const inputsInItem = item.querySelectorAll('[data-promo-field]');
-                console.log(`    - Inputs encontrados en item ${index}: ${inputsInItem.length}`);
-                
-                inputsInItem.forEach(input => {
-                    const field = input.getAttribute('data-promo-field');
-                    if (!field) {
-                        console.warn(`Input sin data-promo-field en item ${index}:`, input);
-                        return;
-                    }
-                    
-                    // IMPORTANTE: Recopilar el valor ANTES de deshabilitar
-                    // Leer el valor directamente del input visible
-                    let rawValue = input.value;
-                    
-                    // Si es el campo precio, formatear con signo $ y solo números
-                    if (field === 'precio') {
-                        // Extraer solo números
-                        const valorNumerico = rawValue.toString().replace(/[^0-9]/g, '');
-                        // Formatear con signo $ si hay números
-                        rawValue = valorNumerico ? `$ ${valorNumerico}` : '';
-                    }
-                    const value = rawValue !== null && rawValue !== undefined ? String(rawValue) : '';
-                    
-                    // Guardar el valor (aunque esté vacío, lo guardamos para que el backend lo reciba)
-                    promocionesData[index][field] = value;
-                    
-                    console.log(`    - Campo ${field}: tipo="${input.tagName}", valor raw="${rawValue}", valor guardado="${value}"`);
-                    console.log(`    - Input completo:`, {
-                        name: input.name,
-                        id: input.id,
-                        value: input.value,
-                        type: input.type,
-                        disabled: input.disabled
-                    });
-                    
-                    // NO deshabilitar aquí - deshabilitar DESPUÉS de crear los inputs ocultos
-                    // para asegurar que los valores se lean correctamente
-                });
-                
-                // Buscar imagen en este item VISIBLE
-                const img = item.querySelector('img[id^="promo-imagen-"]');
-                if (img && img.src) {
-                    // Extraer la ruta relativa de la imagen
-                    let imgPath = img.src.replace(window.location.origin, '');
-                    
-                    // Normalizar: si no empieza con /storage/, intentar extraer solo la ruta
-                    if (imgPath && !imgPath.startsWith('/storage/')) {
-                        // Intentar extraer la ruta desde /storage/ si existe en la URL
-                        const storageMatch = imgPath.match(/\/storage\/.*/);
-                        if (storageMatch) {
-                            imgPath = storageMatch[0];
-                        } else {
-                            // Si no se puede normalizar, descartar (no es una ruta válida)
-                            console.warn(`    ⚠️ Imagen con ruta inválida, descartada: ${imgPath}`);
-                            imgPath = null;
-                        }
-                    }
-                    
-                    // Solo guardar si es una ruta válida que empieza con /storage/
-                    if (imgPath && imgPath.startsWith('/storage/') && !promocionesData[index]['imagen']) {
-                        promocionesData[index]['imagen'] = imgPath;
-                        console.log(`    - Imagen encontrada y normalizada: ${imgPath}`);
-                    }
-                }
-            });
-            
-            console.log(`📊 Datos de promociones recopilados: ${Object.keys(promocionesData).length} promociones`);
-            console.log(`📊 Detalle de datos recopilados:`, JSON.stringify(promocionesData, null, 2));
-            
-            // AHORA deshabilitar todos los inputs visibles para que no se envíen
-            realItems.forEach(item => {
-                const inputsInItem = item.querySelectorAll('[data-promo-field]');
-                inputsInItem.forEach(input => {
-                    input.disabled = true;
-                    console.log(`  - Input ${input.getAttribute('data-promo-field')} deshabilitado`);
-                });
-            });
-            
-            // PASO 3: AHORA eliminar TODOS los inputs de promociones existentes (ocultos) del form
-            // Solo eliminar inputs OCULTOS (los visibles están dentro de items que ya procesamos)
-            const existingPromoInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"], input[name^="promociones"]:not([data-promo-field]), textarea[name^="promociones"]:not([data-promo-field])');
-            console.log(`Eliminando inputs ocultos antiguos del formulario: ${existingPromoInputs.length}`);
-            
-            // Crear un array de los inputs a eliminar para evitar problemas con NodeList
-            const inputsToRemove = Array.from(existingPromoInputs);
-            inputsToRemove.forEach(input => {
-                // Solo eliminar si NO está dentro de un item visible (para no eliminar inputs visibles)
-                const isInVisibleItem = realItems.some(item => item.contains(input));
-                if (!isInVisibleItem) {
-                    console.log(`  - Eliminando input oculto: ${input.name}`);
-                    input.remove();
-                }
-            });
-            
-            // Verificar que se eliminaron correctamente - hacer múltiples verificaciones solo para inputs ocultos
-            let attempts = 0;
-            let remainingInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"]');
-            while (remainingInputs.length > 0 && attempts < 5) {
-                const remainingArray = Array.from(remainingInputs);
-                remainingArray.forEach(input => {
-                    const isInVisibleItem = realItems.some(item => item.contains(input));
-                    if (!isInVisibleItem) {
-                        console.warn(`  - Eliminando input huérfano: ${input.name}`);
-                        input.remove();
-                    }
-                });
-                attempts++;
-                remainingInputs = menuForm.querySelectorAll('input[name^="promociones"][type="hidden"], textarea[name^="promociones"][type="hidden"]');
-            }
-            
-            console.log(`✓ Inputs ocultos antiguos eliminados correctamente`);
-            
-            // PASO 4: Crear inputs ocultos basados en los datos recopilados
-            console.log(`📊 Datos de promociones recopilados: ${Object.keys(promocionesData).length} promociones`);
-            
-            // VERIFICAR que hay datos antes de continuar
-            if (Object.keys(promocionesData).length === 0) {
-                console.log('ℹ️ No hay promociones para sincronizar (esto es válido si se eliminaron todas)');
-                return; // Salir temprano si no hay datos (esto es válido si no hay promociones)
-            }
-            
-            // Crear inputs ocultos en el form principal
-            // IMPORTANTE: Guardar TODAS las promociones que están en el DOM, incluso si están vacías
-            // porque el usuario puede estar en proceso de editarlas
-            let promocionesAgregadas = 0;
-            Object.keys(promocionesData).sort((a, b) => parseInt(a) - parseInt(b)).forEach(index => {
-                const promo = promocionesData[index];
-                
-                console.log(`Procesando promoción índice ${index}:`, promo);
-                console.log(`  DEBUG - nombre: "${promo.nombre}" (type: ${typeof promo.nombre})`);
-                console.log(`  DEBUG - precio: "${promo.precio}" (type: ${typeof promo.precio})`);
-                console.log(`  DEBUG - descripcion: "${promo.descripcion}" (type: ${typeof promo.descripcion})`);
-                console.log(`  DEBUG - imagen: "${promo.imagen}" (type: ${typeof promo.imagen})`);
-                
-                // Agregar TODAS las promociones que están en el DOM, incluso si están vacías
-                // Solo saltar si no tiene NADA (ni nombre, ni precio, ni descripción, ni imagen)
-                const tieneDatos = (promo.nombre !== undefined && String(promo.nombre).trim() !== '') ||
-                                   (promo.precio !== undefined && String(promo.precio).trim() !== '') ||
-                                   (promo.descripcion !== undefined && String(promo.descripcion).trim() !== '') ||
-                                   (promo.imagen !== undefined && String(promo.imagen).trim() !== '');
-                
-                console.log(`  DEBUG - tieneDatos: ${tieneDatos}`);
-                
-                if (tieneDatos) {
-                    // IMPORTANTE: Siempre agregar los campos básicos (nombre, precio, descripción)
-                    // aunque estén vacíos, para que el backend los reciba correctamente
-                    // Asegurar que los valores sean strings, no undefined
-                    const campos = ['nombre', 'precio', 'descripcion'];
-                    campos.forEach(field => {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = `promociones[${promocionesAgregadas}][${field}]`;
-                        // Asegurar que el valor sea string, no undefined o null
-                        const fieldValue = (promo[field] !== undefined && promo[field] !== null) ? String(promo[field]) : '';
-                        input.value = fieldValue;
-                        menuForm.appendChild(input);
-                        console.log(`Agregado: promociones[${promocionesAgregadas}][${field}] = "${fieldValue}"`);
-                    });
-                    
-                    // Agregar imagen solo si existe
-                    if (promo.imagen && promo.imagen.trim() !== '') {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = `promociones[${promocionesAgregadas}][imagen]`;
-                        input.value = promo.imagen;
-                        menuForm.appendChild(input);
-                        console.log(`Agregado: promociones[${promocionesAgregadas}][imagen] = "${promo.imagen}"`);
-                    }
-                    
-                    promocionesAgregadas++;
-                } else {
-                    console.log(`Saltando promoción ${index} porque no tiene ningún dato (está completamente vacía)`);
-                }
-            });
-            
-            console.log(`✅ Promociones sincronizadas: ${promocionesAgregadas}`);
-            
-            // Verificar que los inputs se agregaron
-            const hiddenInputs = menuForm.querySelectorAll('input[name^="promociones"]');
-            console.log('📝 Inputs ocultos creados:', hiddenInputs.length);
-            hiddenInputs.forEach(input => {
-                const valuePreview = input.value.length > 50 ? input.value.substring(0, 50) + '...' : input.value;
-                console.log(`  - ${input.name} = "${valuePreview}"`);
-            });
-            
-            // ALERT si no se agregaron inputs
-            if (hiddenInputs.length === 0 && Object.keys(promocionesData).length > 0) {
-                console.error('❌ ERROR: No se crearon inputs ocultos aunque había datos de promociones');
-                alert(`ERROR: No se crearon inputs ocultos. Promociones encontradas: ${Object.keys(promocionesData).length}, Promociones agregadas: ${promocionesAgregadas}`);
-            }
-        }
 
-        // Función para guardar personalización
-        function saveCustomization() {
-            // ESPERAR un momento para asegurar que el DOM se actualizó completamente
-            setTimeout(() => {
-                // Sincronizar promociones al form principal
-                syncPromocionesToForm();
-                
-                // Esperar un momento más y luego enviar
-                setTimeout(() => {
-                    const menuForm = document.getElementById('menu-form');
-                    if (menuForm) {
-                        menuForm.submit();
-                    }
-                }, 100);
-            }, 100);
-            return;
-            
-            // Sincronizar campos del chatbot con los campos ocultos
-            const chatbotName = document.getElementById('chatbot_name');
-            const chatbotNameHidden = document.getElementById('chatbot_name_hidden');
-            if (chatbotName && chatbotNameHidden) {
-                chatbotNameHidden.value = chatbotName.value;
-            }
-            
-            const welcomeMessage = document.getElementById('welcome_message');
-            const welcomeMessageHidden = document.getElementById('welcome_message_hidden');
-            if (welcomeMessage && welcomeMessageHidden) {
-                welcomeMessageHidden.value = welcomeMessage.value;
-            }
-            
-            // Los campos de colores ya están sincronizados por el JavaScript de los temas
-            
-            // Debug: verificar valores de colores antes de enviar
-            console.log('Valores de colores antes de enviar:', {
-                primary: document.getElementById('primary_color').value,
-                secondary: document.getElementById('secondary_color').value,
-                accent: document.getElementById('accent_color').value,
-                background: document.getElementById('background_color').value
-            });
-            
-            // Primero, enviar el formulario del menú directamente
-            const menuForm = document.getElementById('menu-form');
-            if (menuForm) {
-                // Simplemente enviar el formulario original
-                menuForm.submit();
-                return;
-            }
-            
-            // Crear formulario temporal para enviar POST de personalización
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("comercios.update", $comercio) }}';
-            
-            // Agregar CSRF token
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            form.appendChild(csrfToken);
-            
-            // Agregar método PUT
-            const methodField = document.createElement('input');
-            methodField.type = 'hidden';
-            methodField.name = '_method';
-            methodField.value = 'PUT';
-            form.appendChild(methodField);
-            
-            // Agregar todos los campos de personalización
-            const fields = [
-                'primary_color', 'secondary_color', 'accent_color', 'background_color',
-                'chatbot_name', 'welcome_message'
-            ];
-            
-            fields.forEach(fieldName => {
-                const element = document.getElementById(fieldName);
-                if (element) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = fieldName;
-                    input.value = element.value || (element.checked ? '1' : '0');
-                    form.appendChild(input);
-                }
-            });
-            
-            // Agregar al DOM y enviar
-            document.body.appendChild(form);
-            form.submit();
-        }
         
-        function createHiddenInput(name, value) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value;
-            return input;
-        }
         
         // Variables globales para el modal de iconos
         let currentIconInput = null;
@@ -3618,136 +3370,9 @@
         // FUNCIONES PARA PROCESAR PDFs CON PDF.JS
         // ========================================
         
-        async function handleFileSelection(event) {
-            // Elegir (o deselegir) archivo es lo que prende y apaga el botón que procesa.
-            if (window.actualizarBotonProcesar) window.actualizarBotonProcesar();
-
-            const file = event.target.files[0];
-            if (!file) return;
-
-            // NO convertir PDF a imagen - procesarlo directamente
-            // El backend procesará el PDF completo directamente con IA
-            convertedImageFile = null;
-        }
         
-        let isSubmitting = false;
         
-        function handleFormSubmit(event) {
-            // Prevenir envíos dobles
-            if (isSubmitting) {
-                return false;
-            }
-            
-            isSubmitting = true;
-            
-            // Obtener el formulario
-            const menuForm = document.getElementById('menu-form');
-            if (!menuForm) {
-                console.error('❌ No se encontró el formulario menu-form');
-                isSubmitting = false;
-                return false;
-            }
-            
-            // Verificar que el archivo esté presente SOLO si es un menú nuevo
-            @if(!isset($isEdit) || !$isEdit)
-                // Es un menú nuevo, el archivo es obligatorio
-                const fileInput = document.getElementById('archivo');
-                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                    if (!convertedImageFile) {
-                        console.error('❌ No hay archivo para enviar');
-                        alert('Por favor, selecciona un archivo de menú antes de guardar.');
-                        isSubmitting = false;
-                        return false;
-                    }
-                }
-            @else
-                // Es una edición, el archivo es opcional
-            @endif
-            
-            // Verificar si hay archivo convertido
-            if (convertedImageFile) {
-                // Mostrar loader
-                LoadingManager.showGlobalLoader('Subiendo menú...');
-                
-                // El archivo convertido se enviará a través del FormData en el botón de guardar
-                // Aquí solo permitimos que continúe el flujo
-            } else {
-                // Mostrar loader
-                LoadingManager.showGlobalLoader('Subiendo menú...');
-            }
-            
-            // Enviar el formulario
-            // Agregar un pequeño delay para asegurar que el loader se muestre
-            setTimeout(() => {
-                menuForm.submit();
-            }, 100);
-            
-            return false;
-        }
         
-        async function pdfToSingleImage(pdfFile) {
-            // 1. Cargar el PDF
-            const arrayBuffer = await pdfFile.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-            const numPages = pdf.numPages;
-            
-            LoadingManager.showGlobalLoader(`Procesando PDF: 0/${numPages} páginas...`);
-            
-            // 2. Renderizar cada página en canvas separados
-            const canvases = [];
-            let totalHeight = 0;
-            let maxWidth = 0;
-            
-            for (let i = 1; i <= numPages; i++) {
-                LoadingManager.showGlobalLoader(`Procesando PDF: ${i}/${numPages} páginas...`);
-                
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.5 }); // Reducido de 2.0 a 1.5 para archivos más pequeños
-                
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                await page.render({
-                    canvasContext: canvas.getContext('2d'),
-                    viewport: viewport
-                }).promise;
-                
-                canvases.push(canvas);
-                totalHeight += viewport.height;
-                maxWidth = Math.max(maxWidth, viewport.width);
-            }
-            
-            LoadingManager.showGlobalLoader('Combinando páginas...');
-            
-            // 3. Combinar todos los canvas en uno solo (vertical)
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = maxWidth;
-            finalCanvas.height = totalHeight;
-            const ctx = finalCanvas.getContext('2d');
-            
-            // Fondo blanco
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, maxWidth, totalHeight);
-            
-            // Pegar cada página una debajo de la otra
-            let currentY = 0;
-            for (const canvas of canvases) {
-                ctx.drawImage(canvas, 0, currentY);
-                currentY += canvas.height;
-            }
-            
-            // 4. Convertir a imagen JPEG (más comprimido que PNG)
-            const blob = await new Promise(resolve => 
-                finalCanvas.toBlob(resolve, 'image/jpeg', 0.85) // JPEG con 85% de calidad
-            );
-            
-            // Crear un nuevo archivo de imagen
-            const imageFile = new File([blob], 'menu.jpg', { type: 'image/jpeg' });
-            imageFile.pageCount = numPages; // Agregar información de páginas procesadas
-            
-            return imageFile;
-        }
     </script>
 
     <!-- Modal de selección de iconos -->
@@ -5565,54 +5190,6 @@
             return promociones;
         }
         
-        // Función para guardar promociones vía AJAX (sin mostrar mensaje)
-        async function savePromocionesSilently() {
-            try {
-                // Si es un menú nuevo, no intentar guardar promociones (aún no existe el menú)
-                @if(!isset($isEdit) || !$isEdit || !isset($menu) || !$menu)
-                    return true;
-                @endif
-                
-                const promociones = collectPromocionesData();
-                
-                if (promociones.length === 0) {
-                    // Si no hay promociones, no hacer nada (pero no fallar)
-                    return true;
-                }
-                
-                const saveUrl = `{{ route('menus.save.promociones', ['comercio' => $comercio->slug, 'menu' => $menu->id ?? '0']) }}`;
-                const response = await fetch(saveUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        promociones: promociones,
-                        frontend_logs: window.frontendLogs || [] // Enviar logs al backend
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Error HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    console.log('✅ Promociones guardadas silenciosamente');
-                    return true;
-                } else {
-                    throw new Error(data.error || 'Error al guardar las promociones');
-                }
-                
-            } catch (error) {
-                console.error('❌ Error al guardar promociones:', error);
-                throw error; // Re-lanzar para que el manejador principal lo capture
-            }
-        }
         
         // Función para eliminar promoción
         async function removePromocion(promoId) {

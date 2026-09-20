@@ -121,7 +121,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/menus/{menuId}/restore', [App\Http\Controllers\AdminController::class, 'restoreMenu'])->name('menus.restore');
         Route::get('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'showMenu'])->name('menus.show');
         Route::get('/menus/{menu}/edit', [App\Http\Controllers\AdminController::class, 'editMenu'])->name('menus.edit');
-        Route::put('/menus/{menu}', [App\Http\Controllers\AdminController::class, 'updateMenu'])->name('menus.update');
 
         // Chat del landing
         Route::get('/landing-chat', [App\Http\Controllers\AdminController::class, 'landingChat'])->name('landing-chat.index');
@@ -171,7 +170,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/comercios/{comercio:slug}/menus', [App\Http\Controllers\MenuController::class, 'store'])->name('menus.store')->middleware('throttle:5,1');
     Route::get('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'show'])->name('menus.show');
     Route::get('/comercios/{comercio:slug}/menus/{menu}/edit', [App\Http\Controllers\MenuController::class, 'edit'])->name('menus.edit');
-    Route::put('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'update'])->name('menus.update');
     Route::delete('/comercios/{comercio:slug}/menus/{menu}', [App\Http\Controllers\MenuController::class, 'destroy'])->name('menus.destroy');
     Route::post('/comercios/{comercio:slug}/menus/{menu}/activar', [App\Http\Controllers\MenuController::class, 'activar'])->name('menus.activar');
 

@@ -9,12 +9,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * La pantalla del menú: qué depende del botón que procesa con IA y qué no.
+ * El nombre del menú y el interruptor del pedido en línea: los dos se guardan solos.
  *
  * El bug que motivó esto: el checkbox del pedido en línea nunca tuvo atributo `name`, así
- * que no viajaba con el formulario, y `update()` leía esa ausencia con `boolean()` como un
- * "desactivar". Cada vez que el comercio guardaba su menú, se le apagaba el pedido en
- * línea — y con las comandas arriba, eso deja muda la pantalla del mozo.
+ * que no viajaba con el formulario de la pantalla, y el `update()` del menú leía esa
+ * ausencia como un "desactivar": cada vez que el comercio guardaba su menú, se le apagaba
+ * el pedido en línea. Ese formulario y ese `update()` ya no existen (el menú no se
+ * reprocesa: se sube una carta nueva), así que el caso no puede volver por ese lado.
  */
 class MenuNombreYPedidoTest extends TestCase
 {
@@ -32,25 +33,6 @@ class MenuNombreYPedidoTest extends TestCase
         ]);
 
         return $comercio;
-    }
-
-    private function datosDelForm(array $extra = []): array
-    {
-        return array_merge(['nombre' => 'Carta original'], $extra);
-    }
-
-    public function test_guardar_el_menu_ya_no_apaga_el_pedido_en_linea(): void
-    {
-        $comercio = $this->comercioConMenu(['pedido_habilitado' => true]);
-        $menu = $comercio->menus()->first();
-
-        $this->actingAs($comercio->user)
-            ->put(route('menus.update', [$comercio, $menu]), $this->datosDelForm());
-
-        $this->assertTrue(
-            $comercio->fresh()->pedido_habilitado,
-            'Guardar el menú apagó el pedido en línea.'
-        );
     }
 
     public function test_el_interruptor_del_pedido_guarda_de_verdad(): void
@@ -142,11 +124,18 @@ class MenuNombreYPedidoTest extends TestCase
         $comercio = $this->comercioConMenu();
         $menu = $comercio->menus()->first();
 
+        // En edición el nombre se guarda solo y no hay botón de procesar: el archivo no se
+        // reemplaza, se sube una carta nueva.
         $this->actingAs($comercio->user)
             ->get(route('menus.edit', [$comercio, $menu]))
             ->assertOk()
             ->assertSee('data-guardar-en', false)
-            // El botón dice lo que hace, no "guardar".
-            ->assertSee('Procesar menú');
+            ->assertDontSee('Crear y procesar menú');
+
+        // Al crear sí: el botón dice lo que hace, no "guardar".
+        $this->actingAs($comercio->user)
+            ->get(route('menus.create', $comercio))
+            ->assertOk()
+            ->assertSee('Crear y procesar menú');
     }
 }

@@ -157,6 +157,22 @@ class ResenasGoogleTest extends TestCase
         $this->assertNull($comercio->refresh()->google_review_url);
     }
 
+    public function test_el_link_invalido_explica_en_castellano_que_esta_mal(): void
+    {
+        // El mensaje por defecto de Laravel sale en inglés ("must be a valid URL") y el
+        // comercio quedaba mirando un link que no se guardó sin entender por qué.
+        $user = User::factory()->create();
+        $comercio = $this->comercioConPlan(attrs: ['user_id' => $user->id]);
+
+        $r = $this->actingAs($user)->postJson(
+            route('menus.update.resenas', $comercio),
+            ['google_review_url' => 'google.com/mi-negocio']   // sin https://
+        )->assertStatus(422);
+
+        $this->assertStringContainsString('https://', $r->json('errors.google_review_url.0'));
+        $this->assertNull($comercio->refresh()->google_review_url);
+    }
+
     public function test_no_se_puede_activar_sin_link(): void
     {
         $user = User::factory()->create();

@@ -8,7 +8,6 @@ use App\Models\Comercio;
 use App\Models\Menu;
 use App\Services\ChatbotService;
 use App\Services\ImagenMenuService;
-use App\Services\MenuProcessorService;
 use App\Support\Chip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -314,302 +313,6 @@ class MenuController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Comercio $comercio, Menu $menu)
-    {
-        $user = auth()->user();
-
-        // Validar permisos y que el menú pertenezca al comercio
-        if (! $user->isSuperAdmin() && $comercio->user_id !== $user->id) {
-            abort(403, 'No tienes permiso para actualizar este menú.');
-        }
-
-        if ($menu->comercio_id !== $comercio->id) {
-            abort(404, 'Menú no encontrado en este comercio.');
-        }
-
-        // Preparar reglas de validación
-        $rules = [
-            'nombre' => 'nullable|string|max:255',
-            'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
-            // Formato solo se valida si se envía y no está vacío
-            'formato' => 'nullable|string|in:pdf,image',
-            // Campos del chatbot
-            'chatbot_name' => 'nullable|string|max:50',
-            'welcome_message' => 'nullable|string|max:500',
-            // Campos de colores
-            'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'pedido_habilitado' => 'nullable|boolean',
-        ];
-
-        // Si formato está vacío o no es válido, convertirlo a null
-        if ($request->has('formato') && (empty($request->input('formato')) || ! in_array($request->input('formato'), ['pdf', 'image']))) {
-            $request->merge(['formato' => null]);
-        }
-
-        $validated = $request->validate($rules);
-
-        $nuevoArchivo = $request->hasFile('archivo');
-        $necesitaReprocesar = false;
-
-        // Si se sube un nuevo archivo
-        if ($nuevoArchivo) {
-            // Eliminar archivo anterior de ambos lugares
-            $this->deleteMenuSafely($menu->archivo_original, $comercio->id);
-
-            // Asegurar que existan las carpetas del comercio
-            $this->createComercioDirectories($comercio->id);
-
-            // Preservar extensión original al actualizar
-            $archivo = $request->file('archivo');
-            $extension = $archivo->getClientOriginalExtension();
-            $nombreArchivo = uniqid().'.'.$extension;
-            $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
-
-            // Copiar archivo a public_html en producción
-            $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
-
-            $menu->archivo_original = $archivoPath;
-
-            // Detectar formato automáticamente
-            $extension = $request->file('archivo')->getClientOriginalExtension();
-            $menu->formato = in_array(strtolower($extension), ['pdf']) ? 'pdf' : 'image';
-            $menu->procesado = false; // Marcar como no procesado para reprocesar después
-            $necesitaReprocesar = true; // Se subió archivo nuevo, necesita reprocesar
-        } else {
-            // Si no hay archivo nuevo, verificar si el menú está marcado como no procesado
-            $necesitaReprocesar = ! $menu->procesado;
-        }
-
-        // Actualizar nombre del menú
-        if ($request->has('nombre')) {
-            $menu->nombre = $request->nombre;
-        }
-
-        // Solo actualizar formato si se envía explícitamente y NO hay archivo nuevo
-        if (! $nuevoArchivo && $request->has('formato') && $request->formato) {
-            $menu->formato = $validated['formato'];
-        }
-
-        // IMPORTANTE: Guardar el menú ANTES de verificar si necesita reprocesar
-        // para que el estado de 'procesado' se actualice en la BD
-        $menu->save();
-
-        // Refrescar el menú desde la BD para obtener el estado actualizado
-        $menu->refresh();
-
-        // Actualizar campos del chatbot y colores en el comercio
-        $needsUpdate = false;
-
-        // Log para depurar
-        Log::info('MenuController@update - Datos recibidos del chatbot', [
-            'chatbot_name' => $request->input('chatbot_name'),
-            'welcome_message' => $request->input('welcome_message'),
-            'has_chatbot_name' => $request->has('chatbot_name'),
-            'has_welcome_message' => $request->has('welcome_message'),
-            'all_request_keys' => array_keys($request->all()),
-        ]);
-
-        // Campos del chatbot - actualizar siempre que estén presentes en el request
-        if ($request->has('chatbot_name')) {
-            $comercio->chatbot_name = $request->chatbot_name ?? null;
-            $needsUpdate = true;
-            Log::info('Chatbot name actualizado', [
-                'valor_anterior' => $comercio->getOriginal('chatbot_name'),
-                'valor_nuevo' => $request->chatbot_name,
-            ]);
-        }
-        if ($request->has('welcome_message')) {
-            $comercio->welcome_message = $request->welcome_message ?? null;
-            $needsUpdate = true;
-            Log::info('Welcome message actualizado', [
-                'valor_anterior' => $comercio->getOriginal('welcome_message'),
-                'valor_nuevo' => substr($request->welcome_message ?? '', 0, 50).'...',
-            ]);
-        }
-
-        // Campos de colores
-        if ($request->has('primary_color')) {
-            $comercio->primary_color = $request->primary_color;
-            $needsUpdate = true;
-        }
-        if ($request->has('secondary_color')) {
-            $comercio->secondary_color = $request->secondary_color;
-            $needsUpdate = true;
-        }
-        if ($request->has('accent_color')) {
-            $comercio->accent_color = $request->accent_color;
-            $needsUpdate = true;
-        }
-        if ($request->has('background_color')) {
-            $comercio->background_color = $request->background_color;
-            $needsUpdate = true;
-        }
-
-        if ($needsUpdate) {
-            $comercio->save();
-        }
-
-        // El pedido en línea NO se toca acá. Se guarda solo al mover el interruptor
-        // (`updateChatbotConfig`, que ya usa `has()` para distinguir "vino en false" de
-        // "no vino").
-        //
-        // Antes se leía de este request con `boolean()`, y como el checkbox de la vista
-        // nunca tuvo atributo `name`, el campo no llegaba nunca: cada vez que el comercio
-        // guardaba su menú, el pedido en línea se apagaba solo. Con las comandas arriba,
-        // eso además dejaba mudas las pantallas del mozo.
-
-        // SIEMPRE guardar promociones (incluso si el array está vacío, para eliminar las que fueron borradas)
-        $promocionesData = $request->input('promociones', []);
-
-        // Siempre llamar a savePromociones para que pueda eliminar las que fueron borradas del DOM
-        // Si promocionesData está vacío o no es array, se pasará un array vacío
-        $promocionesParaGuardar = is_array($promocionesData) ? $promocionesData : [];
-        Log::info('Guardando promociones', ['count' => count($promocionesParaGuardar), 'promociones' => $promocionesParaGuardar]);
-        $this->savePromociones($menu, $promocionesParaGuardar);
-
-        // SOLO reprocesar si se subió un nuevo archivo O si el menú está marcado como no procesado
-        // NO reprocesar si solo se actualizaron otros campos (preserva imágenes)
-
-        if (! $necesitaReprocesar) {
-            // Determinar la ruta de retorno según si viene de admin o comercio
-            $editRoute = request()->is('admin/*')
-                ? route('admin.menus.edit', $menu)
-                : route('menus.edit', [$comercio, $menu]);
-
-            return redirect($editRoute)
-                ->with('success', 'Cambios guardados exitosamente.');
-        }
-
-        // Se subió un nuevo archivo o el menú está marcado para reprocesar: preservar imágenes antes de reprocesar
-        // Indexar por ID (método más confiable) y también por nombre para compatibilidad
-        $imagenesExistentes = [];
-        $idsExistentes = []; // Para preservar IDs existentes
-        if ($menu->contexto_gpt) {
-            try {
-                $jsonContent = $menu->contexto_gpt;
-                if (strpos($jsonContent, '```json') !== false) {
-                    $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
-                    $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
-                }
-                $contenidoActual = json_decode(trim($jsonContent), true);
-                if ($contenidoActual && isset($contenidoActual['categorias']) && is_array($contenidoActual['categorias'])) {
-                    foreach ($contenidoActual['categorias'] as $categoria) {
-                        if (isset($categoria['platos']) && is_array($categoria['platos'])) {
-                            foreach ($categoria['platos'] as $plato) {
-                                // Si tiene ID, usarlo; si no, generar uno (migración)
-                                $platoId = isset($plato['id']) ? $plato['id'] : null;
-                                if (! $platoId) {
-                                    // Generar ID único si no existe (migración para items antiguos)
-                                    $platoId = time() * 1000 + count($idsExistentes);
-                                }
-                                $idsExistentes[] = $platoId;
-
-                                // Indexar imagen por ID (método principal)
-                                if (isset($plato['imagen']) && ! empty($plato['imagen'])) {
-                                    $imagenesExistentes[$platoId] = $plato['imagen'];
-
-                                    // También indexar por nombre para compatibilidad con items antiguos
-                                    if (isset($plato['nombre']) && ! empty($plato['nombre'])) {
-                                        $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
-                                        $imagenesExistentes[$nombreNormalizado] = $plato['imagen'];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Error al extraer imágenes existentes antes de reprocesar: '.$e->getMessage());
-            }
-        }
-
-        // Reprocesar con OpenAI
-        try {
-            $processor = new MenuProcessorService;
-            $processed = $processor->processMenu($menu);
-
-            // Restaurar las imágenes y asignar IDs después del reprocesamiento
-            if ($processed && $menu->contexto_gpt) {
-                try {
-                    $jsonContent = $menu->contexto_gpt;
-                    if (strpos($jsonContent, '```json') !== false) {
-                        $jsonContent = preg_replace('/```json\s*/', '', $jsonContent);
-                        $jsonContent = preg_replace('/```\s*$/', '', $jsonContent);
-                    }
-                    $contenidoNuevo = json_decode(trim($jsonContent), true);
-                    if ($contenidoNuevo && isset($contenidoNuevo['categorias']) && is_array($contenidoNuevo['categorias'])) {
-                        $modified = false;
-                        $proximoId = ! empty($idsExistentes) ? max($idsExistentes) + 1 : (time() * 1000);
-
-                        foreach ($contenidoNuevo['categorias'] as &$categoria) {
-                            if (isset($categoria['platos']) && is_array($categoria['platos'])) {
-                                foreach ($categoria['platos'] as &$plato) {
-                                    // Asignar ID si no existe
-                                    if (! isset($plato['id'])) {
-                                        $plato['id'] = $proximoId++;
-                                        $modified = true;
-                                    }
-
-                                    $platoId = $plato['id'];
-
-                                    // Restaurar imagen: buscar por ID primero, luego por nombre (compatibilidad)
-                                    if (! isset($plato['imagen']) || empty($plato['imagen'])) {
-                                        if (isset($imagenesExistentes[$platoId]) && ! empty($imagenesExistentes[$platoId])) {
-                                            // Buscar por ID (método más confiable)
-                                            $plato['imagen'] = $imagenesExistentes[$platoId];
-                                            $modified = true;
-                                        } elseif (isset($plato['nombre']) && ! empty($plato['nombre'])) {
-                                            // Buscar por nombre (compatibilidad con items antiguos)
-                                            $nombreNormalizado = mb_strtolower(trim($plato['nombre']));
-                                            if (isset($imagenesExistentes[$nombreNormalizado]) && ! empty($imagenesExistentes[$nombreNormalizado])) {
-                                                $plato['imagen'] = $imagenesExistentes[$nombreNormalizado];
-                                                $modified = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if ($modified) {
-                            $menu->contexto_gpt = json_encode($contenidoNuevo, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-                            $menu->save();
-                        }
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Error al restaurar imágenes después del reprocesamiento: '.$e->getMessage());
-                }
-            }
-
-            // Determinar la ruta de retorno según si viene de admin o comercio
-            $indexRoute = request()->is('admin/*')
-                ? route('admin.menus.index')
-                : route('menus.index', $comercio);
-
-            $editRoute = request()->is('admin/*')
-                ? route('admin.menus.edit', $menu)
-                : route('menus.edit', [$comercio, $menu]);
-
-            if ($processed) {
-                return redirect($indexRoute)
-                    ->with('success', 'Menú actualizado y reprocesado exitosamente con IA.');
-            } else {
-                return redirect($indexRoute)
-                    ->with('warning', 'Menú actualizado pero hubo un problema en el reprocesamiento.');
-            }
-        } catch (\Exception $e) {
-            \Log::error('Error al reprocesar menú: '.$e->getMessage());
-
-            return redirect($editRoute)
-                ->with('error', 'Error al reprocesar el menú: '.$e->getMessage());
-        }
-    }
-
-    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Comercio $comercio, Menu $menu)
@@ -654,6 +357,13 @@ class MenuController extends Controller
 
         // Activar el menú seleccionado
         $menu->update(['activo' => true]);
+
+        // Desde el botón "Publicar" del editor se vuelve al editor: la idea de esa pantalla es
+        // hacer todo en un solo lugar, y mandarlo a la lista justo al terminar lo sacaba.
+        if (request('volver') === 'editor') {
+            return redirect()->route('menus.edit', [$comercio, $menu])
+                ->with('success', 'Menú publicado: tus clientes ya lo ven.');
+        }
 
         return redirect()->route('menus.index', $comercio)
             ->with('success', 'Menú activado exitosamente.');
@@ -1644,37 +1354,6 @@ class MenuController extends Controller
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-        }
-    }
-
-    /**
-     * Eliminar archivo de menú de forma segura (tanto de storage como de public_html)
-     */
-    private function deleteMenuSafely(?string $archivoPath): void
-    {
-        if (empty($archivoPath)) {
-            return;
-        }
-
-        // Eliminar de storage/app/public
-        if (Storage::disk('public')->exists($archivoPath)) {
-            Storage::disk('public')->delete($archivoPath);
-        }
-
-        // Extraer comercio_id de la ruta (formato: comercios/{id}/menus/filename)
-        $comercioId = null;
-        if (preg_match('/comercios\/(\d+)\/menus\//', $archivoPath, $matches)) {
-            $comercioId = $matches[1];
-        }
-
-        // Eliminar también de public_html/storage si existe (producción)
-        if ($comercioId && file_exists('/home/u560898880/domains')) {
-            $filename = basename($archivoPath);
-            $publicHtmlFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/{$filename}";
-            if (file_exists($publicHtmlFile)) {
-                @unlink($publicHtmlFile);
-                Log::info('Archivo de menú eliminado de public_html', ['file' => $publicHtmlFile]);
-            }
         }
     }
 
@@ -2951,6 +2630,14 @@ class MenuController extends Controller
             // Restringido a http/https a propósito: termina como `href` en el menú
             // público, y `url` a secas deja pasar `javascript:` con ciertos formatos.
             'google_review_url' => 'sometimes|nullable|url:http,https|max:255',
+        ], [
+            // En castellano y diciendo qué hacer: los mensajes por defecto de Laravel salen
+            // en inglés ("The google review url field must be a valid URL"), y el comercio
+            // veía eso sin entender qué tenía mal el link.
+            'google_review_url.url' => 'El link tiene que ser una dirección completa que empiece con https:// (copiala del perfil de tu negocio en Google).',
+            'google_review_url.max' => 'El link es demasiado largo: no puede pasar de 255 caracteres.',
+            'titulo.max' => 'El título no puede pasar de 80 caracteres.',
+            'texto.max' => 'El texto no puede pasar de 200 caracteres.',
         ]);
 
         // El link se guarda ANTES de mirar el interruptor: si vienen juntos (se pega
