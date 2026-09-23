@@ -108,22 +108,38 @@
                                 </span>
                             </div>
                             
-                            <!-- Imagen del menú -->
-                            <div class="relative h-48 overflow-hidden rounded-t-xl">
-                                @if($menu->archivo_original && !str_contains($menu->archivo_original, '.pdf'))
-                                    <img src="{{ asset('storage/' . $menu->archivo_original) }}" 
-                                         alt="Imagen del menú" 
-                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                                @elseif($comercio->logo_url)
-                                    <img src="{{ asset('storage/' . $comercio->logo_url) }}" 
-                                         alt="Logo de {{ $comercio->nombre }}" 
+                            {{-- Imagen del menú.
+
+                                 Son dos cosas distintas y no se muestran igual: la FOTO de la
+                                 carta llena la tarjeta (`object-cover`, recortar está bien), y
+                                 el LOGO —que es lo que se ve cuando el menú es un PDF— va
+                                 entero y centrado. Con `object-cover` el logo se estiraba al
+                                 ancho de la tarjeta y quedaba cortado por la mitad. --}}
+                            @php
+                                $esFotoDelMenu = $menu->archivo_original && ! str_contains($menu->archivo_original, '.pdf');
+                                $imagenCard = $esFotoDelMenu
+                                    ? asset('storage/'.$menu->archivo_original)
+                                    : ($comercio->logo_url
+                                        ? asset('storage/'.$comercio->logo_url)
+                                        : asset('images/logo_empresa_default.png'));
+                            @endphp
+                            <div class="relative h-48 overflow-hidden rounded-t-xl bg-secondary-dark">
+                                @if($esFotoDelMenu)
+                                    <img src="{{ $imagenCard }}"
+                                         alt="Imagen del menú"
                                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                 @else
-                                    <img src="{{ asset('images/logo_empresa_default.png') }}" 
-                                         alt="Logo por defecto de {{ $comercio->nombre }}" 
-                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    {{-- Fondo: la misma imagen ampliada y desenfocada. Resuelve que
+                                         "el logo" del comercio a veces sea un logo cuadrado y a veces
+                                         una foto del local: en los dos casos la de adelante se ve
+                                         entera y el hueco lo rellena ella misma, sin franjas blancas. --}}
+                                    <img src="{{ $imagenCard }}" alt="" aria-hidden="true"
+                                         class="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-50">
+                                    <img src="{{ $imagenCard }}"
+                                         alt="Logo de {{ $comercio->nombre }}"
+                                         class="relative mx-auto h-full w-auto max-w-full object-contain py-3 group-hover:scale-105 transition-transform duration-500">
                                 @endif
-                                
+
                                 <!-- Estado del procesamiento -->
                                 <div class="absolute top-4 right-4">
                                     @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
