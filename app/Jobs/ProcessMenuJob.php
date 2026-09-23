@@ -3,6 +3,9 @@
 namespace App\Jobs;
 
 use App\Models\Menu;
+use App\Notifications\MenuConError;
+use App\Notifications\MenuListo;
+use App\Notifications\PlatosSinPrecio;
 use App\Services\MenuProcessorService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -33,6 +36,18 @@ class ProcessMenuJob implements ShouldQueue
 
         $user = $this->menu->comercio?->user;
 
+        // La campanita del panel, para el que subió el menú y cerró la pestaña: el mail
+        // puede tardar o irse a spam, y el aviso lo espera adentro igual.
+        $user?->notify(new MenuListo($this->menu));
+
+        // Y si la IA no pudo leer algunos precios, decirle cuántos: "revisalo antes de
+        // activarlo" no señala nada, y así sabe qué mirar.
+        $sinPrecio = $this->menu->platosSinPrecio();
+
+        if ($user && $sinPrecio > 0) {
+            $user->notify(new PlatosSinPrecio($this->menu, $sinPrecio));
+        }
+
         if ($user?->email) {
             $menuName = $this->menu->nombre ?? 'tu menú';
             $comercioName = $this->menu->comercio->nombre ?? '';
@@ -55,6 +70,8 @@ class ProcessMenuJob implements ShouldQueue
 
         $this->menu->load('comercio.user');
         $user = $this->menu->comercio?->user;
+
+        $user?->notify(new MenuConError($this->menu));
 
         if ($user?->email) {
             $menuName = $this->menu->nombre ?? 'tu menú';

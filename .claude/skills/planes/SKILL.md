@@ -59,7 +59,9 @@ planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico 
   problema (ahí la excepción sale al catch de afuera y nunca contabiliza). Son dos
   comportamientos distintos para lo mismo, y el que usa el front es el que cobra de más.
 - **Feature gating** (super admin siempre pasa):
-  - `analytics` → inline en `AnalyticsController` (vista, export): aborta 403 sin la feature.
+  - `analytics` → inline en `AnalyticsController` (vista, export): sin la feature muestra
+    `analytics/sin-plan` (403) con el plan que la incluye, sacado de `Plan::primeroConFeature()`.
+    Para nombrar "el plan que tiene X" usar ese helper, no el nombre escrito a mano.
   - `excel` y `promociones` → vía **middleware `plan.feature:<feature>`** (`App\Http\Middleware\EnsurePlanFeature`,
     alias en `bootstrap/app.php`) aplicado a las rutas de export/import y de promos en `routes/web.php`.
     Además se ocultan los botones en `resources/views/menus/create.blade.php`.
@@ -68,9 +70,30 @@ planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico 
     entera. **Borrar la portada nunca se bloquea**: si un comercio baja de plan tiene que poder
     sacarla igual. Ver la skill `portada`.
 - **Dashboard**: `DashboardController` pasa `$comerciosSinCuotaIA`; la vista muestra un aviso amarillo
-  cuando un comercio llegó al límite. **Pendiente:** el aviso aparece recién cuando ya se agotó,
-  no al acercarse. Avisar al 80% le daría margen al comercio para pedir el upgrade antes de
-  quedarse sin asistente en pleno servicio.
+  cuando un comercio llegó al límite.
+- **Avisos de cupo (hecho).** `Comercio::avisarSiSeAcabaLaCuota()`, colgado de `registrarUsoIA()`
+  —y no de un controller, porque las dos rutas del chat pasan por ahí— notifica al 80%
+  (`CuotaIaPorAgotarse`) y al agotarse (`CuotaIaAgotada`, que además va por mail y por eso
+  encola: se dispara desde el chat de un cliente). **Una vez por comercio y por mes**: el
+  período viaja en los datos de la notificación y es lo que se consulta para no repetir.
+  Se ven en la campanita del panel (`<x-campanita />`, sólo para el comercio; el super admin
+  no la tiene).
+- **La campanita entera** (`app/Notifications/`), y de dónde sale cada aviso:
+  | Aviso | Se dispara en |
+  |---|---|
+  | `CuotaIaPorAgotarse` (80%) · `CuotaIaAgotada` (+mail) | `Comercio::registrarUsoIA()` |
+  | `MenuListo` · `MenuConError` · `PlatosSinPrecio` | `ProcessMenuJob` (handle / failed) |
+  | `PlanAsignado` | `PlanController::assignToComercio()`, sólo si el plan cambió |
+  | `MenuSinPublicar` · `AsistenteApagado` | comando `avisos:revisar` (diario) |
+  `Aviso::unaVez()` es lo que evita repetirlos: la clave son los propios datos de la
+  notificación (`comercio_id`, `menu_id`, `periodo`), no una columna nueva. Al sumar un aviso
+  que se calcule sobre un estado —y no sobre un evento— usarlo **siempre**, o el comercio
+  recibe el mismo cartel en cada corrida del cron y deja de mirar la campanita.
+  ⚠️ `avisos:revisar` **depende de que `schedule:run` esté puesto en el servidor**: nadie más
+  calcula esos dos avisos. Si el cron no está, el resto sigue funcionando igual.
+  `PlatosSinPrecio` cuenta con `Menu::platosSinPrecio()`, que lee `contexto_gpt` y devuelve 0
+  si el JSON no se puede parsear.
+  Cubierto por `tests/Feature/AvisosTest.php`.
 
 ## `max_tokens_chat` — medido, no sirve como diferenciador
 

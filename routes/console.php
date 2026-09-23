@@ -21,3 +21,14 @@ Artisan::command('inspire', function () {
 // Queda programado igual porque no molesta y adelanta la limpieza de las mesas que nadie
 // va a tocar hasta mañana. Si el cron no está, no pasa nada.
 Schedule::command('comandas:cerrar-inactivas')->everyFifteenMinutes()->withoutOverlapping();
+
+// Avisos de la campanita que salen del estado de la cuenta (carta lista sin publicar,
+// asistente apagado). Una vez por día, a la mañana.
+//
+// ⚠️ A diferencia del de arriba, ESTE sí depende de que `schedule:run` esté puesto en el
+// servidor: nadie más calcula estos avisos. Si el cron no corre, no se rompe nada, pero
+// esos dos avisos no van a existir nunca.
+Schedule::command('avisos:revisar')
+    ->timezone('America/Argentina/Buenos_Aires')
+    ->dailyAt('10:00')
+    ->withoutOverlapping();

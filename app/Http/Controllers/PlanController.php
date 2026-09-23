@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comercio;
 use App\Models\Plan;
+use App\Notifications\PlanAsignado;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -75,7 +76,16 @@ class PlanController extends Controller
             'plan_id' => ['required', Rule::exists('plans', 'id')],
         ]);
 
+        $cambio = (int) $comercio->plan_id !== (int) $validated['plan_id'];
+
         $comercio->update(['plan_id' => $validated['plan_id']]);
+
+        // El cambio de plan lo hacemos nosotros a mano: sin aviso, el comercio no se entera
+        // de que ya tiene lo que pidió. Sólo si el plan cambió de verdad, para que reasignar
+        // el mismo plan no le llene la campanita.
+        if ($cambio) {
+            $comercio->user?->notify(new PlanAsignado($comercio, $comercio->planEfectivo()));
+        }
 
         return redirect()->route('admin.plans.index')
             ->with('success', "Plan asignado a «{$comercio->nombre}».");

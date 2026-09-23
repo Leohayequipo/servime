@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Notifications\Aviso;
+use App\Notifications\CuotaIaAgotada;
+use App\Notifications\CuotaIaPorAgotarse;
 use App\Services\MenuTranslatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -720,6 +723,49 @@ class Comercio extends Model
         }
 
         $this->save();
+
+        $this->avisarSiSeAcabaLaCuota();
+    }
+
+    /**
+     * Avisa al dueño cuando el cupo de mensajes del mes se está por terminar (80%) y
+     * cuando se terminó.
+     *
+     * Va acá y no en el controller porque las dos rutas del chat —la normal y el stream—
+     * pasan por `registrarUsoIA()`: colgado de una sola, el aviso se perdería justo en la
+     * que usa el front. Cada aviso se manda **una vez por comercio y por mes**; el período
+     * viaja en los datos de la notificación y es lo que se consulta para no repetirlo.
+     */
+    private function avisarSiSeAcabaLaCuota(): void
+    {
+        $plan = $this->planEfectivo();
+        $cupo = (int) ($plan?->mensajes_ia_mes ?? 0);
+
+        // Plan ilimitado o sin cupo definido: no hay nada que avisar.
+        if (! $plan || $plan->esIlimitado() || $cupo <= 0) {
+            return;
+        }
+
+        $user = $this->user;
+
+        if (! $user) {
+            return;
+        }
+
+        $usados = $this->mensajesIaUsados();
+        $periodo = $this->ia_mensajes_periodo;
+
+        $clave = ['comercio_id' => $this->id, 'periodo' => $periodo];
+
+        if ($usados >= $cupo) {
+            Aviso::unaVez($user, CuotaIaAgotada::class, $clave, fn () => new CuotaIaAgotada($this, $cupo, $periodo));
+
+            return;
+        }
+
+        if ($usados >= (int) ceil($cupo * 0.8)) {
+            Aviso::unaVez($user, CuotaIaPorAgotarse::class, $clave, fn () => new CuotaIaPorAgotarse($this, $usados, $cupo, $periodo));
+        }
     }
 
     /**

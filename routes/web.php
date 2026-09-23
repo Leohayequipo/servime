@@ -74,6 +74,14 @@ Route::get('/logos/{filename}', function ($filename) {
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Campanita del panel. El id del aviso se busca dentro de los del usuario, así que
+    // no hay forma de abrir ni marcar el de otro.
+    Route::get('/avisos/{notificacion}', [App\Http\Controllers\NotificacionController::class, 'abrir'])->name('avisos.abrir');
+    Route::post('/avisos/leidos', [App\Http\Controllers\NotificacionController::class, 'leerTodas'])->name('avisos.leidos');
+
+    // Qué plan tiene el comercio y qué le daría el siguiente (el super admin va a /admin/plans).
+    Route::get('/mi-plan', [App\Http\Controllers\MiPlanController::class, 'index'])->name('mi-plan');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
