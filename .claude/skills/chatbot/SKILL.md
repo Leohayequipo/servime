@@ -143,6 +143,36 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 > El front ya muestra el botón **una sola vez por consulta** (`!esReconsulta` en
 > `chat.blade.php`), así que no hace falta resolver el tercer "ver más" seguido: no existe.
 
+## Cuando NO hay IA contesta el recomendador
+
+`RecomendadorService` calcula **una vez por carta** —al procesar el menú, vía
+`GenerarRecomendacionesJob`— con qué va bien cada plato, y lo guarda en
+`menus.recomendaciones`. Con eso, el chat sigue funcionando sin llamar a OpenAI:
+
+- **Cuota agotada o asistente apagado**: las dos rutas del chat (`chat` y `chatStream`)
+  llaman a `respuestaSinIA()`, que busca con `ChatbotService::buscarEnElMenu()` —la misma
+  búsqueda en PHP que se le sirve al modelo— y suma los complementos ya calculados.
+  Devuelve tarjetas con foto y precio, no consume cuota y se loguea `used_openai = false`.
+  Antes tiraba un cartel fijo ("por el momento no está disponible") y en la ruta sin
+  stream ni eso: la IA deshabilitada lanzaba una excepción y caía en el texto genérico.
+- **Dos listas por plato, y la distinción importa**: `con` (se suma al pedido) y
+  `parecidos` (alternativas). Quién va en cuál **lo decide la categoría de la carta, no el
+  modelo**: otra hamburguesa bajo "Va bien con" se lee como "pedite dos".
+- **`validar()` descarta lo que no existe en la carta.** Es lo que lo hace confiable: el
+  modelo inventa nombres y acá no llegan a la mesa.
+- **Un pedido genérico** ("algo para tomar", "un postre") se resuelve por el **rol** de la
+  categoría (principal/guarnicion/bebida/postre), que se clasifica en una llamada aparte.
+- Regenerar: `php artisan menu:recomendaciones {id}` o `--todos`. Hace falta cuando el
+  comercio edita los platos: las recomendaciones apuntan a nombres de la carta.
+
+**El modelo sale de `config('servime.modelo_recomendaciones')`, NO del plan**: corre una
+vez por carta y lo pagamos igual para todos, así que va el que mejor la entienda.
+Medido contra la carta de Azopardo (151 platos): `gpt-4o-mini` cubrió 123 con errores de
+criterio; **`gpt-5.6-luna` cubrió 149**, en 90 s. Al cambiarlo, ojo con el body: los GPT-5
+rechazan `temperature` y `max_tokens`, y por eso la llamada pasa por el trait
+`ArmaPayloadOpenAI`. El techo va **alto (6000)**: en un modelo de razonamiento los tokens
+que piensa salen de ahí, y si se queda corto vuelve sin JSON.
+
 ## Modelo: qué se probó y qué se descartó
 
 | Opción | Banco | Dietas | Costo (1k charlas) | Veredicto |

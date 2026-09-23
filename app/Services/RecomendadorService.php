@@ -24,8 +24,13 @@ use Illuminate\Support\Facades\Log;
  */
 class RecomendadorService
 {
-    /** Barato y suficiente: la tarea es asociar nombres de una lista, no redactar. */
-    private const MODELO = 'gpt-4o-mini';
+    use \App\Support\ArmaPayloadOpenAI;
+
+    /**
+     * Techo de salida. Generoso a propósito: en un modelo de razonamiento, los tokens
+     * que piensa salen de acá, y si se queda corto la respuesta vuelve cortada y sin JSON.
+     */
+    private const MAX_TOKENS = 6000;
 
     /**
      * Platos por llamada. La carta entera viaja igual como catálogo para elegir.
@@ -42,6 +47,61 @@ class RecomendadorService
     private const MAX_COMPLEMENTOS = 3;
 
     public function __construct(private ChatbotService $chatbot) {}
+
+    /**
+     * El modelo que arma las recomendaciones (config/servime.php).
+     *
+     * No sale del plan del comercio, como el del chat: esto corre una vez por carta y lo
+     * pagamos igual para todos, así que va el que mejor entienda la carta y no el más
+     * barato por mensaje.
+     */
+    private function modelo(): string
+    {
+        return (string) config('servime.modelo_recomendaciones', 'gpt-4o-mini');
+    }
+
+    /**
+     * Una llamada a /chat/completions pidiendo JSON, con el body que acepta cada familia
+     * de modelos (los GPT-5 rechazan `temperature` y `max_tokens` con HTTP 400).
+     *
+     * @return array<string, mixed>
+     */
+    private function pedirJson(string $system, string $user, string $apiKey, int $maxTokens = self::MAX_TOKENS): array
+    {
+        $payload = $this->payloadOpenAI(
+            $this->modelo(),
+            [
+                ['role' => 'system', 'content' => $system],
+                ['role' => 'user', 'content' => $user],
+            ],
+            $maxTokens,
+            false,
+            ['temperature' => 0, 'presence_penalty' => 0, 'frequency_penalty' => 0],
+        ) + ['response_format' => ['type' => 'json_object']];
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(180)->post(config('services.openai.base_url', 'https://api.openai.com/v1').'/chat/completions', $payload);
+
+            if (! $response->successful()) {
+                Log::error('Recomendador: error OpenAI', [
+                    'status' => $response->status(),
+                    'modelo' => $this->modelo(),
+                    'cuerpo' => mb_substr($response->body(), 0, 300),
+                ]);
+
+                return [];
+            }
+
+            return (array) json_decode($response->json('choices.0.message.content', '{}'), true);
+        } catch (\Throwable $e) {
+            Log::error('Recomendador: excepción', ['msg' => $e->getMessage()]);
+
+            return [];
+        }
+    }
 
     /**
      * Genera las recomendaciones de un menú y las guarda.
@@ -93,7 +153,7 @@ class RecomendadorService
         }
 
         return [
-            'modelo' => self::MODELO,
+            'modelo' => $this->modelo(),
             'generado_en' => now()->toIso8601String(),
             'roles' => $roles,
             'platos' => $recomendaciones,
@@ -299,34 +359,9 @@ class RecomendadorService
         $user = "CARTA COMPLETA, con su categoría (elegí solo de acá):\n- ".$this->listar($catalogo)
             ."\n\nRECOMENDÁ PARA ESTOS PLATOS:\n- ".$this->listar($lote);
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$apiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(60)->post(config('services.openai.base_url', 'https://api.openai.com/v1').'/chat/completions', [
-                'model' => self::MODELO,
-                'messages' => [
-                    ['role' => 'system', 'content' => $system],
-                    ['role' => 'user', 'content' => $user],
-                ],
-                'temperature' => 0,
-                'response_format' => ['type' => 'json_object'],
-            ]);
+        $data = $this->pedirJson($system, $user, $apiKey);
 
-            if (! $response->successful()) {
-                Log::error('Recomendador: error OpenAI', ['status' => $response->status()]);
-
-                return [];
-            }
-
-            $data = json_decode($response->json('choices.0.message.content', '{}'), true);
-
-            return is_array($data['recomendaciones'] ?? null) ? $data['recomendaciones'] : [];
-        } catch (\Throwable $e) {
-            Log::error('Recomendador: excepción', ['msg' => $e->getMessage()]);
-
-            return [];
-        }
+        return is_array($data['recomendaciones'] ?? null) ? $data['recomendaciones'] : [];
     }
 
     /**
@@ -358,46 +393,23 @@ class RecomendadorService
             .'Respondé SOLO un JSON {"categorias":[{"nombre":"...","rol":"..."}]} '
             .'con TODAS las categorías recibidas, con el nombre EXACTO que recibiste.';
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$apiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(60)->post(config('services.openai.base_url', 'https://api.openai.com/v1').'/chat/completions', [
-                'model' => self::MODELO,
-                'messages' => [
-                    ['role' => 'system', 'content' => $system],
-                    ['role' => 'user', 'content' => '- '.$categorias->implode("\n- ")],
-                ],
-                'temperature' => 0,
-                'response_format' => ['type' => 'json_object'],
-            ]);
+        $data = $this->pedirJson($system, '- '.$categorias->implode("\n- "), $apiKey, 2000);
+        $roles = [];
 
-            if (! $response->successful()) {
-                return [];
+        foreach ((array) ($data['categorias'] ?? []) as $fila) {
+            $nombre = trim((string) ($fila['nombre'] ?? ''));
+            $rol = trim((string) ($fila['rol'] ?? ''));
+
+            // Minúsculas y sin acentos antes de comparar: el modelo contesta
+            // "Principal" y "guarnición", y con la lista cruda no entraba ninguna.
+            $rol = strtr(mb_strtolower($rol, 'UTF-8'), ['ó' => 'o', 'í' => 'i', 'á' => 'a', 'é' => 'e', 'ú' => 'u']);
+
+            if ($nombre !== '' && in_array($rol, ['principal', 'guarnicion', 'bebida', 'postre', 'otro'], true)) {
+                $roles[$nombre] = $rol;
             }
-
-            $data = json_decode($response->json('choices.0.message.content', '{}'), true);
-            $roles = [];
-
-            foreach ((array) ($data['categorias'] ?? []) as $fila) {
-                $nombre = trim((string) ($fila['nombre'] ?? ''));
-                $rol = trim((string) ($fila['rol'] ?? ''));
-
-                // Minúsculas y sin acentos antes de comparar: el modelo contesta
-                // "Principal" y "guarnición", y con la lista cruda no entraba ninguna.
-                $rol = strtr(mb_strtolower($rol, 'UTF-8'), ['ó' => 'o', 'í' => 'i', 'á' => 'a', 'é' => 'e', 'ú' => 'u']);
-
-                if ($nombre !== '' && in_array($rol, ['principal', 'guarnicion', 'bebida', 'postre', 'otro'], true)) {
-                    $roles[$nombre] = $rol;
-                }
-            }
-
-            return $roles;
-        } catch (\Throwable $e) {
-            Log::error('Recomendador: excepción clasificando categorías', ['msg' => $e->getMessage()]);
-
-            return [];
         }
+
+        return $roles;
     }
 
     /**
