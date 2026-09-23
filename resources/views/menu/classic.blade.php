@@ -146,6 +146,16 @@
             color: var(--accent-soft); white-space: nowrap;
         }
 
+        /* "Va bien con": sugerencia, no dato de la carta. Va en texto tenue y debajo del
+           precio, para que no compita con lo que el cliente vino a leer. */
+        .lista-plato-con {
+            margin: 5px 0 0; font-size: 12.5px; line-height: 1.4;
+            color: var(--text-dim);
+        }
+        /* El nombre del plato sugerido, en el color del local: es lo que el ojo tiene que
+           enganchar de esa línea. El resto queda de apoyo. */
+        .lista-plato-con b { font-weight: 600; color: var(--accent-soft); }
+
         /* La foto: cuadrada, a la derecha y con el fondo puesto de antemano, así el
            lazy-load no hace saltar la fila cuando termina de cargar. */
         .lista-plato-foto {
@@ -306,6 +316,26 @@
                                         @endif
                                         @if(!empty($plato['precio']))
                                             <p class="lista-plato-precio">{{ $plato['precio'] }}</p>
+                                        @endif
+
+                                        {{-- "Va bien con": lo único que el menú clásico tiene para
+                                             sugerir algo más, porque acá no hay asistente. Las duplas
+                                             se calcularon al procesar la carta (RecomendadorService),
+                                             así que mostrarlas no cuesta ni una llamada ni un token. --}}
+                                        @php $sugerido = $recomendaciones[$plato['nombre']] ?? ['con' => [], 'parecidos' => []]; @endphp
+                                        @if(!empty($sugerido['con']))
+                                            <p class="lista-plato-con">
+                                                {{ __('Va bien con') }}:
+                                                <b>{{ implode(' · ', $sugerido['con']) }}</b>
+                                            </p>
+                                        @endif
+                                        @if(!empty($sugerido['parecidos']))
+                                            {{-- Alternativas, no acompañamientos: el que duda entre seis
+                                                 hamburguesas se lleva una sola. Van con otro título
+                                                 porque bajo "Va bien con" se leerían como "pedite dos". --}}
+                                            <p class="lista-plato-con">
+                                                {{ __('Parecidos') }}: {{ implode(' · ', $sugerido['parecidos']) }}
+                                            </p>
                                         @endif
                                     </div>
 

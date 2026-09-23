@@ -271,6 +271,20 @@ class ChatbotService
         return ! empty($this->platosQueCoinciden($comercio, $texto, 1));
     }
 
+    /**
+     * La misma búsqueda que se le sirve al modelo, para quien NO lo usa.
+     *
+     * La usa `RecomendadorService` para contestar sin IA: plurales, acentos, jerga y
+     * categorías ya están resueltos acá, y duplicar esa lógica en otro lado seria
+     * garantizar que las dos se separen con el primer arreglo.
+     *
+     * @return array<int, array{nombre:string, precio:string}>
+     */
+    public function buscarEnElMenu(Comercio $comercio, string $texto, int $max = 5): array
+    {
+        return $this->platosQueCoinciden($comercio, $texto, $max);
+    }
+
     private function platosQueCoinciden(Comercio $comercio, string $mensaje, int $max = 5): array
     {
         $normalizar = function (string $t): string {

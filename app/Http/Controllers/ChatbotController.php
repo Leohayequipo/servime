@@ -6,6 +6,7 @@ use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Mesa;
 use App\Services\ChatbotService;
+use App\Services\RecomendadorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,9 +14,31 @@ class ChatbotController extends Controller
 {
     private $chatbotService;
 
-    public function __construct(ChatbotService $chatbotService)
+    public function __construct(ChatbotService $chatbotService, private RecomendadorService $recomendador)
     {
         $this->chatbotService = $chatbotService;
+    }
+
+    /**
+     * Qué contesta el menú cuando no hay IA: cuota agotada o asistente apagado.
+     *
+     * Antes era un cartel fijo ("por el momento no está disponible") que dejaba al cliente
+     * con el menú en la mano y sin ayuda. Ahora busca en la carta y suma las duplas que ya
+     * están calculadas, así que sigue recomendando y sumando al pedido sin gastar un token.
+     * Si la carta no tiene recomendaciones, igual contesta con lo que encontró.
+     *
+     * @return array{texto:string, platos:array<int, array>}
+     */
+    private function respuestaSinIA(Comercio $comercio, string $mensaje): array
+    {
+        $respuesta = $this->recomendador->responder($comercio, $mensaje);
+
+        if (empty($respuesta['platos'])) {
+            $respuesta['texto'] = 'Por el momento el asistente no está disponible. '
+                .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
+        }
+
+        return $respuesta;
     }
 
     /**
@@ -45,20 +68,17 @@ class ChatbotController extends Controller
             // Obtener session_id persistente ANTES de procesar
             $sessionId = $this->getSessionId($request, $comercio);
 
-            // Verificar si las respuestas con IA están habilitadas
-            if (! $comercio->enable_ai_responses) {
-                throw new \Exception('Respuestas con IA deshabilitadas');
-            }
-
-            // Verificar cuota mensual de IA según el plan del comercio
-            if (! $comercio->puedeUsarIA()) {
-                $limitResponse = 'Por el momento el asistente no está disponible. '
-                    .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
+            // Sin IA —apagada o sin cuota— contesta el recomendador. Las dos condiciones
+            // van juntas y acá, igual que en el stream: la IA deshabilitada tiraba una
+            // excepción y terminaba en el texto genérico de respaldo, que no mira la carta.
+            if (! $comercio->enable_ai_responses || ! $comercio->puedeUsarIA()) {
+                $sinIA = $this->respuestaSinIA($comercio, $message);
                 $responseTime = round((microtime(true) - $startTime) * 1000);
-                $this->logConversation($comercio, $message, $limitResponse, false, $responseTime, $request, $sessionId, $modoRespuesta);
+                $this->logConversation($comercio, $message, $sinIA['texto'], false, $responseTime, $request, $sessionId, $modoRespuesta, count($sinIA['platos']), null, array_column($sinIA['platos'], 'nombre'));
 
                 return response()->json([
-                    'response' => $limitResponse,
+                    'response' => $sinIA['texto'],
+                    'platos' => $sinIA['platos'],
                     'timestamp' => now(),
                     'success' => true,
                 ]);
@@ -185,11 +205,10 @@ class ChatbotController extends Controller
 
             // Chequeos que no se pueden "streamear": IA deshabilitada o sin cuota
             if (! $comercio->enable_ai_responses || ! $comercio->puedeUsarIA()) {
-                $limit = 'Por el momento el asistente no está disponible. '
-                    .'Podés ver el menú completo en esta misma página. ¡Gracias por tu paciencia!';
-                $emit(['type' => 'delta', 'content' => $limit]);
-                $emit(['type' => 'done', 'platos' => []]);
-                $this->logConversation($comercio, $message, $limit, false, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta);
+                $sinIA = $this->respuestaSinIA($comercio, $message);
+                $emit(['type' => 'delta', 'content' => $sinIA['texto']]);
+                $emit(['type' => 'done', 'platos' => $sinIA['platos']]);
+                $this->logConversation($comercio, $message, $sinIA['texto'], false, (int) round((microtime(true) - $startTime) * 1000), $request, $sessionId, $modoRespuesta, count($sinIA['platos']), null, array_column($sinIA['platos'], 'nombre'));
 
                 return;
             }

@@ -40,6 +40,11 @@ class ProcessMenuJob implements ShouldQueue
         // puede tardar o irse a spam, y el aviso lo espera adentro igual.
         $user?->notify(new MenuListo($this->menu));
 
+        // Las duplas de la carta ("el pancho va bien con la coca") se calculan una sola vez,
+        // acá, y no en cada consulta del cliente. Va en su propio job: si falla, el menú ya
+        // está listo igual y se puede reintentar solo.
+        GenerarRecomendacionesJob::dispatch($this->menu);
+
         // Y si la IA no pudo leer algunos precios, decirle cuántos: "revisalo antes de
         // activarlo" no señala nada, y así sabe qué mirar.
         $sinPrecio = $this->menu->platosSinPrecio();

@@ -6,6 +6,7 @@ use App\Models\Comercio;
 use App\Models\Mesa;
 use App\Services\ChatbotService;
 use App\Services\MenuTranslatorService;
+use App\Services\RecomendadorService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -129,8 +130,14 @@ class PublicMenuController extends Controller
                 ->groupBy(fn ($p) => $p['categoria'] ?: 'Otros')
             : collect();
 
+        // "Va bien con": duplas ya calculadas al procesar la carta, no en cada visita.
+        // Es lo único que el menú clásico tiene para vender algo más: acá no hay asistente.
+        $recomendaciones = $vista === Comercio::VISTA_LISTA
+            ? app(RecomendadorService::class)->mapaParaMenu($comercio)
+            : [];
+
         return view('menu.classic', compact(
-            'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria'
+            'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria', 'recomendaciones'
         ));
     }
 }
