@@ -138,6 +138,42 @@ class RecomendacionesTest extends TestCase
         $this->assertSame(['Pancho', 'Coca 500'], array_column($respuesta['platos'], 'nombre'));
     }
 
+    /**
+     * Los cuatro casos que fallaron probando el menú sin asistente contra una carta real.
+     * Con el modelo encendido ninguno se notaba: él tiene la carta entera delante.
+     */
+    public function test_encuentra_aunque_escriban_mal_cortado_o_en_ingles(): void
+    {
+        $comercio = $this->comercioConCarta();
+        $recomendador = app(RecomendadorService::class);
+
+        foreach (['tienen panchos?', 'pancho', 'panchos', 'panch'] as $consulta) {
+            $this->assertSame(
+                'Pancho',
+                $recomendador->responder($comercio, $consulta)['platos'][0]['nombre'] ?? null,
+                "No encontró el pancho con: {$consulta}"
+            );
+        }
+
+        // Una letra de más o de menos (el tipeo en un celular, en una mesa)
+        $this->assertSame('Empanadas', $recomendador->responder($comercio, 'empandas')['platos'][0]['nombre']);
+
+        // Y el cliente que escribe en inglés
+        $this->assertSame('Papas fritas', $recomendador->responder($comercio, 'fries')['platos'][0]['nombre']);
+    }
+
+    public function test_un_saludo_no_es_una_busqueda_fallida(): void
+    {
+        $comercio = $this->comercioConCarta();
+
+        foreach (['Hola!', 'buenas', 'Buen día'] as $saludo) {
+            $respuesta = app(RecomendadorService::class)->responder($comercio, $saludo);
+
+            $this->assertStringNotContainsString('No encontré', $respuesta['texto'], "Contestó mal a: {$saludo}");
+            $this->assertNotEmpty($respuesta['platos']);
+        }
+    }
+
     public function test_si_no_encuentra_nada_ofrece_algo_igual(): void
     {
         $comercio = $this->comercioConCarta();

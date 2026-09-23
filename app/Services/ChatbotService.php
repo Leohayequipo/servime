@@ -220,6 +220,20 @@ class ChatbotService
         'gluten' => ['tacc'],
         'vegano' => ['vegano', 'veggie', 'veg'],
         'vegetariano' => ['vegetariano', 'veggie', 'veg'],
+
+        // Inglés: el menú está en castellano, pero el cliente extranjero escribe en el
+        // suyo. Con el asistente encendido el modelo lo resuelve; cuando contesta el
+        // buscador solo (plan sin IA), sin esto no encuentra nada.
+        'burger' => ['hamburguesa'],
+        'fries' => ['papas'],
+        'coffee' => ['cafe'],
+        'beer' => ['cerveza'],
+        'water' => ['agua'],
+        'juice' => ['jugo', 'exprimido'],
+        'salad' => ['ensalada'],
+        'chicken' => ['pollo'],
+        'dessert' => ['postre', 'torta'],
+        'breakfast' => ['desayuno'],
     ];
 
     /**
@@ -311,10 +325,45 @@ class ChatbotService
 
         // Se busca en el nombre y también en el de la categoría: el cliente pide "cerveza"
         // y el plato se llama "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
-        $enPalabras = function (string $texto) use ($normalizar, $raiz): string {
+        $enPalabras = function (string $texto) use ($normalizar, $raiz): array {
             $tokens = preg_split('/\s+/', $normalizar($texto), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
-            return ' '.implode(' ', array_map($raiz, $tokens)).' ';
+            return array_map($raiz, $tokens);
+        };
+
+        /**
+         * ¿Alguna palabra del plato coincide con la que buscó el cliente?
+         *
+         * Además de la palabra completa se aceptan dos cosas, que aparecieron probando el
+         * buscador sin asistente: el ARRANQUE de una palabra ("hamburg" → hamburguesa,
+         * porque la gente escribe hasta que aparece el resultado) y UN ERROR DE TIPEO
+         * ("hamburgesas" → hamburguesa). Con el modelo encendido esto no hacía falta: él
+         * tiene la carta entera delante y resuelve el tipeo solo.
+         *
+         * La tolerancia depende del largo. En palabras cortas una letra ya es otra palabra
+         * ("coca" y "boca"), así que abajo de 5 letras se exige exacto.
+         */
+        $coincide = function (string $buscada, array $tokens): bool {
+            $largo = mb_strlen($buscada);
+            $tolerancia = $largo >= 8 ? 2 : ($largo >= 5 ? 1 : 0);
+
+            foreach ($tokens as $token) {
+                if ($token === $buscada) {
+                    return true;
+                }
+
+                if ($largo >= 4 && str_starts_with($token, $buscada)) {
+                    return true;
+                }
+
+                if ($tolerancia > 0
+                    && abs(mb_strlen($token) - $largo) <= $tolerancia
+                    && levenshtein($token, $buscada) <= $tolerancia) {
+                    return true;
+                }
+            }
+
+            return false;
         };
 
         // Se separan los dos tipos de coincidencia porque no valen lo mismo: preguntando
@@ -329,11 +378,11 @@ class ChatbotService
             $fila = ['nombre' => $plato['nombre'], 'precio' => $plato['precio']];
 
             foreach ($buscadas as $b) {
-                if (str_contains($nombre, ' '.$b.' ')) {
+                if ($coincide($b, $nombre)) {
                     $porNombre[] = $fila;
                     break;
                 }
-                if (str_contains($categoria, ' '.$b.' ')) {
+                if ($coincide($b, $categoria)) {
                     $porCategoria[] = $fila;
                     break;
                 }

@@ -196,6 +196,16 @@ class RecomendadorService
      */
     public function responder(Comercio $comercio, string $mensaje): array
     {
+        // Un "hola" no es un plato, y contestarle "no encontré eso en la carta" es la
+        // primera impresión del menú. Va antes que la búsqueda porque "buenas" y "hola"
+        // no tienen por qué coincidir con nada.
+        if ($this->esSaludo($mensaje)) {
+            return [
+                'texto' => __('¡Hola! Mirá la carta acá abajo o escribí lo que estás buscando.'),
+                'platos' => $this->masPedidos($comercio),
+            ];
+        }
+
         $encontrados = $this->chatbot->buscarEnElMenu($comercio, $mensaje, 3);
 
         if (empty($encontrados)) {
@@ -493,6 +503,22 @@ class RecomendadorService
         }
 
         return $validas;
+    }
+
+    /**
+     * ¿El mensaje es un saludo y nada más?
+     *
+     * Con "hola, tienen hamburguesas?" NO alcanza con que empiece con hola: ahí lo que
+     * importa es la pregunta, así que sólo se toma como saludo el mensaje corto que no
+     * trae nada más.
+     */
+    private function esSaludo(string $mensaje): bool
+    {
+        $texto = trim(strtr(mb_strtolower($mensaje, 'UTF-8'), ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', '¡' => '', '!' => '', '.' => '', ',' => '']));
+
+        $saludos = ['hola', 'holis', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches', 'hey', 'que tal', 'hello', 'hi'];
+
+        return in_array($texto, $saludos, true);
     }
 
     /**
