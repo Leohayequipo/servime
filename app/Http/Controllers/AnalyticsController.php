@@ -8,6 +8,7 @@ use App\Models\Comanda;
 use App\Models\Comercio;
 use App\Models\IntentClassificationRun;
 use App\Models\Menu;
+use App\Models\Plan;
 use App\Models\SiteVisit;
 use App\Models\TrackingEvent;
 use App\Services\AnalyticsInsightsService;
@@ -32,66 +33,60 @@ class AnalyticsController extends Controller
     private const GAP_VISITA_MINUTOS = 30;
 
     /**
-     * Dashboard principal de analytics
+     * Resumen de todos los comercios. Sólo del super admin.
      */
     public function dashboard(Request $request)
     {
         $user = auth()->user();
-        $esAdmin = $user->isSuperAdmin();
 
-        // Scope: super admin ve todo; el comercio común solo lo suyo (evita fuga de datos)
-        $comercios = Comercio::withCount(['menus', 'chatConversations'])
-            ->when(! $esAdmin, fn ($q) => $q->where('user_id', $user->id))
-            ->get();
+        // El comercio elige cuál mirar desde el desplegable de Analytics del nav, como en
+        // Menús. El resumen le mostraba "2 comercios" y "Uso de IA", y su tabla sólo servía
+        // para elegir uno. Si igual llega acá (la tarjeta del dashboard, un link guardado),
+        // va a su primer comercio con analytics; si ninguno lo tiene, ese panel le explica
+        // qué plan le falta.
+        if (! $user->isSuperAdmin()) {
+            $comercios = $user->comercios()->with('plan')->get();
+            $destino = $comercios->first(fn ($c) => $c->tieneFeature('analytics')) ?? $comercios->first();
 
-        // Usuario común necesita la feature 'analytics' en alguno de sus comercios
-        if (! $esAdmin && ! $comercios->contains(fn ($c) => $c->tieneFeature('analytics'))) {
-            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+            return $destino
+                ? redirect()->route('analytics.comercio', $destino)
+                : redirect()->route('comercios.index');
         }
 
-        $comercioIds = $comercios->pluck('id');
-        $conv = ChatConversation::query()
-            ->when(! $esAdmin, fn ($q) => $q->whereIn('comercio_id', $comercioIds));
+        $comercios = Comercio::withCount(['menus', 'chatConversations'])->get();
 
         $stats = [
             'total_comercios' => $comercios->count(),
-            'total_menus' => $esAdmin ? Menu::count() : Menu::whereIn('comercio_id', $comercioIds)->count(),
-            'total_conversations' => (clone $conv)->count(),
-            'conversations_today' => (clone $conv)->whereDate('created_at', today())->count(),
-            'openai_usage' => (clone $conv)->usedOpenAI()->count(),
-            'fallback_usage' => (clone $conv)->where('used_openai', false)->count(),
+            'total_menus' => Menu::count(),
+            'total_conversations' => ChatConversation::count(),
+            'conversations_today' => ChatConversation::whereDate('created_at', today())->count(),
+            'openai_usage' => ChatConversation::usedOpenAI()->count(),
+            'fallback_usage' => ChatConversation::where('used_openai', false)->count(),
         ];
 
-        // Seguimiento de uso de la clasificación con IA (solo super admin)
-        $iaRuns = $esAdmin
-            ? IntentClassificationRun::with('comercio')->latest()->take(20)->get()
-            : collect();
-        $iaRunsMensajes = $esAdmin ? (int) IntentClassificationRun::sum('mensajes_procesados') : 0;
+        // Seguimiento de uso de la clasificación con IA
+        $iaRuns = IntentClassificationRun::with('comercio')->latest()->take(20)->get();
+        $iaRunsMensajes = (int) IntentClassificationRun::sum('mensajes_procesados');
 
-        // Analytics de la web pública: de dónde entran a la landing. Solo super admin:
-        // es tráfico del sitio de ServiME, no de los comercios.
-        $web = null;
-        $webVisitas = null;
+        // Analytics de la web pública: de dónde entran a la landing. Es tráfico del sitio
+        // de ServiME, no de los comercios.
+        $dias = (int) $request->input('dias', 30);
+        $dias = in_array($dias, [7, 30, 90, 365], true) ? $dias : 30;
 
-        if ($esAdmin) {
-            $dias = (int) $request->input('dias', 30);
-            $dias = in_array($dias, [7, 30, 90, 365], true) ? $dias : 30;
+        // Por defecto solo personas. ?bots=1 muestra también lo que no confirmó por JS.
+        $incluirBots = $request->boolean('bots');
 
-            // Por defecto solo personas. ?bots=1 muestra también lo que no confirmó por JS.
-            $incluirBots = $request->boolean('bots');
-
-            $web = SiteVisit::resumen($dias, $incluirBots);
-            $webVisitas = SiteVisit::where('created_at', '>=', now()->subDays($dias))
-                ->when(! $incluirBots, fn ($q) => $q->humanas())
-                ->latest()
-                ->paginate(25)
-                ->withQueryString();
-        }
+        $web = SiteVisit::resumen($dias, $incluirBots);
+        $webVisitas = SiteVisit::where('created_at', '>=', now()->subDays($dias))
+            ->when(! $incluirBots, fn ($q) => $q->humanas())
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
 
         // Atajos más usados de TODOS los comercios: sirve para descubrir qué redacciones
         // funcionan en general y llevarlas al default automático. El comercio ve los suyos
         // en su propio panel; acá interesa el agregado.
-        $chipsGlobales = $esAdmin ? $this->getChipStatsGlobales() : [];
+        $chipsGlobales = $this->getChipStatsGlobales();
 
         return view('analytics.dashboard', compact(
             'comercios', 'stats', 'iaRuns', 'iaRunsMensajes', 'web', 'webVisitas', 'chipsGlobales'
@@ -108,7 +103,7 @@ class AnalyticsController extends Controller
         }
 
         if (! auth()->user()->isSuperAdmin() && ! $comercio->tieneFeature('analytics')) {
-            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+            return $this->sinPlan($comercio);
         }
 
         $comercioId = $comercio->id;
@@ -473,6 +468,25 @@ class AnalyticsController extends Controller
     /**
      * Dispara la reclasificación de intención con IA (Premium, gateado en la ruta).
      */
+    /**
+     * Lo que ve el comercio que entra a analytics sin tenerlo en su plan.
+     *
+     * Antes era un 403 pelado con "a partir del plan Pro" escrito a mano. El plan que
+     * lo incluye se busca en la base (se editan desde /admin/plans) y se ofrece el
+     * contacto, porque el cambio de plan lo hace el super admin: sin eso el cliente
+     * leía "mejorá tu plan" y no tenía dónde hacerlo. Sigue siendo 403.
+     */
+    private function sinPlan(Comercio $comercio)
+    {
+        return response()->view('analytics.sin-plan', [
+            'comercio' => $comercio,
+            'planActual' => $comercio->planEfectivo(),
+            'planNecesario' => Plan::primeroConFeature('analytics'),
+            'soporteWhatsapp' => config('services.support.whatsapp'),
+            'soporteEmail' => config('services.support.email'),
+        ], 403);
+    }
+
     public function reclassifyIntents(Comercio $comercio)
     {
         if (! auth()->user()->isSuperAdmin() && $comercio->user_id !== auth()->id()) {
@@ -998,7 +1012,7 @@ class AnalyticsController extends Controller
         }
 
         if (! auth()->user()->isSuperAdmin() && ! $comercio->tieneFeature('analytics')) {
-            abort(403, 'Las analíticas están disponibles a partir del plan Pro.');
+            return $this->sinPlan($comercio);
         }
 
         $conversations = ChatConversation::forComercio($comercio->id)

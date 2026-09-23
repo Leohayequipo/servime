@@ -57,6 +57,34 @@ class User extends Authenticatable
     }
 
     /**
+     * Cómo se presenta el comercio cuando nos escribe por WhatsApp o por mail.
+     *
+     * Los pedidos llegaban como "quiero pasar al plan Pro" desde un número desconocido:
+     * sin el nombre, el mail y el comercio no había forma de saber qué cuenta tocar. Va el
+     * plan actual también, que es lo primero que habría que ir a buscar al panel.
+     *
+     * @param  Comercio|null  $comercio  el del pedido; si no, se nombran todos los suyos
+     */
+    public function presentacionParaSoporte(?Comercio $comercio = null): string
+    {
+        $quien = "soy {$this->name} ({$this->email})";
+
+        $comercios = $comercio ? collect([$comercio]) : $this->comercios;
+
+        if ($comercios->isEmpty()) {
+            return $quien;
+        }
+
+        $nombres = $comercios
+            ->map(fn (Comercio $c) => $c->nombre.($c->planEfectivo() ? " (plan {$c->planEfectivo()->nombre})" : ''))
+            ->join(', ', ' y ');
+
+        return $comercios->count() === 1
+            ? "{$quien}, de {$nombres}"
+            : "{$quien}. Mis comercios: {$nombres}";
+    }
+
+    /**
      * Send the password reset notification.
      */
     public function sendPasswordResetNotification($token)

@@ -103,6 +103,23 @@ class Plan extends Model
     }
 
     /**
+     * El primer plan que incluye la feature, en el orden en que se venden.
+     *
+     * Para decirle a un comercio a qué plan pasar sin escribir "Pro" a mano: los planes
+     * se editan desde /admin/plans, y un nombre fijo en el código queda mintiendo el día
+     * que se renombra un plan o se mueve una feature de uno a otro. Deja afuera los
+     * inactivos y el de demo (`orden = 0`), igual que la sección de precios de la landing.
+     */
+    public static function primeroConFeature(string $feature): ?self
+    {
+        return static::where('activo', true)
+            ->where('orden', '>', 0)
+            ->orderBy('orden')
+            ->get()
+            ->first(fn (self $plan) => $plan->tieneFeature($feature));
+    }
+
+    /**
      * ¿La cuota de mensajes IA es ilimitada?
      */
     public function esIlimitado(): bool

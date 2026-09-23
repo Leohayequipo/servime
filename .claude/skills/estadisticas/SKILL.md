@@ -43,8 +43,19 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
 
 ## Panel (`AnalyticsController`, rutas `analytics.*`, gateadas por feature `analytics`)
 
-- `dashboard()` — overview. **Scopeado**: super admin ve todo; el comercio común solo lo suyo
-  (antes había fuga de datos). Usuario común necesita la feature `analytics`.
+- `dashboard()` — resumen de todos los comercios, **sólo del super admin**. El comercio no lo
+  ve: le mostraba "2 comercios" y "Uso de IA", y su tabla sólo servía para elegir uno. Si entra
+  igual (la tarjeta del dashboard, un link guardado) va a su primer comercio con analytics.
+- **El comercio elige desde el nav**: "Analytics" es un desplegable con sus comercios cuando
+  tiene más de uno (mismo patrón que "Menús", sub-ítems en mobile) y un link directo cuando
+  tiene uno. Se listan **todos**, también los que no tienen la feature. Por eso el panel sólo
+  muestra "← Dashboard" al super admin.
+- **Sin la feature no hay 403 pelado:** `sinPlan()` muestra `analytics/sin-plan` (sigue siendo
+  403) con el plan actual, el primero que incluye analytics (`Plan::primeroConFeature()`, de la
+  base: **nunca escribir "Pro" a mano**, los planes se renombran desde `/admin/plans`) y el
+  contacto de soporte, porque el cambio de plan lo hace el super admin.
+- ⚠️ En los tests del nav, crear el usuario con `['role' => 'user']`: la factory no setea el rol
+  y sin él `misComercios()` devuelve vacío, así que el nav no lista nada.
 - `comercio(Comercio $comercio)` — detalle por comercio (binding por **slug**; antes hacía
   `findOrFail($slug)` → 404, ya arreglado). Ownership + feature `analytics`.
 - `exportConversations(Comercio $comercio)` — CSV.

@@ -83,6 +83,114 @@ class AnalyticsTrackingTest extends TestCase
         $this->actingAs($user)->get(route('analytics.comercio', $comercio))->assertForbidden();
     }
 
+    public function test_sin_la_feature_le_dice_que_plan_la_incluye_y_como_pedirlo(): void
+    {
+        config(['services.support.whatsapp' => '5491100000000']);
+
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'plan_id' => Plan::where('key', 'basico')->value('id'),
+        ]);
+
+        // El nombre sale de la base: si el super admin renombra el plan, el mensaje lo sigue.
+        Plan::where('key', 'pro')->update(['nombre' => 'Profesional']);
+        $basico = Plan::where('key', 'basico')->value('nombre');
+
+        $this->actingAs($user)->get(route('analytics.comercio', $comercio))
+            ->assertForbidden()
+            ->assertSee("<strong class=\"text-text-primary\">{$basico}</strong>", false)
+            ->assertSee('<strong class="text-text-primary">Profesional</strong>', false)
+            ->assertSee('wa.me/5491100000000');
+
+        // Exportar tampoco devuelve un 403 pelado
+        $this->get(route('analytics.export', $comercio))
+            ->assertForbidden()
+            ->assertSee('Profesional');
+    }
+
+    public function test_si_ningun_plan_tiene_analytics_no_nombra_ninguno(): void
+    {
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'plan_id' => Plan::where('key', 'basico')->value('id'),
+        ]);
+
+        Plan::query()->update(['features' => json_encode([])]);
+
+        $this->actingAs($user)->get(route('analytics.comercio', $comercio))
+            ->assertForbidden()
+            ->assertSee('no las incluye')
+            ->assertDontSee('necesitás el plan');
+    }
+
+    public function test_con_un_solo_comercio_va_directo_a_su_panel(): void
+    {
+        $user = User::factory()->create();
+        $comercio = Comercio::factory()->for($user)->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $this->actingAs($user)->get(route('analytics.dashboard'))
+            ->assertRedirect(route('analytics.comercio', $comercio));
+
+        // Y el panel no ofrece volver a un resumen que lo mandaría de nuevo acá
+        $this->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->assertDontSee('← Dashboard');
+    }
+
+    public function test_con_varios_comercios_elige_desde_el_nav_y_no_ve_el_resumen(): void
+    {
+        // El rol explícito, como en NavMenusTest: la factory no lo setea y sin él el nav
+        // no lista los comercios del usuario (misComercios() pide isRegularUser()).
+        $user = User::factory()->create(['role' => 'user']);
+        // El Básico primero: el resumen tiene que saltearlo e ir al que sí tiene analytics.
+        $basico = Comercio::factory()->for($user)->create([
+            'nombre' => 'Sucursal Norte',
+            'plan_id' => Plan::where('key', 'basico')->value('id'),
+        ]);
+        $pro = Comercio::factory()->for($user)->create([
+            'nombre' => 'Sucursal Centro',
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $this->actingAs($user)->get(route('analytics.dashboard'))
+            ->assertRedirect(route('analytics.comercio', $pro));
+
+        // El desplegable lista los dos, también el que no tiene analytics (al entrar le
+        // dice qué plan le falta), y no hay link al resumen.
+        $this->get(route('analytics.comercio', $pro))
+            ->assertOk()
+            ->assertSee(route('analytics.comercio', $basico))
+            ->assertDontSee(route('analytics.dashboard'))
+            ->assertDontSee('← Dashboard');
+    }
+
+    public function test_sin_comercios_el_resumen_lo_manda_a_crear_uno(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('analytics.dashboard'))
+            ->assertRedirect(route('comercios.index'));
+    }
+
+    public function test_el_super_admin_sigue_teniendo_el_resumen_y_el_boton_para_volver(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'nombre' => 'Sucursal Sur',
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $this->actingAs($admin)->get(route('analytics.dashboard'))
+            ->assertOk()
+            ->assertSee('Sucursal Sur');
+
+        $this->get(route('analytics.comercio', $comercio))
+            ->assertOk()
+            ->assertSee('← Dashboard');
+    }
+
     public function test_no_ve_analytics_de_un_comercio_ajeno(): void
     {
         $user = User::factory()->create();

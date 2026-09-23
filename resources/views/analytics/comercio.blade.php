@@ -19,12 +19,17 @@
                     </div>
                 </div>
                 <div class="flex space-x-2">
-                    <a href="{{ route('analytics.dashboard') }}"
-                       class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg border border-accent-gray">
-                        ← Dashboard
-                    </a>
+                    {{-- El resumen es sólo del super admin: el comercio cambia de comercio
+                         desde el desplegable de Analytics del nav. --}}
+                    @if(auth()->user()->isSuperAdmin())
+                        <a href="{{ route('analytics.dashboard') }}"
+                           class="bg-secondary-dark hover:bg-accent-gray text-text-primary font-medium py-2 px-4 rounded-lg border border-accent-gray">
+                            ← Dashboard
+                        </a>
+                    @endif
+                    {{-- Texto en crema: en tinta sobre el verde no se leía. --}}
                     <a href="{{ route('analytics.export', $comercio) }}"
-                       class="bg-accent-green hover:opacity-90 text-text-primary font-semibold py-2 px-4 rounded-lg inline-flex items-center gap-2">
+                       class="bg-accent-green hover:opacity-90 text-background font-semibold py-2 px-4 rounded-lg inline-flex items-center gap-2">
                         <x-icono name="download" class="w-4 h-4 flex-none" />
                         Exportar
                     </a>
