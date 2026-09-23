@@ -281,9 +281,13 @@ class RecomendacionesTest extends TestCase
             'pancho' => ['con' => ['Coca 500', 'Papas fritas'], 'parecidos' => ['Empanadas'], 'motivo' => 'El combo de siempre'],
         ]]]);
 
+        // Los acompañamientos van como chips tocables en la fila; los parecidos viajan en
+        // el plato y se muestran recién al abrirlo, para no llenar la lista de texto.
         $this->get(route('menu.classic', $comercio))
             ->assertOk()
-            ->assertSee('Va bien con')
-            ->assertSee('Coca 500 · Papas fritas');
+            ->assertSee('data-con="Coca 500|Papas fritas"', false)
+            ->assertSee('data-parecidos="Empanadas"', false)
+            ->assertSee("verPlato('Coca 500')", false)
+            ->assertSee('Va bien con');
     }
 }
