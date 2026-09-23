@@ -148,18 +148,61 @@
                                     </a>
                                 @endif
                                 
-                                {{-- Analytics: super admin siempre; comercio con la feature 'analytics' --}}
-                                @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                                {{-- Analytics: el super admin va a su resumen de todos los comercios.
+                                     El comercio lo ve si alguno de los suyos tiene la feature, y con
+                                     varios elige desde el desplegable, igual que en Menús. Se listan
+                                     TODOS, también los que no tienen analytics: al entrar, el panel
+                                     le dice qué plan le falta. --}}
+                                @if(Auth::user()->isSuperAdmin())
                                     <a href="{{ route('analytics.dashboard') }}"
                                        class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : 'hover:text-accent-deep' }}">
                                         Analytics
                                     </a>
+                                @elseif($misComercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                                    @if($misComercios->count() > 1)
+                                        <div class="relative group">
+                                            <button type="button"
+                                                    class="nav-link inline-flex items-center gap-1 {{ request()->routeIs('analytics.*') ? 'active' : 'hover:text-accent-deep' }}">
+                                                Analytics
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <div class="absolute left-0 top-full pt-2 w-60 opacity-0 invisible
+                                                        group-hover:opacity-100 group-hover:visible
+                                                        group-focus-within:opacity-100 group-focus-within:visible
+                                                        transition-all duration-200 z-50">
+                                                <div class="bg-secondary-dark border border-accent-gray rounded-xl shadow-lg py-2">
+                                                    @foreach($misComercios as $comercioNav)
+                                                        <a href="{{ route('analytics.comercio', $comercioNav) }}"
+                                                           class="block px-4 py-2.5 text-sm truncate transition-colors
+                                                                  {{ request()->routeIs('analytics.*') && request()->route('comercio')?->is($comercioNav)
+                                                                     ? 'text-accent-deep bg-primary-dark'
+                                                                     : 'text-text-primary hover:text-accent-deep hover:bg-primary-dark' }}">
+                                                            {{ $comercioNav->nombre }}
+                                                        </a>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <a href="{{ route('analytics.comercio', $misComercios->first()) }}"
+                                           class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : 'hover:text-accent-deep' }}">
+                                            Analytics
+                                        </a>
+                                    @endif
                                 @endif
                             </div>
                         </div>
                     </div>
                     
                     <div class="flex items-center">
+                        {{-- Avisos: sólo para el comercio. Los del sistema (OpenAI caído, una
+                             cola trabada) son problema nuestro y no van acá. --}}
+                        @if(! Auth::user()->isSuperAdmin())
+                            <x-campanita />
+                        @endif
+
                         <!-- Hamburguesa (solo mobile) -->
                         <button type="button" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')"
                                 class="md:hidden mr-1 p-2 rounded-lg hover:text-accent-deep hover:bg-primary-dark transition-colors"
@@ -195,11 +238,21 @@
                                     <!-- Menu Items -->
                                     <div class="py-2">
                                         <!-- Perfil -->
-                                        <a href="{{ route('profile.edit') }}" 
+                                        <a href="{{ route('profile.edit') }}"
                                            class="flex items-center px-4 py-3 text-sm hover:text-accent-deep hover:bg-primary-dark transition-all duration-300">
                                             <span class="text-lg mr-3">👤</span>
                                             Perfil
                                         </a>
+
+                                        {{-- Mi plan: el comercio no tenía dónde ver qué tiene
+                                             contratado ni qué suma el plan siguiente. --}}
+                                        @if(! Auth::user()->isSuperAdmin())
+                                            <a href="{{ route('mi-plan') }}"
+                                               class="flex items-center px-4 py-3 text-sm hover:text-accent-deep hover:bg-primary-dark transition-all duration-300">
+                                                <span class="text-lg mr-3">⭐</span>
+                                                Mi plan
+                                            </a>
+                                        @endif
                                         
                                         <!-- Divider -->
                                         <div class="border-t border-accent-gray my-2"></div>
@@ -239,8 +292,18 @@
                     @elseif($misComercios->isNotEmpty())
                         <a href="{{ route('menus.index', $misComercios->first()) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('menus.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Menús</a>
                     @endif
-                    @if(Auth::user()->isSuperAdmin() || Auth::user()->comercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                    @if(Auth::user()->isSuperAdmin())
                         <a href="{{ route('analytics.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Analytics</a>
+                    @elseif($misComercios->contains(fn($c) => $c->tieneFeature('analytics')))
+                        @if($misComercios->count() > 1)
+                            <p class="px-3 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-text-secondary">Analytics</p>
+                            @foreach($misComercios as $comercioNav)
+                                <a href="{{ route('analytics.comercio', $comercioNav) }}"
+                                   class="block pl-6 pr-3 py-2 rounded-md text-base font-medium truncate {{ request()->routeIs('analytics.*') && request()->route('comercio')?->is($comercioNav) ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">{{ $comercioNav->nombre }}</a>
+                            @endforeach
+                        @else
+                            <a href="{{ route('analytics.comercio', $misComercios->first()) }}" class="block px-3 py-2 rounded-md text-base font-medium {{ request()->routeIs('analytics.*') ? 'text-accent-deep bg-primary-dark' : 'text-text-secondary' }} hover:bg-primary-dark">Analytics</a>
+                        @endif
                     @endif
 
                     <!-- Usuario (mobile, colapsable) -->
@@ -260,6 +323,9 @@
                     </button>
                     <div id="mobileUser" class="hidden pl-2">
                         <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-primary-dark">👤 Perfil</a>
+                        @if(! Auth::user()->isSuperAdmin())
+                            <a href="{{ route('mi-plan') }}" class="block px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:bg-primary-dark">⭐ Mi plan</a>
+                        @endif
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-danger hover:bg-danger/10">🚪 Cerrar sesión</button>
