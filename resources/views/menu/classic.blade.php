@@ -250,6 +250,10 @@
             width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
             border-radius: 18px 18px 0 0; display: block; background: var(--surface-2);
         }
+        /* Sin esto, el `display: block` de arriba le gana al atributo `hidden` y el plato
+           sin foto (o con la foto rota) mostraba el ícono de imagen partida. */
+        .plato-modal img[hidden] { display: none; }
+        .plato-modal img[hidden] + .plato-modal-texto { border-top: 1px solid var(--line-2); border-radius: 18px; }
         .plato-modal-texto {
             background: var(--surface); border: 1px solid var(--line-2); border-top: 0;
             border-radius: 0 0 18px 18px; padding: 18px 20px 22px;
@@ -494,7 +498,9 @@
     <dialog id="platoModal" class="plato-modal">
         <button type="button" class="plato-modal-cerrar" onclick="document.getElementById('platoModal').close()"
                 aria-label="{{ __('Cerrar') }}">×</button>
-        <img id="platoModalImg" src="" alt="">
+        {{-- onerror: una foto rota se ve peor que ninguna foto, y en el detalle ocupa media
+             pantalla. Mismo criterio que en la lista. --}}
+        <img id="platoModalImg" src="" alt="" onerror="this.hidden = true">
         <div class="plato-modal-texto">
             <h3 id="platoModalNombre"></h3>
             <p id="platoModalDesc"></p>
@@ -643,12 +649,26 @@
             });
         }
 
-        // Tocar una sugerencia busca ese plato en la carta: se reusa el buscador en vez de
-        // saltar con un ancla, así el cliente queda viendo ese plato y su contexto.
+        // Tocar una sugerencia ABRE ese plato, no filtra la carta.
+        //
+        // Filtrar era peor de lo que parecía: el cliente perdía el lugar donde estaba
+        // leyendo y no tenía cómo volver salvo borrar la búsqueda. El detalle se cierra y
+        // la carta sigue donde estaba, y desde un plato se puede seguir a otro y a otro,
+        // que es como se recorre una carta cuando uno está decidiendo.
         function verPlato(nombre) {
-            platoModal.close();
+            const fila = document.querySelector('.lista-plato[data-nombre="' + CSS.escape(nombre) + '"]');
+
+            if (fila) {
+                abrirPlato(fila);
+
+                return;
+            }
+
+            // El plato existe en las recomendaciones pero no en esta pantalla (otra vista
+            // del menú): antes que no hacer nada, buscarlo.
             const input = document.getElementById('buscadorCarta');
             if (!input) return;
+            platoModal.close();
             input.value = nombre;
             input.dispatchEvent(new Event('input'));
             input.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -674,7 +694,14 @@
             pintarSugerencias(document.getElementById('platoModalCon'), lista(btn.dataset.con));
             pintarSugerencias(document.getElementById('platoModalParecidos'), lista(btn.dataset.parecidos));
 
+            // Saltar de un plato a otro reusa el mismo diálogo: abrirlo estando abierto
+            // tira InvalidStateError, así que se cierra primero.
+            if (platoModal.open) {
+                platoModal.close();
+            }
+
             platoModal.showModal();
+            platoModal.scrollTop = 0;
 
             // Que el comercio pueda ver QUÉ plato miran de cerca: es la señal más
             // parecida a "esto me tentó" que da esta pantalla, donde no hay pedido.
