@@ -18,6 +18,11 @@
         return s;
     }
 
+    // El id del visitante, expuesto para el resto de la página (el buscador de la carta lo
+    // manda con cada consulta). Sale de acá y no se genera otro: es el mismo id con el que
+    // se correlacionan los eventos y las conversaciones en el panel.
+    window.smSessionId = sessionId;
+
     window.smTrack = function (event, data) {
         try {
             const body = JSON.stringify({ event: event, data: data || {}, session_id: sessionId() });

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- Lo pide el buscador de la carta, que postea al servidor. --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Carta de {{ $comercio->nombre }} — menú completo</title>
     <meta name="description" content="Menú completo de {{ $comercio->nombre }} con todos los platos y precios actualizados. Miralo desde el celular, sin descargar ninguna app.">
     <link rel="canonical" href="{{ route('menu.classic', $comercio->slug) }}">
@@ -146,6 +148,39 @@
             color: var(--accent-soft); white-space: nowrap;
         }
 
+        /* ── Buscador de la carta ──
+           Se presenta como BUSCADOR y no como un asistente a propósito: cuando un chat no
+           entiende, se siente roto; cuando un buscador no encuentra, es normal y el
+           cliente prueba otra palabra. Es el mismo motor de búsqueda atrás. */
+        .buscador-wrap { width: 100%; max-width: 768px; margin: 0 auto 18px; }
+        .buscador {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--surface); border: 1px solid var(--line-2);
+            border-radius: 14px; padding: 12px 14px;
+        }
+        .buscador svg { flex: none; color: var(--text-dim); }
+        .buscador input {
+            flex: 1; background: none; border: 0; outline: none;
+            color: var(--text); font-size: 16px; /* 16px o iOS hace zoom al tocar */
+        }
+        .buscador input::placeholder { color: var(--text-dim); }
+        .buscador-borrar {
+            flex: none; background: none; border: 0; cursor: pointer;
+            color: var(--text-dim); font-size: 20px; line-height: 1; padding: 0 2px;
+        }
+        /* Los atajos van DEBAJO del buscador y no adentro de un menú: son la forma
+           principal de moverse cuando no hay asistente, y lo que se esconde no existe. */
+        .chips-cat { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 2px; scrollbar-width: none; }
+        .chips-cat::-webkit-scrollbar { display: none; }
+        .chip-cat {
+            flex: none; cursor: pointer; white-space: nowrap;
+            background: var(--surface); border: 1px solid var(--line);
+            color: var(--text-dim); border-radius: 999px;
+            padding: 7px 14px; font-size: 13px;
+        }
+        .chip-cat.activo { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+        .buscador-estado { margin: 12px 2px 0; font-size: 13px; color: var(--text-dim); }
+
         /* "Va bien con": sugerencia, no dato de la carta. Va en texto tenue y debajo del
            precio, para que no compita con lo que el cliente vino a leer. */
         .lista-plato-con {
@@ -245,7 +280,10 @@
     @endif
 
     <div class="menu-container">
-        <!-- Botón flotante IA -->
+        {{-- Botón flotante IA. Sólo si el comercio TIENE el asistente: con la IA apagada
+             el chat igual contesta con el buscador, pero llamarlo "Explorar con IA" sería
+             mentirle al cliente. --}}
+        @if($comercio->enable_ai_responses)
         <a href="{{ route('menu.chat', $comercio) }}"
            style="position:fixed;bottom:24px;right:24px;z-index:50;
                   background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);
@@ -266,7 +304,8 @@
             </svg>
             Explorar con IA
         </a>
-        
+        @endif
+
         {{-- Con las dos formas disponibles, el cliente puede pasar de una a la otra. El
              comercio elige con cuál abre; esto es para el que quiere ver la otra. --}}
         {{-- Sólo si hay archivo: sin él, la lista es la única forma y no hay nada que alternar. --}}
@@ -292,9 +331,35 @@
             @if($vista === \App\Models\Comercio::VISTA_LISTA && $platosPorCategoria->isNotEmpty())
                 {{-- La carta en texto: se lee en el celular sin hacer zoom, que es lo que
                      no se puede hacer con un PDF diseñado para una hoja A4. --}}
+                {{-- Buscar y filtrar. La coincidencia la resuelve el servidor con la misma
+                     búsqueda que usa el asistente (sinónimos, plurales, errores de tipeo);
+                     acá sólo se esconde lo que no coincide, porque la carta entera ya está
+                     dibujada. Sin JavaScript, la lista se ve igual: esto sólo filtra. --}}
                 <div class="w-full max-w-3xl mx-auto animate-fade-in">
+                <div class="buscador-wrap">
+                    <div class="buscador">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/>
+                        </svg>
+                        <input type="search" id="buscadorCarta" autocomplete="off"
+                               placeholder="{{ __('Buscar en la carta') }}"
+                               aria-label="{{ __('Buscar en la carta') }}">
+                        <button type="button" class="buscador-borrar" id="buscadorBorrar" hidden
+                                aria-label="{{ __('Borrar') }}">&times;</button>
+                    </div>
+
+                    <div class="chips-cat" id="chipsCategorias">
+                        <button type="button" class="chip-cat activo" data-cat="">{{ __('Todo') }}</button>
+                        @foreach($platosPorCategoria as $categoria => $platos)
+                            <button type="button" class="chip-cat" data-cat="{{ $categoria }}">{{ $categoria }}</button>
+                        @endforeach
+                    </div>
+
+                    <p class="buscador-estado" id="buscadorEstado" hidden></p>
+                </div>
+
                     @foreach($platosPorCategoria as $categoria => $platos)
-                        <section class="lista-categoria">
+                        <section class="lista-categoria" data-categoria="{{ $categoria }}">
                             <h2 class="lista-categoria-titulo">{{ $categoria }}</h2>
 
                             {{-- La foto va a la DERECHA y el precio debajo del nombre, como en
@@ -303,7 +368,7 @@
                                  de texto de todos los demás y la lista quedaba en zigzag. Así,
                                  el que no tiene foto simplemente ocupa todo el ancho. --}}
                             @foreach($platos as $plato)
-                                <article class="lista-plato">
+                                <article class="lista-plato" data-nombre="{{ $plato['nombre'] }}">
                                     <div class="lista-plato-texto">
                                         <h3 class="lista-plato-nombre">
                                             {{ $plato['nombre'] }}
@@ -408,6 +473,117 @@
     </dialog>
 
     <script>
+        // ── Buscador de la carta ──
+        //
+        // Quién decide qué coincide es el SERVIDOR (/api/buscar), que usa la misma búsqueda
+        // que el asistente: sinónimos, plurales, errores de tipeo y el arranque de una
+        // palabra. Acá sólo se esconde lo que no vino en la respuesta. Escribir esa lógica
+        // otra vez en JavaScript sería tener dos búsquedas que se separan con el primer
+        // arreglo.
+        (function () {
+            const input = document.getElementById('buscadorCarta');
+            if (!input) return;   // vista archivo: no hay lista que filtrar
+
+            const borrar = document.getElementById('buscadorBorrar');
+            const estado = document.getElementById('buscadorEstado');
+            const chips = document.querySelectorAll('.chip-cat');
+            const secciones = document.querySelectorAll('.lista-categoria');
+            const platos = document.querySelectorAll('.lista-plato');
+
+            const mostrarTodo = () => {
+                platos.forEach(p => p.style.display = '');
+                secciones.forEach(s => s.style.display = '');
+            };
+
+            // Filtrar por categoría es instantáneo y no necesita al servidor: la carta
+            // entera ya está en la página.
+            const filtrarCategoria = (cat) => {
+                input.value = '';
+                borrar.hidden = true;
+                estado.hidden = true;
+                mostrarTodo();
+                if (!cat) return;
+                secciones.forEach(s => s.style.display = s.dataset.categoria === cat ? '' : 'none');
+            };
+
+            chips.forEach(chip => chip.addEventListener('click', () => {
+                chips.forEach(c => c.classList.toggle('activo', c === chip));
+                filtrarCategoria(chip.dataset.cat);
+                window.smTrack?.('categoria_tap', { nombre: chip.dataset.cat || 'Todo', vista: 'classic' });
+            }));
+
+            const aplicar = (nombres, texto, encontro) => {
+                const buscados = new Set(nombres);
+                platos.forEach(p => p.style.display = buscados.has(p.dataset.nombre) ? '' : 'none');
+
+                // Una categoría sin ningún plato visible sobra: si no, quedan títulos
+                // sueltos separados por aire y parece que la página se rompió.
+                secciones.forEach(s => {
+                    const visibles = s.querySelectorAll('.lista-plato:not([style*="none"])').length;
+                    s.style.display = visibles ? '' : 'none';
+                });
+
+                estado.textContent = texto;
+                estado.hidden = false;
+
+                if (!encontro) {
+                    // Sin resultados NO se deja la pantalla vacía: se muestra la carta
+                    // entera abajo del aviso, que es lo que el cliente vino a ver.
+                    mostrarTodo();
+                }
+            };
+
+            let timer = null;
+            let ultima = '';
+
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                borrar.hidden = q === '';
+                clearTimeout(timer);
+
+                if (q.length < 2) {
+                    estado.hidden = true;
+                    chips.forEach(c => c.classList.toggle('activo', c.dataset.cat === ''));
+                    mostrarTodo();
+                    return;
+                }
+
+                // Se espera a que deje de tipear: sin esto se manda un pedido por letra.
+                timer = setTimeout(async () => {
+                    if (q === ultima) return;
+                    ultima = q;
+
+                    try {
+                        const r = await fetch('{{ route('menu.buscar', $comercio) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            body: JSON.stringify({ q, session_id: window.smSessionId?.() || null }),
+                        });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        aplicar(data.platos || [], data.texto || '', data.encontro);
+                    } catch (e) {
+                        // Que falle la red no puede dejar la carta escondida.
+                        mostrarTodo();
+                        estado.hidden = true;
+                    }
+                }, 350);
+            });
+
+            borrar.addEventListener('click', () => {
+                input.value = '';
+                borrar.hidden = true;
+                estado.hidden = true;
+                ultima = '';
+                chips.forEach(c => c.classList.toggle('activo', c.dataset.cat === ''));
+                mostrarTodo();
+                input.focus();
+            });
+        })();
+
         const platoModal = document.getElementById('platoModal');
 
         function abrirPlato(btn) {

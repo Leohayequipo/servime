@@ -222,6 +222,58 @@ class RecomendacionesTest extends TestCase
         ]);
     }
 
+    public function test_el_buscador_devuelve_los_nombres_para_filtrar_la_lista(): void
+    {
+        $comercio = $this->comercioConCarta();
+
+        // Devuelve NOMBRES y no HTML: la carta ya está dibujada en la página y el front
+        // sólo esconde lo que no coincide.
+        $this->postJson(route('menu.buscar', $comercio), ['q' => 'panch', 'session_id' => 'sess_busca'])
+            ->assertOk()
+            ->assertJsonPath('encontro', true)
+            ->assertJsonPath('platos.0', 'Pancho');
+    }
+
+    public function test_lo_que_el_buscador_no_encuentra_queda_registrado(): void
+    {
+        $comercio = $this->comercioConCarta();
+
+        // Es el dato que le da sentido al plan sin asistente: lo que el cliente quiso
+        // preguntar y el menú no supo contestar.
+        $this->postJson(route('menu.buscar', $comercio), ['q' => 'sushi', 'session_id' => 'sess_busca'])
+            ->assertOk()
+            ->assertJsonPath('encontro', false);
+
+        $this->assertDatabaseHas('tracking_events', [
+            'comercio_id' => $comercio->id,
+            'event' => 'busqueda_sin_resultado',
+            'session_id' => 'sess_busca',
+        ]);
+    }
+
+    public function test_el_menu_clasico_tiene_buscador_y_atajos_por_categoria(): void
+    {
+        $comercio = $this->comercioConCarta(['menu_clasico_vista' => Comercio::VISTA_LISTA]);
+
+        $this->get(route('menu.classic', $comercio))
+            ->assertOk()
+            ->assertSee('Buscar en la carta')
+            ->assertSee('data-cat="Bebidas"', false)
+            ->assertSee('data-nombre="Pancho"', false);
+    }
+
+    public function test_sin_asistente_no_se_ofrece_explorar_con_ia(): void
+    {
+        $comercio = $this->comercioConCarta([
+            'menu_clasico_vista' => Comercio::VISTA_LISTA,
+            'enable_ai_responses' => false,
+        ]);
+
+        $this->get(route('menu.classic', $comercio))
+            ->assertOk()
+            ->assertDontSee('Explorar con IA');
+    }
+
     public function test_el_menu_clasico_muestra_va_bien_con(): void
     {
         $comercio = $this->comercioConCarta(['menu_clasico_vista' => Comercio::VISTA_LISTA]);

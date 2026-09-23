@@ -310,6 +310,12 @@ Route::middleware(\App\Http\Middleware\ResolverMesa::class)->group(function () {
     Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
         ->middleware('throttle:chat-ia')->name('chat.stream');
 
+    // Buscador de la carta: la misma búsqueda en PHP que usa el asistente, servida al
+    // menú clásico. No llama a ningún modelo, así que va con el límite de tracking y no
+    // con el del chat, que existe para cuidar la factura de OpenAI.
+    Route::post('/api/buscar/{comercio:slug}', [App\Http\Controllers\BuscadorMenuController::class, 'buscar'])
+        ->middleware('throttle:tracking')->name('menu.buscar');
+
     // Tracking de eventos del menú público (sin auth, por sesión)
     Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
         ->middleware('throttle:tracking')->name('track');
