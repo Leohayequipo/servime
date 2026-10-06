@@ -44,7 +44,6 @@ class Plan extends Model
         'customizacion' => 'Portada personalizada del menú',
         'mesas' => 'Mesas con QR propio (y métricas por mesa)',
         'comandas' => 'Comandas y pantalla del mozo (requiere mesas)',
-        'sugerencias' => 'Sugerencias «va bien con» en la carta',
         'lista_pedido' => '«Lo quiero» y «Mi pedido» en la carta',
     ];
 

@@ -149,35 +149,32 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 > El front ya muestra el botón **una sola vez por consulta** (`!esReconsulta` en
 > `chat.blade.php`), así que no hace falta resolver el tercer "ver más" seguido: no existe.
 
-## Recomendaciones precalculadas (y por qué el chat NO las usa sin IA)
+## Dos cosas que se probaron y se descartaron (sep–oct 2026)
 
-`RecomendadorService` calcula **una vez por carta** —al procesar el menú, vía
-`GenerarRecomendacionesJob`— con qué va bien cada plato, y lo guarda en
-`menus.recomendaciones`. Las muestra el **menú clásico** (buscador, chips "va bien con",
-detalle del plato), no el chat.
+**1. "Chat sin IA".** Con cuota agotada o asistente apagado, que el chat contestara
+buscando en la carta. Sin modelo, el chat entiende palabras y no frases, y un chat que no
+entiende se siente roto: quema la imagen del asistente pago. Un buscador que no encuentra,
+en cambio, es normal. Por eso sin IA el chat sigue con el cartel de "no disponible" y la
+experiencia sin IA es el **buscador de la carta** (`BuscadorMenuController`, que usa
+`buscarEnElMenu()`).
 
-- **Se probó y se descartó un "chat sin IA"** (cuota agotada o asistente apagado →
-  contestar con la búsqueda + las recomendaciones). Sin modelo, el chat entiende palabras
-  y no frases, y un chat que no entiende se siente roto: quema la imagen del asistente
-  pago. Un buscador que no encuentra, en cambio, es normal. Por eso sin IA el chat sigue
-  con el cartel de "no disponible" y la experiencia sin IA vive en el menú clásico.
-- **Dos listas por plato, y la distinción importa**: `con` (se suma al pedido) y
-  `parecidos` (alternativas). Quién va en cuál **lo decide la categoría de la carta, no el
-  modelo**: otra hamburguesa bajo "Va bien con" se lee como "pedite dos".
-- **`validar()` descarta lo que no existe en la carta.** Es lo que lo hace confiable: el
-  modelo inventa nombres y acá no llegan a la mesa.
-- **Un pedido genérico** ("algo para tomar", "un postre") se resuelve por el **rol** de la
-  categoría (principal/guarnicion/bebida/postre), que se clasifica en una llamada aparte.
-- Regenerar: `php artisan menu:recomendaciones {id}` o `--todos`. Hace falta cuando el
-  comercio edita los platos: las recomendaciones apuntan a nombres de la carta.
+**2. Sugerencias "va bien con" precalculadas.** La IA leía la carta una vez y guardaba, por
+plato, con qué acompañarlo y qué platos parecidos había; la carta las mostraba como chips.
+Funcionaba (con `gpt-5.6-luna` cubría 149 de 151 platos de Azopardo; `gpt-4o-mini`, 123 y con
+errores de criterio), pero se sacó entera antes de llegar a producción:
 
-**El modelo sale de `config('servime.modelo_recomendaciones')`, NO del plan**: corre una
-vez por carta y lo pagamos igual para todos, así que va el que mejor la entienda.
-Medido contra la carta de Azopardo (151 platos): `gpt-4o-mini` cubrió 123 con errores de
-criterio; **`gpt-5.6-luna` cubrió 149**, en 90 s. Al cambiarlo, ojo con el body: los GPT-5
-rechazan `temperature` y `max_tokens`, y por eso la llamada pasa por el trait
-`ArmaPayloadOpenAI`. El techo va **alto (6000)**: en un modelo de razonamiento los tokens
-que piensa salen de ahí, y si se queda corto vuelve sin JSON.
+- **No había forma de saber si servían**: no se medía si alguien tocaba una sugerencia ni si
+  la sumaba al pedido.
+- **La calidad era correcta, no buena**: muchas eran "va bien con: Agua", que no vende nada.
+  Hicieron falta reglas para que no ofreciera otra hamburguesa como acompañamiento de una
+  hamburguesa, ni metiera papas fritas con un budín.
+- **"Parecidos" repetía lo que ya estaba al lado**, en la misma categoría de la carta.
+- **El comercio no podía corregirlas**, y la reacción natural era apagarlas todas.
+
+Si se retoma, el código está en el historial de la rama `feat/recomendaciones-automaticas`
+(`RecomendadorService`). Lo que vale rescatar: generar una vez por carta y no por consulta,
+validar todo contra la carta real antes de guardarlo, y que la categoría (no el modelo)
+decida qué es acompañamiento y qué es alternativa. Y medir antes de anunciarlo.
 
 ## Modelo: qué se probó y qué se descartó
 

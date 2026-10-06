@@ -68,7 +68,6 @@ class PlanFreeTest extends TestCase
         foreach (['basico', 'pro', 'premium'] as $key) {
             $plan = Plan::where('key', $key)->first();
             $this->assertTrue($plan->tieneFeature('lista_pedido'), $key);
-            $this->assertTrue($plan->tieneFeature('sugerencias'), $key);
             $this->assertNull($plan->cartas_por_mes, "{$key} no tiene tope de cartas");
         }
     }
@@ -85,7 +84,7 @@ class PlanFreeTest extends TestCase
             'mensajes_ia_mes' => 0,
             'cartas_primer_mes' => 5,
             'cartas_por_mes' => '',
-            'features' => ['sugerencias'],
+            'features' => ['lista_pedido'],
             'activo' => 1,
         ];
 
@@ -165,7 +164,7 @@ class PlanFreeTest extends TestCase
     {
         $comercio = $this->comercioEn('free');
 
-        // Las sugerencias que se generan solas al procesar la carta, o lo que hace el admin.
+        // Lo que hace el super admin, o reintentar una carta que falló.
         $this->procesadas($comercio, 5, cuenta: false);
 
         $this->assertSame(3, $comercio->cartasRestantes());

@@ -52,21 +52,13 @@
     "Cuando venga el mozo, mostrale esta pantalla.": "When the waiter comes, show them this screen.",
     "Mi pedido": "My order",
     "No se pudo mandar el pedido. Probá de nuevo.": "The order couldn't be sent. Please try again.",
-    "Parecidos": "Similar",
     "Recomendado": "Recommended",
     "Todavía no elegiste nada. Tocá el + de un plato para sumarlo.": "You haven't picked anything yet. Tap the + on a dish to add it.",
     "Todo": "All",
     "Total estimado": "Estimated total",
-    "Va bien con": "Goes well with",
     "Vaciar mi pedido": "Clear my order",
     "Ver como lista": "View as list",
     "Ver el menú original": "View original menu",
     "¡Listo! Ya lo tiene el mozo": "Done! The waiter has it",
-    ":plato va bien con :con.": ":plato goes well with :con.",
-    "Esto tenemos:": "Here's what we have:",
-    "No encontré eso en la carta. Podés mirar el menú completo acá abajo.": "We couldn't find that on the menu. You can browse the full menu below.",
-    "No encontré eso en la carta. Te dejo algunas de las opciones más pedidas.": "We couldn't find that on the menu. Here are some of the most ordered options.",
-    "Te dejo algunas opciones:": "Here are some options:",
-    "y": "and",
-    "¡Hola! Mirá la carta acá abajo o escribí lo que estás buscando.": "Hi! Browse the menu below or type what you're looking for."
+    "No encontré eso en la carta. Podés mirar el menú completo acá abajo.": "We couldn't find that on the menu. You can browse the full menu below."
 }

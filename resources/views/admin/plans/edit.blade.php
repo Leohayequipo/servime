@@ -63,7 +63,7 @@
 
                 {{-- Cuántas cartas puede procesar con IA. Son dos números y no uno porque al
                      principio el comercio sube, corrige y vuelve a subir; después la carta
-                     cambia poco. Cuentan la carta nueva y "volver a generar sugerencias";
+                     cambia poco. Cuenta cada carta nueva que sube el comercio;
                      reintentar una carta que falló no cuenta. --}}
                 <div class="grid grid-cols-2 gap-4">
                     <div>

@@ -5,15 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Registro de procesamientos con IA de cada carta, y el interruptor de sugerencias.
+ * Registro de procesamientos con IA de cada carta.
  *
- * `procesamientos` sirve para dos cosas, y por eso es una tabla y no un contador:
+ * Es una tabla y no un contador porque sirve para dos cosas:
  *
  * 1. El TOPE de cartas del plan. Se cuentan las filas con `cuenta_para_limite`: la carta
- *    nueva y las sugerencias que el comercio pidió regenerar. Las que se generan solas al
- *    procesar la carta NO cuentan (ya contó la carta), ni lo que hace el super admin, ni
- *    reintentar una carta que falló (la falla fue nuestra o del archivo).
- * 2. Que el super admin vea CUÁNTO CONSUMIÓ cada corrida: tokens, modelo y tiempo.
+ *    nueva que sube el comercio. Lo que hace el super admin no cuenta, ni reintentar una
+ *    carta que falló (la falla fue nuestra o del archivo).
+ * 2. Que el super admin pueda ver cuánto consumió cada corrida (modelo, tokens, tiempo).
+ *    Las columnas están; todavía nada las llena.
  */
 return new class extends Migration
 {
@@ -23,8 +23,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('comercio_id')->constrained()->cascadeOnDelete();
             $table->foreignId('menu_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('tipo', 20);          // carta | sugerencias
-            $table->string('origen', 20);        // comercio | automatico | admin
+            $table->string('tipo', 20);          // carta
+            $table->string('origen', 20);        // comercio | admin
             $table->boolean('cuenta_para_limite')->default(false);
             $table->string('modelo', 60)->nullable();
             $table->unsignedInteger('tokens_entrada')->default(0);
@@ -35,19 +35,10 @@ return new class extends Migration
 
             $table->index(['comercio_id', 'created_at']);
         });
-
-        Schema::table('comercios', function (Blueprint $table) {
-            // Encendido por defecto: la mayoría las quiere, y el que no, las apaga.
-            $table->boolean('sugerencias_activas')->default(true)->after('menu_clasico_vista');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('comercios', function (Blueprint $table) {
-            $table->dropColumn('sugerencias_activas');
-        });
-
         Schema::dropIfExists('procesamientos');
     }
 };

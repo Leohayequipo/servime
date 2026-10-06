@@ -39,9 +39,9 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
   un widget, "lo quiero" es `dish_want` y "lo miró" es `dish_view`.
 
   ⚠️ **`busqueda_sin_resultado` es el argumento de venta del plan con asistente** (lo que el
-  cliente quiso preguntar y la carta no supo contestar). Que encontró o no lo dice
-  `RecomendadorService::responder()` en `encontro`, NO el texto: el texto sale traducido, y
-  buscar "No encontré" en él hacía que en inglés cada búsqueda fallida contara como encontrada.
+  cliente quiso preguntar y la carta no supo contestar). Que encontró o no sale de si hubo
+  platos (`encontro`), NUNCA del texto de la respuesta: el texto sale traducido, y buscar
+  "No encontré" en él hacía que en inglés cada búsqueda fallida contara como encontrada.
   Todavía no hay widget que lo muestre: el dato se guarda.
 
 - **Frontend:** partial `resources/views/menu/partials/tracking.blade.php`, incluido en

@@ -31,15 +31,13 @@ return new class extends Migration
             $table->unsignedSmallInteger('cartas_por_mes')->nullable()->after('cartas_primer_mes');
         });
 
-        // Las dos funciones nuevas existían de hecho en todos los planes ("Lo quiero" está
-        // en el chat de todos): se tildan en los que ya están para que nadie pierda nada.
+        // La función nueva existía de hecho en todos los planes ("Lo quiero" está en el chat
+        // de todos): se tilda en los que ya están para que nadie pierda nada.
         foreach (DB::table('plans')->get() as $plan) {
             $features = json_decode($plan->features ?? '[]', true) ?: [];
 
-            foreach (['sugerencias', 'lista_pedido'] as $nueva) {
-                if (! in_array($nueva, $features, true)) {
-                    $features[] = $nueva;
-                }
+            if (! in_array('lista_pedido', $features, true)) {
+                $features[] = 'lista_pedido';
             }
 
             DB::table('plans')->where('id', $plan->id)->update(['features' => json_encode($features)]);
@@ -74,7 +72,7 @@ return new class extends Migration
                 'nombre' => 'Free',
                 'descripcion' => 'Tu carta digital con QR, sin costo.',
                 'precio' => 0,
-                'features' => json_encode(['promociones', 'sugerencias', 'lista_pedido']),
+                'features' => json_encode(['promociones', 'lista_pedido']),
                 'orden' => 1,
             ]);
         }
@@ -85,7 +83,7 @@ return new class extends Migration
                 'nombre' => 'Mínimo',
                 'descripcion' => 'Tu carta con QR por mesa y los pedidos directo al mozo.',
                 'precio' => 2000,
-                'features' => json_encode(['promociones', 'sugerencias', 'lista_pedido', 'mesas', 'comandas']),
+                'features' => json_encode(['promociones', 'lista_pedido', 'mesas', 'comandas']),
                 'orden' => 2,
             ]);
         }
@@ -101,7 +99,7 @@ return new class extends Migration
         foreach (DB::table('plans')->get() as $plan) {
             $features = array_values(array_diff(
                 json_decode($plan->features ?? '[]', true) ?: [],
-                ['sugerencias', 'lista_pedido']
+                ['lista_pedido']
             ));
             DB::table('plans')->where('id', $plan->id)->update(['features' => json_encode($features)]);
         }

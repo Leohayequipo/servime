@@ -2724,7 +2724,6 @@ class MenuController extends Controller
                 'chatbot_name' => 'nullable|string|max:50',
                 'welcome_message' => 'nullable|string|max:500',
                 'pedido_habilitado' => 'nullable|boolean',
-                'sugerencias_activas' => 'nullable|boolean',
                 // Personalidad del asistente
                 'chatbot_config' => 'nullable|array',
                 'chatbot_config.tono' => 'nullable|string|in:cercano_divertido,calido_atento,formal_elegante,canchero',
@@ -2747,9 +2746,6 @@ class MenuController extends Controller
             }
             if ($request->has('pedido_habilitado')) {
                 $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
-            }
-            if ($request->has('sugerencias_activas')) {
-                $comercio->sugerencias_activas = $request->boolean('sugerencias_activas');
             }
             if ($request->has('chatbot_config')) {
                 $comercio->chatbot_config = $validated['chatbot_config'] ?? null;

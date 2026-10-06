@@ -41,7 +41,7 @@ pública, y lanzarlos tiene que ser una decisión y no un efecto del deploy.
 
 | Plan   | key    | precio | mensajes_ia_mes | cartas (1er mes / después) | features |
 |--------|--------|--------|-----------------|----------------------------|----------|
-| Free   | free   | $0     | **0**           | 3 / 1                      | promociones, sugerencias, lista_pedido |
+| Free   | free   | $0     | **0**           | 3 / 1                      | promociones, lista_pedido |
 | Mínimo | minimo | $2.000 | **0**           | 3 / 1                      | lo mismo + **mesas, comandas** |
 
 **La única diferencia entre los dos es si el pedido le llega al mozo.** En el Free el cliente
@@ -57,16 +57,14 @@ se les cambia precio, cupos y casillas desde `/admin/plans` como a cualquier otr
 - ⚠️ **El 0 es falso en PHP.** `mensajes_ia_mes ? … : 'ilimitado'` le anunciaba "IA ilimitada" al
   Free en la landing, y `precio ? … : 'A consultar'` lo mostraba "A consultar". Para mostrar un
   plan usar `precioLegible()`, `cupoIaLegible()` y `topeCartasLegible()`, nunca el campo pelado.
-- **Casillas nuevas:** `sugerencias` (el "va bien con" de la carta; el comercio además lo puede
-  apagar con `comercios.sugerencias_activas`) y `lista_pedido` ("Lo quiero" y "Mi pedido";
+- **Casilla nueva:** `lista_pedido` ("Lo quiero" y "Mi pedido";
   `Comercio::aceptaListaDePedido()` = la casilla + el interruptor `pedido_habilitado`). La
-  migración las tildó en todos los planes que ya existían, para que nadie pierda nada.
+  migración la tildó en todos los planes que ya existían, para que nadie pierda nada.
 - **Tope de cartas** (`Comercio::cartasRestantes()`): los primeros 30 días desde el alta rige
   `cartas_primer_mes`; después, `cartas_por_mes` por mes calendario, contando desde que terminó
   el primer período (si no, lo usado al final de la prueba se descontaba del mes siguiente).
   Se cuenta en la tabla **`procesamientos`** (filas con `cuenta_para_limite`): la carta nueva
-  cuenta; reintentar una que falló, lo que hace el super admin y las sugerencias que se
-  generan solas al procesar NO. Se anota al subirla, no al terminar, para que dos subidas
+  cuenta; reintentar una que falló y lo que hace el super admin NO. Se anota al subirla, no al terminar, para que dos subidas
   seguidas no pasen las dos. Al tope, `mensajeTopeDeCartas()` dice cuándo se renueva.
 - ⚠️ **Al lanzarlos**, en el mismo momento: tildar "activo" en Free y Mínimo, y tildar "mesas" y
   "comandas" en **Básico y Pro**. Hoy eso es sólo de Premium, y sin tildarlo un comercio que pasa

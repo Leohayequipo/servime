@@ -34,7 +34,6 @@ class PedidoEnLaCartaTest extends TestCase
                 ['nombre' => 'Para comer', 'platos' => [['nombre' => 'Pancho', 'precio' => '$3.000']]],
                 ['nombre' => 'Bebidas', 'platos' => [['nombre' => 'Coca 500', 'precio' => '$2.500']]],
             ]]),
-            'recomendaciones' => ['platos' => ['pancho' => ['con' => ['Coca 500'], 'parecidos' => []]]],
         ]);
 
         return $comercio;
@@ -108,32 +107,6 @@ class PedidoEnLaCartaTest extends TestCase
         $this->postJson(route('api.cart.incr'), [
             'comercio_id' => $comercio->id, 'session_id' => 's', 'nombre' => 'Pancho', 'delta' => 1,
         ])->assertForbidden();
-    }
-
-    public function test_el_comercio_puede_apagar_las_sugerencias(): void
-    {
-        $comercio = $this->comercioEn('free');
-
-        $this->get(route('menu.classic', $comercio))->assertSee('data-con="Coca 500"', false);
-
-        $comercio->update(['sugerencias_activas' => false]);
-
-        $this->get(route('menu.classic', $comercio))
-            ->assertOk()
-            ->assertSee('data-con=""', false)
-            ->assertDontSee('class="sugerencias-rotulo"', false);
-    }
-
-    public function test_el_comercio_apaga_las_sugerencias_desde_el_editor(): void
-    {
-        $comercio = $this->comercioEn('free');
-
-        $this->actingAs($comercio->user)
-            ->postJson(route('menus.update.chatbot.config', $comercio), ['sugerencias_activas' => false])
-            ->assertOk()
-            ->assertJsonPath('success', true);
-
-        $this->assertFalse($comercio->refresh()->sugerencias_activas);
     }
 
     public function test_mirar_un_plato_y_quererlo_se_registran_distinto(): void

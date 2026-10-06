@@ -200,22 +200,6 @@
         .chip-cat.activo { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
         .buscador-estado { margin: 12px 2px 0; font-size: 13px; color: var(--text-dim); }
 
-        /* "Va bien con": chips y no un renglón de texto gris. Tres razones: se distinguen
-           de la descripción del plato, se pueden tocar —y ahí el cliente ve ese plato— y
-           dejan de leerse como un muro de texto cuando hay 150 filas seguidas.
-           Los "parecidos" NO están acá: viven en el detalle del plato, porque son para el
-           que ya se interesó en uno, no para el que está recorriendo la carta. */
-        .sugerencias { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .sugerencia {
-            border: 0; cursor: pointer; font: inherit;
-            font-size: 12px; line-height: 1; padding: 6px 10px; border-radius: 999px;
-            background: color-mix(in srgb, var(--accent) 14%, transparent);
-            color: var(--accent-soft);
-            border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
-        }
-        .sugerencia:active { background: color-mix(in srgb, var(--accent) 26%, transparent); }
-        .sugerencias-rotulo { align-self: center; font-size: 11px; color: var(--text-dim); margin-right: 2px; }
-
         /* ── "Lo quiero" y "Mi pedido" ── */
         .lista-plato-lado { flex: none; position: relative; display: flex; flex-direction: column; align-items: flex-end; }
         /* Con foto, el botón se apoya en la esquina de la foto, como en las apps de pedidos. */
@@ -294,7 +278,6 @@
         .ya-pedido { margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
         .ya-pedido-titulo { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
         .ya-pedido-fila { display: flex; justify-content: space-between; font-size: 13.5px; padding: 3px 0; }
-        .sugerencia-mas { color: var(--accent); font-weight: 700; margin-right: 1px; }
 
         /* La foto: cuadrada, a la derecha y con el fondo puesto de antemano, así el
            lazy-load no hace saltar la fila cuando termina de cargar. */
@@ -342,11 +325,6 @@
         .plato-modal-texto p { margin: 8px 0 0; font-size: 14px; color: var(--text-dim); line-height: 1.5; }
         .plato-modal-texto #platoModalPrecio {
             margin-top: 12px; font-size: 20px; font-weight: 800; color: var(--accent-soft);
-        }
-        .plato-modal-sugiere { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-        .plato-modal-sugiere-titulo {
-            margin: 0 0 8px !important; font-size: 11px; letter-spacing: .08em;
-            text-transform: uppercase; color: var(--text-dim);
         }
         /* Fuera de la tarjeta y sobre el fondo oscuro: no tapa la foto y el pulgar
            llega sin cruzar la pantalla. */
@@ -482,7 +460,6 @@
                                  de texto de todos los demás y la lista quedaba en zigzag. Así,
                                  el que no tiene foto simplemente ocupa todo el ancho. --}}
                             @foreach($platos as $plato)
-                                @php $sugerido = $recomendaciones[$plato['nombre']] ?? ['con' => [], 'parecidos' => []]; @endphp
                                 {{-- Toda la fila abre el detalle, no sólo la foto: en un celular el
                                      pulgar cae en cualquier parte del renglón, y la mayoría de los
                                      platos ni siquiera tiene foto que tocar. --}}
@@ -490,9 +467,7 @@
                                          data-nombre="{{ $plato['nombre'] }}"
                                          data-desc="{{ $plato['descripcion'] ?? '' }}"
                                          data-precio="{{ $plato['precio'] ?? '' }}"
-                                         data-img="{{ $plato['imagen'] ?? '' }}"
-                                         data-con="{{ implode('|', $sugerido['con']) }}"
-                                         data-parecidos="{{ implode('|', $sugerido['parecidos']) }}">
+                                         data-img="{{ $plato['imagen'] ?? '' }}">
                                     <div class="lista-plato-texto">
                                         <div class="lista-plato-fila">
                                             <h3 class="lista-plato-nombre">
@@ -510,21 +485,6 @@
                                             <p class="lista-plato-desc">{{ $plato['descripcion'] }}</p>
                                         @endif
 
-                                        {{-- "Va bien con": lo único que el menú clásico tiene para
-                                             sugerir algo más, porque acá no hay asistente. Las duplas
-                                             se calcularon al procesar la carta (RecomendadorService),
-                                             así que mostrarlas no cuesta ni una llamada ni un token. --}}
-                                        {{-- Sin el "+" de antes: ahora el "+" es "agregar a mi pedido"
-                                             y los dos se confundían. --}}
-                                        @if(!empty($sugerido['con']))
-                                            <div class="sugerencias">
-                                                <span class="sugerencias-rotulo">{{ __('Va bien con') }}</span>
-                                                @foreach($sugerido['con'] as $conEste)
-                                                    <button type="button" class="sugerencia"
-                                                            onclick="event.stopPropagation(); verPlato(@js($conEste))">{{ $conEste }}</button>
-                                                @endforeach
-                                            </div>
-                                        @endif
                                     </div>
 
                                     <div class="lista-plato-lado {{ !empty($plato['imagen']) ? 'con-foto' : '' }}">
@@ -604,16 +564,6 @@
                 <button type="button" id="platoModalQuiero" class="plato-modal-quiero">{{ __('Lo quiero') }}</button>
             @endif
 
-            {{-- Acá sí van los "parecidos": el que abrió un plato ya se interesó en él y
-                 está eligiendo. En la lista, en cambio, eran ruido en cada renglón. --}}
-            <div id="platoModalCon" class="plato-modal-sugiere" hidden>
-                <p class="plato-modal-sugiere-titulo">{{ __('Va bien con') }}</p>
-                <div class="sugerencias"></div>
-            </div>
-            <div id="platoModalParecidos" class="plato-modal-sugiere" hidden>
-                <p class="plato-modal-sugiere-titulo">{{ __('Parecidos') }}</p>
-                <div class="sugerencias"></div>
-            </div>
         </div>
     </dialog>
 
@@ -723,8 +673,9 @@
                     s.style.display = visibles ? '' : 'none';
                 });
 
+                // Encontrado, la lista filtrada habla sola: el aviso es sólo para "no hay".
                 estado.textContent = texto;
-                estado.hidden = false;
+                estado.hidden = !texto;
 
                 if (!encontro) {
                     // Sin resultados NO se deja la pantalla vacía: se muestra la carta
@@ -1057,47 +1008,6 @@
             platoModal.close();
         });
 
-        // Pinta una lista de sugerencias como chips tocables; tocar una lleva a ese plato.
-        function pintarSugerencias(caja, nombres) {
-            const chips = caja.querySelector('.sugerencias');
-            chips.innerHTML = '';
-            caja.hidden = nombres.length === 0;
-
-            nombres.forEach(nombre => {
-                const chip = document.createElement('button');
-                chip.type = 'button';
-                chip.className = 'sugerencia';
-                chip.textContent = nombre;
-                chip.addEventListener('click', () => verPlato(nombre));
-                chips.appendChild(chip);
-            });
-        }
-
-        // Tocar una sugerencia ABRE ese plato, no filtra la carta.
-        //
-        // Filtrar era peor de lo que parecía: el cliente perdía el lugar donde estaba
-        // leyendo y no tenía cómo volver salvo borrar la búsqueda. El detalle se cierra y
-        // la carta sigue donde estaba, y desde un plato se puede seguir a otro y a otro,
-        // que es como se recorre una carta cuando uno está decidiendo.
-        function verPlato(nombre) {
-            const fila = document.querySelector('.lista-plato[data-nombre="' + CSS.escape(nombre) + '"]');
-
-            if (fila) {
-                abrirPlato(fila);
-
-                return;
-            }
-
-            // El plato existe en las recomendaciones pero no en esta pantalla (otra vista
-            // del menú): antes que no hacer nada, buscarlo.
-            const input = document.getElementById('buscadorCarta');
-            if (!input) return;
-            platoModal.close();
-            input.value = nombre;
-            input.dispatchEvent(new Event('input'));
-            input.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
         function abrirPlato(btn) {
             platoAbierto = btn;
             const img = document.getElementById('platoModalImg');
@@ -1114,10 +1024,6 @@
             const precio = document.getElementById('platoModalPrecio');
             precio.textContent = btn.dataset.precio;
             precio.hidden = !btn.dataset.precio;
-
-            const lista = (v) => (v || '').split('|').filter(Boolean);
-            pintarSugerencias(document.getElementById('platoModalCon'), lista(btn.dataset.con));
-            pintarSugerencias(document.getElementById('platoModalParecidos'), lista(btn.dataset.parecidos));
 
             // Saltar de un plato a otro reusa el mismo diálogo: abrirlo estando abierto
             // tira InvalidStateError, así que se cierra primero.

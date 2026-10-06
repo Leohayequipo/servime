@@ -17,26 +17,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Modelo que arma las recomendaciones de la carta
-    |--------------------------------------------------------------------------
-    |
-    | El de "con qué va bien cada plato" (RecomendadorService). NO sale del plan
-    | del comercio como el del chat: esto corre UNA vez por carta y lo pagamos
-    | igual para todos, así que conviene el que mejor la entienda y no el más
-    | barato por mensaje.
-    |
-    | Va por env y no en la base porque se toca una vez cada muchos meses, y así
-    | queda en git la medición que justificó el cambio.
-    |
-    | Ojo: si se pone un GPT-5 (razonamiento), el body cambia — lo resuelve el
-    | trait ArmaPayloadOpenAI, que es por donde pasa la llamada.
-    |
-    */
-
-    'modelo_recomendaciones' => env('MODELO_RECOMENDACIONES', 'gpt-5.6-luna'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Pedido de reseña en Google
     |--------------------------------------------------------------------------
     |

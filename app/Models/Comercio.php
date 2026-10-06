@@ -54,7 +54,6 @@ class Comercio extends Model
         'mozo_pin_hash',
         'mozo_token_rotado_at',
         'menu_clasico_vista',
-        'sugerencias_activas',
     ];
 
     /** Las dos formas de mostrar el menú clásico. */
@@ -199,7 +198,6 @@ class Comercio extends Model
         'tema_derivado' => 'array',
         'horarios' => 'array',
         'slug_manual' => 'boolean',
-        'sugerencias_activas' => 'boolean',
     ];
 
     /**
@@ -685,16 +683,6 @@ class Comercio extends Model
     {
         return (bool) $this->enable_ai_responses
             && (bool) $this->planEfectivo()?->tieneAsistente();
-    }
-
-    /**
-     * ¿Se le muestran las sugerencias ("va bien con", "parecidos") al cliente?
-     *
-     * El plan decide si existen y el comercio decide si las muestra.
-     */
-    public function muestraSugerencias(): bool
-    {
-        return $this->tieneFeature('sugerencias') && $this->sugerencias_activas !== false;
     }
 
     /**

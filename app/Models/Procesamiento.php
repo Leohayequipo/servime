@@ -6,19 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Una corrida de IA sobre una carta: leerla (tipo `carta`) o armar sus sugerencias
- * (tipo `sugerencias`). Sirve para el tope de cartas del plan y para que el super admin
- * vea cuánto consumió cada una. Ver la migración que la crea.
+ * Una corrida de IA sobre una carta (tipo `carta`: leerla al subirla). Sirve para el tope
+ * de cartas del plan y para que el super admin vea cuánto consumió cada una. Ver la
+ * migración que la crea.
  */
 class Procesamiento extends Model
 {
     public const TIPO_CARTA = 'carta';
 
-    public const TIPO_SUGERENCIAS = 'sugerencias';
-
     public const ORIGEN_COMERCIO = 'comercio';
-
-    public const ORIGEN_AUTOMATICO = 'automatico';
 
     public const ORIGEN_ADMIN = 'admin';
 

@@ -20,13 +20,11 @@ class Menu extends Model
         'procesado',
         'estado',
         'activo',
-        'recomendaciones',
     ];
 
     protected $casts = [
         'procesado' => 'boolean',
         'activo' => 'boolean',
-        'recomendaciones' => 'array',
     ];
 
     // Estados de procesamiento del menú
@@ -76,10 +74,7 @@ class Menu extends Model
         foreach ($data['categorias'] as $categoria) {
             foreach ($categoria['platos'] ?? [] as $plato) {
                 if (is_array($plato)) {
-                    // La categoría viaja con el plato: aplanado y sin ella, no hay forma de
-                    // saber si algo es una bebida o un principal, que es de lo que dependen
-                    // las recomendaciones.
-                    $platos[] = $plato + ['categoria' => trim((string) ($categoria['nombre'] ?? ''))];
+                    $platos[] = $plato;
                 }
             }
         }

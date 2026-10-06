@@ -288,8 +288,8 @@ class ChatbotService
     /**
      * La misma búsqueda que se le sirve al modelo, para quien NO lo usa.
      *
-     * La usa `RecomendadorService` para contestar sin IA: plurales, acentos, jerga y
-     * categorías ya están resueltos acá, y duplicar esa lógica en otro lado seria
+     * La usa el buscador de la carta (`BuscadorMenuController`): plurales, acentos, jerga y
+     * categorías ya están resueltos acá, y duplicar esa lógica en otro lado sería
      * garantizar que las dos se separen con el primer arreglo.
      *
      * @return array<int, array{nombre:string, precio:string}>

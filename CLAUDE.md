@@ -58,8 +58,7 @@ npm run dev   /   npm run build
 - **Models** (`app/Models/`): User, Comercio, Menu, Cart, CartItem,
   ChatConversation, ChatLanding, QuestionCategory, Plan, Procesamiento.
 - **Services** (`app/Services/`): ChatbotService, MenuProcessorService,
-  PdfProcessorService, PdfToImageService, GeminiPdfProcessorService, RecomendadorService
-  (las sugerencias "va bien con" de cada carta, generadas una vez con IA al procesarla).
+  PdfProcessorService, PdfToImageService, GeminiPdfProcessorService.
 - **Rutas** (`routes/web.php`):
   - Públicas (sin auth, por `slug`): `/menu/{comercio:slug}` (choose/chat/classic),
     API chat `/api/chat/{slug}`, API carrito `/api/cart/*` (por sesión), buscador de la

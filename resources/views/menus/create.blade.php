@@ -1668,31 +1668,6 @@
                                         </div>
                                     </div>
                                 </div>
-
-                {{-- Sugerencias: "va bien con" debajo de cada plato y "parecidos" al abrirlo.
-                     Encendidas por defecto; el plan decide si existen y el comercio, si las
-                     muestra. Se guarda solo, igual que Pedidos en Línea. --}}
-                @if($comercio->tieneFeature('sugerencias'))
-                    <div class="rounded-2xl mb-8 border border-accent-gray bg-secondary-dark shadow-lg p-6">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <h3 class="text-text-primary font-bold text-xl tracking-tight">Sugerencias a tus clientes</h3>
-                                <p class="text-text-secondary text-sm leading-relaxed mt-1">
-                                    Debajo de cada plato, la carta muestra con qué va bien (por ejemplo, papas con la
-                                    hamburguesa) y, al abrirlo, otros platos parecidos. Las arma la IA cuando procesás la carta.
-                                </p>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer flex-none mt-1">
-                                <input type="checkbox"
-                                       id="sugerencias_activas"
-                                       class="sr-only peer"
-                                       {{ $comercio->sugerencias_activas !== false ? 'checked' : '' }}
-                                       onchange="guardarSugerenciasActivas(this)">
-                                <div class="w-16 h-9 bg-accent-gray peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-blue/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[5px] after:bg-white after:border-accent-gray after:border-2 after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-lg peer-checked:bg-accent-green peer-checked:shadow-lg peer-checked:shadow-green-500/50 transition-all duration-300"></div>
-                            </label>
-                        </div>
-                    </div>
-                @endif
             @endif
                 </x-editor.seccion>
 
@@ -2051,33 +2026,6 @@
             // así que tampoco viajaba con el formulario — el pedido en línea no se podía
             // encender desde esta pantalla.
             guardarPedidoHabilitado(isChecked);
-        }
-
-        // Se guarda al tocar, como Pedidos en Línea. Si el servidor no lo guarda, el
-        // interruptor vuelve a donde estaba: dejarlo movido sería mentirle al comercio.
-        async function guardarSugerenciasActivas(input) {
-            const activo = input.checked;
-
-            try {
-                const r = await fetch(`{{ route('menus.update.chatbot.config', ['comercio' => $comercio->slug]) }}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ sugerencias_activas: activo })
-                });
-                const data = await r.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'no se pudo guardar');
-                }
-            } catch (e) {
-                input.checked = !activo;
-                showError('No se pudieron cambiar las sugerencias. Probá de nuevo.');
-            }
         }
 
         async function guardarPedidoHabilitado(activo) {
