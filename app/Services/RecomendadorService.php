@@ -192,7 +192,11 @@ class RecomendadorService
      * (`ChatbotService::buscarEnElMenu()`), así que encuentra plurales, acentos, jerga y
      * categorías igual que el asistente. Lo que no hace es interpretar la pregunta.
      *
-     * @return array{texto:string, platos:array<int,array>}
+     * `encontro` va explícito y no se deduce del texto: el texto sale traducido al idioma
+     * del cliente, y buscar ahí "No encontré" hacía que en inglés cada búsqueda fallida
+     * contara como encontrada.
+     *
+     * @return array{texto:string, platos:array<int,array>, encontro:bool}
      */
     public function responder(Comercio $comercio, string $mensaje): array
     {
@@ -203,6 +207,7 @@ class RecomendadorService
             return [
                 'texto' => __('¡Hola! Mirá la carta acá abajo o escribí lo que estás buscando.'),
                 'platos' => $this->masPedidos($comercio),
+                'encontro' => true,
             ];
         }
 
@@ -223,6 +228,7 @@ class RecomendadorService
                     ? __('No encontré eso en la carta. Podés mirar el menú completo acá abajo.')
                     : __('No encontré eso en la carta. Te dejo algunas de las opciones más pedidas.'),
                 'platos' => $sugeridos,
+                'encontro' => false,
             ];
         }
 
@@ -248,7 +254,7 @@ class RecomendadorService
             }
         }
 
-        return ['texto' => $texto, 'platos' => $platos];
+        return ['texto' => $texto, 'platos' => $platos, 'encontro' => true];
     }
 
     /**
@@ -546,7 +552,7 @@ class RecomendadorService
                 $platos = $this->platosConRol($comercio, $rol);
 
                 if (! empty($platos)) {
-                    return ['texto' => __('Te dejo algunas opciones:'), 'platos' => $platos];
+                    return ['texto' => __('Te dejo algunas opciones:'), 'platos' => $platos, 'encontro' => true];
                 }
             }
         }

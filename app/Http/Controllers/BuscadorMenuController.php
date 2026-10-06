@@ -38,8 +38,8 @@ class BuscadorMenuController extends Controller
 
         // `responder()` nunca deja al cliente con las manos vacías: si no encontró lo que
         // buscaba igual ofrece algo. Por eso el "encontró" no se deduce de que la lista
-        // tenga platos, sino del texto que arma el recomendador.
-        $encontro = ! str_contains($respuesta['texto'], __('No encontré eso en la carta'));
+        // tenga platos: lo dice el recomendador (y no el texto, que sale traducido).
+        $encontro = $respuesta['encontro'];
 
         TrackingEvent::create([
             'comercio_id' => $comercio->id,
