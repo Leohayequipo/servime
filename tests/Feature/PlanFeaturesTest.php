@@ -54,11 +54,14 @@ class PlanFeaturesTest extends TestCase
         foreach (array_keys(Plan::FEATURES) as $feature) {
             $plan = $this->plan();
 
+            // Con las casillas que necesita (el asistente lo trae el plan: 1000 mensajes).
+            $features = [...array_diff(Plan::REQUISITOS[$feature] ?? [], ['asistente']), $feature];
+
             $this->actingAs($admin)
-                ->put(route('admin.plans.update', $plan), $this->datos([$feature]))
+                ->put(route('admin.plans.update', $plan), $this->datos($features))
                 ->assertSessionHasNoErrors("La feature «{$feature}» se ofrece en el panel pero el validador la rechaza.");
 
-            $this->assertSame([$feature], $plan->fresh()->features);
+            $this->assertSame($features, $plan->fresh()->features);
         }
     }
 
@@ -113,5 +116,56 @@ class PlanFeaturesTest extends TestCase
         $this->actingAs($admin)->put(route('admin.plans.update', $plan), $datos)->assertSessionHasNoErrors();
 
         $this->assertSame([], $plan->fresh()->features);
+    }
+
+    public function test_tildar_una_trae_las_casillas_que_necesita(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $plan = $this->plan();
+
+        // La clasificación vive en el panel de Analytics; las comandas son por mesa. No se
+        // traba el guardado: se completa, como hace el formulario al tildarlas.
+        $this->actingAs($admin)
+            ->put(route('admin.plans.update', $plan), $this->datos(['comandas', 'intencion_ia']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['analytics', 'intencion_ia', 'mesas', 'comandas'], $plan->fresh()->features);
+    }
+
+    public function test_sin_asistente_la_clasificacion_de_intencion_no_se_guarda(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $plan = $this->plan();
+
+        // Clasifica los mensajes del chat: en un plan sin asistente no hay qué clasificar.
+        // Se guarda el resto, sin error.
+        $this->actingAs($admin)
+            ->put(route('admin.plans.update', $plan), $this->datos(['analytics', 'intencion_ia']) + ['mensajes_ia_mes' => 0])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['analytics'], $plan->fresh()->features);
+
+        // Vacío es ilimitado, o sea que tiene asistente.
+        $this->actingAs($admin)
+            ->put(route('admin.plans.update', $plan), $this->datos(['analytics', 'intencion_ia']) + ['mensajes_ia_mes' => ''])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['analytics', 'intencion_ia'], $plan->fresh()->features);
+    }
+
+    public function test_en_el_panel_cada_casilla_cuelga_de_la_que_necesita(): void
+    {
+        $orden = Plan::featuresParaElPanel();
+
+        // Todas, cada una una vez.
+        $this->assertEqualsCanonicalizing(array_keys(Plan::FEATURES), array_keys($orden));
+
+        // Y la que depende va justo debajo de la suya.
+        $claves = array_keys($orden);
+        $this->assertSame('analytics', $orden['intencion_ia']);
+        $this->assertSame(array_search('analytics', $claves) + 1, array_search('intencion_ia', $claves));
+        $this->assertSame('mesas', $orden['comandas']);
+        $this->assertSame(array_search('mesas', $claves) + 1, array_search('comandas', $claves));
+        $this->assertNull($orden['analytics']);
     }
 }

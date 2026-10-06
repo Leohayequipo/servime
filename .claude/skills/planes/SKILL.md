@@ -267,6 +267,14 @@ Vistas: `resources/views/admin/plans/index.blade.php` y `edit.blade.php`.
 
 - **Nueva feature gateable:** agregarla a `features.*` en `PlanController::validatePlan()` (regla `Rule::in`),
   al checkbox en `admin/plans/edit.blade.php`, y chequear `$comercio->tieneFeature('x')` donde corresponda.
+- **Si la feature necesita otra cosa del plan para servir**, va en `Plan::REQUISITOS` y nada más.
+  Hoy: `intencion_ia` → asistente + `analytics` (clasifica mensajes del chat y el botón vive en
+  Analytics); `comandas` → `mesas`. **Se relacionan, no se traba el guardado** (lo pidió el
+  usuario): en el panel cuelga debajo de la casilla que necesita, tildarla trae sus requisitos,
+  destildar el requisito se la lleva (y si vuelve, vuelve). `asistente` no es una casilla sino
+  `mensajes_ia_mes` ≠ 0, y ese número no se inventa: con 0, la casilla queda apagada con aviso.
+  Al guardar, `Plan::conRequisitos()` hace lo mismo. Un plan guardado antes con Comandas sin
+  Mesas se completa al abrirlo; sigue igual en la DB hasta que alguien lo guarde.
 - **Cambiar límites/precios/nombres:** desde `/admin/plans` (no requiere deploy).
 
 > **Deuda técnica conocida (features hardcodeadas):** la lista de features posibles está

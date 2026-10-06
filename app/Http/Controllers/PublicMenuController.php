@@ -69,12 +69,19 @@ class PublicMenuController extends Controller
             // Atajos de arranque del chat: los del comercio, o los del menú si no configuró.
             $chips = $comercio->chipsDe('chat');
 
+            // "Lo quiero" y "Mi pedido": la casilla del plan más el interruptor del comercio,
+            // igual que en la carta. Mirando sólo el interruptor, un plan sin la casilla
+            // mostraba el botón "Pedido" con una lista a la que no se podía sumar nada.
+            $aceptaLista = $comercio->aceptaListaDePedido();
+
             // El botón "Pedir" sólo existe si hay a qué comanda mandar el pedido: hace
             // falta que el comercio tenga la feature y que el cliente haya escaneado el
             // QR de una mesa. Sin eso, el menú es exactamente el de siempre.
-            $puedePedir = $comercio->tieneFeature('comandas') && Mesa::idDeSesion($comercio->id) !== null;
+            $puedePedir = $aceptaLista
+                && $comercio->tieneFeature('comandas')
+                && Mesa::idDeSesion($comercio->id) !== null;
 
-            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones', 'chips', 'puedePedir'));
+            return view('menu.chat', compact('comercio', 'menus', 'categorias', 'tags', 'promociones', 'chips', 'aceptaLista', 'puedePedir'));
         } catch (\Exception $e) {
             \Log::error('Error en PublicMenuController@chat: '.$e->getMessage(), [
                 'comercio_id' => $comercio->id,
@@ -89,6 +96,7 @@ class PublicMenuController extends Controller
                 'tags' => [],
                 'promociones' => [],
                 'chips' => [],
+                'aceptaLista' => false,
                 'puedePedir' => false,
             ]);
         }

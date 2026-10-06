@@ -109,14 +109,25 @@
                          una feature a esta vista sin tocar la otra hacía que el panel la
                          ofreciera y guardar fallara. Ahora agregar una es una línea en
                          `Plan::FEATURES` y aparece en los dos lados. --}}
+                    {{-- Las que dependen de otra cuelgan debajo de ella y se tildan juntas
+                         (ver `Plan::REQUISITOS` y el script de abajo). --}}
                     <div class="space-y-2">
-                        @foreach(\App\Models\Plan::FEATURES as $clave => $etiqueta)
-                            <label class="flex items-center gap-3 text-text-primary text-sm">
-                                <input type="checkbox" name="features[]" value="{{ $clave }}"
-                                       @checked(in_array($clave, $featuresActuales))
-                                       class="rounded border-accent-gray bg-primary-dark text-accent-blue">
-                                {{ $etiqueta }}
-                            </label>
+                        @foreach(\App\Models\Plan::featuresParaElPanel() as $clave => $padre)
+                            @php $requisitos = \App\Models\Plan::REQUISITOS[$clave] ?? []; @endphp
+                            <div class="{{ $padre ? 'ml-2 pl-5 border-l border-accent-gray' : '' }}">
+                                <label class="flex items-center gap-3 text-text-primary text-sm">
+                                    <input type="checkbox" name="features[]" value="{{ $clave }}"
+                                           @checked(in_array($clave, $featuresActuales))
+                                           @if($requisitos) data-requiere="{{ implode(',', $requisitos) }}" @endif
+                                           class="rounded border-accent-gray bg-primary-dark text-accent-blue">
+                                    {{ \App\Models\Plan::FEATURES[$clave] }}
+                                </label>
+                                @if(in_array('asistente', $requisitos, true))
+                                    <p class="text-text-secondary text-xs ml-7 mt-0.5" data-aviso-de="{{ $clave }}" hidden>
+                                        Necesita asistente: con 0 mensajes IA no hay chat.
+                                    </p>
+                                @endif
+                            </div>
                         @endforeach
                     </div>
                 </div>
@@ -133,4 +144,60 @@
 
         </div>
     </div>
+
+    <script>
+        // Las casillas relacionadas se mueven juntas, en vez de trabar el guardado:
+        // - tildar una trae lo que necesita (Comandas tilda Mesas);
+        // - destildar una se lleva las que dependen de ella, y si vuelve, vuelven: un
+        //   click de más no tiene que hacer perder lo que estaba marcado;
+        // - el asistente no es una casilla y su número no se puede inventar: con 0
+        //   mensajes, lo que lo necesita queda apagado y dice por qué.
+        // Lo mismo hace `Plan::conRequisitos()` al guardar.
+        (function () {
+            const mensajes = document.querySelector('input[name="mensajes_ia_mes"]');
+            const casillas = [...document.querySelectorAll('input[name="features[]"]')];
+            const casilla = clave => casillas.find(cb => cb.value === clave);
+            const requisitos = cb => (cb.dataset.requiere || '').split(',').filter(Boolean);
+
+            // Vacío es ilimitado: sólo el 0 es "sin asistente".
+            const hayAsistente = () => mensajes.value.trim() === '' || Number(mensajes.value) !== 0;
+
+            const traerRequisitos = cb => requisitos(cb).forEach(r => { if (casilla(r)) casilla(r).checked = true; });
+
+            function actualizar(tocada) {
+                if (tocada?.checked) {
+                    traerRequisitos(tocada);
+                }
+
+                // En el orden del panel, que pone cada una debajo de la que necesita.
+                casillas.filter(cb => cb.dataset.requiere).forEach(cb => {
+                    const ok = requisitos(cb).every(r => r === 'asistente' ? hayAsistente() : casilla(r)?.checked);
+
+                    if (! ok && cb.checked) {
+                        cb.checked = false;
+                        cb.dataset.apagadaSola = '1';
+                    } else if (ok && cb.dataset.apagadaSola) {
+                        cb.checked = true;
+                    }
+                    if (ok || cb === tocada) {
+                        delete cb.dataset.apagadaSola;
+                    }
+
+                    const sinAsistente = requisitos(cb).includes('asistente') && ! hayAsistente();
+                    cb.disabled = sinAsistente;
+                    cb.closest('label').classList.toggle('opacity-50', sinAsistente);
+                    const aviso = document.querySelector(`[data-aviso-de="${cb.value}"]`);
+                    if (aviso) aviso.hidden = ! sinAsistente;
+                });
+            }
+
+            mensajes.addEventListener('input', () => actualizar());
+            casillas.forEach(cb => cb.addEventListener('change', () => actualizar(cb)));
+
+            // Un plan guardado antes de esto puede tener Comandas sin Mesas: se completa,
+            // igual que al guardar, en vez de sacarle lo que tenía.
+            casillas.filter(cb => cb.checked).forEach(traerRequisitos);
+            actualizar();
+        })();
+    </script>
 </x-app-layout>

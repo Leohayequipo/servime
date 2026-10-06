@@ -368,7 +368,7 @@
 
                 $resumenVender = collect([
                     $cantidadPromos ? $cantidadPromos.' promo'.($cantidadPromos === 1 ? '' : 's') : null,
-                    $comercio->pedido_habilitado ? 'Pedidos en línea' : null,
+                    $comercio->aceptaListaDePedido() ? 'Pedidos en línea' : null,
                     $comercio->pideResena() ? 'Reseñas' : null,
                 ])->filter()->implode(' · ') ?: 'Promociones, atajos, pedidos y reseñas';
 
@@ -1622,8 +1622,10 @@
 
             {{-- Pedidos en Línea queda FUERA del formulario a propósito: el interruptor se
                  guarda solo por AJAX y no viaja en el submit. Adentro, y justo encima del
-                 botón, parecía que había que apretar "Procesar" para confirmarlo. --}}
-            @if($isEdit)
+                 botón, parecía que había que apretar "Procesar" para confirmarlo.
+                 Si el plan no trae "Lo quiero" no se muestra: el comercio lo prendía y en la
+                 carta no cambiaba nada. --}}
+            @if($isEdit && $comercio->tieneFeature('lista_pedido'))
                                 <div id="pedido-card" class="relative overflow-hidden rounded-2xl mb-8 border pedido-card {{ old('pedido_habilitado', $comercio->pedido_habilitado) ? 'bg-accent-green/10 border-accent-green/40 shadow-lg shadow-accent-green/10' : 'bg-secondary-dark border-accent-gray shadow-lg' }} transition-all duration-300 hover:shadow-xl">
                                     <div class="relative p-6">
                                         <!-- Texto arriba -->

@@ -134,6 +134,11 @@ class PlanController extends Controller
             $validated[$campo] = $request->filled($campo) ? (int) $request->input($campo) : null;
         }
 
+        // Las features van relacionadas (comandas trae mesas; sin asistente no hay
+        // clasificación). El formulario ya lo resuelve al tildar; esto es lo mismo del lado
+        // del servidor, para cuando no corre el JavaScript.
+        $validated['features'] = Plan::conRequisitos($validated['features'], $validated['mensajes_ia_mes']);
+
         return $validated;
     }
 }

@@ -109,6 +109,44 @@ class PedidoEnLaCartaTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_en_el_chat_el_boton_pedido_depende_de_la_casilla_del_plan(): void
+    {
+        // Básico trae asistente, así que el menú tiene chat.
+        $comercio = $this->comercioEn('basico');
+
+        $this->get(route('menu.chat', $comercio))
+            ->assertOk()
+            ->assertSee('id="fabWish"', false)
+            ->assertSee('id="wishPanel"', false);
+
+        // Sin la casilla, el interruptor del comercio prendido no alcanza: antes mostraba
+        // el botón "Pedido" con una lista a la que no se podía sumar nada.
+        $plan = $comercio->planEfectivo();
+        $plan->update(['features' => array_values(array_diff($plan->features, ['lista_pedido']))]);
+
+        $this->get(route('menu.chat', $comercio->fresh()))
+            ->assertOk()
+            ->assertDontSee('id="fabWish"', false)
+            ->assertDontSee('id="wishPanel"', false);
+    }
+
+    public function test_el_panel_no_ofrece_el_interruptor_si_el_plan_no_trae_la_lista(): void
+    {
+        $comercio = $this->comercioEn('free');
+        $menu = $comercio->menus()->first();
+
+        $this->actingAs($comercio->user)->get(route('menus.edit', [$comercio, $menu]))
+            ->assertOk()
+            ->assertSee('id="pedido-card"', false);
+
+        $plan = $comercio->planEfectivo();
+        $plan->update(['features' => array_values(array_diff($plan->features, ['lista_pedido']))]);
+
+        $this->actingAs($comercio->user)->get(route('menus.edit', [$comercio, $menu]))
+            ->assertOk()
+            ->assertDontSee('id="pedido-card"', false);
+    }
+
     public function test_mirar_un_plato_y_quererlo_se_registran_distinto(): void
     {
         $comercio = $this->comercioEn('free');

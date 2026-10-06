@@ -48,6 +48,85 @@ class Plan extends Model
     ];
 
     /**
+     * Lo que necesita cada feature, dentro del mismo plan, para servir de algo.
+     *
+     * Sin esto el panel dejaba tildar la clasificación de intención en un plan sin
+     * asistente: clasifica los mensajes del chat, y sin chat no hay nada que clasificar.
+     * Tampoco se ve sin Analytics, porque el botón vive en ese panel. Y "comandas" decía
+     * "requiere mesas" en la etiqueta, pero nadie lo controlaba.
+     *
+     * No traba el guardado: las relaciona. Tildar una trae las casillas que necesita, y en
+     * el panel cuelga debajo de la primera. `asistente` no es una casilla sino que el plan
+     * tenga mensajes de IA (distinto de 0), y ese número no se puede inventar: sin él, la
+     * casilla queda apagada. Un solo nivel: una casilla requerida no tiene requisitos.
+     */
+    public const REQUISITOS = [
+        'intencion_ia' => ['asistente', 'analytics'],
+        'comandas' => ['mesas'],
+    ];
+
+    /**
+     * Las features con sus relaciones resueltas, lo mismo que hace el panel: cada una suma
+     * las casillas que necesita, y la que pide asistente en un plan sin asistente se cae
+     * porque no puede funcionar. Quedan en el orden de `FEATURES`.
+     *
+     * @param  array<int, string>  $features
+     * @return array<int, string>
+     */
+    public static function conRequisitos(array $features, ?int $mensajesIaMes): array
+    {
+        foreach (self::REQUISITOS as $feature => $requisitos) {
+            if (! in_array($feature, $features, true)) {
+                continue;
+            }
+
+            // `null` es ilimitado, o sea que tiene asistente: sólo el 0 es "sin asistente".
+            if (in_array('asistente', $requisitos, true) && $mensajesIaMes === 0) {
+                $features = array_diff($features, [$feature]);
+
+                continue;
+            }
+
+            $features = [...$features, ...array_diff($requisitos, ['asistente'])];
+        }
+
+        return array_values(array_intersect(array_keys(self::FEATURES), $features));
+    }
+
+    /**
+     * Las features en el orden del panel, cada una debajo de la casilla de la que depende
+     * para que se vea que van juntas: clave => la casilla de la que cuelga, o null.
+     *
+     * @return array<string, string|null>
+     */
+    public static function featuresParaElPanel(): array
+    {
+        $padreDe = fn (string $clave) => collect(self::REQUISITOS[$clave] ?? [])
+            ->first(fn ($r) => isset(self::FEATURES[$r]));
+
+        $orden = [];
+        foreach (array_keys(self::FEATURES) as $clave) {
+            if ($padreDe($clave)) {
+                continue;
+            }
+
+            $orden[$clave] = null;
+            foreach (array_keys(self::FEATURES) as $hija) {
+                if ($padreDe($hija) === $clave) {
+                    $orden[$hija] = $clave;
+                }
+            }
+        }
+
+        // Ninguna puede quedar afuera del panel, aunque alguien arme una cadena más larga.
+        foreach (array_keys(self::FEATURES) as $clave) {
+            $orden += [$clave => $padreDe($clave)];
+        }
+
+        return $orden;
+    }
+
+    /**
      * Los modelos del desplegable, con el que ya tiene el plan siempre incluido.
      *
      * Sin esto, un plan con un modelo cargado por SQL que no esté en la lista muestra el

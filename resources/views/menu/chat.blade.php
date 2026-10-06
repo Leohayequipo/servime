@@ -641,14 +641,14 @@
     <div id="panelBackdrop" class="panel-backdrop"></div>
 
     <!-- FAB Categorías + Tags + Pre‑pedido -->
-    @if($comercio->pedido_habilitado || !empty($categorias) || !empty($tags))
+    @if($aceptaLista || !empty($categorias) || !empty($tags))
         <button id="fabTab" class="fab-tab" type="button" title="{{ __('Mostrar/ocultar accesos') }}" aria-label="{{ __('Mostrar accesos') }}">
             <span id="fabTabDot" class="fab-tab-dot"></span>
             <span class="fab-tab-chevron">‹</span>
         </button>
     @endif
     <div class="fab-container">
-        @if($comercio->pedido_habilitado)
+        @if($aceptaLista)
             <div class="fab-item">
                 <button id="fabWish" title="{{ __('Resumen para el camarero') }}" class="fab-btn fab-btn-wish">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v14.5a.5.5 0 0 1-.77.42L16 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L11 19.2l-2.23 1.72a.5.5 0 0 1-.61 0L6 19.2l-1.23.95A.5.5 0 0 1 4 19.73V6a2 2 0 0 1 2-2Zm1 4v2h8V8H8Zm0 4v2h8v-2H8Z"/></svg>
@@ -675,7 +675,7 @@
         @endif
     </div>
 
-    @if($comercio->pedido_habilitado)
+    @if($aceptaLista)
         <!-- Panel Resumen para el camarero -->
         <div id="wishPanel" class="wish-panel">
             <div class="wish-panel-inner">
@@ -813,7 +813,7 @@
         // Contexto para el botón "Ver más opciones" (para no volcar el menú completo)
         let lastCategoria = null;   // última categoría tocada
         let lastQuery = null;       // última consulta escrita a mano / atajo
-        const pedidosHabilitados = @json($comercio->aceptaListaDePedido());
+        const pedidosHabilitados = @json($aceptaLista);
         
         // ===== Reconocimiento de Voz =====
         let recognition = null;
