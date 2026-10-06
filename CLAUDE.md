@@ -46,20 +46,24 @@ npm run dev   /   npm run build
 
 - **Controllers** (`app/Http/Controllers/`): Admin, Comercio, Menu, PublicMenu,
   Chatbot, LandingChat, Cart, Analytics, Dashboard, QuestionCategory, Plan.
-- **Planes (multi-tenant):** cada `Comercio` tiene un `Plan` (Básico/Pro/Premium, editables
-  en DB desde `/admin/plans`). El plan define cuota mensual de mensajes IA, modelo OpenAI,
-  `max_tokens` del chat y features (`analytics`, `excel`, `promociones`). El super admin asigna
+- **Planes (multi-tenant):** cada `Comercio` tiene un `Plan` (Free/Mínimo/Básico/Pro/Premium,
+  editables en DB desde `/admin/plans`; ninguno está escrito en el código). El plan define cuota
+  mensual de mensajes IA (**0 = sin asistente**: el menú entra directo a la carta), tope de
+  cartas procesadas, modelo OpenAI, `max_tokens` del chat y features (`Plan::FEATURES`). Free y
+  Mínimo se crean **inactivos**: lanzarlos es una decisión (ver la skill `planes`). El super admin asigna
   plan y puede resetear el uso de IA de un comercio (se cobra aparte). La cuota se chequea
   en `ChatbotController` y los helpers viven en `Comercio` (`puedeUsarIA`, `registrarUsoIA`...).
   Feature gating: `analytics` inline en `AnalyticsController`; `excel`/`promociones` vía
   middleware `plan.feature:<feature>` (`EnsurePlanFeature`) en las rutas de menús.
 - **Models** (`app/Models/`): User, Comercio, Menu, Cart, CartItem,
-  ChatConversation, ChatLanding, QuestionCategory, Plan.
+  ChatConversation, ChatLanding, QuestionCategory, Plan, Procesamiento.
 - **Services** (`app/Services/`): ChatbotService, MenuProcessorService,
-  PdfProcessorService, PdfToImageService, GeminiPdfProcessorService.
+  PdfProcessorService, PdfToImageService, GeminiPdfProcessorService, RecomendadorService
+  (las sugerencias "va bien con" de cada carta, generadas una vez con IA al procesarla).
 - **Rutas** (`routes/web.php`):
   - Públicas (sin auth, por `slug`): `/menu/{comercio:slug}` (choose/chat/classic),
-    API chat `/api/chat/{slug}`, API carrito `/api/cart/*` (por sesión).
+    API chat `/api/chat/{slug}`, API carrito `/api/cart/*` (por sesión), buscador de la
+    carta `/api/buscar/{slug}`.
   - Auth: gestión de comercios y menús.
   - Admin (`super_admin` + prefijo `/admin`): usuarios, comercios, menús, restore.
 - **Roles:** campo `role` en `users`. Middleware alias `super_admin`

@@ -18,6 +18,8 @@ class TrackingController extends Controller
         'menu_choice',    // eligió IA o clásico (data.choice: ia|classic, data.desde, data.label)
         'promo_click',    // clickeó una promo (data.promo)
         'dish_want',      // clickeó "Lo quiero" (data.nombre, data.price)
+        'dish_view',      // abrió el detalle de un plato para mirarlo (data.nombre). NO es
+        // "lo quiero": mezclarlos inflaba "Platos más deseados".
         'order_summary',  // abrió el "Resumen para el camarero" (data.items) — el final del embudo
         'mic_start',      // arrancó a dictar por voz
         'categoria_tap',  // tocó una categoría en el chat (data.nombre, el del menú sin traducir)

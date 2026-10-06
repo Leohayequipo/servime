@@ -14,7 +14,9 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
   **propia migración** (no en el seeder, porque `DatabaseSeeder` no corre en producción).
   Campos: `key` (estable: basico/pro/premium), `nombre` (marketinero, editable), `descripcion`,
   `precio` (informativo, no hay cobro online), `mensajes_ia_mes` (**null = ilimitado**),
-  `modelo_ia`, `max_tokens_chat`, `features` (JSON: `analytics`, `excel`, `promociones`, `customizacion`), `orden`, `activo`.
+  `modelo_ia`, `max_tokens_chat`, `cartas_primer_mes` y `cartas_por_mes` (tope de cartas
+  procesadas, **null = sin límite**), `features` (JSON, la lista vive en `Plan::FEATURES`),
+  `orden`, `activo`.
 - **`comercios`** (migración `..._120100_add_plan_to_comercios_table`): `plan_id` (FK nullOnDelete),
   `ia_mensajes_periodo` (`YYYY-MM`), `ia_mensajes_usados` (int). Los comercios existentes se migran a Básico.
 - **Modelos:** `App\Models\Plan`, helpers en `App\Models\Comercio`.
@@ -31,6 +33,46 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico tiene
 `promociones`). Antes de afirmar algo sobre un plan, **consultá la DB**, no esta tabla.
 
+## Planes Free y Mínimo (sin asistente) — sep-2026
+
+Migración `2026_09_27_120000_crear_planes_free_y_minimo`. Van primeros en la escalera (el resto
+se corrió dos lugares) y **se crean con `activo = false`**: un plan activo aparece en la landing
+pública, y lanzarlos tiene que ser una decisión y no un efecto del deploy.
+
+| Plan   | key    | precio | mensajes_ia_mes | cartas (1er mes / después) | features |
+|--------|--------|--------|-----------------|----------------------------|----------|
+| Free   | free   | $0     | **0**           | 3 / 1                      | promociones, sugerencias, lista_pedido |
+| Mínimo | minimo | $2.000 | **0**           | 3 / 1                      | lo mismo + **mesas, comandas** |
+
+**La única diferencia entre los dos es si el pedido le llega al mozo.** En el Free el cliente
+arma su lista y se la **muestra** al mozo; en el Mínimo, con QR por mesa, la manda a la tablet.
+
+**Ningún plan está escrito en el código.** Lo que hace distintos a Free y Mínimo son sus datos;
+se les cambia precio, cupos y casillas desde `/admin/plans` como a cualquier otro.
+
+- **`mensajes_ia_mes = 0` significa SIN ASISTENTE** (`Plan::tieneAsistente()`), y es distinto
+  de `null` (ilimitado) y de "se le acabó el cupo del mes". Sin asistente
+  (`Comercio::tieneAsistente()`, que además mira `enable_ai_responses`), el QR entra directo a
+  la carta en lista y el chat no aparece en ningún lado: la portada y `/chat` redirigen.
+- ⚠️ **El 0 es falso en PHP.** `mensajes_ia_mes ? … : 'ilimitado'` le anunciaba "IA ilimitada" al
+  Free en la landing, y `precio ? … : 'A consultar'` lo mostraba "A consultar". Para mostrar un
+  plan usar `precioLegible()`, `cupoIaLegible()` y `topeCartasLegible()`, nunca el campo pelado.
+- **Casillas nuevas:** `sugerencias` (el "va bien con" de la carta; el comercio además lo puede
+  apagar con `comercios.sugerencias_activas`) y `lista_pedido` ("Lo quiero" y "Mi pedido";
+  `Comercio::aceptaListaDePedido()` = la casilla + el interruptor `pedido_habilitado`). La
+  migración las tildó en todos los planes que ya existían, para que nadie pierda nada.
+- **Tope de cartas** (`Comercio::cartasRestantes()`): los primeros 30 días desde el alta rige
+  `cartas_primer_mes`; después, `cartas_por_mes` por mes calendario, contando desde que terminó
+  el primer período (si no, lo usado al final de la prueba se descontaba del mes siguiente).
+  Se cuenta en la tabla **`procesamientos`** (filas con `cuenta_para_limite`): la carta nueva
+  cuenta; reintentar una que falló, lo que hace el super admin y las sugerencias que se
+  generan solas al procesar NO. Se anota al subirla, no al terminar, para que dos subidas
+  seguidas no pasen las dos. Al tope, `mensajeTopeDeCartas()` dice cuándo se renueva.
+- ⚠️ **Al lanzarlos**, en el mismo momento: tildar "activo" en Free y Mínimo, y tildar "mesas" y
+  "comandas" en **Básico y Pro**. Hoy eso es sólo de Premium, y sin tildarlo un comercio que pasa
+  de Mínimo a Básico o Pro pierde los pedidos a la tablet. Regla: cada plan tiene todo lo del
+  de abajo.
+
 ## Helpers en `Comercio` (fuente de verdad de la lógica)
 
 - `planEfectivo()` — el plan asignado, o `Plan::default()` (Básico) como fallback.
@@ -40,6 +82,9 @@ planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico 
 - `resetUsoIA()` — pone el contador en 0 (reset manual del super admin; "se cobra aparte").
 - `modeloIA()` / `maxTokensChat()` — salen del plan (con fallback seguro).
 - `tieneFeature(string $f)` — para el gating.
+- `tieneAsistente()` — el plan trae IA (`mensajes_ia_mes` ≠ 0) y el comercio no la apagó.
+- `aceptaListaDePedido()` / `muestraSugerencias()` — casilla del plan + interruptor del comercio.
+- `cartasRestantes()` / `puedeProcesarCarta()` / `mensajeTopeDeCartas()` — el tope de cartas.
 
 ## Dónde se aplican los límites
 

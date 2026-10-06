@@ -214,6 +214,86 @@
             border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
         }
         .sugerencia:active { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+        .sugerencias-rotulo { align-self: center; font-size: 11px; color: var(--text-dim); margin-right: 2px; }
+
+        /* ── "Lo quiero" y "Mi pedido" ── */
+        .lista-plato-lado { flex: none; position: relative; display: flex; flex-direction: column; align-items: flex-end; }
+        /* Con foto, el botón se apoya en la esquina de la foto, como en las apps de pedidos. */
+        .lista-plato-lado.con-foto .btn-quiero { position: absolute; right: -6px; bottom: -6px; }
+        .btn-quiero {
+            width: 36px; height: 36px; border-radius: 999px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface); color: var(--accent-soft);
+            border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+            font: inherit; font-size: 20px; font-weight: 600; line-height: 1;
+            box-shadow: 0 2px 10px rgba(0,0,0,.25);
+        }
+        /* Ya está en el pedido: el botón muestra cuántos, en el color del local. */
+        .btn-quiero.en-pedido { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 15px; }
+        .plato-modal-quiero {
+            margin-top: 16px; width: 100%; cursor: pointer; border: 0; border-radius: 12px;
+            padding: 13px; font: inherit; font-size: 15px; font-weight: 700;
+            background: var(--accent); color: #fff;
+        }
+        .fab-pedido {
+            position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60;
+            display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+            background: var(--accent); color: #fff; border: 0; border-radius: 999px;
+            padding: 13px 22px; font: inherit; font-size: 15px; font-weight: 700;
+            box-shadow: 0 8px 28px rgba(0,0,0,.4);
+        }
+        .fab-pedido-cant {
+            min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px;
+            background: rgba(255,255,255,.22); display: inline-flex; align-items: center; justify-content: center;
+            font-size: 13px;
+        }
+        .fab-pedido.late { animation: late .35s ease; }
+        @keyframes late { 50% { transform: translateX(-50%) scale(1.08); } }
+
+        /* El pedido sube desde abajo, como una hoja: se cierra y la carta sigue ahí. */
+        .mi-pedido {
+            width: 100%; max-width: 560px; margin: auto auto 0; padding: 20px 20px 26px;
+            border: 1px solid var(--line-2); border-bottom: 0; border-radius: 20px 20px 0 0;
+            /* La superficie del tema puede ser translúcida (sale de la foto del local):
+               sobre el fondo sólido, para que la carta de atrás no se lea a través. */
+            background-color: var(--bg);
+            background-image: linear-gradient(var(--surface), var(--surface));
+            color: var(--text); max-height: 86vh;
+        }
+        /* El diálogo enfoca la X al abrirse: el recuadro sólo con teclado, no al tocar. */
+        .mi-pedido-cerrar:focus { outline: none; }
+        .mi-pedido-cerrar:focus-visible { outline: 2px solid var(--accent); border-radius: 6px; }
+        .mi-pedido::backdrop { background: rgba(0,0,0,.6); }
+        .mi-pedido-cabeza { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .mi-pedido-cabeza h3 { margin: 0; font-size: 19px; font-weight: 700; }
+        .mi-pedido-cerrar { background: none; border: 0; color: var(--text-dim); font-size: 26px; cursor: pointer; line-height: 1; }
+        .mi-pedido-fila { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+        .mi-pedido-fila-nombre { flex: 1; min-width: 0; font-size: 14.5px; }
+        .mi-pedido-fila-precio { font-size: 12.5px; color: var(--text-dim); }
+        .mi-pedido-cant { display: flex; align-items: center; gap: 6px; }
+        .mi-pedido-cant button {
+            width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+            background: var(--surface-2); color: var(--text); border: 1px solid var(--line-2); font: inherit; font-size: 16px;
+        }
+        .mi-pedido-cant span { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+        .mi-pedido-vacio { color: var(--text-dim); font-size: 14px; padding: 12px 0; }
+        .mi-pedido-total { display: flex; justify-content: space-between; margin-top: 16px; font-size: 16px; }
+        .mi-pedido-total strong { font-variant-numeric: tabular-nums; }
+        .mi-pedido-nota { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
+        .mi-pedido-ayuda { margin: 12px 0 0; font-size: 13px; color: var(--text-dim); text-align: center; }
+        .mi-pedido-error { margin: 10px 0 0; font-size: 13px; color: #ff9b8a; text-align: center; }
+        .btn-pedir {
+            margin-top: 18px; width: 100%; cursor: pointer; border: 0; border-radius: 12px;
+            padding: 14px; font: inherit; font-size: 16px; font-weight: 700; background: var(--accent); color: #fff;
+        }
+        .btn-pedir:disabled { opacity: .6; }
+        .mi-pedido-vaciar {
+            display: block; margin: 16px auto 0; background: none; border: 0; cursor: pointer;
+            color: var(--text-dim); font: inherit; font-size: 13px; text-decoration: underline;
+        }
+        .ya-pedido { margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+        .ya-pedido-titulo { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+        .ya-pedido-fila { display: flex; justify-content: space-between; font-size: 13.5px; padding: 3px 0; }
         .sugerencia-mas { color: var(--accent); font-weight: 700; margin-right: 1px; }
 
         /* La foto: cuadrada, a la derecha y con el fondo puesto de antemano, así el
@@ -317,7 +397,7 @@
         {{-- Botón flotante IA. Sólo si el comercio TIENE el asistente: con la IA apagada
              el chat igual contesta con el buscador, pero llamarlo "Explorar con IA" sería
              mentirle al cliente. --}}
-        @if($comercio->enable_ai_responses)
+        @if($comercio->tieneAsistente())
         <a href="{{ route('menu.chat', $comercio) }}"
            style="position:fixed;bottom:24px;right:24px;z-index:50;
                   background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);
@@ -434,25 +514,39 @@
                                              sugerir algo más, porque acá no hay asistente. Las duplas
                                              se calcularon al procesar la carta (RecomendadorService),
                                              así que mostrarlas no cuesta ni una llamada ni un token. --}}
+                                        {{-- Sin el "+" de antes: ahora el "+" es "agregar a mi pedido"
+                                             y los dos se confundían. --}}
                                         @if(!empty($sugerido['con']))
                                             <div class="sugerencias">
+                                                <span class="sugerencias-rotulo">{{ __('Va bien con') }}</span>
                                                 @foreach($sugerido['con'] as $conEste)
                                                     <button type="button" class="sugerencia"
-                                                            onclick="event.stopPropagation(); verPlato(@js($conEste))">
-                                                        <span class="sugerencia-mas">+</span>{{ $conEste }}
-                                                    </button>
+                                                            onclick="event.stopPropagation(); verPlato(@js($conEste))">{{ $conEste }}</button>
                                                 @endforeach
                                             </div>
                                         @endif
                                     </div>
 
-                                    @if(!empty($plato['imagen']))
-                                        {{-- onerror: una foto rota se ve peor que ninguna foto.
-                                             Si el archivo no está, la fila queda como las demás. --}}
-                                        <img src="{{ $plato['imagen'] }}" alt="{{ $plato['nombre'] }}"
-                                             loading="lazy" decoding="async" class="lista-plato-foto"
-                                             onerror="this.remove()">
-                                    @endif
+                                    <div class="lista-plato-lado {{ !empty($plato['imagen']) ? 'con-foto' : '' }}">
+                                        @if(!empty($plato['imagen']))
+                                            {{-- onerror: una foto rota se ve peor que ninguna foto.
+                                                 Si el archivo no está, la fila queda como las demás. --}}
+                                            <img src="{{ $plato['imagen'] }}" alt="{{ $plato['nombre'] }}"
+                                                 loading="lazy" decoding="async" class="lista-plato-foto"
+                                                 onerror="this.remove(); this.parentElement?.classList.remove('con-foto')">
+                                        @endif
+
+                                        {{-- "Lo quiero": suma a la lista privada del cliente. No le llega
+                                             a nadie: para eso está "Pedir", dentro de "Mi pedido". --}}
+                                        @if($aceptaLista)
+                                            <button type="button" class="btn-quiero"
+                                                    onclick="event.stopPropagation(); quiero(this.closest('.lista-plato'))"
+                                                    aria-label="{{ __('Lo quiero') }}: {{ $plato['nombre'] }}">
+                                                <span class="btn-quiero-mas">+</span>
+                                                <span class="btn-quiero-cant" hidden></span>
+                                            </button>
+                                        @endif
+                                    </div>
                                 </article>
                             @endforeach
                         </section>
@@ -506,6 +600,10 @@
             <p id="platoModalDesc"></p>
             <p id="platoModalPrecio"></p>
 
+            @if($aceptaLista)
+                <button type="button" id="platoModalQuiero" class="plato-modal-quiero">{{ __('Lo quiero') }}</button>
+            @endif
+
             {{-- Acá sí van los "parecidos": el que abrió un plato ya se interesó en él y
                  está eligiendo. En la lista, en cambio, eran ruido en cada renglón. --}}
             <div id="platoModalCon" class="plato-modal-sugiere" hidden>
@@ -519,6 +617,61 @@
         </div>
     </dialog>
 
+    @if($aceptaLista)
+        {{-- "Mi pedido": aparece recién cuando hay algo. Antes de eso sería un botón que
+             no hace nada, tapando la carta. --}}
+        <button type="button" id="fabPedido" class="fab-pedido" hidden onclick="abrirMiPedido()">
+            {{ __('Mi pedido') }} <span id="fabPedidoCant" class="fab-pedido-cant">0</span>
+        </button>
+
+        <dialog id="miPedido" class="mi-pedido">
+            <div class="mi-pedido-cabeza">
+                <h3>{{ __('Mi pedido') }}</h3>
+                <button type="button" class="mi-pedido-cerrar" onclick="document.getElementById('miPedido').close()"
+                        aria-label="{{ __('Cerrar') }}">×</button>
+            </div>
+
+            @if($puedePedir)
+                {{-- Lo que la mesa ya mandó y el mozo ve en su pantalla. --}}
+                <div id="yaPedido" class="ya-pedido" hidden></div>
+            @endif
+
+            <div id="miPedidoLista" class="mi-pedido-lista"></div>
+
+            <div class="mi-pedido-total">
+                <span>{{ __('Total estimado') }}</span>
+                <strong id="miPedidoTotal"></strong>
+            </div>
+            <p id="miPedidoSinPrecio" class="mi-pedido-nota" hidden>{{ __('Algunos platos no tienen precio en la carta.') }}</p>
+
+            {{-- Qué hace el cliente con la lista depende de si el local recibe pedidos en la
+                 tablet y de si entró por el QR de una mesa. Se le dice siempre, para que
+                 nunca quede con una lista sin saber para qué sirve. --}}
+            @if($puedePedir)
+                <button type="button" id="btnPedir" class="btn-pedir">{{ __('Pedir') }}</button>
+                <p class="mi-pedido-ayuda">{{ __('El mozo lo ve al toque en su pantalla.') }}</p>
+                <p id="pedidoError" class="mi-pedido-error" hidden></p>
+            @elseif($comercio->tieneFeature('comandas'))
+                <p class="mi-pedido-ayuda">{{ __('Escaneá el código QR de tu mesa para poder pedir desde el teléfono.') }}</p>
+            @else
+                <p class="mi-pedido-ayuda">{{ __('Cuando venga el mozo, mostrale esta pantalla.') }}</p>
+            @endif
+
+            <button type="button" id="miPedidoVaciar" class="mi-pedido-vaciar">{{ __('Vaciar mi pedido') }}</button>
+        </dialog>
+    @endif
+
+    {{-- Textos del pedido, armados acá porque un @json() de varias líneas no compila. --}}
+    @php
+        $txtPedido = [
+            'vacio' => __('Todavía no elegiste nada. Tocá el + de un plato para sumarlo.'),
+            'quitar' => __('Quitar'),
+            'enviando' => __('Enviando…'),
+            'enviado' => __('¡Listo! Ya lo tiene el mozo'),
+            'no_se_pudo' => __('No se pudo mandar el pedido. Probá de nuevo.'),
+            'ya_pediste' => __('Ya pediste'),
+        ];
+    @endphp
     <script>
         // ── Buscador de la carta ──
         //
@@ -631,7 +784,278 @@
             });
         })();
 
+        // ── "Lo quiero" y "Mi pedido" ──
+        //
+        // La lista vive en el teléfono (localStorage) y se copia al servidor con el mismo
+        // /api/cart que usa el chat: el botón "Pedir" le manda al mozo lo que está en el
+        // servidor, y el panel de analítica cuenta desde ahí. La clave es la MISMA que usa
+        // el chat, así el que pasa del chat a la carta no pierde lo que eligió.
+        const LISTA_ACTIVA = @json($aceptaLista ?? false);
+        const PUEDE_PEDIR = @json($puedePedir ?? false);
+        const COMERCIO_ID = {{ $comercio->id }};
+        const TXT = @json($txtPedido);
+
+        function sesionCliente() {
+            // El partial de tracking expone el id del visitante. En la vista previa del
+            // editor ese partial no corre: ahí se lee la misma clave a mano.
+            if (window.smSessionId) return window.smSessionId();
+            const k = 'servime_chat_session_' + COMERCIO_ID;
+            let s = null;
+            try { s = localStorage.getItem(k); } catch (e) {}
+            if (!s) {
+                s = 'session_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+                try { localStorage.setItem(k, s); } catch (e) {}
+            }
+            return s;
+        }
+
+        const claveLista = () => 'servime_wish_' + COMERCIO_ID + '_' + sesionCliente();
+        const leerLista = () => { try { return JSON.parse(localStorage.getItem(claveLista())) || []; } catch (e) { return []; } };
+
+        function guardarLista(lista) {
+            try { localStorage.setItem(claveLista(), JSON.stringify(lista)); } catch (e) {}
+            pintarLista();
+        }
+
+        function alServidor(ruta, datos) {
+            fetch('/api/cart/' + ruta, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify(Object.assign({ comercio_id: COMERCIO_ID, session_id: sesionCliente() }, datos)),
+            }).catch(() => {});
+        }
+
+        // Precio con formato argentino a centavos: el punto separa miles y la coma decimales.
+        // "3.800" son 3800 y "3.50" son 3,50: un valor de miles nunca deja 2 dígitos tras el punto.
+        function aCentavos(txt) {
+            let s = String(txt || '').replace(/[^0-9.,]/g, '');
+            if (!s) return null;
+            if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+            else if (!/^\d+\.\d{2}$/.test(s)) s = s.replace(/\./g, '');
+            const v = parseFloat(s);
+            return isNaN(v) ? null : Math.round(v * 100);
+        }
+
+        function quiero(fila) {
+            if (!LISTA_ACTIVA || !fila) return;
+            const nombre = fila.dataset.nombre;
+            const precio = fila.dataset.precio || null;
+            const lista = leerLista();
+            const i = lista.findIndex(x => x.nombre.toLowerCase() === nombre.toLowerCase());
+
+            if (i >= 0) lista[i].qty += 1;
+            else lista.push({ nombre, qty: 1, priceText: precio, priceCents: aCentavos(precio) });
+
+            guardarLista(lista);
+            alServidor('incr', { nombre, delta: 1, price_text: precio });
+
+            // Recién ACÁ es "lo quiero": abrir el plato para mirarlo es otra cosa y se
+            // registra aparte (dish_view), o el panel mezclaba curiosidad con intención.
+            window.smTrack?.('dish_want', { nombre, price: precio, vista: 'classic' });
+
+            const fab = document.getElementById('fabPedido');
+            if (fab) { fab.classList.remove('late'); void fab.offsetWidth; fab.classList.add('late'); }
+        }
+
+        function cambiarCantidad(i, delta) {
+            const lista = leerLista();
+            if (!lista[i]) return;
+            const nombre = lista[i].nombre;
+            lista[i].qty += delta;
+
+            if (lista[i].qty <= 0) {
+                lista.splice(i, 1);
+                alServidor('remove', { nombre });
+            } else {
+                alServidor('incr', { nombre, delta });
+            }
+            guardarLista(lista);
+        }
+
+        function pintarLista() {
+            if (!LISTA_ACTIVA) return;
+            const lista = leerLista();
+            const total = lista.reduce((s, it) => s + it.qty, 0);
+
+            // El botón flotante y el "+" de cada plato, con cuántos lleva.
+            const fab = document.getElementById('fabPedido');
+            if (fab) {
+                fab.hidden = total === 0;
+                document.getElementById('fabPedidoCant').textContent = total > 99 ? '99+' : total;
+            }
+            document.querySelectorAll('.lista-plato').forEach(fila => {
+                const btn = fila.querySelector('.btn-quiero');
+                if (!btn) return;
+                const it = lista.find(x => x.nombre.toLowerCase() === fila.dataset.nombre.toLowerCase());
+                btn.classList.toggle('en-pedido', !!it);
+                btn.querySelector('.btn-quiero-mas').hidden = !!it;
+                const cant = btn.querySelector('.btn-quiero-cant');
+                cant.hidden = !it;
+                cant.textContent = it ? it.qty : '';
+            });
+
+            // El panel. Se arma con nodos y no con innerHTML: los nombres vienen de la
+            // carta, pero un plato con "<" en el nombre no puede romper la pantalla.
+            const caja = document.getElementById('miPedidoLista');
+            if (!caja) return;
+            caja.replaceChildren();
+
+            if (!lista.length) {
+                const p = document.createElement('p');
+                p.className = 'mi-pedido-vacio';
+                p.textContent = TXT.vacio;
+                caja.appendChild(p);
+            }
+
+            lista.forEach((it, i) => {
+                const fila = document.createElement('div');
+                fila.className = 'mi-pedido-fila';
+
+                const texto = document.createElement('div');
+                texto.className = 'mi-pedido-fila-nombre';
+                texto.textContent = it.nombre;
+                if (it.priceText) {
+                    const pr = document.createElement('div');
+                    pr.className = 'mi-pedido-fila-precio';
+                    pr.textContent = it.priceText;
+                    texto.appendChild(pr);
+                }
+
+                const cant = document.createElement('div');
+                cant.className = 'mi-pedido-cant';
+                const menos = document.createElement('button');
+                menos.type = 'button'; menos.textContent = '−'; menos.setAttribute('aria-label', TXT.quitar);
+                menos.addEventListener('click', () => cambiarCantidad(i, -1));
+                const n = document.createElement('span');
+                n.textContent = it.qty;
+                const mas = document.createElement('button');
+                mas.type = 'button'; mas.textContent = '+';
+                mas.addEventListener('click', () => cambiarCantidad(i, 1));
+                cant.append(menos, n, mas);
+
+                fila.append(texto, cant);
+                caja.appendChild(fila);
+            });
+
+            const centavos = lista.reduce((s, it) => s + (it.priceCents || 0) * it.qty, 0);
+            document.getElementById('miPedidoTotal').textContent =
+                (centavos / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+            document.getElementById('miPedidoSinPrecio').hidden = !lista.some(it => it.priceCents == null);
+
+            const pedir = document.getElementById('btnPedir');
+            if (pedir) pedir.disabled = lista.length === 0;
+        }
+
+        function abrirMiPedido() {
+            const lista = leerLista();
+            pintarLista();
+            document.getElementById('miPedido')?.showModal();
+            cargarYaPedido();
+            // Abrir el pedido para revisarlo es lo más cerca de una venta que se puede medir.
+            // Sólo con algo adentro: vacío, el embudo terminaba más ancho que su escalón anterior.
+            if (lista.length) window.smTrack?.('order_summary', { items: lista.length, vista: 'classic' });
+        }
+
+        document.getElementById('miPedidoVaciar')?.addEventListener('click', () => {
+            guardarLista([]);
+            alServidor('clear', {});
+        });
+
+        // Tocar el fondo cierra, como el detalle del plato.
+        document.getElementById('miPedido')?.addEventListener('click', (e) => {
+            if (e.target.id === 'miPedido') e.target.close();
+        });
+
+        // ── "Pedir": manda la lista a la tablet del mozo (sólo con QR de mesa) ──
+        function pintarYaPedido(items) {
+            const caja = document.getElementById('yaPedido');
+            if (!caja) return;
+            caja.replaceChildren();
+            caja.hidden = !items || !items.length;
+            if (caja.hidden) return;
+
+            const t = document.createElement('div');
+            t.className = 'ya-pedido-titulo';
+            t.textContent = TXT.ya_pediste;
+            caja.appendChild(t);
+
+            items.forEach(it => {
+                const f = document.createElement('div');
+                f.className = 'ya-pedido-fila';
+                const a = document.createElement('span'); a.textContent = it.nombre;
+                const b = document.createElement('span'); b.textContent = '×' + it.qty;
+                f.append(a, b);
+                caja.appendChild(f);
+            });
+        }
+
+        async function cargarYaPedido() {
+            if (!PUEDE_PEDIR) return;
+            try {
+                const r = await fetch('/api/comanda/mia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                    body: JSON.stringify({ comercio_id: COMERCIO_ID, session_id: sesionCliente() }),
+                });
+                const data = await r.json();
+                pintarYaPedido(data.pedido || []);
+            } catch (e) { /* ya está pedido: no poder mostrarlo no es motivo para alarmar */ }
+        }
+
+        document.getElementById('btnPedir')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const error = document.getElementById('pedidoError');
+            if (btn.disabled) return;
+
+            // Bloqueado mientras viaja: un doble toque mandaba dos rondas iguales.
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = TXT.enviando;
+            error.hidden = true;
+
+            try {
+                const r = await fetch('/api/comanda/pedir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                    body: JSON.stringify({ comercio_id: COMERCIO_ID, session_id: sesionCliente() }),
+                });
+                const data = await r.json();
+
+                if (!data.success) {
+                    error.textContent = data.message || TXT.no_se_pudo;
+                    error.hidden = false;
+                    btn.textContent = original;
+                    btn.disabled = false;
+                    return;
+                }
+
+                // El carrito del servidor ya se vació: se vacía también la copia local, o el
+                // cliente vuelve a ver lo mismo y lo manda de nuevo.
+                guardarLista([]);
+                pintarYaPedido(data.pedido || []);
+                btn.textContent = TXT.enviado;
+                setTimeout(() => { btn.textContent = original; pintarLista(); }, 2500);
+            } catch (err) {
+                error.textContent = TXT.no_se_pudo;
+                error.hidden = false;
+                btn.textContent = original;
+                btn.disabled = false;
+            }
+        });
+
+        pintarLista();
+
         const platoModal = document.getElementById('platoModal');
+        let platoAbierto = null;
+
+        // "Lo quiero" desde el detalle suma el plato que está abierto.
+        document.getElementById('platoModalQuiero')?.addEventListener('click', () => {
+            quiero(platoAbierto);
+            platoModal.close();
+        });
 
         // Pinta una lista de sugerencias como chips tocables; tocar una lleva a ese plato.
         function pintarSugerencias(caja, nombres) {
@@ -675,6 +1099,7 @@
         }
 
         function abrirPlato(btn) {
+            platoAbierto = btn;
             const img = document.getElementById('platoModalImg');
             img.src = btn.dataset.img || '';
             img.alt = btn.dataset.nombre;
@@ -703,9 +1128,9 @@
             platoModal.showModal();
             platoModal.scrollTop = 0;
 
-            // Que el comercio pueda ver QUÉ plato miran de cerca: es la señal más
-            // parecida a "esto me tentó" que da esta pantalla, donde no hay pedido.
-            window.smTrack?.('dish_want', { nombre: btn.dataset.nombre, vista: 'classic' });
+            // Qué platos miran de cerca. Es `dish_view` y NO `dish_want`: antes se guardaba
+            // como "Lo quiero" y el panel mezclaba al que miró con el que lo eligió.
+            window.smTrack?.('dish_view', { nombre: btn.dataset.nombre, vista: 'classic' });
         }
 
         // Tocar el fondo cierra. En un celular es lo que la gente intenta primero,

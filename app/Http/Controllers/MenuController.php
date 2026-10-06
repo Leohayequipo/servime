@@ -80,6 +80,14 @@ class MenuController extends Controller
             abort(403, 'No tienes permiso para crear menús en este comercio.');
         }
 
+        // Tope de cartas del plan. Va antes de mirar el archivo: si no puede procesarla, no
+        // tiene sentido subirla. El super admin no tiene tope (carga cartas de sus clientes).
+        if (! $user->isSuperAdmin() && ! $comercio->puedeProcesarCarta()) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $comercio->mensajeTopeDeCartas());
+        }
+
         // DEBUG: Ver información del archivo recibido
         if (! $request->hasFile('archivo')) {
             Log::error('❌ ERROR: No se recibió archivo en la petición');
@@ -186,6 +194,16 @@ class MenuController extends Controller
 
         // Despachar procesamiento a la queue para no bloquear el request
         \App\Jobs\ProcessMenuJob::dispatch($menu);
+
+        // Se anota al subirla y no al terminar: si no, dos subidas seguidas pasaban las dos
+        // antes de que la primera terminara de procesarse.
+        \App\Models\Procesamiento::create([
+            'comercio_id' => $comercio->id,
+            'menu_id' => $menu->id,
+            'tipo' => \App\Models\Procesamiento::TIPO_CARTA,
+            'origen' => $user->isSuperAdmin() ? \App\Models\Procesamiento::ORIGEN_ADMIN : \App\Models\Procesamiento::ORIGEN_COMERCIO,
+            'cuenta_para_limite' => ! $user->isSuperAdmin(),
+        ]);
 
         Log::info('📋 Procesamiento encolado', ['menu_id' => $menu->id]);
 
@@ -2706,6 +2724,7 @@ class MenuController extends Controller
                 'chatbot_name' => 'nullable|string|max:50',
                 'welcome_message' => 'nullable|string|max:500',
                 'pedido_habilitado' => 'nullable|boolean',
+                'sugerencias_activas' => 'nullable|boolean',
                 // Personalidad del asistente
                 'chatbot_config' => 'nullable|array',
                 'chatbot_config.tono' => 'nullable|string|in:cercano_divertido,calido_atento,formal_elegante,canchero',
@@ -2728,6 +2747,9 @@ class MenuController extends Controller
             }
             if ($request->has('pedido_habilitado')) {
                 $comercio->pedido_habilitado = $request->boolean('pedido_habilitado');
+            }
+            if ($request->has('sugerencias_activas')) {
+                $comercio->sugerencias_activas = $request->boolean('sugerencias_activas');
             }
             if ($request->has('chatbot_config')) {
                 $comercio->chatbot_config = $validated['chatbot_config'] ?? null;

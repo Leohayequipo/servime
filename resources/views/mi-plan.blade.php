@@ -25,9 +25,7 @@
                             <p class="text-sm font-medium text-text-primary truncate">{{ $comercio->nombre }}</p>
                             @if($plan)
                                 <p class="text-xs text-text-secondary">
-                                    {{ $plan->esIlimitado()
-                                        ? 'Mensajes del asistente: sin límite'
-                                        : 'Hasta '.number_format($plan->mensajes_ia_mes, 0, ',', '.').' mensajes del asistente por mes' }}
+                                    {{ $plan->cupoIaLegible() }}
                                 </p>
                             @endif
                         </div>
@@ -59,8 +57,8 @@
                         </div>
 
                         <p class="text-2xl font-bold text-text-primary mb-1">
-                            {{ $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.') : 'A consultar' }}
-                            @if($plan->precio)
+                            {{ $plan->precioLegible() }}
+                            @if((float) $plan->precio > 0)
                                 <span class="text-sm font-normal text-text-secondary">/mes</span>
                             @endif
                         </p>
@@ -70,12 +68,22 @@
                         @endif
 
                         <ul class="space-y-2 text-sm text-text-secondary mb-6">
-                            <li class="flex items-start gap-2">
-                                <x-icono name="check" class="w-4 h-4 flex-none mt-0.5 text-accent-green" />
-                                {{ $plan->esIlimitado()
-                                    ? 'Mensajes del asistente sin límite'
-                                    : number_format($plan->mensajes_ia_mes, 0, ',', '.').' mensajes del asistente por mes' }}
+                            {{-- "Sin asistente" va sin tilde verde: al lado de una tilde, lo que
+                                 NO trae el plan se leía como algo que sí trae. --}}
+                            <li class="flex items-start gap-2 {{ $plan->tieneAsistente() ? '' : 'opacity-70' }}">
+                                @if($plan->tieneAsistente())
+                                    <x-icono name="check" class="w-4 h-4 flex-none mt-0.5 text-accent-green" />
+                                @else
+                                    <span class="w-4 flex-none text-center">—</span>
+                                @endif
+                                {{ $plan->cupoIaLegible() }}
                             </li>
+                            @if($plan->topeCartasLegible())
+                                <li class="flex items-start gap-2">
+                                    <x-icono name="check" class="w-4 h-4 flex-none mt-0.5 text-accent-green" />
+                                    {{ $plan->topeCartasLegible() }} procesadas con IA
+                                </li>
+                            @endif
                             @foreach($plan->features ?? [] as $feature)
                                 <li class="flex items-start gap-2">
                                     <x-icono name="check" class="w-4 h-4 flex-none mt-0.5 text-accent-green" />

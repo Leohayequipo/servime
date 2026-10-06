@@ -44,6 +44,8 @@ class Plan extends Model
         'customizacion' => 'Portada personalizada del menú',
         'mesas' => 'Mesas con QR propio (y métricas por mesa)',
         'comandas' => 'Comandas y pantalla del mozo (requiere mesas)',
+        'sugerencias' => 'Sugerencias «va bien con» en la carta',
+        'lista_pedido' => '«Lo quiero» y «Mi pedido» en la carta',
     ];
 
     /**
@@ -74,6 +76,8 @@ class Plan extends Model
         'mensajes_ia_mes',
         'modelo_ia',
         'max_tokens_chat',
+        'cartas_primer_mes',
+        'cartas_por_mes',
         'features',
         'orden',
         'activo',
@@ -85,6 +89,8 @@ class Plan extends Model
         'precio' => 'decimal:2',
         'mensajes_ia_mes' => 'integer',
         'max_tokens_chat' => 'integer',
+        'cartas_primer_mes' => 'integer',
+        'cartas_por_mes' => 'integer',
         'orden' => 'integer',
     ];
 
@@ -117,6 +123,71 @@ class Plan extends Model
             ->orderBy('orden')
             ->get()
             ->first(fn (self $plan) => $plan->tieneFeature($feature));
+    }
+
+    /**
+     * ¿El plan trae el asistente con IA?
+     *
+     * `0` mensajes significa "sin asistente" (planes Free y Mínimo) y `null` significa
+     * ilimitado: no es lo mismo que quedarse sin cupo a mitad de mes, que es de un plan que
+     * SÍ lo trae. Sin asistente, el menú no ofrece el chat en ningún lado.
+     */
+    public function tieneAsistente(): bool
+    {
+        return $this->mensajes_ia_mes === null || $this->mensajes_ia_mes > 0;
+    }
+
+    /**
+     * El cupo de IA en palabras: "Sin asistente", "Asistente sin límite" o "5.000 mensajes…".
+     *
+     * Existe porque el 0 es falso en PHP: con `mensajes_ia_mes ? … : 'ilimitado'`, la
+     * landing le iba a anunciar "IA ilimitada" al plan que no tiene asistente.
+     */
+    public function cupoIaLegible(): string
+    {
+        if (! $this->tieneAsistente()) {
+            return 'Sin asistente con IA';
+        }
+
+        return $this->esIlimitado()
+            ? 'Asistente sin límite'
+            : number_format($this->mensajes_ia_mes, 0, ',', '.').' mensajes del asistente por mes';
+    }
+
+    /**
+     * El tope de cartas en palabras, o null si no tiene tope.
+     */
+    public function topeCartasLegible(): ?string
+    {
+        $primero = $this->cartas_primer_mes;
+        $despues = $this->cartas_por_mes;
+
+        if ($primero === null && $despues === null) {
+            return null;
+        }
+
+        $txt = fn (?int $n) => $n === null ? 'sin límite' : ($n === 1 ? '1 carta' : $n.' cartas');
+
+        return $primero === $despues
+            ? ucfirst($txt($despues)).' por mes'
+            : ucfirst($txt($primero)).' el primer mes, después '.$txt($despues).' por mes';
+    }
+
+    /**
+     * El precio tal como se le muestra al comercio: "Gratis", "A consultar" o "$2.000".
+     *
+     * Antes era un `precio ? ... : 'A consultar'`, y con el Free en $0 mostraba "A
+     * consultar": el 0 es falso en PHP.
+     */
+    public function precioLegible(): string
+    {
+        if ($this->precio === null) {
+            return 'A consultar';
+        }
+
+        return (float) $this->precio === 0.0
+            ? 'Gratis'
+            : '$'.number_format((float) $this->precio, 0, ',', '.');
     }
 
     /**

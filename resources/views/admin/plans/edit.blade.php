@@ -58,8 +58,24 @@
                 <div>
                     <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Mensajes IA por mes</label>
                     <input type="number" min="0" name="mensajes_ia_mes" value="{{ old('mensajes_ia_mes', $plan->mensajes_ia_mes) }}" class="input-field" placeholder="vacío = ilimitado">
-                    <p class="text-text-secondary text-xs mt-1">Dejalo vacío para cuota ilimitada.</p>
+                    <p class="text-text-secondary text-xs mt-1">Dejalo vacío para cuota ilimitada. En <strong>0</strong>, el plan no tiene asistente: el menú no ofrece el chat y entra directo a la carta.</p>
                 </div>
+
+                {{-- Cuántas cartas puede procesar con IA. Son dos números y no uno porque al
+                     principio el comercio sube, corrige y vuelve a subir; después la carta
+                     cambia poco. Cuentan la carta nueva y "volver a generar sugerencias";
+                     reintentar una carta que falló no cuenta. --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Cartas los primeros 30 días</label>
+                        <input type="number" min="0" name="cartas_primer_mes" value="{{ old('cartas_primer_mes', $plan->cartas_primer_mes) }}" class="input-field" placeholder="vacío = sin límite">
+                    </div>
+                    <div>
+                        <label class="block text-text-secondary text-xs font-medium uppercase tracking-wide mb-2">Cartas por mes, después</label>
+                        <input type="number" min="0" name="cartas_por_mes" value="{{ old('cartas_por_mes', $plan->cartas_por_mes) }}" class="input-field" placeholder="vacío = sin límite">
+                    </div>
+                </div>
+                <p class="text-text-secondary text-xs -mt-3">Cartas procesadas con IA. Dejalo vacío para no poner límite.</p>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>

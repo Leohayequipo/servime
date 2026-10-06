@@ -23,7 +23,9 @@ class ComandaClienteTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function comercio(array $features = ['mesas', 'comandas'], array $extra = []): Comercio
+    // `lista_pedido` va siempre: sin la lista del cliente ("Lo quiero") no hay carrito que
+    // mandar, y acá lo que se prueba es el paso siguiente, el pedido a la comanda.
+    private function comercio(array $features = ['mesas', 'comandas', 'lista_pedido'], array $extra = []): Comercio
     {
         $plan = Plan::create([
             'key' => 'test-'.uniqid(),
@@ -139,7 +141,7 @@ class ComandaClienteTest extends TestCase
 
     public function test_sin_la_feature_comandas_el_endpoint_esta_cerrado(): void
     {
-        $comercio = $this->comercio(['mesas']);
+        $comercio = $this->comercio(['mesas', 'lista_pedido']);
         $mesa = Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 7]);
         $this->sentarseEn($mesa);
         $this->agregarAlCarrito($comercio, 'tel-a', 'Milanesa');
@@ -178,7 +180,7 @@ class ComandaClienteTest extends TestCase
     public function test_el_comercio_sin_comandas_no_menciona_pedidos_por_telefono(): void
     {
         // Sin la feature, el menú es el de siempre: ni botón ni aviso.
-        $comercio = $this->comercio(['mesas']);
+        $comercio = $this->comercio(['mesas', 'lista_pedido']);
 
         // El atributo del <p>, no el nombre de la clase (que vive siempre en la hoja de estilos).
         $this->get(route('menu.chat', $comercio).'?lang=es')

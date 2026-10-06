@@ -26,11 +26,23 @@ Dos fuentes de datos alimentan las estadísticas por comercio:
   | `page_view` | `view: choose\|chat\|classic` | al cargar cada vista |
   | `menu_choice` | `choice: ia\|classic`, `desde: cta\|chip\|completo`, `label` | `[data-track-choice]` |
   | `promo_click` | `promo` | `.cat-chip-promo` |
-  | `dish_want` | `nombre`, `price` | `.btn-lo-quiero` |
-  | `order_summary` | `items` | abrir el "Resumen para el mozo" (`#fabWish`) |
+  | `dish_want` | `nombre`, `price` | "Lo quiero": `.btn-lo-quiero` del chat y el "+" (`.btn-quiero`) de la carta |
+  | `dish_view` | `nombre` | abrir el detalle de un plato en la carta clásica (sólo mirarlo) |
+  | `order_summary` | `items` | abrir "Mi pedido" con algo adentro (`#fabWish` del chat, `#fabPedido` de la carta) |
   | `mic_start` | — | `recognition.onstart` del dictado por voz |
   | `categoria_tap` | `nombre` | `.cat-chip[data-categoria]` del panel de categorías del chat |
   | `tag_tap` | `nombre` | `.tag-chip[data-tag]` del panel "Filtrar por Tags" del chat |
+  | `busqueda` · `busqueda_sin_resultado` | `q`, `resultados` | buscador de la carta (`POST /api/buscar/{slug}`); se registran **del lado del servidor**, no por `/api/track` |
+
+  ⚠️ **`dish_view` no es `dish_want`.** Hasta oct-2026 la carta clásica registraba abrir un plato
+  como `dish_want`, y "Platos más deseados" mezclaba al que miró con el que lo eligió. Al sumar
+  un widget, "lo quiero" es `dish_want` y "lo miró" es `dish_view`.
+
+  ⚠️ **`busqueda_sin_resultado` es el argumento de venta del plan con asistente** (lo que el
+  cliente quiso preguntar y la carta no supo contestar). Que encontró o no lo dice
+  `RecomendadorService::responder()` en `encontro`, NO el texto: el texto sale traducido, y
+  buscar "No encontré" en él hacía que en inglés cada búsqueda fallida contara como encontrada.
+  Todavía no hay widget que lo muestre: el dato se guarda.
 
 - **Frontend:** partial `resources/views/menu/partials/tracking.blade.php`, incluido en
   `menu/portada|choose|chat|classic` con `['trackView' => '...']`. Define `window.smTrack(event, data)`

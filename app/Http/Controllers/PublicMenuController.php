@@ -17,6 +17,14 @@ class PublicMenuController extends Controller
      */
     public function choose(Comercio $comercio)
     {
+        // Sin asistente (planes sin IA, o el comercio lo apagó) no hay nada que elegir: la
+        // portada existe para ofrecer "hablale al asistente" o "mirá la carta". Se entra
+        // directo a la carta. La mesa del QR ya quedó guardada en la sesión (ResolverMesa
+        // corre antes), así que no se pierde con el redirect.
+        if (! $comercio->tieneAsistente()) {
+            return redirect()->route('menu.classic', $comercio);
+        }
+
         // Los que configuró el comercio, o los automáticos del menú si nunca los tocó.
         $chips = $comercio->chipsDe('portada');
 
@@ -33,6 +41,12 @@ class PublicMenuController extends Controller
      */
     public function chat(Comercio $comercio)
     {
+        // Un link viejo al chat (compartido, guardado) no puede abrir un asistente que el
+        // plan no trae: lleva a la carta, que es lo que ese comercio ofrece.
+        if (! $comercio->tieneAsistente()) {
+            return redirect()->route('menu.classic', $comercio);
+        }
+
         try {
             $menus = $comercio->menus()
                 ->where('procesado', true)
@@ -116,7 +130,12 @@ class PublicMenuController extends Controller
         // comercio, salvo que el cliente pida la otra con ?vista= (el botón para alternar).
         $vista = in_array(request('vista'), [Comercio::VISTA_LISTA, Comercio::VISTA_ARCHIVO], true)
             ? request('vista')
-            : $comercio->vistaMenuClasico($archivoDisponible);
+            // Sin asistente, la carta abre en LISTA: es la única versión con buscador,
+            // atajos y "Lo quiero". Si abriera en el PDF, el cliente no se entera de que
+            // existen. El original queda a un toque ("ver la carta original").
+            : ($comercio->tieneAsistente()
+                ? $comercio->vistaMenuClasico($archivoDisponible)
+                : Comercio::VISTA_LISTA);
 
         // Sin archivo no hay nada que alternar.
         if (! $archivoDisponible) {
@@ -136,8 +155,24 @@ class PublicMenuController extends Controller
             ? app(RecomendadorService::class)->mapaParaMenu($comercio)
             : [];
 
+        // Las sugerencias las decide el plan y el comercio las puede apagar.
+        if (! $comercio->muestraSugerencias()) {
+            $recomendaciones = [];
+        }
+
+        // "Lo quiero" y "Mi pedido": la lista privada del cliente, para mostrársela al mozo.
+        $aceptaLista = $comercio->aceptaListaDePedido();
+
+        // Que el pedido LE LLEGUE al mozo necesita saber a qué mesa llevarlo: la función
+        // de comandas y haber entrado por el QR de una mesa. Sin mesa, la lista sigue
+        // sirviendo para mostrársela. Misma regla que el chat.
+        $puedePedir = $aceptaLista
+            && $comercio->tieneFeature('comandas')
+            && Mesa::idDeSesion($comercio->id) !== null;
+
         return view('menu.classic', compact(
-            'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria', 'recomendaciones'
+            'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria', 'recomendaciones',
+            'aceptaLista', 'puedePedir'
         ));
     }
 }

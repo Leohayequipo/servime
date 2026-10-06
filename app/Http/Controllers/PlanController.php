@@ -115,6 +115,8 @@ class PlanController extends Controller
             'mensajes_ia_mes' => ['nullable', 'integer', 'min:0'],
             'modelo_ia' => ['required', 'string', 'max:50'],
             'max_tokens_chat' => ['required', 'integer', 'min:50', 'max:4000'],
+            'cartas_primer_mes' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'cartas_por_mes' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'features' => ['nullable', 'array'],
             // Del modelo y no escrita acá: cuando la lista vivía en dos lugares, sumar una
             // feature a la vista sin tocar este `in` hacía que el panel la ofreciera y
@@ -127,10 +129,10 @@ class PlanController extends Controller
         $validated['features'] = $validated['features'] ?? [];
         $validated['activo'] = $request->boolean('activo');
         $validated['orden'] = $validated['orden'] ?? 0;
-        // mensajes_ia_mes vacío = ilimitado (null)
-        $validated['mensajes_ia_mes'] = $request->filled('mensajes_ia_mes')
-            ? (int) $request->input('mensajes_ia_mes')
-            : null;
+        // Vacío = sin límite (null), en los tres: la cuota de IA y los dos topes de cartas.
+        foreach (['mensajes_ia_mes', 'cartas_primer_mes', 'cartas_por_mes'] as $campo) {
+            $validated[$campo] = $request->filled($campo) ? (int) $request->input($campo) : null;
+        }
 
         return $validated;
     }

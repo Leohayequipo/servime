@@ -76,7 +76,7 @@ class CartController extends Controller
         if (! $comercio) {
             return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
         }
-        if (! $comercio->pedido_habilitado) {
+        if (! $comercio->aceptaListaDePedido()) {
             return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
         }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
@@ -102,7 +102,7 @@ class CartController extends Controller
         if (! $comercio) {
             return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
         }
-        if (! $comercio->pedido_habilitado) {
+        if (! $comercio->aceptaListaDePedido()) {
             return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
         }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
@@ -139,7 +139,7 @@ class CartController extends Controller
         if (! $comercio) {
             return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
         }
-        if (! $comercio->pedido_habilitado) {
+        if (! $comercio->aceptaListaDePedido()) {
             return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
         }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);
@@ -160,7 +160,7 @@ class CartController extends Controller
         if (! $comercio) {
             return response()->json(['success' => false, 'message' => 'Comercio no encontrado'], 404);
         }
-        if (! $comercio->pedido_habilitado) {
+        if (! $comercio->aceptaListaDePedido()) {
             return response()->json(['success' => false, 'message' => 'Los pedidos están deshabilitados para este comercio'], 403);
         }
         $cart = $this->getOrCreateCart($data['comercio_id'], $data['session_id']);

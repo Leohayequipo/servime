@@ -813,7 +813,7 @@
         // Contexto para el botón "Ver más opciones" (para no volcar el menú completo)
         let lastCategoria = null;   // última categoría tocada
         let lastQuery = null;       // última consulta escrita a mano / atajo
-        const pedidosHabilitados = @json($comercio->pedido_habilitado);
+        const pedidosHabilitados = @json($comercio->aceptaListaDePedido());
         
         // ===== Reconocimiento de Voz =====
         let recognition = null;

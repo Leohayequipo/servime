@@ -104,7 +104,9 @@ class ComercioSlugTest extends TestCase
         $comercio->refresh();
         $this->assertSame('azopardo', $comercio->slug);
         $this->assertTrue($comercio->slug_manual);
-        $this->get('/menu/azopardo-cafe-bar')->assertOk();  // la vieja sigue viva
+        // La vieja sigue viva. Se sigue el redirect porque un comercio sin asistente entra
+        // directo a la carta: lo que importa acá es que la URL no dé 404.
+        $this->followingRedirects()->get('/menu/azopardo-cafe-bar')->assertOk();
     }
 
     public function test_una_url_fijada_a_mano_no_se_pisa_al_renombrar(): void

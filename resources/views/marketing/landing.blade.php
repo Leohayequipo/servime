@@ -78,7 +78,7 @@
                 ],
                 [
                     'q' => '¿Cuánto cuesta ServiME?',
-                    'a' => 'Hay tres planes según la cantidad de consultas al asistente y las funciones que necesites (analíticas, promociones e importación por Excel). Podés ver el detalle en la sección de planes y precios de esta página.',
+                    'a' => 'Hay un plan gratis para tener tu carta con QR, y planes pagos según las funciones que necesites: mesas con pedidos directo al mozo, el asistente con IA, analíticas e importación por Excel. Podés ver el detalle en la sección de planes y precios de esta página.',
                 ],
             ];
 
@@ -901,8 +901,8 @@
                     @foreach($planes as $plan)
                         @php
                             $esPro     = $plan->key === 'pro';
-                            $precio    = $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.').'/mes' : 'A consultar';
-                            $msgs      = $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' msgs IA/mes' : 'IA ilimitada';
+                            $precio    = $plan->precioLegible().((float) $plan->precio > 0 ? '/mes' : '');
+                            $msgs      = ! $plan->tieneAsistente() ? 'Sin asistente IA' : ($plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' msgs IA/mes' : 'IA ilimitada');
                             $features  = [
                                 'analytics'   => 'Analytics avanzado',
                                 'excel'       => 'Exportar a Excel',
@@ -983,10 +983,10 @@
                                     <tr style="border-top:1px solid var(--line-soft); {{ $plan->key === 'pro' ? 'background:rgba(224,122,95,.07);' : '' }}">
                                         <td class="px-5 py-4 font-bold whitespace-nowrap">{{ $plan->nombre }}</td>
                                         <td class="px-5 py-4 text-muted whitespace-nowrap tabular-nums">
-                                            {{ $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.') : 'A consultar' }}
+                                            {{ $plan->precioLegible() }}
                                         </td>
                                         <td class="px-5 py-4 text-muted whitespace-nowrap tabular-nums">
-                                            {{ $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes, 0, ',', '.').' / mes' : 'Ilimitadas' }}
+                                            {{ ! $plan->tieneAsistente() ? '—' : ($plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes, 0, ',', '.').' / mes' : 'Ilimitadas') }}
                                         </td>
                                         <td class="px-5 py-4 text-muted whitespace-nowrap">
                                             {{ $plan->modelo_ia === 'gpt-4o' ? 'Avanzada' : 'Estándar' }}

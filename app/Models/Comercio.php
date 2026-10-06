@@ -54,6 +54,7 @@ class Comercio extends Model
         'mozo_pin_hash',
         'mozo_token_rotado_at',
         'menu_clasico_vista',
+        'sugerencias_activas',
     ];
 
     /** Las dos formas de mostrar el menú clásico. */
@@ -198,6 +199,7 @@ class Comercio extends Model
         'tema_derivado' => 'array',
         'horarios' => 'array',
         'slug_manual' => 'boolean',
+        'sugerencias_activas' => 'boolean',
     ];
 
     /**
@@ -667,6 +669,116 @@ class Comercio extends Model
         $plan = $this->planEfectivo();
 
         return $plan ? $plan->tieneFeature($feature) : false;
+    }
+
+    /**
+     * ¿El cliente del menú tiene asistente con IA?
+     *
+     * Hacen falta las dos cosas: que el plan lo traiga (los planes con 0 mensajes no lo
+     * traen) y que el comercio no lo haya apagado. Sin asistente, el menú no ofrece el chat
+     * en ningún lado y entra directo a la carta.
+     *
+     * Quedarse sin cupo a mitad de mes NO entra acá: ese comercio sí tiene asistente, sólo
+     * que se le terminó el mes (ver `puedeUsarIA()`).
+     */
+    public function tieneAsistente(): bool
+    {
+        return (bool) $this->enable_ai_responses
+            && (bool) $this->planEfectivo()?->tieneAsistente();
+    }
+
+    /**
+     * ¿Se le muestran las sugerencias ("va bien con", "parecidos") al cliente?
+     *
+     * El plan decide si existen y el comercio decide si las muestra.
+     */
+    public function muestraSugerencias(): bool
+    {
+        return $this->tieneFeature('sugerencias') && $this->sugerencias_activas !== false;
+    }
+
+    /**
+     * ¿El cliente puede armar su lista con "Lo quiero" y ver "Mi pedido"?
+     *
+     * El plan decide si existe (`lista_pedido`) y el comercio decide si la usa (el
+     * interruptor "Pedidos en línea" de su editor). Es una lista privada del cliente:
+     * que el pedido LE LLEGUE al mozo es otra cosa (`comandas`, con QR por mesa).
+     */
+    public function aceptaListaDePedido(): bool
+    {
+        return (bool) $this->pedido_habilitado && $this->tieneFeature('lista_pedido');
+    }
+
+    public function procesamientos()
+    {
+        return $this->hasMany(Procesamiento::class);
+    }
+
+    /** Los primeros días en que rige `cartas_primer_mes` en vez de `cartas_por_mes`. */
+    public const DIAS_PRIMER_MES = 30;
+
+    /**
+     * Cuántas cartas más puede procesar con IA en el período actual. `null` = sin límite.
+     *
+     * Los primeros 30 días desde el alta rige el tope del primer mes (al principio el
+     * comercio sube, corrige y vuelve a subir); después, el tope por mes calendario. Se
+     * cuentan desde que terminó el primer período, y no desde el día 1 del mes: si no, lo
+     * procesado en los últimos días de la prueba se le descontaba también del mes siguiente.
+     *
+     * Son 30 días desde el alta y no "el mes calendario del alta", porque con eso el que se
+     * registra el día 28 tenía tres días para probar.
+     */
+    public function cartasRestantes(): ?int
+    {
+        $plan = $this->planEfectivo();
+
+        if (! $plan) {
+            return null;
+        }
+
+        $finPrimerMes = ($this->created_at ?? now())->copy()->addDays(self::DIAS_PRIMER_MES);
+
+        if (now()->lt($finPrimerMes)) {
+            $tope = $plan->cartas_primer_mes;
+            $desde = $this->created_at ?? now()->subDays(self::DIAS_PRIMER_MES);
+        } else {
+            $tope = $plan->cartas_por_mes;
+            $desde = now()->startOfMonth()->max($finPrimerMes);
+        }
+
+        if ($tope === null) {
+            return null;
+        }
+
+        $usadas = $this->procesamientos()
+            ->where('cuenta_para_limite', true)
+            ->where('created_at', '>=', $desde)
+            ->count();
+
+        return max(0, $tope - $usadas);
+    }
+
+    public function puedeProcesarCarta(): bool
+    {
+        $restantes = $this->cartasRestantes();
+
+        return $restantes === null || $restantes > 0;
+    }
+
+    /**
+     * Qué se le dice al comercio cuando llegó al tope. Nombra la fecha en que se le renueva,
+     * porque "llegaste al límite" a secas no le dice qué hacer.
+     */
+    public function mensajeTopeDeCartas(): string
+    {
+        $finPrimerMes = ($this->created_at ?? now())->copy()->addDays(self::DIAS_PRIMER_MES);
+        $renueva = now()->lt($finPrimerMes)
+            ? $finPrimerMes
+            : now()->startOfMonth()->addMonth()->max($finPrimerMes);
+
+        return 'Tu plan ya usó las cartas que puede procesar por ahora. '
+            .'Se renueva el '.$renueva->format('d/m').'. '
+            .'Mientras tanto podés editar la carta que tenés a mano, sin límite.';
     }
 
     /**
