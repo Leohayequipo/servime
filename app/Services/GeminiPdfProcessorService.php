@@ -15,8 +15,8 @@ class GeminiPdfProcessorService
     {
         // Intentar leer desde config primero, si no desde env directamente
         $this->geminiApiKey = config('services.gemini.api_key') ?: env('GEMINI_API_KEY');
-        // Para procesar PDFs, usar gemini-2.5-flash (modelo estable, rápido y soporta 1M tokens)
-        $this->geminiModel = config('services.gemini.model') ?: env('GEMINI_MODEL', 'gemini-2.5-flash');
+        // El modelo sale de config/services.php (ahí está por qué es ése).
+        $this->geminiModel = config('services.gemini.model') ?: env('GEMINI_MODEL', 'gemini-3.6-flash');
         $this->geminiBaseUrl = config('services.gemini.base_url') ?: env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta');
     }
 
@@ -252,7 +252,9 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
                     'temperature' => 0.1,
                     'topK' => 40,
                     'topP' => 0.95,
-                    'maxOutputTokens' => 65536, // Máximo para gemini-2.5-flash (evita cortes en JSON grandes)
+                    // El máximo del modelo (evita cortes en JSON grandes). Incluye lo que el
+                    // modelo razona: una carta de 127 platos usa ~10.000 en total.
+                    'maxOutputTokens' => 65536,
                 ]
             ];
 

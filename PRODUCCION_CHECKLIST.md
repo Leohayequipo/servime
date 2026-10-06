@@ -64,7 +64,7 @@ por *volumen y tamaño*, todo en código:
 | Modelo chatbot | **según el plan** del comercio | `Comercio::modeloIA()` |
 | Máx. tokens respuesta chatbot | **según el plan** | `Comercio::maxTokensChat()` |
 | Modelo OCR/carga menú | `gpt-4o` | `.env` → `OPENAI_MODEL` |
-| Modelo PDFs | `gemini-2.5-flash` | `.env` → `GEMINI_MODEL` |
+| Modelo PDFs | `gemini-3.6-flash` | `.env` → `GEMINI_MODEL` |
 
 → Esto hace el gasto *predecible*, pero ante un pico de tráfico nada lo frena en
 dólares. El tope monetario es lo que falta configurar en los paneles (abajo).
@@ -114,11 +114,18 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 
 ## 🔴 5. Con fecha de vencimiento
 
-- [ ] **Migrar `gemini-2.5-flash` antes del 16/10/2026.** Es el modelo que procesa los
-      PDFs de los menús (`GeminiPdfProcessorService`) y ese día se discontinúa: si no se
-      migra, los comercios dejan de poder subir menús en PDF. En la cuenta ya están
-      disponibles `gemini-3.5-flash` y `gemini-3.6-flash`. Es cambiar `GEMINI_MODEL` y
-      probar con PDFs reales de distinto peso. **No dejarlo para octubre.**
+- [ ] **Migrar `gemini-2.5-flash` antes del 16/10/2026.** Es el modelo que procesa las
+      cartas (`GeminiPdfProcessorService`) y ese día se discontinúa. Si se apaga, no da
+      error: `MenuProcessorService` pasa en silencio a OpenAI Vision, que inventa precios.
+      - [x] Elegido y probado en local (oct-2026): `gemini-3.6-flash`. Mismos platos y
+            precios que el 2.5 en cuatro cartas reales (127, 34, 34 y 86 platos), dos
+            corridas. Cuesta ~US$0,04 una carta de 127 platos (~US$0,08 desde enero de
+            2027, cuando termina el precio de lanzamiento). Ya es el valor por defecto en
+            `config/services.php`.
+      - [ ] **En el `.env` de producción:** si tiene `GEMINI_MODEL=gemini-2.5-flash`, ese
+            valor manda sobre el del código. Cambiarlo a `gemini-3.6-flash` (o borrar la
+            línea) y correr `php artisan config:clear && php artisan config:cache`.
+      - [ ] Después del deploy, subir una carta de prueba y revisar platos y precios.
 
 ## 🔴 6. Trabajo que existe solo en la máquina local
 

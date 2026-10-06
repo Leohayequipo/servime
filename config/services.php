@@ -59,7 +59,9 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'), // Modelo estable y rápido para procesar PDFs
+        // Procesa las cartas (PDF e imagen). Elegido en oct-2026 contra el 2.5-flash, que se
+        // discontinúa el 16/10/2026: sobre cartas reales sacó los mismos platos y precios.
+        'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
     ],
 

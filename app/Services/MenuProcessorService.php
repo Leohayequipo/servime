@@ -271,6 +271,11 @@ class MenuProcessorService
                 // Guardar respuesta de Gemini en archivo temporal
                 $this->saveGeminiResponseToTemp($filePath, $result['menu_data']);
 
+                // Sin esto la carta quedaba anotada como "procesada con OpenAI Vision" aunque
+                // la hubiera leído Gemini, y no se podía saber si cayó al plan B (que inventa
+                // precios). Las imágenes ya lo anotaban.
+                $this->savedExtractedText = $result['extracted_text'] ?? 'PDF procesado directamente con Gemini';
+
                 return $result['menu_data'];
             }
         } catch (\Exception $e) {
