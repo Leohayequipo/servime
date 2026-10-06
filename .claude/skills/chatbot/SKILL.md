@@ -60,6 +60,12 @@ el banco, y eso es lo que hace viable el modelo 17 veces más barato.
   tapaban las tortas de verdad.
 - Plurales y acentos por raíz; `SINONIMOS` traduce jerga rioplatense (birra→cerveza,
   celíaco→tacc); `PALABRAS_VACIAS` saca muletillas **y adjetivos de opinión**.
+- Acepta el **arranque de una palabra** (`hamburg` → Hamburguesa) y **un error de tipeo, dos en
+  palabras largas** (`hamburgesas`, `empandas`), y `SINONIMOS` tiene inglés básico (burger,
+  fries, beer). Abajo de 5 letras exige exacto: una letra ya es otra palabra ("coca" y "boca").
+  Con el modelo encendido esto casi no se nota —tiene la carta entera delante y resuelve el
+  tipeo solo—; lo hizo necesario el **buscador de la carta**, que usa esta misma búsqueda sin
+  modelo (`buscarEnElMenu()`).
 
 > ⚠️ Los adjetivos de opinión están en `PALABRAS_VACIAS` por una razón concreta: los comercios
 > les ponen esas palabras a los platos. Preguntando *"¿con cuál queda mejor?"* se buscaba
@@ -143,18 +149,18 @@ frase y ofrece otra categoría real, en vez de dejar la charla muerta.
 > El front ya muestra el botón **una sola vez por consulta** (`!esReconsulta` en
 > `chat.blade.php`), así que no hace falta resolver el tercer "ver más" seguido: no existe.
 
-## Cuando NO hay IA contesta el recomendador
+## Recomendaciones precalculadas (y por qué el chat NO las usa sin IA)
 
 `RecomendadorService` calcula **una vez por carta** —al procesar el menú, vía
 `GenerarRecomendacionesJob`— con qué va bien cada plato, y lo guarda en
-`menus.recomendaciones`. Con eso, el chat sigue funcionando sin llamar a OpenAI:
+`menus.recomendaciones`. Las muestra el **menú clásico** (buscador, chips "va bien con",
+detalle del plato), no el chat.
 
-- **Cuota agotada o asistente apagado**: las dos rutas del chat (`chat` y `chatStream`)
-  llaman a `respuestaSinIA()`, que busca con `ChatbotService::buscarEnElMenu()` —la misma
-  búsqueda en PHP que se le sirve al modelo— y suma los complementos ya calculados.
-  Devuelve tarjetas con foto y precio, no consume cuota y se loguea `used_openai = false`.
-  Antes tiraba un cartel fijo ("por el momento no está disponible") y en la ruta sin
-  stream ni eso: la IA deshabilitada lanzaba una excepción y caía en el texto genérico.
+- **Se probó y se descartó un "chat sin IA"** (cuota agotada o asistente apagado →
+  contestar con la búsqueda + las recomendaciones). Sin modelo, el chat entiende palabras
+  y no frases, y un chat que no entiende se siente roto: quema la imagen del asistente
+  pago. Un buscador que no encuentra, en cambio, es normal. Por eso sin IA el chat sigue
+  con el cartel de "no disponible" y la experiencia sin IA vive en el menú clásico.
 - **Dos listas por plato, y la distinción importa**: `con` (se suma al pedido) y
   `parecidos` (alternativas). Quién va en cuál **lo decide la categoría de la carta, no el
   modelo**: otra hamburguesa bajo "Va bien con" se lee como "pedite dos".

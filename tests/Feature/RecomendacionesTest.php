@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Models\Plan;
-use App\Models\User;
 use App\Services\RecomendadorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -182,44 +181,6 @@ class RecomendacionesTest extends TestCase
 
         $this->assertStringContainsString('No encontré eso en la carta', $respuesta['texto']);
         $this->assertNotEmpty($respuesta['platos']);
-    }
-
-    public function test_el_chat_sin_cuota_recomienda_en_vez_de_avisar_que_no_esta_disponible(): void
-    {
-        $plan = Plan::where('key', 'basico')->first();
-        $plan->update(['mensajes_ia_mes' => 1]);
-
-        $comercio = $this->comercioConCarta([
-            'user_id' => User::factory()->create(['role' => 'user'])->id,
-            'plan_id' => $plan->id,
-        ]);
-        $comercio->menus()->first()->update(['recomendaciones' => ['platos' => [
-            'pancho' => ['con' => ['Coca 500'], 'parecidos' => [], 'motivo' => 'El combo de siempre'],
-        ]]]);
-
-        // Cuota agotada: a partir de acá el asistente con IA no contesta más.
-        $comercio->registrarUsoIA();
-        $this->assertFalse($comercio->refresh()->puedeUsarIA());
-
-        $respuesta = $this->postJson(route('chat.api', $comercio), [
-            'message' => 'tienen panchos?',
-            'session_id' => 'sess_sin_ia',
-        ]);
-
-        $respuesta->assertOk()
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('platos.0.nombre', 'Pancho')
-            ->assertJsonPath('platos.1.nombre', 'Coca 500');
-
-        $this->assertStringContainsString('Coca 500', $respuesta->json('response'));
-        $this->assertStringNotContainsString('no está disponible', $respuesta->json('response'));
-
-        // Y no se gastó cuota ni se llamó a OpenAI.
-        $this->assertSame(1, $comercio->refresh()->mensajesIaUsados());
-        $this->assertDatabaseHas('chat_conversations', [
-            'comercio_id' => $comercio->id,
-            'used_openai' => false,
-        ]);
     }
 
     public function test_el_buscador_devuelve_los_nombres_para_filtrar_la_lista(): void
