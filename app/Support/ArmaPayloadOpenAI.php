@@ -9,9 +9,11 @@ namespace App\Support;
  * aceptan: `max_tokens` (piden `max_completion_tokens`), `temperature` distinta del default,
  * `presence_penalty` y `frequency_penalty`.
  *
- * Vive acá y no en ChatbotService porque lo necesitan los dos chats que llaman a OpenAI —el
- * asistente del menú y el chat de ventas de la landing— y con una copia en cada uno alcanza
- * con arreglar un solo lado para que el otro empiece a devolver 400 sin que nadie lo note.
+ * Vive acá y no en ChatbotService porque lo necesita todo lo que llama a OpenAI —el asistente
+ * del menú, el chat de ventas de la landing y la lectura de cartas cuando Gemini falla
+ * (MenuProcessorService)— y con una copia en cada uno alcanza con arreglar un solo lado para
+ * que otro empiece a devolver 400 sin que nadie lo note. Pasó: la lectura de cartas armaba
+ * su body a mano y con `OPENAI_MODEL=gpt-5.6-luna` fallaba en todas las llamadas.
  *
  * ⚠️ Al apuntar un chat a un modelo de razonamiento hay que revisar también el límite de
  * tokens: el razonamiento se descuenta de `max_completion_tokens`, así que un valor pensado
@@ -20,7 +22,7 @@ namespace App\Support;
 trait ArmaPayloadOpenAI
 {
     /**
-     * @param  array<int, array{role: string, content: string}>  $messages
+     * @param  array<int, array{role: string, content: string|array}>  $messages  (array = texto + imágenes)
      * @param  array{temperature?: float, presence_penalty?: float, frequency_penalty?: float}  $ajustesClasicos
      *                                                                                                            Solo se aplican a las familias que los aceptan; en razonamiento se ignoran.
      * @return array<string, mixed>

@@ -3,11 +3,30 @@
 namespace App\Services;
 
 use App\Models\Menu;
+use App\Support\ArmaPayloadOpenAI;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MenuProcessorService
 {
+    use ArmaPayloadOpenAI;
+
+    /**
+     * Tamaños y variantes: la regla del prompt de Gemini, para los prompts del plan B.
+     *
+     * Los de OpenAI no la tenían. En una carta con columnas Chica/Mediana/Grande, gpt-4o
+     * pegaba los tres precios en el nombre de la pizza y gpt-5.6-luna se quedaba sólo con el
+     * de la chica (medido en oct-2026). Se suma lo de las columnas porque ahí falló.
+     */
+    private const REGLA_VARIANTES = <<<'TXT'
+🍕 VARIANTES Y TAMAÑOS (MUY IMPORTANTE - NO CONCATENES PRECIOS NI DESCARTES TAMAÑOS):
+- Si un plato tiene MÚLTIPLES TAMAÑOS o VARIANTES con precios distintos (ej: pizza "Chica $3000 / Mediana $4500 / Grande $6000", o "SOLO", "JAMÓN Y QUESO", "COMPLETO"), crea UN PLATO SEPARADO por cada tamaño/variante, con SU precio individual y el tamaño en el nombre. Ejemplo: "Pizza Muzzarella (Chica)" → $3000, "Pizza Muzzarella (Mediana)" → $4500, "Pizza Muzzarella (Grande)" → $6000
+- Si los tamaños están como ENCABEZADOS DE COLUMNA (ej: "CHICA", "MEDIANA", "GRANDE" arriba de los precios), cada columna es un tamaño: cada precio de la fila va con el tamaño de SU columna
+- PROHIBIDO concatenar precios como "$3000 $4500 $6000" o "$3000/$4500/$6000" en el campo precio de un solo plato, y PROHIBIDO ponerlos en el nombre
+- PROHIBIDO quedarte con un solo precio y descartar los otros tamaños: si hay tres precios, son tres platos
+- Cuando veas varios números de precio en la misma fila que un plato, casi siempre significa que hay varios tamaños: sepáralos en platos distintos
+TXT;
+
     protected $openaiApiKey;
 
     protected $openaiModel;
@@ -21,6 +40,25 @@ class MenuProcessorService
         // Usar config() en lugar de env() para funcionar con config:cache en producción
         $this->openaiApiKey = config('services.openai.api_key');
         $this->openaiModel = config('services.openai.model', 'gpt-4o');
+    }
+
+    /**
+     * El body para leer una carta con OpenAI (el plan B cuando Gemini falla).
+     *
+     * Leer pide temperatura 0 y sin penalties, que es lo que recibía `gpt-4o`. Un GPT-5 no
+     * acepta ninguna de las dos cosas ni `max_tokens`: con el body armado a mano, poner
+     * `OPENAI_MODEL=gpt-5.6-luna` devolvía 400 en todas las llamadas, o sea que el plan B se
+     * caía justo cuando hacía falta. El trait elige los parámetros según el modelo.
+     *
+     * @param  array<int, array<string, mixed>>  $messages
+     */
+    private function payloadLectura(array $messages, int $maxTokens = 16384): array
+    {
+        return $this->payloadOpenAI($this->openaiModel, $messages, $maxTokens, false, [
+            'temperature' => 0,
+            'presence_penalty' => 0,
+            'frequency_penalty' => 0,
+        ]);
     }
 
     /**
@@ -469,29 +507,24 @@ class MenuProcessorService
                 $response = Http::withHeaders([
                     'Authorization' => 'Bearer '.$this->openaiApiKey,
                     'Content-Type' => 'application/json',
-                ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => $this->openaiModel, // gpt-4o-mini o gpt-4.1
-                    'messages' => [
-                        [
-                            'role' => 'user',
-                            'content' => [
-                                [
-                                    'type' => 'text',
-                                    'text' => $this->buildExtractionPrompt($sectionNumber, $sections),
-                                ],
-                                [
-                                    'type' => 'image_url',
-                                    'image_url' => [
-                                        'url' => 'data:'.$mimeType.';base64,'.$base64Image,
-                                        'detail' => 'high',
-                                    ],
+                ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', $this->payloadLectura([
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => $this->buildExtractionPrompt($sectionNumber, $sections),
+                            ],
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                    'detail' => 'high',
                                 ],
                             ],
                         ],
                     ],
-                    'temperature' => 0,
-                    'max_tokens' => 16384,
-                ]);
+                ]));
 
                 if ($response->successful()) {
                     $data = $response->json();
@@ -2091,29 +2124,24 @@ Responde SOLO con JSON válido, sin texto adicional, sin markdown, sin explicaci
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->openaiModel,
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => [
-                            [
-                                'type' => 'text',
-                                'text' => $this->buildExtractionPromptForPage($pageNumber, $totalPages),
-                            ],
-                            [
-                                'type' => 'image_url',
-                                'image_url' => [
-                                    'url' => 'data:'.$mimeType.';base64,'.$base64Image,
-                                    'detail' => 'high',
-                                ],
+            ])->timeout(300)->post('https://api.openai.com/v1/chat/completions', $this->payloadLectura([
+                [
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => $this->buildExtractionPromptForPage($pageNumber, $totalPages),
+                        ],
+                        [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                'detail' => 'high',
                             ],
                         ],
                     ],
                 ],
-                'max_tokens' => 16384,
-                'temperature' => 0,
-            ]);
+            ]));
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -2333,6 +2361,8 @@ EJEMPLO DE LO QUE NO DEBES HACER:
 ❌ Si ves "CAFÉ- CORTADO- LÁGRIMA", NO lo cambies a "CAFÉ EXPRESSO"
 ❌ Si ves "$3500", NO lo cambies a "$8000" o "$9000"
 
+'.self::REGLA_VARIANTES.'
+
 ⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
 - Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
 - Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE", 🔥 → "PICANTE")
@@ -2390,17 +2420,12 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->openaiModel,
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => $contentArray,
-                    ],
+            ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', $this->payloadLectura([
+                [
+                    'role' => 'user',
+                    'content' => $contentArray,
                 ],
-                'max_tokens' => 16384,
-                'temperature' => 0,
-            ]);
+            ]));
 
             // Guardar número de imágenes para el log
             $imagesProcessed = count($imagePaths);
@@ -2645,15 +2670,13 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->openaiModel,
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => [
-                            [
-                                'type' => 'text',
-                                'text' => 'Eres un OCR (reconocimiento óptico de caracteres). Tu única tarea es TRANSCRIBIR LITERALMENTE el texto que ves en esta imagen de menú.
+            ])->timeout(600)->post('https://api.openai.com/v1/chat/completions', $this->payloadLectura([
+                [
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => 'Eres un OCR (reconocimiento óptico de caracteres). Tu única tarea es TRANSCRIBIR LITERALMENTE el texto que ves en esta imagen de menú.
 
 ⚠️ INSTRUCCIONES CRÍTICAS:
 
@@ -2739,6 +2762,8 @@ EJEMPLOS DE LO QUE NO DEBES HACER:
 ❌ Si ves "CAFÉ- CORTADO- LÁGRIMA" NO lo cambies a "CAFÉ EXPRESSO"
 ❌ Si ves "SALSA DE CHOCO O" y "MERMELADA" en líneas separadas, NO los dividas en dos platos separados
 
+'.self::REGLA_VARIANTES.'
+
 ⚠️ DETECCIÓN DE TAGS/ETIQUETAS (MUY IMPORTANTE):
 - Si ves CUALQUIER símbolo, icono, emoji, texto pequeño, badge o indicador visual junto al nombre del plato (antes, después, arriba, abajo, al lado), inclúyelo en el campo "tags" como TEXTO
 - Si ves un emoji o icono, conviértelo a su significado en texto (ej: 🌱 → "VEGANO", ⚡ → "PICANTE", 🔥 → "PICANTE")
@@ -2777,20 +2802,17 @@ FORMATO JSON REQUERIDO:
 - Es MEJOR un JSON incompleto que un JSON con contenido inventado
 
 Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin comentarios, sin markdown.',
-                            ],
-                            [
-                                'type' => 'image_url',
-                                'image_url' => [
-                                    'url' => 'data:'.$mimeType.';base64,'.$base64Image,
-                                    'detail' => 'high',
-                                ],
+                        ],
+                        [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => 'data:'.$mimeType.';base64,'.$base64Image,
+                                'detail' => 'high',
                             ],
                         ],
                     ],
                 ],
-                'max_tokens' => 16384,
-                'temperature' => 0,
-            ]);
+            ]));
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -2906,21 +2928,16 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->openaiModel,
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'Eres un experto en análisis de menús de restaurantes. Analiza el texto del menú y extrae la información estructurada en formato JSON con: nombre del restaurante, categorías de platos, platos con precios, descripciones, y cualquier información relevante.',
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => "Analiza este menú en formato {$format}:\n\n{$text}",
-                    ],
+            ])->timeout(180)->post('https://api.openai.com/v1/chat/completions', $this->payloadLectura([
+                [
+                    'role' => 'system',
+                    'content' => 'Eres un experto en análisis de menús de restaurantes. Analiza el texto del menú y extrae la información estructurada en formato JSON con: nombre del restaurante, categorías de platos, platos con precios, descripciones, y cualquier información relevante.',
                 ],
-                'max_tokens' => 2000,
-                'temperature' => 0,
-            ]);
+                [
+                    'role' => 'user',
+                    'content' => "Analiza este menú en formato {$format}:\n\n{$text}",
+                ],
+            ], 2000));
 
             if ($response->successful()) {
                 $data = $response->json();
