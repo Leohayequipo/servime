@@ -5,6 +5,53 @@ Marcar `[x]` a medida que se completan. Prioridad: 🔴 alta · 🟡 media · �
 
 ---
 
+## 💰 0. Para empezar a cobrar (decidido el 06/10/2026)
+
+La idea: **cobrar ya, sin esperar la integración con Mercado Pago.** La integración es lo
+que más tarda y no hace falta para los primeros clientes. Hoy no hay ningún medio de pago
+en el sistema, el registro está cerrado ("El acceso es por suscripción. Contactanos") y el
+plan lo asigna el super admin a mano.
+
+**Paso 1: deploy de lo que ya está**
+- [ ] Push de `main` (= deploy). Incluye la migración a Gemini, que vence el 16/10 (sección 5).
+- [ ] En el `.env` de producción: `GEMINI_MODEL=gemini-3.6-flash` y
+      `OPENAI_MODEL=gpt-5.6-luna`, después `php artisan config:clear && php artisan config:cache`.
+- [ ] Subir una carta de prueba (ideal: la de Azopardo, 151 platos) y revisar que el log
+      diga "procesado exitosamente con Gemini" y que platos y precios estén bien.
+
+**Paso 2: cobrar con Mercado Pago sin programar**
+- [ ] En el panel de MP → **Planes de suscripción**: crear un plan por cada plan pago
+      (nombre, precio, frecuencia mensual). MP da un link que debita la tarjeta todos los
+      meses. Doc: https://www.mercadopago.com.ar/developers/es/docs/subscription-plans/overview
+- [ ] Cuando entra un pago, asignarle el plan al comercio en `/admin/plans` (ya existe).
+
+**Paso 3: dos cambios de código para que eso cierre** (no están hechos)
+- [ ] **Campo "link de pago" en cada plan**, editable en `/admin/plans`, que se muestre
+      como botón "Suscribirme" en los precios de la landing y en "Mi plan" del comercio.
+      El cliente paga solo; el super admin sólo activa.
+- [ ] **Plan con el que arranca un comercio nuevo.** Hoy es **Pro, gratis y sin vencimiento**
+      (`ComercioController::store`, `Plan::where('key', 'pro')`). Tiene que ser Free o una
+      prueba con fecha: si no, nadie tiene motivo para pagar.
+
+**Paso 4: lanzar los planes** (desde `/admin/plans`, sin deploy)
+- [ ] Precios definitivos en cada plan.
+- [ ] Tildar "activo" en Free y Mínimo y, en el mismo momento, Mesas + Comandas en Básico
+      y Pro (si no, pasar de Mínimo a Básico o Pro le saca al comercio los pedidos a la tablet).
+
+**Antes de cobrarle al primero** (sin código)
+- [ ] **Topes de gasto** en OpenAI y Google AI (sección 3): hoy la factura de IA no tiene techo.
+- [ ] **Backups automáticos de la base** en Hostinger (sección 2).
+- [ ] **Términos y condiciones y política de privacidad.** No hay ninguna página legal, y el
+      sistema guarda datos de los comercios y las charlas de sus clientes.
+- [ ] **Factura electrónica (ARCA):** Mercado Pago cobra pero no factura. Verlo con el contador.
+
+**Después, con clientes pagando**
+- [ ] Integración real con MP: suscripciones por API (preapproval) + webhook que active el
+      plan cuando se paga y lo baje cuando se cae el pago. Varios días de trabajo + pruebas
+      en el sandbox de MP. Recién ahí tiene sentido abrir el registro con el plan Free.
+
+---
+
 ## 🔴 1. Tests de flujos críticos
 
 - [x] **Baseline verde restaurado** — había 7 tests de Breeze fallando (registro/reset/
@@ -63,7 +110,7 @@ por *volumen y tamaño*, todo en código:
 | Rate limit crear menú (OCR) | 5 req/min | `routes/web.php:113` |
 | Modelo chatbot | **según el plan** del comercio | `Comercio::modeloIA()` |
 | Máx. tokens respuesta chatbot | **según el plan** | `Comercio::maxTokensChat()` |
-| Modelo OCR/carga menú | `gpt-4o` | `.env` → `OPENAI_MODEL` |
+| Modelo OCR/carga menú (plan B si Gemini falla) | `gpt-5.6-luna` (antes `gpt-4o`) | `.env` → `OPENAI_MODEL` |
 | Modelo PDFs | `gemini-3.6-flash` | `.env` → `GEMINI_MODEL` |
 
 → Esto hace el gasto *predecible*, pero ante un pico de tráfico nada lo frena en
@@ -129,11 +176,8 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 
 ## 🔴 6. Trabajo que existe solo en la máquina local
 
-- [ ] **La rama `feat/portada-menu-publico` nunca se pusheó ni se mergeó a `main`.**
-      Al 14/08/2026 son ~29 commits sin upstream: los atajos configurables, el panel de
-      analytics completo, el consumo de tokens del chatbot, los fixes de precios e
-      imágenes de menús y el round-trip del Excel. Si se pierde el disco, se pierde todo.
-      Es el riesgo más grande abierto y el más barato de cerrar.
+- [x] **La rama `feat/portada-menu-publico` nunca se pusheó ni se mergeó a `main`.**
+      Resuelto: está mergeada en `main` (verificado el 06/10/2026).
 
 ## 🟡 7. Bugs conocidos, anotados y sin arreglar
 
@@ -183,34 +227,32 @@ a la facturación. El super admin puede resetear el uso de un comercio (se cobra
 - [x] CLAUDE.md creado.
 - [x] **Rotar la API key de Gemini** expuesta — rotada por el usuario (local + servidor).
 - [x] `.env.example` actualizado con todas las claves necesarias.
-- [ ] Push de los commits locales pendientes (esperando que Hostinger vuelva).
+- [ ] Push de los commits locales pendientes de `main` (ver sección 0, paso 1).
 
 ---
 
-## Estado general (14/08/2026)
+## Estado general (06/10/2026)
 
-Tareas 1, 2, 3 y 4 cerradas en lo que toca al código; la suite está en **201 tests verdes**.
+La suite está en **523 tests verdes**. El objetivo ahora es **empezar a cobrar**.
 
 Lo abierto, por orden de urgencia:
 
-1. 🔴 **Pushear la rama** — ~29 commits que solo existen en local (sección 6).
-2. 🔴 **Migrar Gemini antes del 16/10/2026** — quedan ~2 meses (sección 5).
-3. 🔴 **Topes de gasto** en los paneles de OpenAI y Google AI (sección 3).
-4. 🔴 **Backups automáticos de BD** y `.env` de producción (sección 2).
+1. 🔴 **Deploy antes del 16/10** — push de `main` + `.env` de producción + carta de prueba
+   (sección 0, paso 1). Sin eso, el 16/10 las cartas pasan en silencio al plan B.
+2. 🔴 **Cobrar:** links de suscripción de MP + campo "link de pago" por plan + plan inicial
+   que no sea Pro gratis + lanzar Free/Mínimo (sección 0, pasos 2 a 4).
+3. 🔴 **Topes de gasto** en OpenAI y Google AI (sección 3) y **backups** de BD (sección 2).
+4. 🔴 **Términos y condiciones y política de privacidad** (sección 0).
 5. 🟡 Bugs anotados: cuota cobrada de más en el stream, aviso de cuota tardío (sección 7).
+6. 🟡 Verificar en producción el cron `schedule:run` (sin él no salen los avisos diarios
+   de la campanita: `MenuSinPublicar`, `AsistenteApagado`).
 
-Ideas sin arrancar (no son deuda, son features nuevas):
+Ideas (no son deuda, son features nuevas):
 
-- **Pedir reseña en Google.** Hoy el sistema no puede: no capta datos de contacto del
-  comensal (el carrito lo identifica por `session_id` anónimo y no hay checkout), no hay
-  canal de notificación hacia él, no hay campo donde guardar el link, y el chat no
-  renderiza enlaces (`parseMarkdown` solo hace negrita, itálica, `[TAGS:]` e `[IMAGEN:]`).
-  Camino corto: campo `google_review_url` + un marcador propio tipo `[[RESEÑA]]` que el
-  front convierta en botón, reusando la cañería de `[[PLATOS]]`. **No** habilitar links
-  markdown genéricos: dejaría entrar como enlace clickeable cualquier URL alucinada por el
-  modelo o colada en el texto de un menú importado.
+- [x] **Pedir reseña en Google.** Hecho (campos de reseña en `comercios`, `pideResena()`).
 - **Disponibilidad / sin stock de un plato.** Diseñado el 14/08/2026, **pendiente de
   implementar**. Ver el detalle abajo.
+- **Integración real con Mercado Pago** (sección 0, "Después").
 
 ---
 
