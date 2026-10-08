@@ -448,6 +448,7 @@
                                         @php
                                             $platosCat = is_array($categoria['platos'] ?? null) ? $categoria['platos'] : [];
                                             $sinDescCat = collect($platosCat)->filter(fn ($p) => blank($p['descripcion'] ?? null))->count();
+                                            $sinFotoCat = collect($platosCat)->filter(fn ($p) => blank($p['imagen'] ?? null))->count();
                                         @endphp
                                         <div class="editor-categoria border border-accent-gray rounded-xl overflow-hidden bg-secondary-dark" data-categoria-editor="{{ $categoriaIndex }}">
                                             <button type="button" class="editor-categoria-cabecera w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 text-left hover:bg-primary-dark/60 transition-colors" aria-expanded="false">
@@ -457,6 +458,9 @@
                                                 @if($sinDescCat)
                                                     <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary flex-shrink-0">{{ $sinDescCat }} sin descripción</span>
                                                 @endif
+                                                {{-- Siempre está (oculto en 0) porque se recuenta al subir o borrar una foto. --}}
+                                                <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary flex-shrink-0"
+                                                      data-sin-foto-cat="{{ $categoriaIndex }}" @unless($sinFotoCat) style="display:none" @endunless>{{ $sinFotoCat }} sin foto</span>
                                             </button>
 
                                             <div class="editor-categoria-cuerpo hidden border-t border-accent-gray">
@@ -488,6 +492,21 @@
                                                                 @if(blank($plato['descripcion'] ?? null))
                                                                     <button type="button" class="plato-detalle-toggle hidden md:inline-flex flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary hover:border-accent-blue/50 hover:text-accent-deep transition-colors" title="Agregar descripción">sin descripción</button>
                                                                 @endif
+                                                                {{-- Foto de un vistazo, sin abrir plato por plato: miniatura o
+                                                                     "sin foto". Las clases de cada estado están repetidas en
+                                                                     marcarFotoPlato() (JS), que lo repinta al subir o borrar. --}}
+                                                                @php $fotoPlato = filled($plato['imagen'] ?? null) ? asset($plato['imagen']) : null; @endphp
+                                                                <button type="button" data-abre="foto"
+                                                                        id="plato-foto-indicador-{{ $categoriaIndex }}-{{ $platoIndex }}"
+                                                                        @if($fotoPlato) data-tiene-foto="1" @endif
+                                                                        class="plato-detalle-toggle plato-foto-indicador hidden md:inline-flex flex-shrink-0 items-center justify-center overflow-hidden border border-accent-gray hover:border-accent-blue/50 transition-colors {{ $fotoPlato ? 'w-8 h-8 rounded-md' : 'text-[11px] px-2 py-0.5 rounded-full text-text-secondary hover:text-accent-deep' }}"
+                                                                        title="{{ $fotoPlato ? 'Ver o cambiar la foto' : 'Agregar foto' }}">
+                                                                    @if($fotoPlato)
+                                                                        <img src="{{ $fotoPlato }}" alt="" loading="lazy" class="w-full h-full object-cover">
+                                                                    @else
+                                                                        sin foto
+                                                                    @endif
+                                                                </button>
                                                                     <!-- Precio (alineado a la derecha) -->
                                                                     <div class="flex items-center gap-2 flex-shrink-0">
                                                                         <div class="flex items-center bg-secondary-dark border border-accent-blue/50 rounded-lg overflow-hidden shadow-md hover:border-accent-blue transition-colors">
@@ -1959,8 +1978,8 @@
                 detalle.classList.toggle('hidden', !abrir);
                 item.querySelectorAll('.plato-detalle-toggle[aria-expanded]').forEach((b) => b.setAttribute('aria-expanded', abrir ? 'true' : 'false'));
                 item.querySelector('.plato-detalle-flecha')?.classList.toggle('rotate-180', abrir);
-                // Desde "sin descripción" se va directo a escribirla.
-                if (abrir && !toggle.hasAttribute('aria-expanded')) {
+                // Desde "sin descripción" se va directo a escribirla (el de la foto sólo abre).
+                if (abrir && !toggle.hasAttribute('aria-expanded') && toggle.dataset.abre !== 'foto') {
                     const [, cat, plato] = item.querySelector('[id^="descripcion-display-"]').id.match(/(\d+)-(\d+)$/);
                     if (typeof enableEditDescripcion === 'function') enableEditDescripcion(Number(cat), Number(plato));
                 }
@@ -3505,6 +3524,37 @@
         }
 
         // Función para subir imagen de plato
+        // Repinta el indicador de foto del plato (miniatura o "sin foto") y recuenta el
+        // "N sin foto" de su categoría. Las clases son las mismas del Blade de la fila.
+        function marcarFotoPlato(categoriaIndex, platoIndex, url) {
+            const ind = document.getElementById(`plato-foto-indicador-${categoriaIndex}-${platoIndex}`);
+            if (ind) {
+                const chip = ['text-[11px]', 'px-2', 'py-0.5', 'rounded-full', 'text-text-secondary', 'hover:text-accent-deep'];
+                const mini = ['w-8', 'h-8', 'rounded-md'];
+                ind.classList.remove(...(url ? chip : mini));
+                ind.classList.add(...(url ? mini : chip));
+                ind.title = url ? 'Ver o cambiar la foto' : 'Agregar foto';
+                ind.textContent = url ? '' : 'sin foto';
+                if (url) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = '';
+                    img.className = 'w-full h-full object-cover';
+                    ind.appendChild(img);
+                    ind.dataset.tieneFoto = '1';
+                } else {
+                    delete ind.dataset.tieneFoto;
+                }
+            }
+
+            const contador = document.querySelector(`[data-sin-foto-cat="${categoriaIndex}"]`);
+            if (contador) {
+                const n = document.querySelectorAll(`#platos-container-${categoriaIndex} .plato-foto-indicador:not([data-tiene-foto])`).length;
+                contador.textContent = `${n} sin foto`;
+                contador.style.display = n ? '' : 'none';
+            }
+        }
+
         async function uploadPlatoImagen(event, categoriaIndex, platoIndex) {
             const file = event.target.files[0];
             if (!file) return;
@@ -3617,6 +3667,7 @@
                 }
 
                 if (data.success) {
+                    marcarFotoPlato(categoriaIndex, platoIndex, data.imagen_url);
                     // Actualizar imagen con URL del servidor
                     const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);
                     if (img) {
@@ -3754,6 +3805,7 @@
                 }
 
                 if (data.success) {
+                    marcarFotoPlato(categoriaIndex, platoIndex, null);
                     // Eliminar del DOM
                     const container = document.getElementById(`plato-imagen-container-${categoriaIndex}-${platoIndex}`);
                     const img = document.getElementById(`plato-imagen-${categoriaIndex}-${platoIndex}`);

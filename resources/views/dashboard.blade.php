@@ -513,11 +513,14 @@
         }
 
         function filterByTime(period) {
+            // Los botones están dentro de la sección de conversaciones, que no siempre se
+            // muestra, y esto corre igual al cargar: sin ellos tiraba un error en consola.
+            const active = document.getElementById(`filter-${period}`);
+            if (!active) return;
             document.querySelectorAll('#filter-today, #filter-week, #filter-month').forEach(btn => {
                 btn.classList.remove('active-filter', 'bg-accent-blue', 'text-black', 'font-medium');
                 btn.classList.add('bg-secondary-dark', 'text-text-secondary', 'border', 'border-accent-gray');
             });
-            const active = document.getElementById(`filter-${period}`);
             active.classList.add('active-filter');
             active.classList.remove('bg-secondary-dark', 'text-text-secondary', 'border', 'border-accent-gray');
 
