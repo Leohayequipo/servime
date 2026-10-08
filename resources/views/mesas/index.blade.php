@@ -72,7 +72,7 @@
                             {{-- Escanearlo con la tablet evita tipear 24 caracteres al azar,
                                  que es donde se pierde el tiempo al configurar el local. --}}
                             <div class="text-center">
-                                <img src="{{ route('mozo.qr', $comercio) }}"
+                                <img src="{{ $qrMozo ?? route('mozo.qr', $comercio) }}"
                                      alt="QR para abrir la pantalla del mozo"
                                      class="w-28 h-28 rounded-lg bg-white p-1">
                                 <p class="text-text-secondary text-xs mt-1">Escanealo con la tablet</p>
@@ -168,9 +168,9 @@
                                 @endunless
                             </div>
 
-                            <img src="{{ route('mesas.qr', [$comercio, $mesa]) }}"
+                            {{-- Embebido y no por URL: ver MesaController::index (la CDN). --}}
+                            <img src="{{ $qrPorMesa[$mesa->id] }}"
                                  alt="Código QR de la mesa {{ $mesa->numero }}"
-                                 loading="lazy"
                                  class="w-full rounded-xl bg-white p-2 mb-4">
 
                             <form method="POST" action="{{ route('mesas.update', [$comercio, $mesa]) }}" class="mb-3">
@@ -192,7 +192,8 @@
                                 <a href="{{ $mesa->urlPublica() }}" target="_blank"
                                    class="btn-secondary px-4 py-2 text-xs">👁️ Abrir</a>
 
-                                <a href="{{ route('mesas.qr', [$comercio, $mesa]) }}?download=1"
+                                <a href="{{ $qrPorMesa[$mesa->id] }}"
+                                   download="qr-{{ $comercio->slug }}-mesa-{{ $mesa->numero }}.png"
                                    class="btn-secondary px-4 py-2 text-xs">⬇️ PNG</a>
 
                                 <form method="POST" action="{{ route('mesas.rotar', [$comercio, $mesa]) }}"

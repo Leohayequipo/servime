@@ -185,6 +185,26 @@ class MesaPanelTest extends TestCase
 
         $respuesta->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertNotFalse(getimagesizefromstring($respuesta->getContent()));
+        // Que la CDN de producción no la guarde ni la "optimice" (la re-pide sin sesión).
+        $this->assertStringContainsString('no-transform', $respuesta->headers->get('Cache-Control'));
+        $this->assertStringContainsString('private', $respuesta->headers->get('Cache-Control'));
+    }
+
+    public function test_la_pantalla_trae_los_qr_embebidos_y_no_por_url(): void
+    {
+        // En producción, con la CDN de Hostinger adelante, <img src=".../qr.png"> salía roto:
+        // la CDN pedía la imagen sin la sesión y contestaba "Invalid source image".
+        $comercio = $this->comercioCon($this->planConMesas());
+        $this->actingAs($comercio->user)->post(route('mesas.sincronizar', $comercio), ['cantidad' => 2]);
+        $mesa = $comercio->mesas()->first();
+
+        $html = $this->actingAs($comercio->user)->get(route('mesas.index', $comercio))->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($html, 'alt="Código QR de la mesa'));
+        $this->assertMatchesRegularExpression('/<img src="data:image\/png;base64,[^"]+"\s+alt="Código QR de la mesa '.$mesa->numero.'"/', $html);
+        $this->assertStringNotContainsString(route('mesas.qr', [$comercio, $mesa]), $html);
+        // La descarga también sale del embebido, con nombre de archivo.
+        $this->assertStringContainsString('download="qr-'.$comercio->slug.'-mesa-'.$mesa->numero.'.png"', $html);
     }
 
     public function test_pedir_mas_mesas_que_el_tope_no_pasa_la_validacion(): void

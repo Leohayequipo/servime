@@ -19,6 +19,12 @@ use Illuminate\View\View;
  */
 class MesaController extends Controller
 {
+    /**
+     * Para las imágenes que piden login: que la CDN de Hostinger no las guarde (son de un
+     * solo comercio) ni las "optimice" (las re-pide sin sesión y rompe). Ver index().
+     */
+    private const SIN_CDN = 'private, no-store, no-transform';
+
     public function __construct(
         private MesaService $mesas,
         private QrService $qr,
@@ -28,10 +34,23 @@ class MesaController extends Controller
     {
         $this->autorizar($comercio);
 
+        $mesas = $comercio->mesas()->get();
+
         return view('mesas.index', [
             'comercio' => $comercio,
-            'mesas' => $comercio->mesas()->get(),
+            'mesas' => $mesas,
             'activas' => $comercio->mesas()->activas()->count(),
+            // Los QR van embebidos (data URI) y no como <img src="…/qr.png">. En producción
+            // hay adelante una CDN de Hostinger que intercepta las URLs de imágenes para
+            // optimizarlas, y las va a buscar SIN la sesión del usuario: estas rutas piden
+            // login, le devuelven el redirect y la CDN contesta "Invalid source image".
+            // Embebidos no hay ninguna imagen que interceptar. (~3,6 KB por mesa.)
+            'qrPorMesa' => $mesas->mapWithKeys(
+                fn (Mesa $mesa) => [$mesa->id => $this->qr->dataUriDeMesa($mesa)]
+            ),
+            'qrMozo' => $comercio->tieneAccesoMozo()
+                ? 'data:image/png;base64,'.base64_encode($this->qr->png(route('mozo.pin', $comercio->mozo_token), null, 400))
+                : null,
         ]);
     }
 
@@ -157,7 +176,7 @@ class MesaController extends Controller
         return response(
             $this->qr->png(route('mozo.pin', $comercio->mozo_token), null, 400),
             200,
-            ['Content-Type' => 'image/png']
+            ['Content-Type' => 'image/png', 'Cache-Control' => self::SIN_CDN]
         );
     }
 
@@ -168,7 +187,7 @@ class MesaController extends Controller
 
         $png = $this->qr->pngDeMesa($mesa);
 
-        $headers = ['Content-Type' => 'image/png'];
+        $headers = ['Content-Type' => 'image/png', 'Cache-Control' => self::SIN_CDN];
 
         if ($request->boolean('download')) {
             $headers['Content-Disposition'] = 'attachment; filename="qr-'.$comercio->slug.'-mesa-'.$mesa->numero.'.png"';
