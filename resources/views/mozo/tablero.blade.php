@@ -12,6 +12,11 @@
          traerlos, pero el `confirm()` nativo no va: no matchea la estética. --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        /* El atributo `hidden` tiene que ocultar siempre. Las clases de botón (btn-secondary,
+           btn-danger) fijan display:inline-flex y le ganaban: el "Agregar «…»" del buscador
+           salía como una píldora vacía, y "Cerrar mesa" aparecía en las mesas libres. */
+        [hidden] { display: none !important; }
+
         /* Pensado para una tablet apoyada en la barra: los botones se tocan con el dedo
            pulgar y de costado, no con un mouse. Nada más chico de 44px de alto. */
         .mesa-card {
@@ -81,9 +86,14 @@
             color: rgb(var(--c-ink)); cursor: pointer;
         }
         /* Se pega arriba del contenido scrolleable: el título y la salida siguen a mano
-           por más que el mozo baje 20 platos en el buscador. */
+           por más que el mozo baje 20 platos en el buscador.
+
+           `top` es -20px y no 0 a propósito: el contenedor tiene 20px de relleno (p-5) y
+           el navegador lo respeta al pegar, así que con 0 la cabecera quedaba 20px más
+           abajo de donde la pone el margen negativo. Sin scrollear tapaba el principio
+           del pedido, y scrolleando el pedido se veía pasar por arriba del título. */
         .detalle-cab {
-            position: sticky; top: 0; z-index: 3;
+            position: sticky; top: -20px; z-index: 3;
             display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
             margin: -20px -20px 16px; padding: 20px;
             background: rgb(var(--c-elev-2));
@@ -253,6 +263,31 @@
             });
         }
 
+        // El total al pie de la lista, como en una cuenta. Si hay platos sin precio en la
+        // carta se avisa: el total no los incluye y el cliente tiene que saberlo.
+        function filaTotal(mesa) {
+            const sinPrecio = mesa.rondas.flatMap(r => r.items)
+                .filter(it => it.precio_centavos === null || it.precio_centavos === undefined)
+                .reduce((n, it) => n + it.qty, 0);
+            return `
+                <div class="border-t border-accent-gray/50 pt-3">
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-text-secondary">Total</span>
+                        <span class="text-text-primary font-bold text-lg">${plata(mesa.total_centavos)}</span>
+                    </div>
+                    ${sinPrecio ? `<div class="text-text-secondary text-xs text-right">sin contar ${sinPrecio} plato(s) sin precio</div>` : ''}
+                </div>`;
+        }
+
+        // "$ 6.500,00", o "$ 13.000,00 · 2 × $ 6.500,00" si hay más de uno. Sin precio en
+        // la carta no se inventa un $0: se dice que no tiene.
+        function precioDeFila(it) {
+            if (it.precio_centavos === null || it.precio_centavos === undefined) return 'sin precio';
+            return it.qty > 1
+                ? `${plata(it.subtotal_centavos)} · ${it.qty} × ${plata(it.precio_centavos)}`
+                : plata(it.precio_centavos);
+        }
+
         function pedir(url, opciones = {}) {
             return fetch(url, {
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
@@ -384,6 +419,10 @@
                             <div class="min-w-0">
                                 <div class="text-text-primary">${it.nombre}</div>
                                 ${it.nota ? `<div class="text-text-secondary text-xs">${it.nota}</div>` : ''}
+                                {{-- El precio de cada plato: para cuando la mesa pregunta
+                                     "¿a ver qué gastamos?" y el mozo le muestra la pantalla.
+                                     Con más de uno, el subtotal primero y la cuenta al lado. --}}
+                                <div class="text-text-secondary text-sm mt-0.5">${precioDeFila(it)}</div>
                             </div>
                             <div class="flex items-center gap-2 flex-none">
                                 <button class="btn-qty" data-menos="${it.id}">−</button>
@@ -394,7 +433,7 @@
                         </div>
                     `).join('')}
                 </div>
-            `).join('');
+            `).join('') + filaTotal(mesa);
 
             const rondas = document.getElementById('detalleRondas');
             rondas.querySelectorAll('[data-mas]').forEach(b => b.addEventListener('click',

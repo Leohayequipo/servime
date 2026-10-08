@@ -349,6 +349,10 @@ class MozoController extends Controller
                 'qty' => $item->qty,
                 'nota' => $item->nota,
                 'precio' => $item->price_text,
+                // En centavos para mostrarlo con el mismo formato que el total. null = el
+                // plato no tenía precio en la carta: no es "$0", se muestra "sin precio".
+                'precio_centavos' => $item->price_centavos,
+                'subtotal_centavos' => $item->price_centavos !== null ? $item->subtotalCentavos() : null,
                 'del_mozo' => $item->loAgregoElMozo(),
             ])->values()->all(),
         ])->reverse()->values()->all();

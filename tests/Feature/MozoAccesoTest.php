@@ -332,6 +332,28 @@ class MozoAccesoTest extends TestCase
         $this->assertSame('Café', $rondas[0]['items'][0]['nombre']);
     }
 
+    public function test_cada_plato_trae_su_precio_y_su_subtotal(): void
+    {
+        // Para cuando la mesa pide "¿a ver qué gastamos?" y el mozo le muestra la pantalla.
+        $comercio = $this->comercioConMozo();
+        $comanda = $this->comandaCon($comercio);
+        $servicio = app(ComandaService::class);
+        $this->entrar($comercio);
+
+        $servicio->agregarDelMozo($comanda, 'Huevos revueltos', 3, '$5.000');
+        $servicio->agregarDelMozo($comanda, 'Agua de la casa');   // sin precio en la carta
+
+        $mesa = $this->getJson(route('mozo.estado', $comercio->mozo_token))->assertOk()->json('mesas.0');
+        $items = collect($mesa['rondas'])->flatMap(fn ($r) => $r['items'])->keyBy('nombre');
+
+        $this->assertSame(500000, $items['Huevos revueltos']['precio_centavos']);
+        $this->assertSame(1500000, $items['Huevos revueltos']['subtotal_centavos']);
+        // Sin precio no es $0: la pantalla dice "sin precio" y el total no lo cuenta.
+        $this->assertNull($items['Agua de la casa']['precio_centavos']);
+        $this->assertNull($items['Agua de la casa']['subtotal_centavos']);
+        $this->assertSame(1500000, $mesa['total_centavos']);
+    }
+
     public function test_el_mozo_corrige_la_cantidad_y_borra_un_item(): void
     {
         $comercio = $this->comercioConMozo();
