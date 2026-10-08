@@ -48,6 +48,36 @@ class Plan extends Model
     ];
 
     /**
+     * Cómo se nombra cada feature de cara al cliente: [texto, versión corta para la tabla].
+     *
+     * `FEATURES` es para el panel del super admin. La landing y su chat de ventas tenían
+     * cada uno su propia lista, nadie les sumó las features nuevas, y los precios públicos
+     * mostraban "lista_pedido", "customizacion", "mesas" y "comandas" tal cual. Ahora
+     * leen de acá, y un test falla si una feature queda sin su texto.
+     */
+    public const FEATURES_PUBLICAS = [
+        'analytics' => ['Analytics avanzado', 'Analíticas'],
+        'excel' => ['Importar y exportar el menú en Excel', 'Excel'],
+        'promociones' => ['Gestión de promociones', 'Promociones'],
+        'intencion_ia' => ['Clasificación de intención con IA', 'Intención IA'],
+        'customizacion' => ['Portada personalizada del menú', 'Portada'],
+        'mesas' => ['Mesas con su propio QR', 'Mesas'],
+        'comandas' => ['Pedidos directo a la pantalla del mozo', 'Pedidos al mozo'],
+        'lista_pedido' => ['«Lo quiero» y «Mi pedido» en la carta', 'Lo quiero'],
+    ];
+
+    /**
+     * El nombre público de una feature. Nunca devuelve la clave interna: si falta el texto
+     * público usa la etiqueta del panel.
+     */
+    public static function nombrePublico(string $feature, bool $corto = false): string
+    {
+        return self::FEATURES_PUBLICAS[$feature][$corto ? 1 : 0]
+            ?? self::FEATURES[$feature]
+            ?? ucfirst(str_replace('_', ' ', $feature));
+    }
+
+    /**
      * Lo que necesita cada feature, dentro del mismo plan, para servir de algo.
      *
      * Sin esto el panel dejaba tildar la clasificación de intención en un plan sin

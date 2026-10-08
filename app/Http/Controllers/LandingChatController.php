@@ -61,29 +61,23 @@ ServiME convierte el menú físico de un bar o restaurante en una experiencia di
 - No uses headers con ## en tus respuestas
 PROMPT;
 
-    private const FEATURE_LABELS = [
-        'analytics' => 'Analytics avanzado de consultas',
-        'excel' => 'Exportar conversaciones a Excel',
-        'promociones' => 'Gestión de promociones destacadas',
-        'intencion_ia' => 'Clasificación de intención con IA',
-    ];
-
     private function buildSystemPrompt(): string
     {
         $planes = Plan::where('activo', true)->where('orden', '>', 0)->orderBy('orden')->get();
 
         $planesText = "\n\n## Planes y precios\n";
         foreach ($planes as $plan) {
-            $precio = $plan->precio ? '$'.number_format($plan->precio, 0, ',', '.').'/mes' : 'A consultar';
-            $msgs = $plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' mensajes IA por mes' : 'IA ilimitada';
+            // Los helpers y no el campo pelado: el 0 es falso en PHP, y con `precio ? … :
+            // 'A consultar'` y `mensajes_ia_mes ? … : 'IA ilimitada'` el bot le vendía el
+            // Free como "A consultar" y con "IA ilimitada", cuando no tiene asistente.
+            $precio = $plan->precioLegible().((float) $plan->precio > 0 ? '/mes' : '');
 
             $planesText .= "\n### {$plan->nombre} — {$precio}\n";
             $planesText .= "{$plan->descripcion}\n";
-            $planesText .= "- {$msgs}\n";
+            $planesText .= "- {$plan->cupoIaLegible()}\n";
 
             foreach ($plan->features ?? [] as $feature) {
-                $label = self::FEATURE_LABELS[$feature] ?? $feature;
-                $planesText .= "- {$label}\n";
+                $planesText .= '- '.Plan::nombrePublico($feature)."\n";
             }
         }
 

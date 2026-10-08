@@ -903,12 +903,6 @@
                             $esPro     = $plan->key === 'pro';
                             $precio    = $plan->precioLegible().((float) $plan->precio > 0 ? '/mes' : '');
                             $msgs      = ! $plan->tieneAsistente() ? 'Sin asistente IA' : ($plan->mensajes_ia_mes ? number_format($plan->mensajes_ia_mes).' msgs IA/mes' : 'IA ilimitada');
-                            $features  = [
-                                'analytics'   => 'Analytics avanzado',
-                                'excel'       => 'Exportar a Excel',
-                                'promociones' => 'Gestión de promociones',
-                                'intencion_ia'=> 'Clasificación de intención con IA',
-                            ];
                         @endphp
                         {{-- El plan Pro se destaca por contraste de material (fondo verde profundo),
                              no por un borde de color. --}}
@@ -937,7 +931,7 @@
                                 @foreach($plan->features ?? [] as $feature)
                                     <li class="flex items-start gap-2.5 text-sm">
                                         <span class="shrink-0" style="color:{{ $esPro ? 'var(--wood)' : 'var(--accent-ink)' }};">✓</span>
-                                        {{ $features[$feature] ?? $feature }}
+                                        {{ \App\Models\Plan::nombrePublico($feature) }}
                                     </li>
                                 @endforeach
                             </ul>
@@ -952,15 +946,10 @@
                 {{-- Comparativa. Las columnas salen de las features reales de cada plan,
                      así que si agregás o quitás una en el panel, la tabla se actualiza sola. --}}
                 @php
-                    $etiquetas = [
-                        'analytics' => 'Analíticas',
-                        'excel' => 'Excel',
-                        'promociones' => 'Promociones',
-                        'intencion_ia' => 'Intención IA',
-                    ];
+                    $orden = array_keys(\App\Models\Plan::FEATURES_PUBLICAS);
                     $presentes = $planes->flatMap(fn ($p) => $p->features ?? [])->unique();
-                    $columnas = collect(array_keys($etiquetas))->filter(fn ($f) => $presentes->contains($f))
-                        ->merge($presentes->diff(array_keys($etiquetas)))->values();
+                    $columnas = collect($orden)->filter(fn ($f) => $presentes->contains($f))
+                        ->merge($presentes->diff($orden))->values();
                 @endphp
 
                 <div class="mt-14">
@@ -974,7 +963,7 @@
                                     <th class="font-bold text-xs uppercase tracking-wider px-5 py-4">Consultas al asistente</th>
                                     <th class="font-bold text-xs uppercase tracking-wider px-5 py-4">Calidad de IA</th>
                                     @foreach($columnas as $col)
-                                        <th class="font-bold text-xs uppercase tracking-wider px-5 py-4 whitespace-nowrap">{{ $etiquetas[$col] ?? ucfirst(str_replace('_', ' ', $col)) }}</th>
+                                        <th class="font-bold text-xs uppercase tracking-wider px-5 py-4 whitespace-nowrap">{{ \App\Models\Plan::nombrePublico($col, true) }}</th>
                                     @endforeach
                                 </tr>
                             </thead>

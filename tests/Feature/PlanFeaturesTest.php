@@ -168,4 +168,27 @@ class PlanFeaturesTest extends TestCase
         $this->assertSame(array_search('mesas', $claves) + 1, array_search('comandas', $claves));
         $this->assertNull($orden['analytics']);
     }
+
+    public function test_toda_feature_tiene_su_texto_para_el_cliente(): void
+    {
+        // Pasó: se sumaron cuatro features y la landing mostraba "lista_pedido" tal cual.
+        foreach (array_keys(Plan::FEATURES) as $feature) {
+            $this->assertArrayHasKey($feature, Plan::FEATURES_PUBLICAS, "La feature «{$feature}» no tiene texto público.");
+        }
+    }
+
+    public function test_la_landing_no_muestra_claves_internas(): void
+    {
+        $plan = $this->plan(array_keys(Plan::FEATURES));
+        $plan->update(['orden' => 1, 'precio' => 1000]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        foreach (array_keys(Plan::FEATURES) as $feature) {
+            $this->assertStringContainsString(e(Plan::nombrePublico($feature)), $html);
+            if (str_contains($feature, '_') || $feature !== strtolower(Plan::nombrePublico($feature))) {
+                $this->assertDoesNotMatchRegularExpression('/>\s*'.preg_quote($feature, '/').'\s*</', $html, "La landing muestra «{$feature}» tal cual.");
+            }
+        }
+    }
 }
