@@ -771,7 +771,7 @@
                         ['Bares y cervecerías', 'malbec-copa', 'Tu carta de tragos y cervezas siempre actualizada. El asistente sugiere el maridaje con la picada o la tabla.'],
                         ['Cafeterías y panaderías', 'ensalada-verde', 'Menú de desayunos y meriendas con opciones sin TACC, veganas o sin lactosa bien señalizadas.'],
                         ['Pizzerías y rotiserías', 'fugazza', 'Variedades, tamaños y promociones del día visibles al instante, sin reimprimir la carta.'],
-                        ['Food trucks', null, 'Un QR que funciona en cualquier lado. Cambiás el menú del día desde el celular en segundos.'],
+                        ['Food trucks', 'food-truck', 'Un QR que funciona en cualquier lado. Cambiás el menú del día desde el celular en segundos.'],
                         ['Heladerías y postres', 'helado-artesanal', 'Sabores y combinaciones del día, con las opciones sin azúcar destacadas para quien las busca.'],
                     ] as [$titulo, $foto, $texto])
                         @php $src = $fotoRubro($foto); @endphp
