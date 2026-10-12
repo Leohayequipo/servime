@@ -1,0 +1,40 @@
+FOTOS DE LA DEMO PARA INMOBILIARIAS
+===================================
+
+Todas las fotos son de Unsplash y están bajo la Licencia Unsplash
+(https://unsplash.com/license): uso comercial gratuito, sin obligación de
+atribución. Igual se deja anotado de dónde salió cada una.
+
+Las propiedades, precios y datos de la demo son INVENTADOS. Las fotos no
+corresponden a esas direcciones ni a esos barrios.
+
+Se bajaron ya convertidas a webp de 1200 px (y 640 px la portada de cada
+tarjeta, "1-sm.webp").
+
+
+fotos/depto-puerto-madero/  — Huy Nguyen (https://unsplash.com/@huynguyen_pch)
+  1.webp  https://unsplash.com/photos/ciHrgv7HKZE
+  2.webp  https://unsplash.com/photos/kb_Q3CLOlzo
+  3.webp  https://unsplash.com/photos/yeiddImKtF0
+  4.webp  https://unsplash.com/photos/HdV8o72FhgU
+
+fotos/monoambiente-palermo/  — Aquilion Property (https://unsplash.com/@aquilionproperty)
+  1.webp  https://unsplash.com/photos/1EJXSLUfqU0
+  2.webp  https://unsplash.com/photos/NoPzk4m4jHc
+  3.webp  https://unsplash.com/photos/KUG5LLnuTbo
+  4.webp  https://unsplash.com/photos/qbhF5gOzhVU
+  5.webp  https://unsplash.com/photos/dZYYr4rO3DI
+
+fotos/casa-pilar/  — John Fornander (https://unsplash.com/@johnfo)
+  1.webp  https://unsplash.com/photos/Id7u0EkTjBE
+  2.webp  https://unsplash.com/photos/y3_AHHrxUBY
+  3.webp  https://unsplash.com/photos/MN9bkjqWXa4
+  4.webp  https://unsplash.com/photos/w6ez7LKnDGo
+  5.webp  https://unsplash.com/photos/3dNh2Kbp0Z4
+
+fotos/ph-villa-urquiza/  — David Marquez (https://unsplash.com/@mark_ez_estudio)
+  1.webp  https://unsplash.com/photos/fDQkGvdA1Nw
+  2.webp  https://unsplash.com/photos/3bRxBh2yiVc
+  3.webp  https://unsplash.com/photos/N07BIDiQ85o
+  4.webp  https://unsplash.com/photos/PPIPgRm8fkw
+  5.webp  https://unsplash.com/photos/5v6EaWn0v_o
