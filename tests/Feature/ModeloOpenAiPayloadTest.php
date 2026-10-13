@@ -39,7 +39,9 @@ class ModeloOpenAiPayloadTest extends TestCase
         foreach (['gpt-5.6-luna', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.4', 'o3'] as $modelo) {
             $payload = $this->payload($modelo);
 
-            $this->assertSame(900, $payload['max_completion_tokens'], $modelo);
+            // Los 900 de la respuesta más 1.500 para pensar: el razonamiento se descuenta
+            // del mismo tope, y sin la reserva luna devolvió una respuesta vacía.
+            $this->assertSame(900 + 1500, $payload['max_completion_tokens'], $modelo);
             $this->assertArrayNotHasKey('max_tokens', $payload, $modelo);
         }
     }

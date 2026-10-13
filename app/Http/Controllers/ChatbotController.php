@@ -68,8 +68,16 @@ class ChatbotController extends Controller
             $response = $this->chatbotService->processMessage($comercio, $message, $sessionId, $modoRespuesta, $scopeRespuesta);
             $responseTime = round((microtime(true) - $startTime) * 1000);
 
+            // Sin texto no hay respuesta (ver la misma guarda en chatStream).
+            $usoIA = trim($response) !== '';
+            if (! $usoIA) {
+                $response = $this->generateFallbackResponse($comercio, $message);
+            }
+
             // Contabilizar el consumo de IA del mes (para la cuota del plan)
-            $comercio->registrarUsoIA();
+            if ($usoIA) {
+                $comercio->registrarUsoIA();
+            }
 
             // Platos del menú recomendados (datos exactos del JSON: foto/precio/botón).
             // Se calcula ANTES del log para poder guardar cuántos fueron: cero significa
@@ -77,7 +85,7 @@ class ChatbotController extends Controller
             $platos = $this->chatbotService->detectarPlatosMencionados($comercio, $response);
 
             // Log de la conversación (usar session_id obtenido anteriormente)
-            $this->logConversation($comercio, $message, $response, true, $responseTime, $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado(), array_column($platos, 'nombre'));
+            $this->logConversation($comercio, $message, $response, $usoIA, $responseTime, $request, $sessionId, $modoRespuesta, count($platos), $this->chatbotService->faltanteDeclarado(), array_column($platos, 'nombre'));
 
             return response()->json([
                 'response' => $response,
@@ -217,6 +225,16 @@ class ChatbotController extends Controller
                     $full = $this->generateFallbackResponse($comercio, $message);
                     $emit(['type' => 'delta', 'content' => $full]);
                 }
+            }
+
+            // El modelo también puede terminar BIEN y sin escribir nada: un GPT-5 que se
+            // gasta el límite pensando. OpenAI no lo reporta como error, así que el cliente
+            // veía la burbuja vacía y al comercio se le descontaba el mensaje de la cuota.
+            // Sin texto no hay respuesta: se trata igual que una caída.
+            if ($usoIA && trim($full) === '') {
+                $usoIA = false;
+                $full = $this->generateFallbackResponse($comercio, $message);
+                $emit(['type' => 'delta', 'content' => $full]);
             }
 
             // Contabilizar el uso de IA del mes (cuota del plan). Solo si OpenAI respondió:

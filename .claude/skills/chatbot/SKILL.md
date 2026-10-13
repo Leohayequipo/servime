@@ -255,6 +255,14 @@ Al revés, el comercio se queda sin chatbot sin que nadie haya tocado el repo.
 Los tres parámetros que se pierden estaban para variar el vocabulario; en las pruebas contra
 menús reales las respuestas siguieron saliendo bien sin ellos.
 
+**El razonamiento sale del mismo tope que la respuesta.** `max_completion_tokens` cuenta lo
+que el modelo piensa más lo que escribe. En oct-2026 luna razonó los 1.200 tokens de Premium
+con "somos 4, qué pedimos?" y devolvió **una respuesta vacía, sin marcador**. Por eso
+`ArmaPayloadOpenAI` le suma `RESERVA_RAZONAMIENTO` (1.500) al límite del plan en los modelos
+que razonan: `max_tokens_chat` sigue midiendo la respuesta. Solo se cobra lo usado (mediana
+~300 tokens), así que no encarece el caso normal. Medido: los pedidos de grupo pasan los 600
+seguido, que es el tope que tenían Básico (600) y Pro (900) en la base local.
+
 ## Consumo: qué gastó cada consulta
 
 Cada respuesta de OpenAI trae un `usage` que **antes se descartaba**. Ahora se guarda en
@@ -287,6 +295,9 @@ Cada respuesta de OpenAI trae un `usage` que **antes se descartaba**. Ahora se g
   "Sin responder" del panel marcaba 0 con OpenAI caído, y `registrarUsoIA()` le comía la cuota
   del plan al comercio por consultas que nunca se atendieron. Va con la bandera `$usoIA`, que
   se apaga solo si **no llegó ningún token** (un stream cortado a mitad igual respondió).
+  También se apaga si el modelo termina **bien pero sin texto** (un GPT-5 que se gastó el
+  límite pensando: OpenAI no lo reporta como error). Las dos entradas (`chat` y `chatStream`)
+  responden con `generateFallbackResponse()` en vez de una burbuja vacía, y no cobran cuota.
 - **El idioma se resuelve por código y se dice explícito** (`SetLocale::NOMBRES`/`ANCLAJES`):
   como todo el prompt está en español, inferirlo funcionaba 1 de cada 4 veces. **En consola no
   corre el middleware** y contesta en inglés: al probar por tinker, `app()->setLocale('es')`.

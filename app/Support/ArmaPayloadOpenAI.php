@@ -15,12 +15,17 @@ namespace App\Support;
  * que otro empiece a devolver 400 sin que nadie lo note. Pasó: la lectura de cartas armaba
  * su body a mano y con `OPENAI_MODEL=gpt-5.6-luna` fallaba en todas las llamadas.
  *
- * ⚠️ Al apuntar un chat a un modelo de razonamiento hay que revisar también el límite de
- * tokens: el razonamiento se descuenta de `max_completion_tokens`, así que un valor pensado
- * para un GPT-4 puede consumirse entero pensando y devolver una respuesta vacía.
+ * El razonamiento se descuenta de `max_completion_tokens`, así que un límite pensado para un
+ * GPT-4 puede consumirse entero pensando y devolver una respuesta vacía. Pasó con luna y el
+ * tope de 1.200 de Premium: "somos 4, qué pedimos?" razonó 1.200 tokens y no escribió nada,
+ * sin marcador ni tarjetas. Por eso a los modelos de razonamiento se les suma una reserva
+ * para pensar, aparte del límite que pide el que llama (que sigue midiendo la RESPUESTA).
+ * Solo se cobra lo que se usa: la reserva no encarece el caso normal (~300 tokens).
  */
 trait ArmaPayloadOpenAI
 {
+    private const RESERVA_RAZONAMIENTO = 1500;
+
     /**
      * @param  array<int, array{role: string, content: string|array}>  $messages  (array = texto + imágenes)
      * @param  array{temperature?: float, presence_penalty?: float, frequency_penalty?: float}  $ajustesClasicos
@@ -32,7 +37,7 @@ trait ArmaPayloadOpenAI
         $payload = ['model' => $model, 'messages' => $messages];
 
         if ($this->esModeloDeRazonamiento($model)) {
-            $payload['max_completion_tokens'] = $maxTokens;
+            $payload['max_completion_tokens'] = $maxTokens + self::RESERVA_RAZONAMIENTO;
         } else {
             $payload['max_tokens'] = $maxTokens;
             $payload['temperature'] = $ajustesClasicos['temperature'] ?? 0.7;        // Más creatividad para descripciones gourmet

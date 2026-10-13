@@ -93,4 +93,61 @@ class ChatbotCaidaTest extends TestCase
 
         $this->assertSame($usadosAntes, (int) $comercio->fresh()->ia_mensajes_usados);
     }
+
+    /**
+     * Lo que devuelve un GPT-5 que se gastó el límite pensando: un 200 sin texto.
+     * Le pasó a luna con "somos 4, qué pedimos?" (1.200 tokens de razonamiento, 0 de respuesta).
+     */
+    private function respuestaVacia(): void
+    {
+        config(['services.openai.api_key' => 'test-key']);
+        $usage = ['prompt_tokens' => 7977, 'completion_tokens' => 1200,
+            'completion_tokens_details' => ['reasoning_tokens' => 1200]];
+
+        $sse = 'data: '.json_encode(['choices' => [['delta' => [], 'finish_reason' => 'length']]])."\n"
+            .'data: '.json_encode(['choices' => [], 'usage' => $usage])."\n"
+            ."data: [DONE]\n";
+
+        Http::fake([
+            '*/chat/completions' => fn ($request) => ($request->data()['stream'] ?? false)
+                ? Http::response($sse, 200)
+                : Http::response(['choices' => [['message' => ['content' => ''], 'finish_reason' => 'length']], 'usage' => $usage], 200),
+        ]);
+    }
+
+    public function test_una_respuesta_vacia_del_stream_no_deja_la_burbuja_en_blanco_ni_cobra_cuota(): void
+    {
+        $this->respuestaVacia();
+        $comercio = $this->comercioConMenu();
+        $usadosAntes = (int) $comercio->fresh()->ia_mensajes_usados;
+
+        $this->correrStream($this->post(route('chat.stream', $comercio), [
+            'message' => 'somos 4, qué pedimos?',
+            'session_id' => 'sess_vacia',
+        ]));
+
+        $conv = ChatConversation::forComercio($comercio->id)->latest('id')->first();
+
+        $this->assertNotSame('', trim($conv->bot_response), 'El cliente tiene que ver el texto de respaldo.');
+        $this->assertFalse((bool) $conv->used_openai, 'Tiene que contar en "Sin responder".');
+        $this->assertSame($usadosAntes, (int) $comercio->fresh()->ia_mensajes_usados);
+    }
+
+    public function test_una_respuesta_vacia_sin_stream_tampoco(): void
+    {
+        $this->respuestaVacia();
+        $comercio = $this->comercioConMenu();
+        $usadosAntes = (int) $comercio->fresh()->ia_mensajes_usados;
+
+        $this->postJson(route('chat.api', $comercio), [
+            'message' => 'somos 4, qué pedimos?',
+            'session_id' => 'sess_vacia2',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $conv = ChatConversation::forComercio($comercio->id)->latest('id')->first();
+
+        $this->assertNotSame('', trim($conv->bot_response));
+        $this->assertFalse((bool) $conv->used_openai);
+        $this->assertSame($usadosAntes, (int) $comercio->fresh()->ia_mensajes_usados);
+    }
 }
