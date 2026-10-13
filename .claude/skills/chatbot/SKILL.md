@@ -76,6 +76,19 @@ el banco, y eso es lo que hace viable el modelo 17 veces más barato.
 > ignore lo que claramente no venga al caso. Sin eso el modelo nombraba los seis lomitos que
 > le pasábamos y al cliente le caían ocho tarjetas de golpe.
 
+> ⚠️ **Los verbos también son muletillas.** "Ver más" vuelve a buscar con las palabras de la
+> pregunta original: tras "quiero una pinta pero no sé con qué **combinar**" ofreció dos
+> licuados "**Combina**do" (el error de tipeo tolerado los emparejaba). Por eso `combinar`,
+> `maridar` y `pero` (que por el arranque traería una "Peroni") están en `PALABRAS_VACIAS`.
+> `acompañar` **no**, a propósito: encuentra la categoría "Acompañamientos", que es lo buscado.
+>
+> Y en el "ver más" de un pedido de acompañamiento (`esPedidoDeAcompanamiento()`) no se pasa
+> la lista: la búsqueda trae lo que el cliente **ya eligió** (la cerveza), y presentada como
+> "ESTO ES TODO" el modelo la ofrecía como "la opción que faltaba".
+>
+> Y ojo: la lista se compara con la palabra **ya sin acentos** (`acompaña` llega como
+> `acompana`). Una muletilla con tilde o ñ escrita así nunca filtra nada: va sin acento.
+
 El chat la llama con tope **6**, lo máximo que muestra un pedido específico, y "ver más" con
 25. Se probó con 8 para darle margen de elección y gpt-4o-mini metía las 8 en el marcador: lo
 que recibe en esta lista lo recita entero. El `$max = 5` por defecto queda para el buscador.
@@ -133,6 +146,16 @@ permitía ver qué ofreció el asistente.
   **hasta 6** (6 es también el máximo con el que el front muestra el botón "Ver más"); abierto o
   de grupo → 3 o 4; opinión → 1; "todos" → todos; saludo → ninguno. Las tarjetas no se
   achicaron: con 6 queda una columna larga, y fue a propósito.
+- **"¿Con qué acompaño X?" no es una opinión.** Al principio caía en "opinión → 1" y a "quiero
+  una pinta pero no sé con qué combinar" le daba una sola picada. Es un pedido de ideas: van
+  **3 opciones distintas entre sí** (algo para picar, algo frito, algo contundente). La opinión
+  de verdad ("¿la pinta va bien con papas?") sigue con 1.
+- **El texto vende.** Con "1 o 2 frases, un solo plato" quedó correcto pero frío ("te recomiendo
+  X, que es una buena opción"). Ahora: la frase del destacado **evoca** con lo que dice la carta
+  ("una picada bien completa para ir picando entre trago y trago") sin listar ingredientes ni
+  inventar; "la más pedida" **solo** para platos estrella; y cierra, si viene al caso, con **una
+  pregunta** que empuja el siguiente pedido ("¿Le sumamos algo dulce para cerrar?"), respetando
+  la REGLA #1 (en un pedido específico no ofrece otro tipo).
 
 ## El asistente sabe qué hora es
 

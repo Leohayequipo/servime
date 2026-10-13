@@ -144,4 +144,63 @@ class BusquedaEnMenuTest extends TestCase
 
         $this->assertStringNotContainsString('BÚSQUEDA YA HECHA EN EL MENÚ', $m->invoke(new ChatbotService, $comercio, 'tienen sushi?'));
     }
+
+    public function test_el_verbo_combinar_no_trae_platos_que_se_llaman_combinado(): void
+    {
+        // Caso de producción: "quiero una pinta pero no sé con qué combinar" y el "Ver más"
+        // ofreció dos licuados. "combinar" entraba por el error de tipeo tolerado y "pero",
+        // por el arranque de palabra, habría traído una Peroni.
+        $comercio = Comercio::factory()->create();
+        Menu::factory()->activo()->create([
+            'comercio_id' => $comercio->id,
+            'contexto_gpt' => json_encode(['categorias' => [
+                ['nombre' => 'Cervezas', 'platos' => [
+                    ['nombre' => 'PINTA (Patagonia Tirada)', 'precio' => ''],
+                    ['nombre' => 'Peroni', 'precio' => '$9.000'],
+                ]],
+                ['nombre' => 'Licuados', 'platos' => [
+                    ['nombre' => 'Combinado (con LECHE)', 'precio' => '$7800'],
+                ]],
+            ]], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $this->assertSame(
+            ['PINTA (Patagonia Tirada)'],
+            $this->buscar($comercio, 'quiero una pinta pero no se con que combinar')
+        );
+        // El plato sí se encuentra cuando el cliente lo pide por su nombre.
+        $this->assertSame(['Combinado (con LECHE)'], $this->buscar($comercio, 'un combinado'));
+    }
+
+    private function promptVerMas(Comercio $comercio, string $consultaOriginal): string
+    {
+        $servicio = new ChatbotService;
+        foreach (['modoRespuesta' => 'ver_mas', 'scopeRespuesta' => $consultaOriginal] as $prop => $valor) {
+            $p = new \ReflectionProperty(ChatbotService::class, $prop);
+            $p->setAccessible(true);
+            $p->setValue($servicio, $valor);
+        }
+        $m = new ReflectionMethod(ChatbotService::class, 'promptUsuario');
+        $m->setAccessible(true);
+
+        return $m->invoke($servicio, $comercio, 'Mostrame todas las opciones que coincidan con lo que te pregunté, sin limitarte a unas pocas.');
+    }
+
+    public function test_ver_mas_tras_un_pedido_de_acompanamiento_no_ofrece_lo_que_ya_eligio(): void
+    {
+        // La búsqueda de "quiero una cerveza..." trae la cerveza, y presentada como "ESTO ES
+        // TODO" el modelo la ofrecía como "la opción que faltaba".
+        $prompt = $this->promptVerMas($this->comercioConCarta(), 'quiero una cerveza pero no se con que combinarla');
+
+        $this->assertStringNotContainsString('ESTO ES TODO', $prompt);
+        $this->assertStringNotContainsString('Corona Sin Alcohol', $prompt);
+    }
+
+    public function test_ver_mas_de_una_busqueda_comun_sigue_trayendo_la_lista(): void
+    {
+        $prompt = $this->promptVerMas($this->comercioConCarta(), 'tienen cerveza?');
+
+        $this->assertStringContainsString('ESTO ES TODO', $prompt);
+        $this->assertStringContainsString('Corona Sin Alcohol', $prompt);
+    }
 }
