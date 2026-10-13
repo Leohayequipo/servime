@@ -391,8 +391,9 @@ class ChatbotService
 
         // Tope bajo por defecto: alcanza para que el modelo sepa que el plato EXISTE, que es
         // para lo único que está esta búsqueda. Cuantos más le pasemos, más tienta a
-        // nombrarlos a todos y más tarjetas le caen encima al cliente.
-        // En "ver más" se sube a propósito: ahí el cliente pidió justamente la lista entera.
+        // nombrarlos a todos y más tarjetas le caen encima al cliente. El chat pide 6 (lo
+        // máximo que muestra un pedido específico) y en "ver más" 25, porque ahí el cliente
+        // pidió justamente la lista entera.
         return array_slice(array_merge($porNombre, $porCategoria), 0, $max);
     }
 
@@ -1003,7 +1004,7 @@ class ChatbotService
                 ->where('session_id', $sessionId)
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
-                ->get(['user_message', 'bot_response', 'created_at'])
+                ->get(['user_message', 'bot_response', 'platos_ofrecidos', 'created_at'])
                 ->reverse(); // Invertir para tener el orden cronológico correcto
 
             $history = [];
@@ -1014,10 +1015,17 @@ class ChatbotService
                     'content' => $conv->user_message,
                 ];
 
-                // Agregar respuesta del bot
+                // La respuesta se guarda sin el marcador, y el texto ya no nombra los platos
+                // (las tarjetas los muestran). Sin volver a ponérselo, el modelo no sabe qué
+                // le mostró al cliente: "Ver más" repetía las nueve tortas que ya había dado.
+                $respuesta = $conv->bot_response;
+                if (! empty($conv->platos_ofrecidos)) {
+                    $respuesta .= "\n[[PLATOS: ".implode(' | ', $conv->platos_ofrecidos).']]';
+                }
+
                 $history[] = [
                     'role' => 'assistant',
-                    'content' => $conv->bot_response,
+                    'content' => $respuesta,
                 ];
             }
 
@@ -1254,31 +1262,38 @@ SI EL MENÚ NO LO DICE, VOS NO LO SABÉS:
 - Vale para \"¿de qué tamaño son las empanadas?\" igual que para \"¿tiene maní?\". Improvisar un tamaño genera un reclamo en la mesa; improvisar un alérgeno es un problema de salud.
 - Quedar corto es preferible: \"eso no lo tengo en la carta, consultalo con el camarero\" es una respuesta perfectamente buena.
 
-CÓMO ESCRIBIR — LO BREVE ES LO BUENO:
-- ⚠️ DEBAJO DE TU RESPUESTA, la app le muestra al cliente una TARJETA por cada plato que nombrás, con la FOTO, los INGREDIENTES y el PRECIO. Todo eso YA LO VE: si lo repetís en el texto, lee dos veces lo mismo y se pierde lo que sí importa.
-  → NO enumeres ingredientes ni describas de qué está hecho el plato. NO escribas precios.
-  → Usá el texto para lo que la tarjeta NO puede decir: POR QUÉ se lo recomendás, para qué momento es, con qué combina, cuál elegir si duda.
-  → Ejemplo. Mal: \"Te recomiendo la Pizza Azopardo, que lleva salsa pomodoro, muzzarella, rúcula, jamón crudo y parmesano, a $18.000\". Bien: \"Si querés algo para compartir, la Pizza Azopardo nunca falla: es la más pedida de la casa.\"
-- 2 o 3 frases en total, no más. Si piden \"ver más\" o el menú completo, ahí sí listá todo lo que coincida, igual sin describir cada uno.
+CUÁNTOS PLATOS — SEGÚN LO QUE PIDE (van en el marcador del final, ver más abajo):
+- Pedido específico (caso a de la REGLA #1: \"café\", \"hamburguesas\", \"algo dulce\", \"cervezas\"): TODOS los que de verdad respondan, hasta 6, primero los platos estrella y los que mejor encajan. Si hay más de 6, elegí los 6 mejores: debajo hay un botón \"Ver más opciones\" para el resto. No te quedes con dos si el menú tiene seis.
+- Pedido abierto o de grupo (caso b): una propuesta de mesa de 3 o 4 platos.
+- Opinión (\"¿esto va bien con aquello?\"): 1, el que recomendás.
+- Si pide ver TODOS los de algo: todos los que coincidan.
+- Saludo, horarios o una pregunta que no es de platos: ninguno.
+
+CÓMO ESCRIBIR — EL TEXTO NO ES LA LISTA:
+- ⚠️ DEBAJO DE TU RESPUESTA, la app le muestra al cliente una TARJETA por cada plato del marcador, con el NOMBRE, la FOTO, los INGREDIENTES y el PRECIO. Todo eso YA LO VE: si lo repetís en el texto, lee dos veces lo mismo.
+  → NO enumeres en el texto los platos que van en el marcador. Nombrá como mucho UNO, el que destacás, y decí por qué.
+  → NO describas de qué está hecho el plato. NO escribas precios.
+  → Usá el texto para lo que la tarjeta NO puede decir: cuál elegir si duda, para qué momento es, qué tiene de especial.
+  → Ejemplo. Mal: \"Podés elegir Cafe con leche, Cafe cortado o la PROMO Cafe con leche + 2 Med. jyq\" (el cliente lee tres nombres y abajo ve las mismas tres tarjetas). Bien: \"Para la merienda tenés varias opciones ☕ Si venís con hambre, la PROMO Cafe con leche + 2 Med. jyq es la más completa.\"
+- 1 o 2 frases, no más, aunque el marcador lleve seis platos. Si piden \"ver más\" o el menú completo, el texto sigue siendo una línea: los platos van en el marcador.
 - Sos entusiasta y gourmet, pero en prosa natural y cálida: nunca un catálogo ni una lista con guiones.
-- Recomendá POCOS platos (2 o 3) bien elegidos.
-- Nombrá cada plato con su NOMBRE EXACTO del menú. NO pegues imágenes ni links.
-- Cada plato que nombrás se le convierte en una tarjeta con botón de compra. Por eso no nombres platos de paso, ni para descartarlos, ni como ejemplo de sabores que no estás recomendando de verdad.
+- El plato que nombres, con su NOMBRE EXACTO del menú. NO pegues imágenes ni links.
+- No nombres platos de paso, ni para descartarlos, ni como ejemplo de sabores que no estás recomendando de verdad: el cliente los busca abajo y no los encuentra.
 - VENTA SUGERIDA: según la REGLA #1. Caso (b) → mesa completa con bebida y postre. Caso (a) → NADA de otro tipo, ni siquiera como cierre o \"broche de oro\": si pide qué tomar, recomendá SOLO bebidas (la que mejor marida con lo que ya tiene); si pide un postre, SOLO postres. El maridaje existe para elegir mejor DENTRO del tipo que pidió, no para agregar otros tipos. Recién si el pedido es abierto (caso b) sumás algo de otra categoría.
 - Entendés el habla argentina cotidiana (\"birra\", \"chupi\", \"algo para tomar\", \"papas\", \"fritas\", \"una coca\") y la traducís a lo que realmente hay en el menú.
 - LENGUAJE NEUTRAL: el cliente puede estar DENTRO o FUERA del local. NUNCA uses \"ven\", \"te esperamos\", \"cuando vengas\". Usá \"Probá...\", \"Pedí...\", \"Disfrutá...\", \"Te recomiendo...\", \"No te lo pierdas\".
 - Un emoji de categoría queda bien, con moderación (🍕 pizzas, 🍝 pastas, 🥗 ensaladas, 🍖 carnes, 🍤 mariscos, 🍷 vinos, 🍺 cervezas, 🍰 postres, ☕ café).
 
 CÓMO CERRAR LA RESPUESTA (OBLIGATORIO):
-Primero la respuesta en prosa, natural, como le hablarías al cliente, nombrando los platos como se dicen (\"una Coca Cola bien fría\", \"la muzza grande\").
+Primero una intro breve en prosa, natural, como le hablarías al cliente.
 Y en la ÚLTIMA LÍNEA, SIEMPRE este marcador, que el cliente NO ve:
 [[PLATOS: Nombre exacto del menú | Otro nombre exacto del menú]]
 - Copiá cada nombre EXACTAMENTE como figura en el menú, con su tamaño o variante y hasta el último detalle (si el menú dice \"Coca Cola 354 ml\", va \"Coca Cola 354 ml\", no \"Coca Cola\"; si dice \"Muzzarella (Grande)\", va así y no \"Pizza Muzzarella grande\").
 - SIEMPRE en el idioma original del menú, aunque estés respondiendo en inglés o portugués: si traducís el nombre, el plato no se encuentra y el cliente se queda sin poder pedirlo.
-- Solo los platos que estás recomendando de verdad, en ese orden. NO lo que ya tiene en el pedido, ni platos nombrados al pasar o para descartar.
+- Solo los platos que estás recomendando de verdad, cuántos según \"CUÁNTOS PLATOS\", del que más le recomendás al que menos: las tarjetas salen en ese orden. NO lo que ya tiene en el pedido, ni platos nombrados al pasar o para descartar.
 - Si no recomendás ninguno (un saludo, una consulta de horarios), cerrá con [[PLATOS: ]] vacío.
-- Es la ÚNICA lista: en la prosa los platos van dentro de las frases, nunca como lista con guiones ni como resumen final.
-Ese marcador se convierte en las tarjetas con foto, precio y botón \"Lo quiero\". Si te lo olvidás, el cliente no puede pedir nada.
+- Es la ÚNICA lista: el texto de arriba no la repite, ni con guiones ni dentro de las frases ni como resumen final.
+Ese marcador es lo ÚNICO que se convierte en tarjetas con foto, precio y botón \"Lo quiero\": un plato que nombrás en el texto y no está acá, el cliente no lo puede pedir. Si te olvidás el marcador, no puede pedir nada.
 
 Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado de verdad (REGLA #0)—, agregá en la línea siguiente un segundo marcador, que tampoco ve:
 [[FALTA: lo que pidió y no está]]
@@ -1326,7 +1341,7 @@ Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado
                 ."El cliente está mirando SOLO la categoría \"{$scope}\" del menú (tocó ese filtro, no escribió una pregunta libre).\n"
                 ."- Recomendá/mostrá ÚNICAMENTE platos que pertenezcan a la categoría \"{$scope}\" del menú. NO menciones NI sugieras nada de otras categorías.\n"
                 ."- PROHIBIDA la venta cruzada: NO sumes una bebida, guarnición, entrada ni postre de otra categoría. Ignorá cualquier regla anterior que pida acompañamientos.\n"
-                ."- Si el cliente pide ver TODAS/más opciones, listá TODOS los platos de la categoría \"{$scope}\" (sin límite). Si no, presentá unas pocas bien elegidas de esa misma categoría (3 a 5).\n"
+                ."- Si el cliente pide ver TODAS/más opciones, poné en el marcador TODOS los platos de la categoría \"{$scope}\" (sin límite). Si no, hasta 6 bien elegidos de esa misma categoría. En los dos casos el texto es una línea y no los enumera: las tarjetas ya los muestran.\n"
                 ."- Si esa categoría no existe en el menú, decilo con amabilidad y ofrecé ver otra categoría real.\n";
         } elseif ($this->modoRespuesta === 'ver_mas') {
             // El problema de "Ver más" no era que mostrara poco: es que mostraba LO MISMO.
@@ -1336,7 +1351,7 @@ Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado
             $modoExtra = "\n\n⚠️ MODO VER MÁS — ESTA REGLA MANDA SOBRE TODAS LAS ANTERIORES:\n"
                 ."El cliente ya vio tu respuesta anterior y tocó \"Ver más opciones\" sobre: \"{$scope}\".\n"
                 ."- NO REPITAS los platos que ya nombraste antes en esta conversación. El cliente los tiene arriba en la pantalla: repetirlos hace que el botón no sirva para nada.\n"
-                ."- Mostrá SOLO los que le faltan ver, y sin volver a explicar de qué se trata: una línea corta y los platos nuevos.\n"
+                ."- Mostrá SOLO los que le faltan ver, y sin volver a explicar de qué se trata: una línea corta de texto, sin enumerarlos, y los platos nuevos en el marcador (las tarjetas ya los muestran).\n"
                 ."- Si ya no queda ninguno por mostrar, decilo en UNA frase (\"esas son todas las que tenemos\") y ofrecele una categoría REAL del menú que le pueda interesar, para que la charla siga en algún lado.\n"
                 ."- El marcador [[PLATOS: ...]] va SOLO con los platos nuevos de ESTE mensaje. Si repetís ahí los anteriores, al cliente le vuelven a aparecer las mismas tarjetas y no entiende si ya los agregó o no. Si no hay ninguno nuevo, cerrá con [[PLATOS: ]] vacío.\n"
                 ."- NO vuelques el menú completo ni agregues cosas sin relación con \"{$scope}\".\n";
@@ -1349,7 +1364,10 @@ Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado
         // En "ver más" se busca por la consulta ORIGINAL (el mensaje es el texto sintético
         // del botón, que no dice nada) y se traen todas: es justo lo que el cliente pidió.
         $enVerMas = $this->modoRespuesta === 'ver_mas';
-        $coinciden = $this->platosQueCoinciden($comercio, $enVerMas ? $scope : $message, $enVerMas ? 25 : 5);
+        // Fuera de "ver más" el tope es 6, lo máximo que muestra un pedido específico. Se
+        // probó con 8 para darle margen y gpt-4o-mini metía las 8 en el marcador: lo que
+        // recibe en esta lista lo recita entero.
+        $coinciden = $this->platosQueCoinciden($comercio, $enVerMas ? $scope : $message, $enVerMas ? 25 : 6);
         $encontrados = '';
         if (! empty($coinciden)) {
             $lista = implode("\n", array_map(
@@ -1365,13 +1383,15 @@ Y SI el cliente pidió algo que el menú NO tiene —después de haberlo buscado
             $encontrados = $enVerMas
                 // Acá sí es la lista: el cliente tocó el botón justamente para verla entera.
                 ? "\n\n✅ BÚSQUEDA YA HECHA — ESTO ES TODO lo que hay en el menú para \"{$scope}\":\n{$lista}\n"
-                    ."Recorré esa lista una por una y mostrá TODAS las que no hayas nombrado en tus respuestas anteriores. No te quedes con dos: el cliente tocó el botón para ver el resto.\n"
+                    ."Recorré esa lista una por una y poné en el marcador TODAS las que no hayas recomendado en tus respuestas anteriores. No te quedes con dos: el cliente tocó el botón para ver el resto.\n"
                     ."Recién si TODAS las de la lista ya aparecieron antes, decí que esas son todas y ofrecé otra categoría real del menú.\n"
                 : "\n\n✅ BÚSQUEDA YA HECHA EN EL MENÚ — estos platos coinciden con lo que escribió:\n{$lista}\n"
-                    ."Es información de referencia, NO una lista para recitar: elegí los 2 o 3 que mejor respondan y nombrá SOLO esos.\n"
+                    ."Es información de referencia, NO una lista para recitar:\n"
+                    ."- Si preguntó una OPINIÓN (si algo combina, cuál conviene, si es buena idea): contestá la pregunta y en el marcador va UN solo plato, el que recomendás. Esta lista no se usa.\n"
+                    ."- Si buscó un tipo de plato puntual: al marcador van todos los que de verdad respondan, hasta 6.\n"
+                    ."- Si es un pedido abierto o de grupo: 3 o 4, armando la mesa.\n"
                     ."Si es lo que pidió: existe, NO digas que no lo tenés ni uses [[FALTA]] para eso.\n"
-                    ."Si claramente NO es lo que pidió (coincidió una palabra suelta del nombre), ignoralo.\n"
-                    ."Si preguntó una OPINIÓN (si algo combina, cuál conviene), contestá la pregunta: no listes el menú.\n";
+                    ."Si claramente NO es lo que pidió (coincidió una palabra suelta del nombre), ignoralo.\n";
         }
 
         return "{$carrito}{$this->ahoraMismo($comercio)}
@@ -1379,7 +1399,7 @@ IDIOMA DE LA RESPUESTA: {$idioma}. {$anclaje} (los nombres de los platos NO se t
 
 PREGUNTA DEL CLIENTE: {$message}
 {$encontrados}{$modoExtra}
-Respondé en PROSA (nada de listas con guiones: los platos van dentro de las frases, la app les pone la tarjeta con foto y precio). Antes de decir que algo no está, buscalo en el menú. Cerrá con [[PLATOS: ...]] y, si de verdad no lo tenés, con [[FALTA: ...]].";
+Respondé en PROSA, con 1 o 2 frases. En el TEXTO nombrá como mucho UN plato (el que destacás); en el MARCADOR van TODOS los que recomendás, cuántos según \"CUÁNTOS PLATOS\": la app los muestra como tarjetas con nombre, foto y precio. Antes de decir que algo no está, buscalo en el menú. Cerrá con [[PLATOS: ...]] y, si de verdad no lo tenés, con [[FALTA: ...]].";
     }
 
     /**

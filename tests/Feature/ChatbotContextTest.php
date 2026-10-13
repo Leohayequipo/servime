@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Menu;
 use App\Services\ChatbotService;
@@ -302,6 +303,35 @@ class ChatbotContextTest extends TestCase
             // Lo que importa es que el pedido en curso llegue al modelo y que quede claro
             // que es de la MESA (puede haber cosas de varias personas), no la frase exacta.
             return str_contains($body, 'Lenguado') && str_contains($body, 'PEDIDO DE LA MESA');
+        });
+    }
+
+    public function test_el_historial_le_recuerda_al_modelo_que_platos_mostro(): void
+    {
+        config(['services.openai.api_key' => 'test-key']);
+        $comercio = $this->comercioConMenu();
+
+        // El texto guardado ya no nombra los platos (las tarjetas los muestran): lo que el
+        // modelo ofreció solo queda en platos_ofrecidos.
+        ChatConversation::create([
+            'comercio_id' => $comercio->id,
+            'session_id' => 'sess-hist',
+            'user_message' => 'pizzas',
+            'bot_response' => 'Para compartir, la grande nunca falla 🍕',
+            'platos_ofrecidos' => ['Muzzarella (Grande)', 'Muzzarella (Chica)'],
+            'used_openai' => true,
+        ]);
+
+        Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => "Esas son todas.\n[[PLATOS: ]]"]]]], 200)]);
+
+        (new ChatbotService)->processMessage($comercio, 'Mostrame todas las opciones', 'sess-hist', 'ver_mas', 'pizzas');
+
+        Http::assertSent(function ($request) {
+            $asistente = collect($request->data()['messages'])->firstWhere('role', 'assistant');
+
+            return $asistente !== null
+                && str_contains($asistente['content'], 'Para compartir, la grande nunca falla')
+                && str_contains($asistente['content'], '[[PLATOS: Muzzarella (Grande) | Muzzarella (Chica)]]');
         });
     }
 }

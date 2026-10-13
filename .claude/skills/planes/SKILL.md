@@ -32,6 +32,7 @@ puede usar la IA. Los planes son editables desde la web por el super admin (vive
 ⚠️ Esta tabla es lo que **siembra la migración**, no necesariamente lo que hay en la DB: los
 planes se editan por web y ya divergieron (en local, Pro usa `gpt-4o` y Básico tiene
 `promociones`). Antes de afirmar algo sobre un plan, **consultá la DB**, no esta tabla.
+En **producción**, a oct-2026, todos los planes usan `gpt-5.6-luna` (lo confirmó el usuario).
 
 ## Planes Free y Mínimo (sin asistente) — sep-2026
 

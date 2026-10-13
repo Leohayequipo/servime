@@ -76,12 +76,21 @@ el banco, y eso es lo que hace viable el modelo 17 veces más barato.
 > ignore lo que claramente no venga al caso. Sin eso el modelo nombraba los seis lomitos que
 > le pasábamos y al cliente le caían ocho tarjetas de golpe.
 
+El chat la llama con tope **6**, lo máximo que muestra un pedido específico, y "ver más" con
+25. Se probó con 8 para darle margen de elección y gpt-4o-mini metía las 8 en el marcador: lo
+que recibe en esta lista lo recita entero. El `$max = 5` por defecto queda para el buscador.
+
 ## Los marcadores son el carrito
 
 La respuesta cierra con `[[PLATOS: Nombre exacto | Otro]]`, que **nunca ve el cliente**: de ahí
 salen las tarjetas con foto, precio y botón "Lo quiero". Si el modelo se olvida del marcador,
 el cliente lee un plato que no puede pedir. Es lo más frágil del sistema y lo primero a mirar
 si se cambia de modelo o se reordena el prompt.
+
+Desde que el texto ya no enumera los platos, el plan B sin marcador (`detectarPorTexto`, que
+busca nombres en la prosa) rescata como mucho **uno**: antes rescataba todos porque el texto
+los nombraba. O sea que el marcador pesa todavía más que antes. En el banco de preguntas,
+contar que aparezca en **cada** corrida.
 
 `[[FALTA: sushi]]` es lo que pidió y no está: alimenta "Te lo pidieron y no lo tenés" del panel
 (ver la skill `estadisticas`). Va declarado por el modelo y no inferido de "no recomendó nada",
@@ -112,9 +121,18 @@ permitía ver qué ofreció el asistente.
   —y gpt-4o hacía lo mismo, o sea era del prompt—. Tamaño, porciones, cocción y **alérgenos**
   se contestan con "no figura en la carta, consultalo con el local". Improvisar un tamaño
   genera un reclamo en la mesa; improvisar un alérgeno es otra cosa.
-- **Respuestas breves.** Nunca le habíamos dicho que la app muestra abajo una tarjeta con foto,
-  ingredientes y precio, así que repetía todo eso en la prosa. Ahora usa el texto para lo que
-  la tarjeta no puede decir (por qué se lo recomienda). Igual se relaja en respuestas largas.
+- **El texto no es la lista (oct-2026).** Nunca le habíamos dicho que la app muestra abajo una
+  tarjeta con foto, ingredientes y precio, así que repetía todo eso en la prosa. Y aun después
+  de eso, el prompt le pedía nombrar cada plato **dentro** del texto (herencia de cuando las
+  tarjetas salían de buscar nombres en la prosa): el cliente leía *"podés elegir Cafe con leche o
+  la PROMO…"* y abajo veía las mismas dos tarjetas. Ahora el texto es una intro de 1 o 2 frases
+  que nombra **como mucho un** plato (el que destaca, con el porqué) y la lista vive solo en el
+  marcador.
+- **Cuántos platos, según el pedido.** Antes era "2 o 3" para todo, y pedías café y salía uno.
+  Ahora (bloque "CUÁNTOS PLATOS" del `system`): pedido específico → todos los que respondan,
+  **hasta 6** (6 es también el máximo con el que el front muestra el botón "Ver más"); abierto o
+  de grupo → 3 o 4; opinión → 1; "todos" → todos; saludo → ninguno. Las tarjetas no se
+  achicaron: con 6 queda una columna larga, y fue a propósito.
 
 ## El asistente sabe qué hora es
 
@@ -180,8 +198,13 @@ decida qué es acompañamiento y qué es alternativa. Y medir antes de anunciarl
 
 | Opción | Banco | Dietas | Costo (1k charlas) | Veredicto |
 |---|---|---|---|---|
-| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el elegido**; ya está en Premium (ago-2026) |
-| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | Básico y Pro; falla en dietas |
+| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el elegido**; en producción lo usan **todos** los planes (confirmado oct-2026) |
+| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | ya no se usa en prod (sí en Básico y Pro de la base **local**); falla en dietas |
+
+> Un cambio de prompt se valida con **luna**, que es lo que ve el cliente. En local, Básico y
+> Pro siguen con `gpt-4o-mini`: probar con un comercio Premium (Azopardo local) o cambiar el
+> plan en memoria. En oct-2026 se perdió media prueba ajustando el prompt para mini, que sigue
+> las reglas de formato a medias (nombra varios platos en el texto aunque se le pida uno).
 | gpt-5-nano | ok | 3/3 | $11,69 | razona 4.692 tokens: 3× más caro |
 | gpt-5-mini | ok | 3/3 | $32,56 | razona 2.534 tokens: 8× |
 | gpt-4.1 | ok | 3/3 | $40,22 | 9× |
@@ -257,6 +280,9 @@ Cada respuesta de OpenAI trae un `usage` que **antes se descartaba**. Ahora se g
 
 - **Historial: 5 consultas** (`HISTORIAL_MENSAJES`). Son dos entradas cada una (pregunta +
   respuesta completa): con 10 medimos ~1.275 tokens extra en **cada** mensaje, con 5 son ~634.
+- **La respuesta del historial lleva su `[[PLATOS]]` rearmado** desde `platos_ofrecidos`. Se
+  guarda sin marcador y el texto ya no nombra los platos: sin rearmarlo, el modelo no sabía qué
+  había mostrado y "Ver más" repitió las nueve tortas que acababa de dar (luna, 2 de 3 veces).
 - **`chatStream()` es el que usa el front.** Pasaba `used_openai = true` hardcodeado, así que
   "Sin responder" del panel marcaba 0 con OpenAI caído, y `registrarUsoIA()` le comía la cuota
   del plan al comercio por consultas que nunca se atendieron. Va con la bandera `$usoIA`, que
