@@ -179,7 +179,7 @@ class SiteVisit extends Model
      * Métricas del contador del footer. Cacheadas: el footer se renderiza en cada visita
      * y no queremos pegarle a la DB cada vez.
      *
-     * @return array{activos:int, visitas:int, consultas_ia:int, mostrar:bool}
+     * @return array{activos:int, visitas:int, visitantes:int, consultas_ia:int, mostrar:bool}
      */
     public static function stats(): array
     {
@@ -195,6 +195,10 @@ class SiteVisit extends Model
                         ->distinct('visitor_id')
                         ->count('visitor_id'),
                     'visitas' => $visitas,
+                    // Visitantes únicos de siempre para el hero de la landing. CON bots, a
+                    // diferencia del resto: decisión del dueño (oct-2026). Ojo que un bot no
+                    // guarda la cookie, así que cada pasada suya cuenta como visitante nuevo.
+                    'visitantes' => static::distinct('visitor_id')->count('visitor_id'),
                     // Consultas realmente respondidas por IA (menús + chat de la landing)
                     'consultas_ia' => ChatConversation::count() + ChatLanding::count(),
                     // El contador aparece solo cuando los números ya juegan a favor
@@ -207,7 +211,7 @@ class SiteVisit extends Model
             // No cacheamos el fallo, así se recupera solo apenas la migración corra.
             report($e);
 
-            return ['activos' => 0, 'visitas' => 0, 'consultas_ia' => 0, 'mostrar' => false];
+            return ['activos' => 0, 'visitas' => 0, 'visitantes' => 0, 'consultas_ia' => 0, 'mostrar' => false];
         }
     }
 }

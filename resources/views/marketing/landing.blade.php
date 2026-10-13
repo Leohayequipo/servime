@@ -528,6 +528,17 @@
                                 @endif
                             </div>
 
+                            {{-- Visitantes únicos de la web, contando bots (ver SiteVisit::stats).
+                                 A diferencia del contador del footer, no espera a un mínimo: el
+                                 dueño lo quiere a la vista desde ya. --}}
+                            @if (($stats['visitantes'] ?? 0) > 0)
+                                <p class="mt-6 flex items-center gap-2.5 text-base text-muted">
+                                    <span class="inline-block h-2 w-2 rounded-full" style="background:var(--accent-soft)" aria-hidden="true"></span>
+                                    <strong class="font-display text-2xl tabular-nums" style="color:var(--accent-ink);">{{ number_format($stats['visitantes'], 0, ',', '.') }}</strong>
+                                    visitantes ya pasaron por ServiME
+                                </p>
+                            @endif
+
                             {{-- Anclas rápidas de valor (narrativa de la propuesta comercial).
                                  El número de idiomas sale de SetLocale::IDIOMAS para que no se
                                  desincronice si mañana se suma uno. --}}
