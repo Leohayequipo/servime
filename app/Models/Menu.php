@@ -37,6 +37,19 @@ class Menu extends Model
      */
     public const MAX_FOTOS = 10;
 
+    /**
+     * Lo más que puede pesar cada archivo de la carta, en KB (14 MB).
+     *
+     * Sale de Gemini y no del servidor: el PDF va dentro del pedido en base64, que lo agranda
+     * un 33%, y el pedido entero tiene un tope de ~20 MB. 14 MB quedan en 18,7: entran en
+     * `GeminiPdfProcessorService::MAX_BYTES_PEDIDO` con lugar para el prompt. Más arriba,
+     * Gemini lo rechaza y la carta pasa en silencio a OpenAI, que inventa precios.
+     *
+     * Un PDF más pesado no se rechaza de entrada: el formulario lo achica en el navegador
+     * antes de subirlo (public/js/achicar-pdf.js).
+     */
+    public const MAX_KB_ARCHIVO = 14 * 1024;
+
     // Estados de procesamiento del menú
     public const ESTADO_PROCESANDO = 'procesando';
 

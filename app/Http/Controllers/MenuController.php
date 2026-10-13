@@ -104,12 +104,12 @@ class MenuController extends Controller
         $request->validate([
             'nombre' => 'nullable|string|max:255',
             'archivos' => 'nullable|array|max:'.Menu::MAX_FOTOS,
-            'archivos.*' => 'file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB cada uno
-            'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
+            'archivos.*' => 'file|mimes:pdf,jpeg,png,jpg,gif|max:'.Menu::MAX_KB_ARCHIVO,
+            'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:'.Menu::MAX_KB_ARCHIVO,
         ], [
             'archivos.max' => 'Podés subir hasta '.Menu::MAX_FOTOS.' fotos por carta.',
             'archivos.*.mimes' => 'Cada archivo tiene que ser un PDF o una foto (JPG, PNG o GIF).',
-            'archivos.*.max' => 'Cada archivo puede pesar hasta 10 MB.',
+            'archivos.*.max' => 'Cada archivo puede pesar hasta '.(Menu::MAX_KB_ARCHIVO / 1024).' MB.',
         ]);
 
         // Usar MIME type O extensión para detectar PDF (algunos PDFs escaneados pueden tener MIME type incorrecto)

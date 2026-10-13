@@ -1830,6 +1830,8 @@
                                 <x-input-error :messages="array_merge($errors->get('archivos'), collect($errors->get('archivos.*'))->flatten()->unique()->values()->all())" class="mt-2" />
 
                                 <p id="fotos-aviso" class="mt-2 text-sm text-danger" hidden></p>
+                                {{-- Qué pasó con un PDF pesado: se está achicando o cuánto quedó. --}}
+                                <p id="archivo-estado" class="mt-2 text-sm text-text-secondary" hidden></p>
 
                                 {{-- Las fotos elegidas, en orden. Solo aparece con fotos: un PDF va solo. --}}
                                 <div id="fotos-elegidas" class="mt-4" hidden>
@@ -1847,7 +1849,9 @@
 
                             <p class="mt-2 text-sm text-text-secondary">
                                 Un PDF, o hasta {{ \App\Models\Menu::MAX_FOTOS }} fotos (JPG, PNG, GIF) en el orden
-                                de la carta: se leen todas juntas como una sola carta. Hasta 10 MB cada archivo.
+                                de la carta: se leen todas juntas como una sola carta. Hasta
+                                {{ \App\Models\Menu::MAX_KB_ARCHIVO / 1024 }} MB cada archivo; un PDF más
+                                pesado se achica solo antes de subirlo.
                                 La IA lee los platos, las categorías y los precios: tarda entre medio minuto
                                 y un par de minutos.
                             </p>
@@ -2055,6 +2059,11 @@
     <!-- SortableJS for drag & drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
+    @unless($isEdit)
+        {{-- Achica un PDF que pasa el límite antes de subirlo (ver montarSelectorDeFotos). --}}
+        <script src="{{ asset('js/achicar-pdf.js') }}?v={{ filemtime(public_path('js/achicar-pdf.js')) }}"></script>
+    @endunless
+
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
         
@@ -2150,11 +2159,13 @@
             // vez que cambia: el submit nativo de abajo manda exactamente ese orden.
             function montarSelectorDeFotos(input) {
                 const MAX_FOTOS = {{ \App\Models\Menu::MAX_FOTOS }};
+                const MAX_BYTES = {{ \App\Models\Menu::MAX_KB_ARCHIVO }} * 1024;
                 const LADO_MAYOR = 2400;
                 const bloque = document.getElementById('fotos-elegidas');
                 const lista = document.getElementById('fotos-lista');
                 const cantidad = document.getElementById('fotos-cantidad');
                 const aviso = document.getElementById('fotos-aviso');
+                const estado = document.getElementById('archivo-estado');
                 const agregar = document.getElementById('fotos-agregar');
                 let elegidos = []; // { file, url }
 
@@ -2173,6 +2184,50 @@
                 function avisar(texto) {
                     aviso.textContent = texto;
                     aviso.hidden = !texto;
+                }
+
+                function informar(texto) {
+                    estado.textContent = texto;
+                    estado.hidden = !texto;
+                }
+
+                const enMb = bytes => (bytes / 1024 / 1024).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' MB';
+
+                // Un PDF que pasa el límite se achica acá antes de subir (public/js/achicar-pdf.js):
+                // primero se le saca lo que guarda pero no se ve y, si no alcanza, sus páginas
+                // pasan a imágenes. Devuelve el archivo a subir, o null si no hubo forma.
+                async function prepararPdf(file) {
+                    if (file.size <= MAX_BYTES || !window.achicarPdf) return file;
+
+                    const pesos = `pesa ${enMb(file.size)} y el máximo es ${enMb(MAX_BYTES)}`;
+                    const alAvanzar = texto => {
+                        window.preparando = texto;
+                        informar(`${texto} (${pesos})`);
+                        window.actualizarBotonProcesar();
+                    };
+
+                    // Mientras se achica no se puede elegir otro: los dos terminarían pisándose.
+                    input.disabled = true;
+                    try {
+                        const resultado = await window.achicarPdf(file, { maxBytes: MAX_BYTES, alAvanzar });
+                        if (!resultado) {
+                            informar('');
+                            avisar(`Este PDF ${pesos}, y ni achicándolo entra. Exportalo de nuevo con menos calidad o subí fotos de las páginas.`);
+                            return null;
+                        }
+                        informar(resultado.como === 'limpio'
+                            ? `El PDF pesaba ${enMb(file.size)}: le sacamos datos que guardaba pero no se ven y quedó en ${enMb(resultado.file.size)}. La carta no cambia.`
+                            : `El PDF pesaba ${enMb(file.size)}: pasamos sus páginas a imágenes y quedó en ${enMb(resultado.file.size)}. La IA la lee igual.`);
+                        return resultado.file;
+                    } catch (e) {
+                        console.error(e);
+                        informar('');
+                        avisar(`No pudimos achicar el PDF (${pesos}). Exportalo de nuevo con menos calidad o subí fotos de las páginas.`);
+                        return null;
+                    } finally {
+                        input.disabled = false;
+                        window.preparando = '';
+                    }
                 }
 
                 // Las fotos de celular pesan 3 a 5 MB: diez juntas pasan el límite de subida
@@ -2257,6 +2312,7 @@
                 input.addEventListener('change', async () => {
                     const nuevos = Array.from(input.files);
                     avisar('');
+                    informar('');
 
                     // Cerró el diálogo sin elegir: el navegador vació `files`, se repone lo que había.
                     if (nuevos.length === 0) {
@@ -2274,7 +2330,8 @@
                         }
                         // Un PDF reemplaza lo que hubiera elegido antes.
                         vaciar();
-                        elegidos = [{ file: nuevos[0], url: null }];
+                        const pdf = await prepararPdf(nuevos[0]);
+                        elegidos = pdf ? [{ file: pdf, url: null }] : [];
                         escribirEnInput();
                         dibujar();
                         return;
@@ -2288,7 +2345,7 @@
                         avisar(`Se pueden subir hasta ${MAX_FOTOS} fotos por carta: quedaron las primeras ${MAX_FOTOS}.`);
                     }
 
-                    window.preparandoFotos = true;
+                    window.preparando = 'Preparando fotos…';
                     escribirEnInput();
                     window.actualizarBotonProcesar();
 
@@ -2297,7 +2354,7 @@
                         elegidos.push({ file: preparada, url: URL.createObjectURL(preparada) });
                     }
 
-                    window.preparandoFotos = false;
+                    window.preparando = '';
                     escribirEnInput();
                     dibujar();
                 });
@@ -2796,9 +2853,9 @@
                 let motivo = '';
                 if (faltaNombre) {
                     motivo = 'Poné un nombre para el menú.';
-                } else if (window.preparandoFotos) {
-                    // Las fotos se están achicando antes de subir (ver montarSelectorDeFotos).
-                    motivo = 'Preparando fotos…';
+                } else if (window.preparando) {
+                    // Las fotos o el PDF se están achicando antes de subir (ver montarSelectorDeFotos).
+                    motivo = window.preparando;
                 } else if (!hayArchivo) {
                     motivo = 'Elegí el archivo del menú para poder procesarlo.';
                 }

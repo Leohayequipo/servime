@@ -36,12 +36,9 @@ class GeminiPdfProcessorService
                 throw new \Exception('Archivo PDF no encontrado: ' . $pdfPath);
             }
 
-            // Verificar tamaño del archivo (Gemini tiene límite de ~20MB)
             $fileSize = filesize($pdfPath);
-            $maxSize = 20 * 1024 * 1024; // 20MB
-            
-            if ($fileSize > $maxSize) {
-                throw new \Exception('El PDF es demasiado grande. Tamaño: ' . number_format($fileSize / 1024 / 1024, 2) . ' MB. Máximo permitido: 20 MB');
+            if ($fileSize > self::MAX_BYTES_ARCHIVO) {
+                throw new \Exception('El PDF es demasiado grande. Tamaño: ' . number_format($fileSize / 1024 / 1024, 2) . ' MB. Máximo permitido: ' . number_format(self::MAX_BYTES_ARCHIVO / 1024 / 1024, 2) . ' MB');
             }
 
             // Aumentar el tiempo de ejecución de PHP
@@ -101,11 +98,9 @@ class GeminiPdfProcessorService
                 throw new \Exception('Archivo de imagen no encontrado: ' . $imagePath);
             }
 
-            // Verificar tamaño del archivo (Gemini tiene límite de ~20MB)
             $fileSize = filesize($imagePath);
-            $maxSize = 20 * 1024 * 1024; // 20MB
-            if ($fileSize > $maxSize) {
-                throw new \Exception('La imagen es demasiado grande. Tamaño: ' . number_format($fileSize / 1024 / 1024, 2) . ' MB. Máximo permitido: 20 MB');
+            if ($fileSize > self::MAX_BYTES_ARCHIVO) {
+                throw new \Exception('La imagen es demasiado grande. Tamaño: ' . number_format($fileSize / 1024 / 1024, 2) . ' MB. Máximo permitido: ' . number_format(self::MAX_BYTES_ARCHIVO / 1024 / 1024, 2) . ' MB');
             }
 
             // Detectar el mime type real de la imagen
@@ -160,6 +155,14 @@ class GeminiPdfProcessorService
 
     /** Gemini acepta ~20 MB por pedido, contando el base64. Se deja margen para el prompt. */
     private const MAX_BYTES_PEDIDO = 19 * 1024 * 1024;
+
+    /**
+     * Lo más que puede pesar un PDF o una foto que va sola en el pedido (~14,25 MB).
+     *
+     * El base64 convierte cada 3 bytes en 4. Antes se comparaba el archivo crudo contra
+     * 20 MB, y uno de 16 MB pasaba ese control y llegaba a Gemini con 21.
+     */
+    private const MAX_BYTES_ARCHIVO = self::MAX_BYTES_PEDIDO / 4 * 3;
 
     /**
      * Procesar una carta subida como VARIAS fotos, todas en un solo pedido.
