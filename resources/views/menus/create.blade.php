@@ -177,6 +177,17 @@
             border: none;
             border-radius: 0.5rem;
         }
+
+        /* Carta en varias fotos: una debajo de la otra, en orden, y se scrollea. */
+        .file-modal-body.varias {
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 1rem;
+        }
+
+        .file-modal-body.varias img {
+            max-height: none;
+        }
         
         /* Estilos específicos para los swatches de temas */
         .theme-swatch {
@@ -1759,21 +1770,30 @@
                                                     <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
                                                         {{ $menu->updated_at->format('H:i') }}
                                                     </span>
+                                                    @if($menu->tieneVariasFotos())
+                                                        <span class="text-accent-green/90 text-xs bg-accent-gray/20 px-2 py-1 rounded-md font-medium">
+                                                            {{ count($menu->archivosEnOrden()) }} fotos
+                                                        </span>
+                                                    @endif
                                             </div>
                                         </div>
                                         </div>
                                         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+                                            {{-- Todas las fotos, en orden: una carta en varias partes se ve entera. --}}
                                             <button type="button"
-                                                    onclick="openFileModal('{{ asset('storage/' . $menu->archivo_original) }}', '{{ $menu->formato }}')"
+                                                    onclick='openFileModal(@json(array_map(fn ($archivo) => asset("storage/".$archivo), $menu->archivosEnOrden())), @json($menu->formato))'
                                                     class="px-4 py-2.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap">
                                                 👁️ Ver
                                             </button>
-                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}" 
+                                            {{-- Con varias fotos no hay un archivo que bajar: se ven todas con "Ver". --}}
+                                            @unless($menu->tieneVariasFotos())
+                                            <a href="{{ asset('storage/' . $menu->archivo_original) }}"
                                                download
                                                class="px-4 py-2.5 bg-accent-gray/30 hover:bg-accent-gray/50 text-text-primary border border-accent-gray rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-2">
                                                 <span>📥</span>
                                                 <span>Descargar</span>
                                             </a>
+                                            @endunless
                                         </div>
                                     </div>
                                 </div>
@@ -1796,16 +1816,40 @@
                             <label for="archivo" class="block text-sm font-medium text-text-secondary mb-3">
                                 Archivo del Menú
                             </label>
+                                {{-- `multiple`: una carta en papel suele ser varias fotos. El orden
+                                     en que quedan en la lista de abajo es el orden en que se suben
+                                     y en que la IA las lee (el JS lo escribe en `files`). --}}
                                 <input type="file"
                                        id="archivo"
-                                       name="archivo"
+                                       name="archivos[]"
+                                       multiple
                                        accept=".pdf,.jpeg,.jpg,.png,.gif"
                                        required
                                        class="w-full px-4 py-3 bg-background border border-accent-gray rounded-xl text-text-primary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all duration-200" />
                                 <x-input-error :messages="$errors->get('archivo')" class="mt-2" />
+                                <x-input-error :messages="array_merge($errors->get('archivos'), collect($errors->get('archivos.*'))->flatten()->unique()->values()->all())" class="mt-2" />
+
+                                <p id="fotos-aviso" class="mt-2 text-sm text-danger" hidden></p>
+
+                                {{-- Las fotos elegidas, en orden. Solo aparece con fotos: un PDF va solo. --}}
+                                <div id="fotos-elegidas" class="mt-4" hidden>
+                                    <p class="text-sm font-medium text-text-primary mb-1">
+                                        <span id="fotos-cantidad"></span> · se leen en este orden
+                                    </p>
+                                    <p class="text-xs text-text-secondary mb-3">
+                                        Como páginas de una misma carta. Usá las flechas para cambiar el orden.
+                                    </p>
+                                    <ol id="fotos-lista" class="space-y-2"></ol>
+                                    <button type="button" id="fotos-agregar" class="btn-secondary inline-flex mt-3">
+                                        + Agregar más fotos
+                                    </button>
+                                </div>
+
                             <p class="mt-2 text-sm text-text-secondary">
-                                PDF o foto (JPG, PNG, GIF), hasta 10 MB. La IA lee los platos, las
-                                categorías y los precios: tarda entre medio minuto y un par de minutos.
+                                Un PDF, o hasta {{ \App\Models\Menu::MAX_FOTOS }} fotos (JPG, PNG, GIF) en el orden
+                                de la carta: se leen todas juntas como una sola carta. Hasta 10 MB cada archivo.
+                                La IA lee los platos, las categorías y los precios: tarda entre medio minuto
+                                y un par de minutos.
                             </p>
 
                             {{-- El botón arranca apagado y se prende cuando están el nombre y el
@@ -2095,8 +2139,170 @@
             // reemplaza (se sube una carta nueva) y todo lo demás se guarda solo.
             const fileInput = document.getElementById('archivo');
             if (fileInput) {
-                // Elegir (o sacar) el archivo es lo que prende y apaga el botón.
-                fileInput.addEventListener('change', () => window.actualizarBotonProcesar());
+                montarSelectorDeFotos(fileInput);
+            }
+
+            // ── Los archivos de la carta (sólo al crear) ───────────────────────────
+            //
+            // Un PDF va solo; las fotos pueden ser varias y su orden es el orden en que la
+            // IA las lee, como páginas. El input no sabe ordenar ni sumar (elegir de nuevo
+            // reemplaza lo elegido), así que la lista vive acá y se escribe en `files` cada
+            // vez que cambia: el submit nativo de abajo manda exactamente ese orden.
+            function montarSelectorDeFotos(input) {
+                const MAX_FOTOS = {{ \App\Models\Menu::MAX_FOTOS }};
+                const LADO_MAYOR = 2400;
+                const bloque = document.getElementById('fotos-elegidas');
+                const lista = document.getElementById('fotos-lista');
+                const cantidad = document.getElementById('fotos-cantidad');
+                const aviso = document.getElementById('fotos-aviso');
+                const agregar = document.getElementById('fotos-agregar');
+                let elegidos = []; // { file, url }
+
+                // Sin DataTransfer (navegadores viejos) no se puede reescribir `files`: queda
+                // el comportamiento nativo, con las fotos en el orden en que se eligieron.
+                let puedeOrdenar = true;
+                try { new DataTransfer(); } catch (e) { puedeOrdenar = false; }
+
+                if (!puedeOrdenar) {
+                    input.addEventListener('change', () => window.actualizarBotonProcesar());
+                    return;
+                }
+
+                const esPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+
+                function avisar(texto) {
+                    aviso.textContent = texto;
+                    aviso.hidden = !texto;
+                }
+
+                // Las fotos de celular pesan 3 a 5 MB: diez juntas pasan el límite de subida
+                // del servidor. Se achican acá (lado mayor 2400 px, JPEG) y la IA las lee
+                // igual de bien. Si el navegador no puede, va la original y la achica el
+                // servidor antes de mandarla a la IA.
+                async function achicar(file) {
+                    if (file.size <= 1.5 * 1024 * 1024 && !/gif$/i.test(file.type)) return file;
+                    try {
+                        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                        const escala = Math.min(1, LADO_MAYOR / Math.max(bitmap.width, bitmap.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(bitmap.width * escala);
+                        canvas.height = Math.round(bitmap.height * escala);
+                        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                        if (bitmap.close) bitmap.close();
+                        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+                        if (!blob || blob.size >= file.size) return file;
+                        return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+                    } catch (e) {
+                        return file;
+                    }
+                }
+
+                function vaciar() {
+                    elegidos.forEach(e => e.url && URL.revokeObjectURL(e.url));
+                    elegidos = [];
+                }
+
+                function escribirEnInput() {
+                    const dt = new DataTransfer();
+                    elegidos.forEach(e => dt.items.add(e.file));
+                    input.files = dt.files;
+                }
+
+                function mover(i, paso) {
+                    const j = i + paso;
+                    if (j < 0 || j >= elegidos.length) return;
+                    [elegidos[i], elegidos[j]] = [elegidos[j], elegidos[i]];
+                    escribirEnInput();
+                    dibujar();
+                }
+
+                function quitar(i) {
+                    const [sacado] = elegidos.splice(i, 1);
+                    if (sacado.url) URL.revokeObjectURL(sacado.url);
+                    avisar('');
+                    escribirEnInput();
+                    dibujar();
+                }
+
+                function dibujar() {
+                    const sonFotos = elegidos.length > 0 && !esPdf(elegidos[0].file);
+                    bloque.hidden = !sonFotos;
+                    cantidad.textContent = elegidos.length === 1 ? '1 foto' : `${elegidos.length} fotos`;
+                    agregar.hidden = elegidos.length >= MAX_FOTOS;
+                    lista.innerHTML = '';
+
+                    if (sonFotos) {
+                        elegidos.forEach((e, i) => {
+                            const ultimo = i === elegidos.length - 1;
+                            const li = document.createElement('li');
+                            li.className = 'flex items-center gap-3 bg-background border border-accent-gray rounded-xl p-2';
+                            li.innerHTML = `
+                                <span class="w-7 h-7 flex-shrink-0 rounded-full bg-accent-blue text-black text-sm font-bold flex items-center justify-center">${i + 1}</span>
+                                <img src="${e.url}" alt="" class="w-14 h-14 flex-shrink-0 object-cover rounded-lg">
+                                <span data-nombre class="flex-1 min-w-0 text-sm text-text-primary truncate"></span>
+                                <button type="button" data-paso="-1" aria-label="Subir la foto ${i + 1}" class="w-9 h-9 flex-shrink-0 rounded-lg border border-accent-gray text-text-primary disabled:opacity-30" ${i === 0 ? 'disabled' : ''}>↑</button>
+                                <button type="button" data-paso="1" aria-label="Bajar la foto ${i + 1}" class="w-9 h-9 flex-shrink-0 rounded-lg border border-accent-gray text-text-primary disabled:opacity-30" ${ultimo ? 'disabled' : ''}>↓</button>
+                                <button type="button" data-quitar aria-label="Quitar la foto ${i + 1}" class="w-9 h-9 flex-shrink-0 rounded-lg border border-danger/40 text-danger">✕</button>`;
+                            // El nombre lo eligió el usuario: va como texto, nunca como HTML.
+                            li.querySelector('[data-nombre]').textContent = e.file.name;
+                            li.querySelectorAll('[data-paso]').forEach(b => b.addEventListener('click', () => mover(i, Number(b.dataset.paso))));
+                            li.querySelector('[data-quitar]').addEventListener('click', () => quitar(i));
+                            lista.appendChild(li);
+                        });
+                    }
+
+                    window.actualizarBotonProcesar();
+                }
+
+                input.addEventListener('change', async () => {
+                    const nuevos = Array.from(input.files);
+                    avisar('');
+
+                    // Cerró el diálogo sin elegir: el navegador vació `files`, se repone lo que había.
+                    if (nuevos.length === 0) {
+                        escribirEnInput();
+                        dibujar();
+                        return;
+                    }
+
+                    if (nuevos.some(esPdf)) {
+                        if (nuevos.length > 1) {
+                            avisar('Un PDF se sube solo. Si tu carta son fotos, podés elegir varias.');
+                            escribirEnInput();
+                            dibujar();
+                            return;
+                        }
+                        // Un PDF reemplaza lo que hubiera elegido antes.
+                        vaciar();
+                        elegidos = [{ file: nuevos[0], url: null }];
+                        escribirEnInput();
+                        dibujar();
+                        return;
+                    }
+
+                    // Fotos: se suman a las que ya estaban (salvo que lo anterior fuera un PDF).
+                    if (elegidos.length && esPdf(elegidos[0].file)) vaciar();
+
+                    const lugar = MAX_FOTOS - elegidos.length;
+                    if (nuevos.length > lugar) {
+                        avisar(`Se pueden subir hasta ${MAX_FOTOS} fotos por carta: quedaron las primeras ${MAX_FOTOS}.`);
+                    }
+
+                    window.preparandoFotos = true;
+                    escribirEnInput();
+                    window.actualizarBotonProcesar();
+
+                    for (const file of nuevos.slice(0, Math.max(0, lugar))) {
+                        const preparada = await achicar(file);
+                        elegidos.push({ file: preparada, url: URL.createObjectURL(preparada) });
+                    }
+
+                    window.preparandoFotos = false;
+                    escribirEnInput();
+                    dibujar();
+                });
+
+                agregar.addEventListener('click', () => input.click());
             }
 
             const menuForm = document.getElementById('menu-form');
@@ -2590,6 +2796,9 @@
                 let motivo = '';
                 if (faltaNombre) {
                     motivo = 'Poné un nombre para el menú.';
+                } else if (window.preparandoFotos) {
+                    // Las fotos se están achicando antes de subir (ver montarSelectorDeFotos).
+                    motivo = 'Preparando fotos…';
                 } else if (!hayArchivo) {
                     motivo = 'Elegí el archivo del menú para poder procesarlo.';
                 }
@@ -3365,18 +3574,23 @@
         });
         
         // Funciones para el modal de archivos
-        function openFileModal(fileUrl, fileType) {
+        // Recibe una URL o una lista: una carta en varias fotos las muestra todas, en orden.
+        function openFileModal(fileUrls, fileType) {
             const modal = document.getElementById('fileModal');
             const modalBody = document.getElementById('fileModalBody');
-            
+            const urls = Array.isArray(fileUrls) ? fileUrls : [fileUrls];
+
             modalBody.innerHTML = '';
-            
+            modalBody.classList.toggle('varias', urls.length > 1);
+
             if (fileType === 'pdf') {
                 // Para PDFs usar iframe
-                modalBody.innerHTML = `<iframe src="${fileUrl}" title="Vista previa del PDF"></iframe>`;
+                modalBody.innerHTML = `<iframe src="${urls[0]}" title="Vista previa del PDF"></iframe>`;
             } else {
                 // Para imágenes usar img
-                modalBody.innerHTML = `<img src="${fileUrl}" alt="Vista previa del archivo" />`;
+                modalBody.innerHTML = urls
+                    .map((url, i) => `<img src="${url}" alt="${urls.length > 1 ? `Foto ${i + 1} del menú` : 'Vista previa del archivo'}" />`)
+                    .join('');
             }
             
             modal.style.display = 'flex';

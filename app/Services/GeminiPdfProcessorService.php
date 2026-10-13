@@ -56,7 +56,10 @@ class GeminiPdfProcessorService
             $prompt = $this->buildPrompt('PDF');
 
             // Llamar a la API de Gemini
-            $response = $this->callGeminiAPI($prompt, $base64Pdf, $mimeType);
+            $response = $this->callGeminiAPI([
+                ['text' => $prompt],
+                ['inline_data' => ['mime_type' => $mimeType, 'data' => $base64Pdf]],
+            ]);
 
             if ($response['success']) {
 
@@ -120,7 +123,10 @@ class GeminiPdfProcessorService
 
             $prompt = $this->buildPrompt('imagen');
 
-            $response = $this->callGeminiAPI($prompt, $base64Image, $mimeType);
+            $response = $this->callGeminiAPI([
+                ['text' => $prompt],
+                ['inline_data' => ['mime_type' => $mimeType, 'data' => $base64Image]],
+            ]);
 
             if ($response['success']) {
                 return [
@@ -140,6 +146,148 @@ class GeminiPdfProcessorService
                 'provider' => 'gemini'
             ];
         }
+    }
+
+    /**
+     * Lado mayor y calidad con que se mandan las fotos de una carta en varias partes.
+     *
+     * 2400 px se lee igual de bien que el original (la letra de una carta impresa sigue
+     * nítida) y deja cada foto en ~0,5-1 MB: diez entran holgadas en el límite de Gemini.
+     */
+    private const FOTO_LADO_MAYOR = 2400;
+
+    private const FOTO_CALIDAD_JPEG = 85;
+
+    /** Gemini acepta ~20 MB por pedido, contando el base64. Se deja margen para el prompt. */
+    private const MAX_BYTES_PEDIDO = 19 * 1024 * 1024;
+
+    /**
+     * Procesar una carta subida como VARIAS fotos, todas en un solo pedido.
+     *
+     * Van juntas y no una por una porque son páginas de la misma carta: leídas por separado,
+     * una categoría que sigue en la página siguiente salía dos veces, y una foto repetida
+     * duplicaba platos. Gemini las recibe en orden, cada una con su número de página.
+     *
+     * @param  array<int, string>  $rutas  Rutas absolutas, en el orden de la carta.
+     */
+    public function processImagesToMenu(array $rutas): array
+    {
+        try {
+            if (empty($this->geminiApiKey) || $this->geminiApiKey === 'your_gemini_api_key_here') {
+                throw new \Exception('Gemini API key no configurada. Verifica que GEMINI_API_KEY esté en tu archivo .env');
+            }
+
+            if (count($rutas) === 0) {
+                throw new \Exception('No hay fotos para procesar');
+            }
+
+            set_time_limit(600); // 10 minutos
+
+            $total = count($rutas);
+            $partes = [
+                ['text' => $this->buildPrompt("conjunto de {$total} fotos")],
+                ['text' => $this->instruccionesVariasFotos($total)],
+            ];
+            $bytes = 0;
+
+            foreach (array_values($rutas) as $i => $ruta) {
+                if (! file_exists($ruta)) {
+                    throw new \Exception('Foto no encontrada: '.basename($ruta));
+                }
+
+                [$mimeType, $base64] = $this->prepararFoto($ruta);
+                $bytes += strlen($base64);
+
+                $partes[] = ['text' => 'Página '.($i + 1)." de {$total}:"];
+                $partes[] = ['inline_data' => ['mime_type' => $mimeType, 'data' => $base64]];
+            }
+
+            if ($bytes > self::MAX_BYTES_PEDIDO) {
+                throw new \Exception('Las fotos juntas pesan demasiado para procesarlas en un solo pedido ('
+                    .number_format($bytes / 1024 / 1024, 1).' MB). Probá con menos fotos.');
+            }
+
+            $response = $this->callGeminiAPI($partes);
+
+            if ($response['success']) {
+                return [
+                    'success' => true,
+                    'menu_data' => $response['menu_data'],
+                    'extracted_text' => "{$total} fotos procesadas juntas con Gemini",
+                    'provider' => 'gemini',
+                ];
+            }
+
+            throw new \Exception($response['error'] ?? 'Error desconocido al procesar con Gemini');
+
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Error al procesar las fotos con Gemini: '.$e->getMessage(),
+                'provider' => 'gemini',
+            ];
+        }
+    }
+
+    /** Lo que cambia cuando la carta llega en varias fotos. Va aparte del prompt de siempre. */
+    private function instruccionesVariasFotos(int $total): string
+    {
+        return "IMPORTANTE — LA CARTA LLEGA EN {$total} FOTOS:
+- Son las páginas de UNA MISMA carta, en el orden en que se adjuntan (Página 1, Página 2...).
+- Devolvé UN SOLO JSON con los platos de TODAS las páginas, en ese orden.
+- Si una categoría empieza en una página y sigue en la siguiente, es la MISMA categoría: no la repitas, seguí agregando sus platos.
+- Si el mismo plato aparece en dos fotos (por ejemplo, una página fotografiada dos veces), incluilo UNA sola vez.
+- Las reglas de precios de arriba valen para cada página por separado.";
+    }
+
+    /**
+     * Deja la foto lista para mandar: [mime, base64].
+     *
+     * Se manda tal cual si ya es liviana, derecha y en un formato que Gemini lee. Si no, se
+     * carga con `BrandThemeService::cargar()` —que corrige la orientación EXIF de las fotos
+     * de celular y corta antes de quedarse sin memoria— y se achica a JPEG. GIF siempre se
+     * convierte: Gemini no lo acepta.
+     */
+    private function prepararFoto(string $ruta): array
+    {
+        $info = @getimagesize($ruta);
+
+        if ($info === false) {
+            throw new \Exception('No se pudo leer la foto: '.basename($ruta));
+        }
+
+        $orientacion = 1;
+        if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $orientacion = (int) ((@exif_read_data($ruta) ?: [])['Orientation'] ?? 1);
+        }
+
+        $aceptado = in_array($info['mime'], ['image/jpeg', 'image/png', 'image/webp'], true);
+        $liviana = filesize($ruta) <= 2 * 1024 * 1024 && max($info[0], $info[1]) <= self::FOTO_LADO_MAYOR;
+
+        if ($aceptado && $liviana && $orientacion === 1) {
+            return [$info['mime'], base64_encode(file_get_contents($ruta))];
+        }
+
+        $imagenes = app(BrandThemeService::class);
+        $img = $imagenes->cargar($ruta);
+
+        $ancho = imagesx($img);
+        $alto = imagesy($img);
+        $lado = max($ancho, $alto);
+
+        if ($lado > self::FOTO_LADO_MAYOR) {
+            $nuevoAncho = (int) round($ancho * self::FOTO_LADO_MAYOR / $lado);
+            $achicada = $imagenes->reescalar($img, $nuevoAncho);
+            imagedestroy($img);
+            $img = $achicada;
+        }
+
+        ob_start();
+        imagejpeg($img, null, self::FOTO_CALIDAD_JPEG);
+        $jpeg = ob_get_clean();
+        imagedestroy($img);
+
+        return ['image/jpeg', base64_encode($jpeg)];
     }
 
     /**
@@ -225,8 +373,13 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
 
     /**
      * Llamar a la API de Gemini
+     *
+     * Recibe las partes del pedido tal cual las espera Gemini: textos (`['text' => ...]`)
+     * y adjuntos (`['inline_data' => ['mime_type' => ..., 'data' => base64]]`), en orden.
+     * Antes recibía un solo adjunto; una carta en varias fotos necesita mandar todas en el
+     * mismo pedido para que salga UNA carta y no una por foto.
      */
-    private function callGeminiAPI(string $prompt, string $base64Pdf, string $mimeType): array
+    private function callGeminiAPI(array $partes): array
     {
         try {
             // Construir URL para la API de Gemini
@@ -235,17 +388,7 @@ Responde SOLO con el JSON válido, sin texto adicional, sin explicaciones, sin c
             $payload = [
                 'contents' => [
                     [
-                        'parts' => [
-                            [
-                                'text' => $prompt
-                            ],
-                            [
-                                'inline_data' => [
-                                    'mime_type' => $mimeType,
-                                    'data' => $base64Pdf
-                                ]
-                            ]
-                        ]
+                        'parts' => $partes,
                     ]
                 ],
                 'generationConfig' => [

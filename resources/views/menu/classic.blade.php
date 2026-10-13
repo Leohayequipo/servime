@@ -355,6 +355,13 @@
             object-fit: contain;
             border-radius: 12px;
         }
+
+        /* Carta en varias fotos: cada página a todo el ancho y se recorre con scroll. Con
+           el tope de alto de arriba, en el celular cada página quedaba chiquita. */
+        .menu-image.pagina {
+            width: 100%;
+            max-height: none;
+        }
         
         @keyframes fade-in {
             from { opacity: 0; transform: scale(0.95); }
@@ -520,6 +527,18 @@
                             class="menu-pdf"
                             title="Menú PDF">
                         </iframe>
+                    @elseif($menuActivo->tieneVariasFotos())
+                        {{-- La carta llegó en varias fotos: todas, en el orden en que el
+                             comercio las subió, una debajo de la otra. --}}
+                        <div class="space-y-4">
+                            @foreach($menuActivo->archivosEnOrden() as $i => $foto)
+                                <img
+                                    src="{{ asset('storage/' . $foto) }}"
+                                    alt="Menú {{ $comercio->nombre }} — página {{ $i + 1 }}"
+                                    @if($i > 0) loading="lazy" @endif
+                                    class="menu-image pagina mx-auto">
+                            @endforeach
+                        </div>
                     @else
                         <img
                             src="{{ asset('storage/' . $menuActivo->archivo_original) }}"

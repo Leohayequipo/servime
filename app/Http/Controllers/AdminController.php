@@ -267,9 +267,10 @@ class AdminController extends Controller
             return view('menus.procesando', ['comercio' => $menu->comercio, 'menu' => $menu]);
         }
 
-        // Asegurar que el archivo del menú esté disponible en public_html (si existe)
-        if ($menu->archivo_original) {
-            $this->ensureMenuFileInPublicHtml($menu->archivo_original);
+        // Asegurar que los archivos del menú estén disponibles en public_html (si existen).
+        // Todos: una carta en varias fotos se ve entera en el menú clásico.
+        foreach ($menu->archivosEnOrden() as $archivo) {
+            $this->ensureMenuFileInPublicHtml($archivo);
         }
 
         return view('menus.create', [

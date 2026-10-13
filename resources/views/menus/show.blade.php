@@ -222,8 +222,11 @@
                             </button>
                         </div>
                         <!-- Imagen del menú -->
-                        <div class="max-h-screen overflow-auto">
-                            <img src="{{ asset('storage/' . $menu->archivo_original) }}" alt="Menú de {{ $comercio->nombre }}" class="w-full h-auto object-contain">
+                        <div class="max-h-screen overflow-auto space-y-4">
+                            {{-- Todas las fotos de la carta, en orden (una sola si se subió así). --}}
+                            @foreach($menu->archivosEnOrden() as $i => $foto)
+                                <img src="{{ asset('storage/' . $foto) }}" alt="Menú de {{ $comercio->nombre }}{{ $menu->tieneVariasFotos() ? ' — foto '.($i + 1) : '' }}" class="w-full h-auto object-contain">
+                            @endforeach
                         </div>
                     </div>
                 </div>

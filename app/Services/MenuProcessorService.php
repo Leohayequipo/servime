@@ -6,6 +6,7 @@ use App\Models\Menu;
 use App\Support\ArmaPayloadOpenAI;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class MenuProcessorService
 {
@@ -241,7 +242,9 @@ TXT;
         // REFRESCAR el menú desde la BD para asegurar que tenemos la ruta correcta
         $menu->refresh();
 
-        $filePath = storage_path('app/public/'.$menu->archivo_original);
+        // Por el disco y no con storage_path() armado a mano: es la misma carpeta
+        // (storage/app/public), pero así los tests con Storage::fake() la encuentran.
+        $filePath = Storage::disk('public')->path($menu->archivo_original);
         $comercioContext = $this->getComercioContext($menu);
 
         if (! file_exists($filePath)) {
@@ -256,9 +259,63 @@ TXT;
 
         if ($menu->formato === 'pdf') {
             return $this->processPDFWithOpenAI($filePath);
-        } else {
-            return $this->processImageWithGemini($filePath);
         }
+
+        // Una carta subida en varias fotos se lee entera de una vez: son páginas de la
+        // misma carta, no cartas distintas.
+        if ($menu->tieneVariasFotos()) {
+            $rutas = array_map(fn ($ruta) => Storage::disk('public')->path($ruta), $menu->archivosEnOrden());
+
+            foreach ($rutas as $ruta) {
+                if (! file_exists($ruta)) {
+                    throw new \Exception('Archivo no encontrado: '.$ruta);
+                }
+            }
+
+            return $this->processImagesWithGemini($rutas);
+        }
+
+        return $this->processImageWithGemini($filePath);
+    }
+
+    /**
+     * Procesa una carta de varias fotos.
+     *
+     * 1. Gemini con TODAS las fotos en un solo pedido, en orden: sale una sola carta, sin
+     *    categorías partidas entre páginas ni platos repetidos.
+     * 2. Si Gemini falla, OpenAI Vision foto por foto, y las partes se unen con
+     *    `combineMenuJsons()` —el mismo que une las páginas de un PDF—. Es la caída que ya
+     *    tiene la foto sola (decisión del 12/10/2026). A diferencia de esa, acá queda un
+     *    warning en el log: OpenAI tiende a inventar precios y la caída no puede pasar
+     *    desapercibida.
+     *
+     * @param  array<int, string>  $rutas  Rutas absolutas, en el orden de la carta.
+     */
+    protected function processImagesWithGemini(array $rutas)
+    {
+        $result = (new GeminiPdfProcessorService)->processImagesToMenu($rutas);
+
+        if ($result['success'] && ! empty($result['menu_data'])) {
+            $this->savedExtractedText = $result['extracted_text'];
+
+            return $result['menu_data'];
+        }
+
+        Log::warning("Menú #{$this->menuId}: Gemini no pudo leer las ".count($rutas).' fotos juntas; se pasa a OpenAI Vision foto por foto', [
+            'menu_id' => $this->menuId,
+            'motivo' => $result['message'] ?? 'respuesta vacía',
+        ]);
+
+        $partes = [];
+        foreach ($rutas as $ruta) {
+            $json = $this->processImageWithOpenAI($ruta);
+
+            if (! empty($json)) {
+                $partes[] = $json;
+            }
+        }
+
+        return $partes === [] ? '' : $this->combineMenuJsons($partes);
     }
 
     /**

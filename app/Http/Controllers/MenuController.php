@@ -88,8 +88,12 @@ class MenuController extends Controller
                 ->with('error', $comercio->mensajeTopeDeCartas());
         }
 
-        // DEBUG: Ver información del archivo recibido
-        if (! $request->hasFile('archivo')) {
+        // El formulario manda `archivos[]` (una carta puede ser varias fotos). `archivo`, el
+        // campo suelto de antes, se sigue aceptando: es un solo archivo, como siempre.
+        $archivos = $request->file('archivos') ?? ($request->hasFile('archivo') ? [$request->file('archivo')] : []);
+        $archivos = array_values(array_filter(is_array($archivos) ? $archivos : [$archivos]));
+
+        if ($archivos === []) {
             Log::error('❌ ERROR: No se recibió archivo en la petición');
 
             return redirect()->back()
@@ -97,75 +101,66 @@ class MenuController extends Controller
                 ->with('error', 'No se recibió ningún archivo. Por favor, intenta nuevamente.');
         }
 
-        $file = $request->file('archivo');
-        Log::info('DEBUG - Archivo recibido en store:', [
-            'original_name' => $file->getClientOriginalName(),
-            'extension' => $file->getClientOriginalExtension(),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'is_valid' => $file->isValid(),
-            'has_file' => $request->hasFile('archivo'),
-        ]);
-
-        $validated = $request->validate([
+        $request->validate([
             'nombre' => 'nullable|string|max:255',
-            'archivo' => 'required|file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB max
+            'archivos' => 'nullable|array|max:'.Menu::MAX_FOTOS,
+            'archivos.*' => 'file|mimes:pdf,jpeg,png,jpg,gif|max:10240', // 10MB cada uno
+            'archivo' => 'nullable|file|mimes:pdf,jpeg,png,jpg,gif|max:10240',
+        ], [
+            'archivos.max' => 'Podés subir hasta '.Menu::MAX_FOTOS.' fotos por carta.',
+            'archivos.*.mimes' => 'Cada archivo tiene que ser un PDF o una foto (JPG, PNG o GIF).',
+            'archivos.*.max' => 'Cada archivo puede pesar hasta 10 MB.',
         ]);
 
-        // Subir archivo preservando la extensión original
-        $archivo = $request->file('archivo');
+        // Usar MIME type O extensión para detectar PDF (algunos PDFs escaneados pueden tener MIME type incorrecto)
+        $esPdf = fn ($archivo) => $archivo->getMimeType() === 'application/pdf'
+            || strtolower($archivo->getClientOriginalExtension()) === 'pdf';
+
+        // Varias partes solo tienen sentido con fotos: un PDF ya trae todas sus páginas.
+        if (count($archivos) > 1 && collect($archivos)->contains($esPdf)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['archivos' => 'Un PDF se sube solo. Si tu carta son fotos, podés subir varias juntas.']);
+        }
+
         // Asegurar que existan las carpetas del comercio
         $this->createComercioDirectories($comercio->id);
 
-        $extension = $archivo->getClientOriginalExtension();
-        $nombreArchivo = uniqid().'.'.$extension;
-        $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", $nombreArchivo, 'public');
+        // Se guardan en el orden en que llegan: es el orden en que el comercio las acomodó,
+        // y el orden en que la IA las va a leer.
+        $rutas = [];
+        foreach ($archivos as $i => $archivo) {
+            $extension = $archivo->getClientOriginalExtension() ?: $archivo->guessExtension();
+            $archivoPath = $archivo->storeAs("comercios/{$comercio->id}/menus", uniqid().'-'.$i.'.'.$extension, 'public');
 
-        Log::info('📤 ARCHIVO SUBIDO', [
-            'archivo_path' => $archivoPath,
-            'nombre_original' => $request->file('archivo')->getClientOriginalName(),
-            'extension_original' => $request->file('archivo')->getClientOriginalExtension(),
-            'extension_guardada' => $extension,
-            'tamaño' => $request->file('archivo')->getSize(),
-            'mime_type' => $request->file('archivo')->getMimeType(),
+            // Copiar archivo a public_html en producción (con manejo de errores)
+            try {
+                $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
+            } catch (\Exception $e) {
+                // No fallar si hay error al copiar a public_html (solo es para producción)
+                Log::warning('Error al copiar archivo a public_html (no crítico)', [
+                    'error' => $e->getMessage(),
+                    'archivo_path' => $archivoPath,
+                ]);
+            }
+
+            $rutas[] = $archivoPath;
+        }
+
+        Log::info('📤 ARCHIVOS SUBIDOS', [
+            'archivos' => $rutas,
             'comercio_id' => $comercio->id,
             'comercio_nombre' => $comercio->nombre,
         ]);
 
-        // Copiar archivo a public_html en producción (con manejo de errores)
-        try {
-            $this->copyMenuToPublicHtml($archivoPath, $comercio->id);
-        } catch (\Exception $e) {
-            // No fallar si hay error al copiar a public_html (solo es para producción)
-            Log::warning('Error al copiar archivo a public_html (no crítico)', [
-                'error' => $e->getMessage(),
-                'archivo_path' => $archivoPath,
-            ]);
-        }
-
-        // Crear menú
+        // Crear menú. `archivo_original` es siempre el primero: la miniatura, el admin y los
+        // chequeos de "¿el archivo está?" lo leen a él. La lista completa va en `archivos`.
         $menu = new Menu;
         $menu->comercio_id = $comercio->id;
         $menu->nombre = $request->nombre;
-        $menu->archivo_original = $archivoPath;
-
-        Log::info('💾 MENÚ CREADO EN BD', [
-            'menu_id' => 'NUEVO (aún no guardado)',
-            'archivo_original' => $archivoPath,
-            'comercio_id' => $comercio->id,
-        ]);
-
-        // Detectar formato automáticamente basándose en MIME type y extensión
-        $mimeType = $request->file('archivo')->getMimeType();
-        $extension = strtolower($request->file('archivo')->getClientOriginalExtension());
-
-        Log::info('DEBUG - Detectando formato:', [
-            'mime_type' => $mimeType,
-            'extension' => $extension,
-        ]);
-
-        // Usar MIME type O extensión para detectar PDF (algunos PDFs escaneados pueden tener MIME type incorrecto)
-        $menu->formato = ($mimeType === 'application/pdf' || $extension === 'pdf') ? 'pdf' : 'image';
+        $menu->archivo_original = $rutas[0];
+        $menu->archivos = count($rutas) > 1 ? $rutas : null;
+        $menu->formato = $esPdf($archivos[0]) ? 'pdf' : 'image';
 
         $menu->procesado = false;
 
@@ -320,9 +315,10 @@ class MenuController extends Controller
             return view('menus.procesando', compact('comercio', 'menu'));
         }
 
-        // Asegurar que el archivo del menú esté disponible en public_html (si existe)
-        if ($menu->archivo_original) {
-            $this->ensureMenuFileInPublicHtml($menu->archivo_original, $comercio->id);
+        // Asegurar que los archivos del menú estén disponibles en public_html (si existen).
+        // Todos: una carta en varias fotos se ve entera en el menú clásico.
+        foreach ($menu->archivosEnOrden() as $archivo) {
+            $this->ensureMenuFileInPublicHtml($archivo, $comercio->id);
         }
 
         $isEdit = true;

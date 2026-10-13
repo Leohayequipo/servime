@@ -354,7 +354,8 @@ class MenuProcesandoTest extends TestCase
         $this->actingAs($user)->get(route('menus.create', $comercio))
             ->assertOk()
             ->assertSee('id="menu-form"', false)
-            ->assertSee('name="archivo"', false)
+            // `archivos[]`: una carta puede subirse como varias fotos (MenuVariasFotosTest).
+            ->assertSee('name="archivos[]"', false)
             ->assertSee(route('menus.store', $comercio), false);
     }
 }

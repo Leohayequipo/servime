@@ -55,7 +55,11 @@
 
             @if($menu->archivo_original)
                 <p class="text-center text-text-secondary text-xs mt-6">
-                    Archivo: {{ basename($menu->archivo_original) }}
+                    @if($menu->tieneVariasFotos())
+                        {{ count($menu->archivosEnOrden()) }} fotos, leídas juntas como una sola carta
+                    @else
+                        Archivo: {{ basename($menu->archivo_original) }}
+                    @endif
                 </p>
             @endif
 

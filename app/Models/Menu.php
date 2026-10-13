@@ -14,6 +14,7 @@ class Menu extends Model
         'comercio_id',
         'nombre',
         'archivo_original',
+        'archivos',
         'texto_extraido',
         'contexto_gpt',
         'formato',
@@ -25,7 +26,16 @@ class Menu extends Model
     protected $casts = [
         'procesado' => 'boolean',
         'activo' => 'boolean',
+        'archivos' => 'array',
     ];
+
+    /**
+     * Cuántas fotos se pueden subir para una misma carta.
+     *
+     * Se mandan todas juntas en un solo pedido a Gemini, que acepta hasta ~20 MB. Con diez
+     * fotos achicadas a 2400 px entran con margen; con más, una carta muy cargada lo rozaría.
+     */
+    public const MAX_FOTOS = 10;
 
     // Estados de procesamiento del menú
     public const ESTADO_PROCESANDO = 'procesando';
@@ -47,6 +57,27 @@ class Menu extends Model
     public function tuvoError(): bool
     {
         return $this->estado === self::ESTADO_ERROR;
+    }
+
+    /**
+     * Las rutas de los archivos de la carta, en el orden en que se leen.
+     *
+     * Una carta de varias fotos las tiene en `archivos`; una de un solo archivo (PDF o foto),
+     * y todas las de antes de que existiera esa columna, solo en `archivo_original`.
+     */
+    public function archivosEnOrden(): array
+    {
+        if (is_array($this->archivos) && count($this->archivos) > 0) {
+            return array_values($this->archivos);
+        }
+
+        return filled($this->archivo_original) ? [$this->archivo_original] : [];
+    }
+
+    /** Si la carta se subió como varias fotos. */
+    public function tieneVariasFotos(): bool
+    {
+        return $this->formato !== 'pdf' && count($this->archivosEnOrden()) > 1;
     }
 
     /**
