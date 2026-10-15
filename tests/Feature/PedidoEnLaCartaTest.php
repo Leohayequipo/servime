@@ -65,16 +65,18 @@ class PedidoEnLaCartaTest extends TestCase
             ->assertSee('id="btnPedir"', false);
     }
 
-    public function test_el_minimo_sin_qr_de_mesa_avisa_que_hay_que_escanearlo(): void
+    public function test_el_minimo_sin_qr_de_mesa_dice_que_se_lo_muestre_al_camarero(): void
     {
         $comercio = $this->comercioEn('minimo');
+        Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 4]);
 
         // En castellano: sin idioma, el menú elige por el navegador y ese texto ya tenía
         // traducción al inglés.
         $this->get(route('menu.classic', $comercio).'?lang=es')
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
-            ->assertSee('Escaneá el código QR de tu mesa');
+            ->assertDontSee('Escaneá el código QR de tu mesa')
+            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.');
     }
 
     public function test_el_pedido_de_la_carta_le_llega_al_mozo(): void

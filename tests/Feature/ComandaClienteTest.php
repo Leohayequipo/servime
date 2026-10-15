@@ -162,31 +162,32 @@ class ComandaClienteTest extends TestCase
     }
 
     /**
-     * El que entra por el QR general del local, por las redes o por un link compartido no
-     * puede pedir (no hay mesa a la que mandar el pedido), pero tiene que enterarse de por
-     * qué. Sin el aviso, el botón simplemente no está y no tiene cómo saber que escaneando
-     * el QR de su mesa sí podría.
+     * El que entra por el QR público del local, por las redes o por un link compartido no
+     * puede pedir (no hay mesa a la que mandar el pedido): la lista es para mostrársela al
+     * camarero. No se lo manda a escanear "el QR de su mesa", porque hay locales que usan
+     * sólo el QR público y ese QR no existe.
      */
-    public function test_al_que_entra_sin_mesa_se_le_explica_como_pedir(): void
+    public function test_al_que_entra_por_el_qr_publico_se_le_dice_que_se_lo_muestre_al_camarero(): void
     {
         $comercio = $this->comercio();
+        Mesa::factory()->create(['comercio_id' => $comercio->id, 'numero' => 1]);
 
         $this->get(route('menu.chat', $comercio).'?lang=es')
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
-            ->assertSee('Escaneá el código QR de tu mesa para poder pedir desde el teléfono.', false);
+            ->assertDontSee('Escaneá el código QR de tu mesa', false)
+            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.', false);
     }
 
     public function test_el_comercio_sin_comandas_no_menciona_pedidos_por_telefono(): void
     {
-        // Sin la feature, el menú es el de siempre: ni botón ni aviso.
+        // Sin la feature tampoco hay botón: la lista es para mostrársela al camarero.
         $comercio = $this->comercio(['mesas', 'lista_pedido']);
 
-        // El atributo del <p>, no el nombre de la clase (que vive siempre en la hoja de estilos).
         $this->get(route('menu.chat', $comercio).'?lang=es')
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
-            ->assertDontSee('class="pedir-aviso"', false);
+            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.', false);
     }
 
     public function test_despues_de_pedir_el_carrito_queda_vacio(): void

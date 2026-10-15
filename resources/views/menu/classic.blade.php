@@ -620,10 +620,8 @@
                 <button type="button" id="btnPedir" class="btn-pedir">{{ __('Pedir') }}</button>
                 <p class="mi-pedido-ayuda">{{ __('El mozo lo ve al toque en su pantalla.') }}</p>
                 <p id="pedidoError" class="mi-pedido-error" hidden></p>
-            @elseif($comercio->tieneFeature('comandas'))
-                <p class="mi-pedido-ayuda">{{ __('Escaneá el código QR de tu mesa para poder pedir desde el teléfono.') }}</p>
             @else
-                <p class="mi-pedido-ayuda">{{ __('Cuando venga el mozo, mostrale esta pantalla.') }}</p>
+                <p class="mi-pedido-ayuda">{{ __('Cuando venga el camarero, mostrale esta pantalla.') }}</p>
             @endif
 
             <button type="button" id="miPedidoVaciar" class="mi-pedido-vaciar">{{ __('Vaciar mi pedido') }}</button>

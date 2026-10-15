@@ -425,12 +425,17 @@
             font-size: 19px; font-weight: 800; color: var(--accent); letter-spacing: .01em;
         }
         .wish-header-buttons { display: flex; gap: 8px; }
+        /* Íconos redondos (tachito y cruz): 36px para que se toquen bien con el dedo. */
         .wish-btn {
-            padding: 6px 10px; border-radius: 9999px; border: 1px solid var(--line-2);
-            font-size: 12px; cursor: pointer;
+            min-width: 36px; height: 36px; padding: 0 9px; border-radius: 9999px;
+            border: 1px solid var(--line-2); font-size: 12px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
         }
+        .wish-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
         .wish-btn-clear { background: var(--surface-2); color: #C98B86; margin-right: 6px; }
-        .wish-btn-clear.armed { background: #7A2E2E; color: #fff; border-color: rgba(255,255,255,.3); }
+        /* Primer toque: el tachito se pone rojo y suma "¿Vaciar?" para pedir el segundo. */
+        .wish-btn-clear.armed { background: #7A2E2E; color: #fff; border-color: rgba(255,255,255,.3); padding: 0 12px; }
+        .wish-btn-clear .wish-btn-label:empty { display: none; }
         .wish-btn-close { background: var(--surface-2); color: var(--text); }
         /* Ya pedido: se distingue del carrito por el borde en el acento, para que de un
            vistazo se vea qué está confirmado y qué todavía se está eligiendo. */
@@ -690,8 +695,13 @@
                         @endif
                     </h4>
                     <div class="wish-header-buttons">
-                        <button id="wishClear" class="wish-btn wish-btn-clear">{{ __('Vaciar') }}</button>
-                        <button id="wishClose" class="wish-btn wish-btn-close">{{ __('Cerrar') }}</button>
+                        <button id="wishClear" class="wish-btn wish-btn-clear" title="{{ __('Vaciar') }}" aria-label="{{ __('Vaciar') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                            <span class="wish-btn-label"></span>
+                        </button>
+                        <button id="wishClose" class="wish-btn wish-btn-close" title="{{ __('Cerrar') }}" aria-label="{{ __('Cerrar') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                        </button>
                     </div>
                 </div>
                 {{-- Lo que la mesa YA pidió, que es lo que el mozo tiene que traer. Va
@@ -710,13 +720,12 @@
                         {{ __('Pedir') }}
                     </button>
                     <p class="pedir-ayuda">{{ __('El mozo lo ve al toque en su pantalla.') }}</p>
-                @elseif($comercio->tieneFeature('comandas'))
-                    {{-- El local toma pedidos desde el teléfono, pero este cliente entró sin
-                         mesa (por el QR general, las redes o un link que le pasaron). Sin
-                         este aviso el botón simplemente no está y no tiene cómo enterarse
-                         de que escaneando el QR de su mesa sí podría pedir. --}}
+                @else
+                    {{-- Entró sin mesa (QR público, redes, un link): la lista es para
+                         mostrársela al camarero. No se lo manda a buscar "el QR de su mesa":
+                         hay locales que usan sólo el QR público y ese QR no existe. --}}
                     <p class="pedir-aviso">
-                        {{ __('Escaneá el código QR de tu mesa para poder pedir desde el teléfono.') }}
+                        {{ __('Cuando venga el camarero, mostrale esta pantalla.') }}
                     </p>
                 @endif
             </div>
@@ -1775,12 +1784,12 @@
         function resetWishClear() {
             wishClearArmed = false;
             if (wishClearTimer) clearTimeout(wishClearTimer);
-            if (wishClearBtn) { wishClearBtn.textContent = T.vaciar; wishClearBtn.classList.remove('armed'); }
+            if (wishClearBtn) { wishClearBtn.querySelector('.wish-btn-label').textContent = ''; wishClearBtn.classList.remove('armed'); }
         }
         wishClearBtn?.addEventListener('click', () => {
             if (!wishClearArmed) {
                 wishClearArmed = true;
-                wishClearBtn.textContent = T.vaciar_confirmar;
+                wishClearBtn.querySelector('.wish-btn-label').textContent = T.vaciar_confirmar;
                 wishClearBtn.classList.add('armed');
                 wishClearTimer = setTimeout(resetWishClear, 3000);
                 return;
