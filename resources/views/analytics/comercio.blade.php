@@ -263,9 +263,9 @@
                 // Se nombran con el texto que el cliente ve en la portada, no con el
                 // nombre interno: el comercio reconoce sus botones por lo que dicen.
                 $puertas = [
-                    ['«Preguntame lo que quieras»', $en['cta'], 'bg-warning'],
+                    ['«Tu camarero virtual»', $en['cta'], 'bg-warning'],
                     ['Atajos sugeridos', $en['chip'], 'bg-accent-blue'],
-                    ['«Quiero ver el menú completo»', $en['completo'], 'bg-accent-gray'],
+                    ['«Carta digital»', $en['completo'], 'bg-accent-gray'],
                 ];
             @endphp
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

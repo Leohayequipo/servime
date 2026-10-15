@@ -118,7 +118,8 @@
         .d4 { animation-delay: .32s; } .d5 { animation-delay: .42s; }
 
         @media (prefers-reduced-motion: reduce) {
-            .an, .hero img, .cta::after, .cta-go, .dot { animation: none !important; }
+            .an, .hero img, .cta::after, .cta-go, .dot,
+            .estrella-grande, .estrella-chica { animation: none !important; }
         }
 
         /* ── Hero ── */
@@ -172,7 +173,7 @@
 
         /* ── Identidad ── */
         .identidad { text-align: center; margin-bottom: 18px; }
-        .eyebrow { font-size: 9.5px; letter-spacing: .34em; color: var(--acento); margin-bottom: 8px; }
+        .eyebrow { font-size: 12px; letter-spacing: .3em; color: var(--acento); margin-bottom: 10px; }
         .titulo { font-family: 'Playfair Display', serif; font-weight: 500;
                   font-size: 38px; line-height: 1.03; color: #FBF5EA; }
         .regla { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 11px 0 8px; }
@@ -191,11 +192,22 @@
             transition: transform .22s cubic-bezier(.22,1,.36,1);
         }
         .cta:active { transform: scale(.99); }
+        /* Más seguido y más fuerte que antes (6,5 s y .55): era tan suave que no se
+           notaba, y este es el botón que más queremos que toquen. */
         .cta::after {
-            content: ''; position: absolute; top: 0; bottom: 0; width: 38%;
-            background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
-            animation: sheen 6.5s ease-in-out 1.6s infinite; pointer-events: none;
+            content: ''; position: absolute; top: 0; bottom: 0; width: 42%;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent);
+            animation: sheen 4s ease-in-out .8s infinite; pointer-events: none;
         }
+        /* Las dos estrellas del ícono titilan por turno, como un destello. */
+        @keyframes twinkle {
+            0%, 100% { transform: scale(1) rotate(0); opacity: 1; }
+            45%      { transform: scale(1.22) rotate(18deg); opacity: 1; }
+            55%      { transform: scale(.9) rotate(24deg); opacity: .65; }
+        }
+        @keyframes twinkle2 { 0%, 60%, 100% { transform: scale(1); opacity: .55; } 75% { transform: scale(1.5); opacity: 1; } }
+        .estrella-grande { transform-origin: 12px 10px; animation: twinkle 2.8s ease-in-out infinite; }
+        .estrella-chica  { transform-origin: 19px 17.4px; animation: twinkle2 2.8s ease-in-out infinite; }
         .cta-ico {
             flex-shrink: 0; width: 54px; height: 54px; border-radius: 50%;
             background: color-mix(in srgb, var(--acento) 28%, transparent);
@@ -238,18 +250,20 @@
             display: flex; align-items: center; gap: 12px;
             background: var(--surface);
             border: 1px solid var(--borde); border-top-color: var(--borde-top);
-            border-radius: 16px; padding: 10px 12px 10px 10px;
+            border-radius: 16px; padding: 12px 14px 12px 12px;
             text-decoration: none; color: inherit;
             transition: border-color .22s ease, transform .22s ease;
         }
         .completo:active { transform: scale(.99); }
-        .completo img { width: 50px; height: 50px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
+        .completo img { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
                         object-position: {{ $comercio->focoPortada() }}; }
         .completo div { flex: 1; min-width: 0; }
-        .completo h3 { font-size: 13px; font-weight: 400; color: #F7EEE0; margin-bottom: 2px; }
-        .completo p { font-size: 10.5px; font-weight: 300; color: rgba(242,231,213,.5); }
+        /* Dos palabras grandes en la letra del título se leen de un vistazo; la frase
+           anterior ("Quiero ver el menú completo") en 13px pasaba de largo. */
+        .completo h3 { font-family: 'Playfair Display', serif; font-weight: 500;
+                       font-size: 21px; letter-spacing: .06em; color: #F7EEE0; }
         .completo span {
-            flex-shrink: 0; width: 37px; height: 37px; border-radius: 50%;
+            flex-shrink: 0; width: 41px; height: 41px; border-radius: 50%;
             background: var(--acento); display: flex; align-items: center; justify-content: center;
         }
 
@@ -305,13 +319,19 @@
             <svg width="25" height="25" viewBox="0 0 24 24" fill="none"
                  stroke="color-mix(in srgb, {{ $acento }} 82%, #000)" stroke-width="1.2"
                  stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2.8l1.9 5.3 5.3 1.9-5.3 1.9L12 17.2l-1.9-5.3L4.8 10l5.3-1.9L12 2.8z"/>
-                <path d="M19 15.4l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z"/>
+                <path class="estrella-grande" d="M12 2.8l1.9 5.3 5.3 1.9-5.3 1.9L12 17.2l-1.9-5.3L4.8 10l5.3-1.9L12 2.8z"/>
+                <path class="estrella-chica" d="M19 15.4l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z"/>
             </svg>
         </span>
+        {{-- La figura que el cliente ya conoce, en vez de "Nuestra IA". Lo de armar el
+             pedido sólo se promete si el comercio tiene la lista de pedido prendida. --}}
         <span class="cta-txt">
-            <h2>Preguntame<br>lo que quieras</h2>
-            <p>Nuestra IA te ayuda a elegir, recomienda platos y responde todas tus dudas.</p>
+            <h2>Tu camarero<br>virtual</h2>
+            @if($comercio->aceptaListaDePedido())
+                <p>Te recomienda, te cuenta cada plato y te arma el pedido.</p>
+            @else
+                <p>Te recomienda y te cuenta cada plato.</p>
+            @endif
         </span>
         <span class="cta-go">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EFE3CE"
@@ -343,8 +363,7 @@
     <a class="completo an d5" href="{{ route('menu.classic', $comercio) }}" data-track-choice="classic" data-track-desde="completo">
         <img src="{{ asset('storage/'.$comercio->portada_thumb_url) }}" alt="">
         <div>
-            <h3>Quiero ver el menú completo</h3>
-            <p>Explorá todas nuestras opciones.</p>
+            <h3>CARTA DIGITAL</h3>
         </div>
         <span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A130D"
