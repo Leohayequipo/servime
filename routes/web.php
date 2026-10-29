@@ -309,6 +309,13 @@ Route::middleware(\App\Http\Middleware\ResolverMesa::class)->group(function () {
         ->middleware('throttle:chat-ia')->name('chat.api');
     Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
         ->middleware('throttle:chat-ia')->name('chat.stream');
+    // Nota de voz → texto. Llama a OpenAI, así que va con el límite del chat.
+    Route::post('/api/chat/{comercio:slug}/transcribir', [App\Http\Controllers\ChatbotController::class, 'transcribir'])
+        ->middleware('throttle:chat-ia')->name('chat.transcribir');
+    // La charla de la visita en curso, al reabrir el chat. No llama al modelo: va con el
+    // límite de tracking, no con el del chat (que cuida la factura de OpenAI).
+    Route::get('/api/chat/{comercio:slug}/historial', [App\Http\Controllers\ChatbotController::class, 'historial'])
+        ->middleware('throttle:tracking')->name('chat.historial');
 
     // Buscador de la carta: la misma búsqueda en PHP que usa el asistente, servida al
     // menú clásico. No llama a ningún modelo, así que va con el límite de tracking y no

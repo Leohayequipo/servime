@@ -6,11 +6,15 @@ use App\Models\ChatConversation;
 use App\Models\Comercio;
 use App\Models\Mesa;
 use App\Services\ChatbotService;
+use App\Services\TranscripcionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ChatbotController extends Controller
 {
+    /** Consultas que se vuelven a mostrar al reabrir el chat. */
+    private const HISTORIAL_EN_PANTALLA = 20;
+
     private $chatbotService;
 
     public function __construct(ChatbotService $chatbotService)
@@ -29,6 +33,9 @@ class ChatbotController extends Controller
                 'tipo' => 'nullable|string|in:categoria,ver_mas,chip,chip_portada,chip_chat,tag',
                 'chip_id' => 'nullable|string|max:16',
                 'scope' => 'nullable|string|max:500',
+                // Lo que la burbuja muestra cuando el mensaje lo armó un botón (ver historial()).
+                'etiqueta' => 'nullable|string|max:120',
+                'voz' => 'nullable|boolean',
             ]);
 
             $message = $request->input('message');
@@ -156,6 +163,9 @@ class ChatbotController extends Controller
             'tipo' => 'nullable|string|in:categoria,ver_mas,chip,chip_portada,chip_chat,tag',
             'chip_id' => 'nullable|string|max:16',
             'scope' => 'nullable|string|max:500',
+            // Lo que la burbuja muestra cuando el mensaje lo armó un botón (ver historial()).
+            'etiqueta' => 'nullable|string|max:120',
+            'voz' => 'nullable|boolean',
         ]);
 
         $message = $request->input('message');
@@ -351,6 +361,81 @@ class ChatbotController extends Controller
         return ['chip' => array_filter(['id' => $id, 'label' => $label])];
     }
 
+    /**
+     * El texto corto que mostró la burbuja del cliente, cuando el mensaje lo armó un botón.
+     *
+     * Lo que se le manda al modelo en esos casos es largo y está en español ("Mostrame
+     * TODAS las opciones de la categoría..."): el cliente vio "Ver más opciones". Sin
+     * guardarlo, al volver a abrir el chat le aparecía el texto interno.
+     *
+     * @return array<string, string>
+     */
+    private function etiquetaDelBoton(Request $request): array
+    {
+        $etiqueta = trim((string) $request->input('etiqueta'));
+
+        return array_merge(
+            $etiqueta !== '' ? ['etiqueta' => $etiqueta] : [],
+            // Mandado por nota de voz. No cambia el `origen`: sigue siendo texto del
+            // cliente y tiene que contar en los widgets de palabras.
+            $request->boolean('voz') ? ['voz' => true] : []
+        );
+    }
+
+    /**
+     * Pasa a texto una nota de voz del chat. El front después la manda como un mensaje
+     * normal (con `voz`), así que la cuota se descuenta una sola vez: en la respuesta.
+     */
+    public function transcribir(Request $request, Comercio $comercio, TranscripcionService $transcripcion): JsonResponse
+    {
+        $request->validate([
+            // 30 s de opus pesan ~120 KB y de mp4 ~250 KB: 2 MB es margen de sobra y
+            // corta a quien quiera subir otra cosa. min:1 (1 KB): uno vacío no se manda.
+            'audio' => 'required|file|min:1|max:2048|mimetypes:audio/webm,video/webm,audio/ogg,audio/mp4,video/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/wav,audio/x-wav',
+        ]);
+
+        // Sin asistente no hay a quién mandarle el texto: no se gasta en transcribir.
+        if (! $comercio->enable_ai_responses || ! $comercio->puedeUsarIA()) {
+            return response()->json(['error' => 'no_disponible'], 403);
+        }
+
+        $texto = $transcripcion->transcribir($request->file('audio'), $comercio, app()->getLocale());
+
+        if ($texto === null) {
+            return response()->json(['error' => 'no_entendido'], 422);
+        }
+
+        return response()->json(['texto' => mb_substr($texto, 0, 500)]);
+    }
+
+    /**
+     * La charla de la visita en curso, para volver a dibujarla al reabrir el chat.
+     *
+     * No llama a ningún modelo ni cuenta cuota. Las tarjetas se rearman contra el menú
+     * actual (ver ChatbotService::tarjetasDePlatos).
+     */
+    public function historial(Request $request, Comercio $comercio): JsonResponse
+    {
+        // Sólo con el id del dispositivo, nunca adivinado. getSessionId() cae a IP +
+        // navegador cuando falta: en el wifi del local, dos celulares iguales comparten
+        // las dos cosas y uno vería la charla del otro.
+        $sessionId = (string) $request->header('X-Session-ID');
+        if ($sessionId === '' || strlen($sessionId) > 100) {
+            return response()->json(['mensajes' => []]);
+        }
+
+        $mensajes = ChatConversation::deLaVisita($comercio->id, $sessionId, self::HISTORIAL_EN_PANTALLA)
+            ->map(fn (ChatConversation $c) => [
+                'cliente' => $c->metadata['etiqueta'] ?? $c->user_message,
+                'voz' => (bool) ($c->metadata['voz'] ?? false),
+                'respuesta' => $c->bot_response,
+                'platos' => $this->chatbotService->tarjetasDePlatos($comercio, $c->platos_ofrecidos ?? []),
+            ])
+            ->values();
+
+        return response()->json(['mensajes' => $mensajes]);
+    }
+
     private function consumoDelModelo(): array
     {
         $consumo = $this->chatbotService->ultimoConsumo();
@@ -404,7 +489,7 @@ class ChatbotController extends Controller
                     'response_length' => strlen($response),
                     'timestamp' => now()->toISOString(),
                     'session_id_source' => $request->header('X-Session-ID') ? 'header' : 'inferred',
-                ], $this->consumoDelModelo(), $this->chipDelClick($request, $comercio)),
+                ], $this->consumoDelModelo(), $this->chipDelClick($request, $comercio), $this->etiquetaDelBoton($request)),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error logging conversation: '.$e->getMessage());

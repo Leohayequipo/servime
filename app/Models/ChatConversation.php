@@ -76,6 +76,50 @@ class ChatConversation extends Model
     }
 
     /**
+     * Horas sin escribir que cierran una visita. Pasado eso, el chat arranca de cero.
+     *
+     * El `session_id` vive en el localStorage del celular y no vence nunca, así que sin
+     * corte el que vuelve a la semana siguiente vería (y el asistente recordaría) lo que
+     * charló la vez anterior. Tres horas cubren una comida larga con sobremesa.
+     */
+    public const HORAS_VISITA = 3;
+
+    /**
+     * Los mensajes de la visita en curso de este dispositivo, en orden cronológico.
+     *
+     * La visita se arma hacia atrás desde ahora: cada mensaje entra si está a menos de
+     * HORAS_VISITA del siguiente (o de ahora, el último). Así una charla que arrancó hace
+     * cuatro horas pero sigue activa no se corta a la mitad.
+     *
+     * La usan las DOS puntas a propósito: lo que el cliente ve al volver a entrar y lo
+     * que el asistente recuerda. Si no coinciden, el modelo contesta "como te dije" sobre
+     * algo que el cliente ya no tiene en pantalla.
+     *
+     * @return \Illuminate\Support\Collection<int, self>
+     */
+    public static function deLaVisita(int $comercioId, string $sessionId, int $limite): \Illuminate\Support\Collection
+    {
+        $filas = self::where('comercio_id', $comercioId)
+            ->where('session_id', $sessionId)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limite)
+            ->get();
+
+        $visita = collect();
+        $corte = now();
+        foreach ($filas as $fila) {
+            if ($fila->created_at->lt($corte->copy()->subHours(self::HORAS_VISITA))) {
+                break;
+            }
+            $visita->push($fila);
+            $corte = $fila->created_at;
+        }
+
+        return $visita->reverse()->values();
+    }
+
+    /**
      * Solo lo que TIPEÓ el cliente, sin los mensajes que arma la interfaz al tocar
      * "Ver más opciones" o un chip de categoría.
      *

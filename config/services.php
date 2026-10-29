@@ -55,6 +55,10 @@ return [
          */
         'landing_model' => env('LANDING_CHAT_MODEL', 'gpt-5.6-luna'),
         'landing_max_tokens' => (int) env('LANDING_CHAT_MAX_TOKENS', 900),
+
+        // Notas de voz del chat (TranscripcionService). Va aparte del modelo del plan: no
+        // es un modelo de chat, y cuesta por minuto de audio, no por token.
+        'transcribe_model' => env('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-mini-transcribe'),
     ],
 
     'gemini' => [

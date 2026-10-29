@@ -176,7 +176,7 @@ class ComandaClienteTest extends TestCase
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
             ->assertDontSee('Escaneá el código QR de tu mesa', false)
-            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.', false);
+            ->assertSee('Cuando venga el camarer@, mostrale esta pantalla.', false);
     }
 
     public function test_el_comercio_sin_comandas_no_menciona_pedidos_por_telefono(): void
@@ -187,7 +187,7 @@ class ComandaClienteTest extends TestCase
         $this->get(route('menu.chat', $comercio).'?lang=es')
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
-            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.', false);
+            ->assertSee('Cuando venga el camarer@, mostrale esta pantalla.', false);
     }
 
     public function test_despues_de_pedir_el_carrito_queda_vacio(): void

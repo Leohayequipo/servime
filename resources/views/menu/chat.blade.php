@@ -365,18 +365,72 @@
         #chatMessages { transition: padding-right .35s ease; padding-right: 4.5rem; }
         body.fabs-collapsed #chatMessages { padding-right: 1rem; }
 
-        /* Micrófono: acción SECUNDARIA, así que va neutro. Antes era verde saturado y
-           competía con el botón de enviar, que es la acción principal. */
+        /* Micrófono: va al lado del enviar y en neutro, porque enviar es la acción
+           principal y los dos están siempre a la vista. touch-action y user-select evitan
+           que el mantener apretado abra el menú de copiar o haga scroll. */
         .mic-button {
-            background: var(--surface-2); border: 1px solid var(--line-2);
-            color: var(--text-dim);
+            position: relative;
+            background: var(--surface-2); color: var(--text); border: 1px solid var(--line-2);
             border-radius: 9999px; width: 46px; height: 46px; flex: 0 0 auto;
             display: flex; align-items: center; justify-content: center; padding: 0;
-            cursor: pointer; transition: transform .15s ease, background .2s ease, color .2s ease;
+            cursor: pointer; transition: transform .15s ease, background .2s ease;
+            touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
-        .mic-button:active { transform: scale(.92); }
-        .mic-button:hover { color: var(--text); }
-        .mic-button svg { width: 19px; height: 19px; display: block; fill: currentColor; }
+        .mic-button[hidden], .send-btn[hidden] { display: none; }
+        .mic-button > svg { width: 21px; height: 21px; display: block; fill: currentColor; pointer-events: none; }
+        /* Grabando: el botón crece bajo el dedo, como en WhatsApp */
+        /* Crece hacia arriba y adentro: escalado desde el centro se salía por el borde */
+        .mic-button.grabando-activo { transform: translate(-6px, -10px) scale(1.3); background: #ef4444; color: #fff; border-color: transparent; box-shadow: 0 0 0 6px rgba(239,68,68,.18); }
+        .grab-candado {
+            position: absolute; left: 50%; bottom: calc(100% + 14px); transform: translateX(-50%);
+            display: none; flex-direction: column; align-items: center; gap: 2px;
+            padding: 8px 7px 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-2);
+            color: var(--text-dim); pointer-events: none;
+        }
+        .grab-candado svg { width: 14px; height: 14px; fill: currentColor; }
+        .grab-candado i { font-style: normal; font-size: 12px; line-height: 1; animation: subir 1.2s ease-in-out infinite; }
+        .mic-button.grabando-activo .grab-candado { display: flex; transform: translateX(-50%) scale(.74); }
+        @keyframes subir { 0%,100% { transform: translateY(2px); opacity: .5; } 50% { transform: translateY(-3px); opacity: 1; } }
+
+        .grabando {
+            flex: 1; min-width: 0; height: 46px; display: flex; align-items: center; gap: 10px;
+            padding: 0 14px; border-radius: 9999px; background: var(--surface-2); border: 1px solid var(--line-2);
+            color: var(--text); font-size: 16px; user-select: none; -webkit-user-select: none;
+        }
+        .grabando[hidden] { display: none; }
+        .grab-punto { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; flex: none; animation: latido 1s ease-in-out infinite; }
+        @keyframes latido { 50% { opacity: .25; } }
+        .grab-tiempo { font-variant-numeric: tabular-nums; flex: none; }
+        .grab-cancelar { margin-left: auto; color: var(--text-dim); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .1s; }
+        .grab-borrar { flex: none; width: 34px; height: 34px; margin-left: -8px; border-radius: 50%; border: none; background: transparent; color: #f87171; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .grab-borrar[hidden] { display: none; }
+        .grab-borrar svg { width: 21px; height: 21px; fill: currentColor; }
+
+        /* Burbuja de la nota de voz: play, onda y duración, con lo que se entendió abajo */
+        .burbuja-voz { min-width: 230px; }
+        .voz-fila { display: flex; align-items: center; gap: 10px; }
+        .voz-play { flex: none; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(255,255,255,.22); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .voz-play svg { width: 16px; height: 16px; fill: currentColor; }
+        .voz-onda { flex: 1; height: 26px; display: flex; align-items: center; gap: 2px; }
+        .voz-onda span { flex: 1; min-height: 3px; border-radius: 2px; background: rgba(255,255,255,.45); transition: background .1s; }
+        .voz-onda span.oida { background: #fff; }
+        .voz-dur { flex: none; font-size: 13px; font-variant-numeric: tabular-nums; opacity: .9; }
+        .voz-texto { margin-top: 6px; font-size: 15px; line-height: 1.35; opacity: .92; }
+        .voz-texto.pendiente { font-style: italic; opacity: .75; }
+
+        /* Ayuda cuando el micrófono está bloqueado */
+        .ayuda-mic {
+            width: min(92vw, 380px); border: 1px solid var(--line-2); border-radius: 18px; padding: 20px;
+            background: var(--surface); color: var(--text);
+        }
+        .ayuda-mic::backdrop { background: rgba(0,0,0,.6); }
+        .ayuda-mic h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .ayuda-mic p { font-size: 16px; line-height: 1.45; }
+        .ayuda-mic .ayuda-mic-alt { margin-top: 10px; color: var(--text-dim); font-size: 14px; }
+        .ayuda-mic-botones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+        .ayuda-mic-botones button { border-radius: 12px; padding: 10px 16px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
+        .ayuda-mic-sec { background: var(--surface-2); color: var(--text); }
+        .ayuda-mic-pri { background: var(--accent); color: #fff; }
 
         /* Input bar: borde neutro en reposo. Antes tenía borde azul permanente y
            parecía estar siempre enfocado (o en estado de error). */
@@ -469,10 +523,13 @@
             color: #E8C4C0; font-size: 13px; text-align: center;
         }
         /* Aviso, no error: el cliente no hizo nada mal, sólo entró por otra puerta. */
+        /* Es la instrucción de qué hacer con la lista: va en grande y con el acento.
+           A 13px y en gris claro quedaba como letra chica y el cliente no la leía. */
         .pedir-aviso {
-            margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
-            background: var(--surface-2); border: 1px dashed var(--line-2);
-            font-size: 13px; color: var(--text-dim); text-align: center;
+            margin: 14px 0 0; padding: 14px 16px; border-radius: 12px;
+            background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            font-size: 17px; font-weight: 600; line-height: 1.35; color: var(--text); text-align: center;
         }
 
         .wish-list {
@@ -614,15 +671,17 @@
 
         <!-- Input fijo abajo -->
         <div class="input-fixed">
-            <div class="max-w-md mx-auto flex items-center gap-2">
-                <button id="micButton"
-                        title="{{ __('Hablar con el asistente') }}"
-                        style="display:none"
-                        class="mic-button">
-                    {{-- El SVG va directo en el botón: envuelto en un <span> inline quedaba
-                         desalineado por el baseline y el line-height del span. --}}
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h-2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z"/></svg>
-                </button>
+            <div class="max-w-md mx-auto flex items-center gap-2 barra-chat">
+                {{-- Mientras graba, esta franja ocupa el lugar del input (estilo WhatsApp).
+                     Con la grabación "trabada" aparecen el tacho y el enviar. --}}
+                <div id="grabando" class="grabando" hidden>
+                    <button type="button" id="grabBorrar" class="grab-borrar" title="{{ __('Borrar') }}" hidden>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm4 2v8h2v-8h-2Zm4 0v8h2v-8h-2Z"/></svg>
+                    </button>
+                    <span class="grab-punto" aria-hidden="true"></span>
+                    <span id="grabTiempo" class="grab-tiempo">0:00</span>
+                    <span id="grabCancelar" class="grab-cancelar">‹ {{ __('Deslizá para cancelar') }}</span>
+                </div>
                 {{-- autocomplete="off": sin esto el navegador ofrece el historial de lo que
                      se escribió antes en este input, y al cliente le aparecía un desplegable
                      con mensajes viejos (incluso de otra persona en un celular compartido).
@@ -635,12 +694,39 @@
                        spellcheck="false"
                        enterkeyhint="send"
                        class="flex-1 min-w-0 border border-accent-gray px-4 py-3 text-text-primary text-base placeholder-text-secondary focus:outline-none chat-input-bar">
+                {{-- Siempre a la vista junto al enviar (con uno que se reemplazaba por el otro,
+                     como en WhatsApp, no se entendía). Mantener apretado graba, soltar envía. --}}
+                <button type="button" id="micButton" class="mic-button" hidden
+                        title="{{ __('Mantené apretado para grabar') }}" aria-label="{{ __('Mantené apretado para grabar') }}">
+                    {{-- El candado sale arriba del botón: deslizar hacia él deja grabando
+                         sin tener que mantener el dedo. --}}
+                    <span id="grabCandado" class="grab-candado" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1Zm2 0h6V7a3 3 0 0 0-6 0v3Z"/></svg>
+                        <i>⌃</i>
+                    </span>
+                    {{-- El SVG va directo en el botón: envuelto en un <span> inline quedaba
+                         desalineado por el baseline y el line-height del span. --}}
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h-2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z"/></svg>
+                </button>
                 <button id="sendButton" title="{{ __('Enviar') }}" class="send-btn bg-accent-blue text-white transition-all duration-200 hover:opacity-90 shadow-lg flex-none">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
                 </button>
             </div>
         </div>
     </div>
+
+    {{-- Micrófono bloqueado. Una vez que el cliente dijo que no, ningún navegador deja
+         volver a preguntar desde la página: hay que habilitarlo a mano, así que se le
+         explica cómo según su teléfono. --}}
+    <dialog id="ayudaMic" class="ayuda-mic">
+        <h3>{{ __('Necesitamos el micrófono') }}</h3>
+        <p id="ayudaMicPasos"></p>
+        <p class="ayuda-mic-alt">{{ __('O escribí tu pregunta abajo.') }}</p>
+        <div class="ayuda-mic-botones">
+            <button type="button" id="ayudaMicCerrar" class="ayuda-mic-sec">{{ __('Cerrar') }}</button>
+            <button type="button" id="ayudaMicReintentar" class="ayuda-mic-pri">{{ __('Probar de nuevo') }}</button>
+        </div>
+    </dialog>
 
     <!-- Fondo oscuro que se muestra cuando hay un panel abierto (lo separa del chat) -->
     <div id="panelBackdrop" class="panel-backdrop"></div>
@@ -725,7 +811,7 @@
                          mostrársela al camarero. No se lo manda a buscar "el QR de su mesa":
                          hay locales que usan sólo el QR público y ese QR no existe. --}}
                     <p class="pedir-aviso">
-                        {{ __('Cuando venga el camarero, mostrale esta pantalla.') }}
+                        {{ __('Cuando venga el camarer@, mostrale esta pantalla.') }}
                     </p>
                 @endif
             </div>
@@ -798,7 +884,16 @@
                 'lo_quiero' => __('Lo quiero'),
                 'agregado' => __('Agregado'),
                 'ver_mas' => __('Ver más opciones'),
-                'escuchando' => __('Escuchando...'),
+                'mantene_para_grabar' => __('Mantené apretado el micrófono para grabar y soltalo para enviar.'),
+                'listo_para_grabar' => __('¡Listo! Ahora mantené apretado el micrófono para grabar.'),
+                'transcribiendo' => __('Transcribiendo…'),
+                'no_te_entendi' => __('No te entendí. Probá de nuevo o escribilo.'),
+                'asistente_no_disponible' => __('El asistente no está disponible ahora.'),
+                'sin_microfono' => __('No pudimos usar el micrófono de este teléfono.'),
+                'reproducir' => __('Reproducir'),
+                'mic_pasos_android' => __('Tocá el ícono que está a la izquierda de la dirección de la página, entrá en Permisos y activá el Micrófono. Después tocá «Probar de nuevo».'),
+                'mic_pasos_ios' => __('Tocá «aA» en la barra de la dirección, entrá en Configuración del sitio web y en Micrófono elegí Permitir. Después tocá «Probar de nuevo».'),
+                'mic_pasos_app' => __('Este navegador no deja usar el micrófono. Tocá los tres puntos de arriba y elegí «Abrir en el navegador».'),
                 'escribi' => __('Escribe tu mensaje...'),
                 'total' => __('Total'),
                 'vacio' => __('Tu pedido está vacío'),
@@ -824,167 +919,335 @@
         let lastQuery = null;       // última consulta escrita a mano / atajo
         const pedidosHabilitados = @json($aceptaLista);
         
-        // ===== Reconocimiento de Voz =====
-        let recognition = null;
-        let isListening = false;
-        const micPermissionKey = 'servime_mic_permission_{{ $comercio->id }}';
-        const micRejectedKey = 'servime_mic_rejected_{{ $comercio->id }}';
-        
-        // Detectar soporte de Speech Recognition
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const isSpeechSupported = SpeechRecognition !== undefined;
-        
-        // Verificar si el usuario ya rechazó el permiso
-        const micRejected = localStorage.getItem(micRejectedKey) === 'true';
-        
-        // Inicializar reconocimiento de voz cuando el DOM esté listo
-        function initSpeechRecognition() {
-            const micButton = document.getElementById('micButton');
-            const messageInput = document.getElementById('messageInput');
-            
-            if (!micButton || !messageInput) return;
-            
-            // Inicializar reconocimiento de voz si está soportado y no fue rechazado
-            if (isSpeechSupported && !micRejected) {
-                try {
-                    recognition = new SpeechRecognition();
-                    recognition.lang = 'es-ES';
-                    recognition.continuous = false;
-                    recognition.interimResults = false;
-                    
-                    recognition.onstart = function() {
-                        isListening = true;
-                        micButton.style.background = '#ef4444';
-                        messageInput.placeholder = T.escuchando;
-                        // El dictado termina en el input y se manda como texto, así que sin
-                        // este evento no hay forma de saber si el micrófono se usa.
-                        window.smTrack?.('mic_start');
-                    };
-                    
-                    recognition.onresult = function(event) {
-                        const transcript = event.results[0][0].transcript;
-                        messageInput.value = transcript;
-                        messageInput.placeholder = T.escribi;
-                        // Opcional: enviar automáticamente o permitir editar
-                        // sendMessage(transcript);
-                    };
-                    
-                    recognition.onerror = function(event) {
-                        isListening = false;
-                        micButton.style.background = 'var(--surface-2)';
-                        messageInput.placeholder = T.escribi;
-                        
-                        if (event.error === 'not-allowed' || event.error === 'denied') {
-                            // Usuario rechazó el permiso
-                            localStorage.setItem(micRejectedKey, 'true');
-                            micButton.style.display = 'none';
-                            alert('Permiso de micrófono denegado. Puedes seguir usando el chat escribiendo.');
-                        } else if (event.error === 'network') {
-                            // Error de red: solo mostrar una vez, no spamear la consola
-                            if (!recognition._networkErrorShown) {
-                                recognition._networkErrorShown = true;
-                                // Silenciosamente reiniciar después de un tiempo
-                                setTimeout(() => {
-                                    recognition._networkErrorShown = false;
-                                }, 5000);
-                            }
-                        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                            // Solo mostrar errores significativos, no los temporales
-                            console.warn('Error en reconocimiento de voz:', event.error);
-                        }
-                    };
-                    
-                    recognition.onend = function() {
-                        isListening = false;
-                        micButton.style.background = 'var(--surface-2)';
-                        messageInput.placeholder = T.escribi;
-                    };
-                    
-                    // Solicitar permiso la primera vez que se presiona el botón
-                    micButton.addEventListener('click', function() {
-                        if (!isListening) {
-                            // Intentar iniciar reconocimiento (solicitará permiso si es la primera vez)
-                            try {
-                                recognition.start();
-                            } catch (error) {
-                                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                                    localStorage.setItem(micRejectedKey, 'true');
-                                    micButton.style.display = 'none';
-                                    alert('Permiso de micrófono denegado. Puedes seguir usando el chat escribiendo.');
-                                }
-                            }
-                        } else {
-                            // Detener reconocimiento
-                            recognition.stop();
-                        }
-                    });
-                    
-                    // Verificar si ya se dio permiso antes (mostrar botón si es así)
-                    // Safari no soporta bien navigator.permissions.query, así que usamos fallback
-                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                    
-                    if (isSafari) {
-                        // Safari: usar solo localStorage como referencia
-                        const savedPermission = localStorage.getItem(micPermissionKey);
-                        if (savedPermission === 'granted') {
-                            micButton.style.display = 'flex';
-                        } else {
-                            // En Safari, mostrar botón y solicitar permiso al hacer clic
-                            // (Safari solicita permiso automáticamente al llamar start())
-                            micButton.style.display = 'flex';
-                        }
-                    } else {
-                        // Chrome, Edge, etc: usar permissions.query
-                        navigator.permissions.query({ name: 'microphone' }).then(function(result) {
-                            if (result.state === 'granted') {
-                                micButton.style.display = 'flex';
-                                localStorage.setItem(micPermissionKey, 'granted');
-                            } else if (result.state === 'prompt') {
-                                // Mostrar botón pero solicitar permiso al hacer clic
-                                micButton.style.display = 'flex';
-                            } else {
-                                // Permiso denegado
-                                localStorage.setItem(micRejectedKey, 'true');
-                                micButton.style.display = 'none';
-                            }
-                        }).catch(function() {
-                            // Fallback: mostrar botón y solicitar permiso al hacer clic
-                            // (algunos navegadores no soportan permissions.query)
-                            const savedPermission = localStorage.getItem(micPermissionKey);
-                            if (savedPermission === 'granted') {
-                                micButton.style.display = 'flex';
-                            } else {
-                                // Mostrar botón para intentar solicitar permiso
-                                micButton.style.display = 'flex';
-                            }
-                        });
-                    }
-                    
-                } catch (error) {
-                    console.error('Error inicializando reconocimiento de voz:', error);
+        // ===== Notas de voz (estilo WhatsApp) =====
+        // Mantener apretado el micrófono graba; soltar envía; deslizar a la izquierda
+        // cancela; deslizar hacia arriba traba la grabación para no tener que sostener.
+        //
+        // Antes era el dictado del navegador (Web Speech API), que muchos teléfonos no
+        // traen (Firefox, Samsung, Xiaomi, el navegador de Instagram): el botón ni aparecía.
+        // Grabar audio lo soporta casi todo, y el texto lo saca el servidor
+        // (TranscripcionService). Tampoco se esconde más el botón cuando se negó el permiso:
+        // quedaba oculto para siempre, aunque después lo habilitaran.
+        const vozDisponible = !!(window.isSecureContext && navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+        const SEGUNDOS_MAXIMOS = @json(\App\Services\TranscripcionService::SEGUNDOS_MAXIMOS);
+        const DESLIZAR_CANCELA = 90;   // px a la izquierda
+        const DESLIZAR_TRABA = 70;     // px hacia arriba
+
+        let permisoMic = false;        // ya lo concedió en esta página
+        let grab = null;               // grabación en curso
+
+        // Los dos botones siempre a la vista. Se probó el cambio de uno por otro según
+        // haya texto (como WhatsApp) y confundía: parecía que no se podía escribir.
+        function actualizarBotonesBarra() {
+            if (grab) return;
+            document.getElementById('micButton').hidden = !vozDisponible;
+            document.getElementById('sendButton').hidden = false;
+        }
+
+        async function estadoPermisoMic() {
+            if (permisoMic) return 'granted';
+            try {
+                return (await navigator.permissions.query({ name: 'microphone' })).state;
+            } catch (e) {
+                return 'desconocido'; // Safari viejo: no informa, se pregunta al tocar
+            }
+        }
+
+        // Pide el permiso sin grabar. Es lo que hace WhatsApp la primera vez: el cartel del
+        // navegador interrumpe el "mantener apretado", así que primero se pide y después
+        // se avisa que ya puede grabar.
+        async function pedirPermisoMic() {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+                s.getTracks().forEach(t => t.stop());
+                permisoMic = true;
+                document.getElementById('ayudaMic').open && document.getElementById('ayudaMic').close();
+                mostrarAviso(T.listo_para_grabar, 3200);
+                return true;
+            } catch (e) {
+                manejarErrorMic(e);
+                return false;
+            }
+        }
+
+        function manejarErrorMic(e) {
+            if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'PermissionDeniedError')) {
+                mostrarAyudaMic();
+            } else if (e && (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError')) {
+                mostrarAviso(T.sin_microfono, 3500);
+            } else {
+                console.warn('Micrófono:', e);
+                mostrarAviso(T.sin_microfono, 3500);
+            }
+        }
+
+        function mostrarAyudaMic() {
+            const ua = navigator.userAgent;
+            let pasos = T.mic_pasos_android;
+            if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|; wv\)/i.test(ua)) pasos = T.mic_pasos_app;
+            else if (/iPhone|iPad|iPod/i.test(ua)) pasos = T.mic_pasos_ios;
+            document.getElementById('ayudaMicPasos').textContent = pasos;
+            const d = document.getElementById('ayudaMic');
+            if (!d.open) d.showModal();
+        }
+        document.getElementById('ayudaMicCerrar')?.addEventListener('click', () => document.getElementById('ayudaMic').close());
+        document.getElementById('ayudaMicReintentar')?.addEventListener('click', pedirPermisoMic);
+
+        function formatoTiempo(seg) {
+            seg = Math.max(0, Math.round(seg));
+            return Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0');
+        }
+
+        function tipoDeGrabacion() {
+            // Chrome/Android graban webm-opus; Safari, mp4. Se deja elegir al navegador si
+            // no soporta ninguno de los dos explícitamente.
+            for (const t of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']) {
+                if (MediaRecorder.isTypeSupported?.(t)) return t;
+            }
+            return '';
+        }
+
+        async function empezarGrabacion(xInicial, yInicial) {
+            const mic = document.getElementById('micButton');
+            grab = { inicio: 0, x: xInicial, y: yInicial, trabada: false, cancelada: false, terminada: false, niveles: [], chunks: [] };
+            const actual = grab;
+            mic.classList.add('grabando-activo');
+            mostrarFranjaGrabando(true);
+
+            try {
+                actual.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+                terminarGrabacion(false);
+                manejarErrorMic(e);
+                return;
+            }
+            permisoMic = true;
+            // Si soltó mientras se abría el micrófono, fue un toque: no hay nada que grabar.
+            if (actual.terminada) { actual.stream.getTracks().forEach(t => t.stop()); return; }
+
+            const tipo = tipoDeGrabacion();
+            actual.recorder = new MediaRecorder(actual.stream, tipo ? { mimeType: tipo } : undefined);
+            actual.recorder.ondataavailable = ev => { if (ev.data && ev.data.size) actual.chunks.push(ev.data); };
+            actual.recorder.start();
+            actual.inicio = Date.now();
+            window.smTrack?.('mic_start');
+
+            // La onda de la burbuja sale del volumen real mientras grababa, como en WhatsApp.
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                actual.ctx = new Ctx();
+                const analizador = actual.ctx.createAnalyser();
+                analizador.fftSize = 512;
+                actual.ctx.createMediaStreamSource(actual.stream).connect(analizador);
+                const buf = new Uint8Array(analizador.fftSize);
+                actual.medidor = setInterval(() => {
+                    analizador.getByteTimeDomainData(buf);
+                    let suma = 0;
+                    for (const v of buf) { const d = (v - 128) / 128; suma += d * d; }
+                    actual.niveles.push(Math.sqrt(suma / buf.length));
+                }, 100);
+            } catch (e) { /* sin onda real: se dibuja una genérica */ }
+
+            actual.reloj = setInterval(() => {
+                const seg = (Date.now() - actual.inicio) / 1000;
+                document.getElementById('grabTiempo').textContent = formatoTiempo(seg);
+                if (seg >= SEGUNDOS_MAXIMOS) terminarGrabacion(true);
+            }, 200);
+        }
+
+        function mostrarFranjaGrabando(si) {
+            document.getElementById('grabando').hidden = !si;
+            document.getElementById('messageInput').hidden = si;
+            document.getElementById('sendButton').hidden = true;
+            document.getElementById('grabTiempo').textContent = '0:00';
+            document.getElementById('grabCancelar').hidden = false;
+            document.getElementById('grabCancelar').style.opacity = 1;
+            document.getElementById('grabBorrar').hidden = true;
+        }
+
+        // Trabada: ya no hace falta sostener el dedo. Aparecen el tacho y el enviar.
+        function trabarGrabacion() {
+            if (!grab || grab.trabada) return;
+            grab.trabada = true;
+            document.getElementById('micButton').classList.remove('grabando-activo');
+            document.getElementById('micButton').hidden = true;
+            document.getElementById('grabCancelar').hidden = true;
+            document.getElementById('grabBorrar').hidden = false;
+            document.getElementById('sendButton').hidden = false;
+        }
+
+        function terminarGrabacion(enviar) {
+            const actual = grab;
+            if (!actual || actual.terminada) return;
+            actual.terminada = true;
+            grab = null;
+            clearInterval(actual.reloj);
+            clearInterval(actual.medidor);
+            document.getElementById('micButton').classList.remove('grabando-activo');
+            mostrarFranjaGrabando(false);
+            actualizarBotonesBarra();
+
+            const duracion = actual.inicio ? (Date.now() - actual.inicio) / 1000 : 0;
+            const cerrar = () => {
+                actual.stream?.getTracks().forEach(t => t.stop());
+                actual.ctx?.close?.();
+            };
+
+            if (!actual.recorder) { cerrar(); if (enviar) mostrarAviso(T.mantene_para_grabar, 2600); return; }
+
+            actual.recorder.onstop = () => {
+                cerrar();
+                if (!enviar) return;
+                // Un toque corto no es un audio: WhatsApp explica cómo se usa.
+                if (duracion < 0.8) { mostrarAviso(T.mantene_para_grabar, 2600); return; }
+                const blob = new Blob(actual.chunks, { type: actual.recorder.mimeType || 'audio/webm' });
+                enviarNotaDeVoz(blob, duracion, actual.niveles);
+            };
+            actual.recorder.stop();
+        }
+
+        // Dibuja N barras a partir de los niveles medidos (o una onda genérica sin ellos).
+        function barrasDeOnda(niveles, n = 28) {
+            const out = [];
+            for (let i = 0; i < n; i++) {
+                let v;
+                if (niveles && niveles.length) {
+                    const a = Math.floor(i * niveles.length / n), b = Math.max(a + 1, Math.floor((i + 1) * niveles.length / n));
+                    v = Math.max(...niveles.slice(a, b));
+                } else {
+                    v = 0.15 + 0.25 * Math.abs(Math.sin(i * 1.7));
                 }
+                out.push(Math.round(Math.min(100, Math.max(12, v * 260))));
             }
-            
-            // Función para ajustar estilo del input cuando el micrófono está visible
-            function updateInputStyle() {
-                // El input es una píldora siempre (mic y enviar van separados con gap)
-                messageInput.style.borderRadius = '9999px';
+            return out;
+        }
+
+        function burbujaDeVoz(url, duracion, niveles) {
+            const div = document.createElement('div');
+            const barras = barrasDeOnda(niveles).map(h => `<span style="height:${h}%"></span>`).join('');
+            div.innerHTML = `
+                <div class="flex justify-end">
+                    <div class="burbuja-voz bg-accent-blue rounded-2xl rounded-tr-md px-3 py-2.5 max-w-[85%] text-white shadow-lg">
+                        <div class="voz-fila">
+                            <button type="button" class="voz-play" aria-label="${escHtml(T.reproducir)}">
+                                <svg viewBox="0 0 24 24" data-icono="play"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                            <div class="voz-onda">${barras}</div>
+                            <span class="voz-dur">${formatoTiempo(duracion)}</span>
+                        </div>
+                        <div class="voz-texto pendiente">${escHtml(T.transcribiendo)}</div>
+                    </div>
+                </div>`;
+
+            const audio = new Audio(url);
+            const btn = div.querySelector('.voz-play');
+            const spans = [...div.querySelectorAll('.voz-onda span')];
+            const icono = (play) => btn.innerHTML = play
+                ? '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+                : '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+            btn.addEventListener('click', () => { audio.paused ? audio.play() : audio.pause(); });
+            audio.addEventListener('play', () => icono(false));
+            audio.addEventListener('pause', () => icono(true));
+            audio.addEventListener('ended', () => { icono(true); spans.forEach(s => s.classList.remove('oida')); });
+            audio.addEventListener('timeupdate', () => {
+                // duration de un webm grabado suele venir Infinity: se usa la medida al grabar
+                const total = isFinite(audio.duration) ? audio.duration : duracion;
+                const hasta = Math.floor((audio.currentTime / total) * spans.length);
+                spans.forEach((s, i) => s.classList.toggle('oida', i < hasta));
+            });
+            return div;
+        }
+
+        async function enviarNotaDeVoz(blob, duracion, niveles) {
+            const burbuja = burbujaDeVoz(URL.createObjectURL(blob), duracion, niveles);
+            document.getElementById('sugerencias')?.remove();
+            document.getElementById('chatMessages').appendChild(burbuja);
+            scrollToBottom();
+            const textoEl = burbuja.querySelector('.voz-texto');
+
+            isLoading = true;
+            let texto = null, error = null;
+            try {
+                const ext = (blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm');
+                const datos = new FormData();
+                datos.append('audio', blob, 'nota.' + ext);
+                const resp = await fetch('{{ route("chat.transcribir", $comercio) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'X-Session-ID': getOrCreateSessionId(),
+                    },
+                    body: datos,
+                });
+                const json = await resp.json().catch(() => ({}));
+                if (resp.ok && json.texto) texto = json.texto;
+                else error = json.error === 'no_disponible' ? T.asistente_no_disponible : T.no_te_entendi;
+            } catch (e) {
+                error = T.no_te_entendi;
             }
-            
-            // Ajustar estilo inicial
-            updateInputStyle();
-            
-            // Observar cambios en el display del botón
-            const observer = new MutationObserver(updateInputStyle);
-            observer.observe(micButton, { attributes: true, attributeFilter: ['style'] });
+            isLoading = false;
+
+            textoEl.classList.remove('pendiente');
+            if (!texto) {
+                textoEl.textContent = error;
+                return;
+            }
+            textoEl.textContent = texto;
+            sendMessage(texto, null, null, false, null, null, { sinBurbuja: true, voz: true });
         }
-        
-        // Inicializar cuando el DOM esté listo
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSpeechRecognition);
-        } else {
-            initSpeechRecognition();
-        }
+
+        (function initMicrofono() {
+            const mic = document.getElementById('micButton');
+            const input = document.getElementById('messageInput');
+            if (!mic || !input) return;
+
+            input.addEventListener('input', actualizarBotonesBarra);
+            actualizarBotonesBarra();
+            if (!vozDisponible) return;
+
+            mic.addEventListener('contextmenu', e => e.preventDefault());
+
+            let presionado = false;
+            mic.addEventListener('pointerdown', async (e) => {
+                e.preventDefault();
+                presionado = true;
+                if (@json(\App\Support\VistaPrevia::activa($comercio))) { avisoVistaPrevia(); return; }
+                if (isLoading || grab) return;
+
+                // Sin permiso todavía: se pide, y la próxima vez que lo mantenga, graba.
+                const estado = await estadoPermisoMic();
+                if (estado !== 'granted') {
+                    if (estado === 'denied') mostrarAyudaMic();
+                    else pedirPermisoMic();
+                    return;
+                }
+
+                // Consultar el permiso es asíncrono: si ya soltó, fue un toque y no se graba
+                // (si no, quedaba grabando sin nadie apretando).
+                if (!presionado) { mostrarAviso(T.mantene_para_grabar, 2600); return; }
+                try { mic.setPointerCapture(e.pointerId); } catch (err) {}
+                empezarGrabacion(e.clientX, e.clientY);
+            });
+
+            mic.addEventListener('pointermove', (e) => {
+                if (!grab || grab.trabada) return;
+                const dx = e.clientX - grab.x, dy = e.clientY - grab.y;
+                // El "deslizá para cancelar" se va apagando a medida que se acerca al corte
+                document.getElementById('grabCancelar').style.opacity = String(Math.max(.2, 1 + dx / DESLIZAR_CANCELA));
+                if (dx < -DESLIZAR_CANCELA) terminarGrabacion(false);
+                else if (dy < -DESLIZAR_TRABA) trabarGrabacion();
+            });
+
+            const soltar = (enviar) => () => { presionado = false; if (grab && !grab.trabada) terminarGrabacion(enviar); };
+            mic.addEventListener('pointerup', soltar(true));
+            mic.addEventListener('pointercancel', soltar(false));
+
+            document.getElementById('grabBorrar').addEventListener('click', () => terminarGrabacion(false));
+            // Si cambia de app en medio de una grabación, se descarta: no se manda un audio
+            // que el cliente no terminó.
+            document.addEventListener('visibilitychange', () => { if (document.hidden && grab) terminarGrabacion(false); });
+        })();
 
         // Obtener o crear session_id persistente
         function getOrCreateSessionId() {
@@ -1004,19 +1267,26 @@
         // Cartelito para la vista previa del editor. Estilos a mano y no con clases: esta
         // pantalla lleva el tema del comercio, y el aviso tiene que leerse sobre cualquiera.
         function avisoVistaPrevia() {
-            if (document.getElementById('avisoVistaPrevia')) return;
-            const aviso = document.createElement('div');
-            aviso.id = 'avisoVistaPrevia';
-            aviso.textContent = 'Vista previa: el asistente responde en tu menú real, no acá.';
-            aviso.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);'
-                + 'z-index:9999;max-width:88%;padding:10px 16px;border-radius:999px;'
-                + 'background:rgba(24,18,12,.88);color:#F2EDE3;font-size:13px;text-align:center;'
-                + 'box-shadow:0 6px 20px rgba(0,0,0,.25);';
-            document.body.appendChild(aviso);
-            setTimeout(() => aviso.remove(), 2600);
+            mostrarAviso('Vista previa: el asistente responde en tu menú real, no acá.', 2600);
         }
 
-        async function sendMessage(message, tipo, scope, esReconsulta, etiqueta, chipId) {
+        // Cartelito flotante arriba de la barra (vista previa, pistas del micrófono).
+        function mostrarAviso(texto, ms) {
+            document.getElementById('avisoFlotante')?.remove();
+            const aviso = document.createElement('div');
+            aviso.id = 'avisoFlotante';
+            aviso.textContent = texto;
+            aviso.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);'
+                + 'z-index:9999;max-width:88%;padding:10px 16px;border-radius:16px;'
+                + 'background:rgba(24,18,12,.92);color:#F2EDE3;font-size:15px;line-height:1.35;text-align:center;'
+                + 'box-shadow:0 6px 20px rgba(0,0,0,.25);';
+            document.body.appendChild(aviso);
+            setTimeout(() => aviso.remove(), ms || 2600);
+        }
+
+        // opciones.sinBurbuja: el mensaje ya está en pantalla (la nota de voz dibuja la suya).
+        // opciones.voz: se guarda para saber cuánto se usa el micrófono.
+        async function sendMessage(message, tipo, scope, esReconsulta, etiqueta, chipId, opciones = {}) {
             if (isLoading) return;
 
             // Adentro del editor (vista previa) el chat se ve pero no manda nada: cada
@@ -1050,7 +1320,11 @@
 
             // La burbuja muestra `etiqueta` cuando el mensaje lo armó la interfaz: el texto
             // que se le manda al bot es largo y está en español, y al cliente le aparecía así.
-            addMessage(etiqueta || message, 'user');
+            if (opciones.sinBurbuja) {
+                window.smResena?.contarMensaje(); // lo que addMessage() hace por el resto
+            } else {
+                addMessage(etiqueta || message, 'user');
+            }
             showTypingIndicator();
 
             let wrapper = null, textEl = null, full = '', started = false, finalized = false;
@@ -1074,11 +1348,15 @@
                     },
                     // chip_id va aparte de `scope`: el scope acota la respuesta del modelo, y
                     // meterle un identificador ahí le ensuciaría el prompt.
-                    body: JSON.stringify(
+                    // `etiqueta` se guarda para que el historial muestre lo mismo que vio el
+                    // cliente ("Ver más opciones") y no el texto interno que va al modelo.
+                    body: JSON.stringify(Object.assign(
                         tipo
                             ? { message: message, tipo: tipo, scope: scope || message, chip_id: chipId || null }
-                            : { message: message }
-                    )
+                            : { message: message },
+                        etiqueta ? { etiqueta: etiqueta } : {},
+                        opciones.voz ? { voz: true } : {}
+                    ))
                 });
 
                 if (!resp.ok || !resp.body) throw new Error('Sin stream');
@@ -1372,6 +1650,26 @@
 
         function addMessage(text, sender, platos = [], permitirVerMas = true) {
             const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = armarBurbuja(text, sender, platos, permitirVerMas);
+
+            chatMessages.appendChild(messageDiv);
+            if (sender === 'user') {
+                // Cuenta para el pedido de reseña: mide que haya usado el asistente de
+                // verdad, no que haya entrado y rebotado.
+                window.smResena?.contarMensaje();
+                scrollToBottom();
+            } else {
+                // La respuesta del bot: mostrar desde la primera línea
+                scrollToMessageTop(messageDiv);
+                messageDiv.querySelectorAll('img').forEach(img => {
+                    img.addEventListener('load', () => scrollToMessageTop(messageDiv));
+                    img.addEventListener('error', () => scrollToMessageTop(messageDiv));
+                });
+            }
+        }
+
+        // El nodo de una burbuja, sin agregarlo. Lo usan addMessage() y el historial.
+        function armarBurbuja(text, sender, platos = [], permitirVerMas = true) {
             const messageDiv = document.createElement('div');
 
             // Parsear Markdown para el bot
@@ -1396,21 +1694,8 @@
                     </div>
                 `;
             }
-            
-            chatMessages.appendChild(messageDiv);
-            if (sender === 'user') {
-                // Cuenta para el pedido de reseña: mide que haya usado el asistente de
-                // verdad, no que haya entrado y rebotado.
-                window.smResena?.contarMensaje();
-                scrollToBottom();
-            } else {
-                // La respuesta del bot: mostrar desde la primera línea
-                scrollToMessageTop(messageDiv);
-                messageDiv.querySelectorAll('img').forEach(img => {
-                    img.addEventListener('load', () => scrollToMessageTop(messageDiv));
-                    img.addEventListener('error', () => scrollToMessageTop(messageDiv));
-                });
-            }
+
+            return messageDiv;
         }
 
         // ===== Wishlist (pre‑pedido simple con "Lo quiero") =====
@@ -1891,6 +2176,53 @@
             updateWishBadge();
         }
 
+        // La charla de esta misma visita (ChatConversation::HORAS_VISITA). Sin esto, ir a
+        // la carta y volver dejaba el chat vacío, mientras el asistente se acordaba de
+        // todo lo hablado. Las tarjetas vienen rearmadas contra el menú de ahora.
+        const historialListo = (async function () {
+            // En la vista previa del editor el chat no manda nada: tampoco trae nada.
+            if (@json(\App\Support\VistaPrevia::activa($comercio))) return;
+            try {
+                const resp = await fetch('{{ route("chat.historial", $comercio) }}', {
+                    headers: { 'Accept': 'application/json', 'X-Session-ID': getOrCreateSessionId() }
+                });
+                if (!resp.ok) return;
+                const { mensajes } = await resp.json();
+                if (!mensajes || !mensajes.length) return;
+
+                // Las sugerencias son de la pantalla vacía, y esta ya no lo está.
+                document.getElementById('sugerencias')?.remove();
+
+                const frag = document.createDocumentFragment();
+                mensajes.forEach(m => {
+                    // El texto del cliente se escapa: addMessage() lo inserta tal cual.
+                    // Sin "Ver más": ese botón depende de la última consulta en memoria.
+                    // El audio no se guarda: la nota de voz vuelve como su texto, con el 🎤.
+                    frag.appendChild(armarBurbuja((m.voz ? '🎤 ' : '') + escHtml(m.cliente), 'user'));
+                    frag.appendChild(armarBurbuja(m.respuesta || '', 'bot', m.platos || [], false));
+                });
+                // Lo que ya está en el pedido vuelve como "✓ Agregado", igual que lo dejó el
+                // cliente: con "Lo quiero" un segundo toque sumaba otra unidad sin querer.
+                const enPedido = new Set(loadWish().map(x => (x.nombre || '').toLowerCase()));
+                frag.querySelectorAll('.btn-lo-quiero').forEach(b => {
+                    if (enPedido.has((b.dataset.nombre || '').trim().toLowerCase())) {
+                        b.dataset.added = '1';
+                        b.textContent = T.agregado_ok;
+                        b.classList.add('added');
+                    }
+                });
+                // Sin animación de entrada: son veinte burbujas deslizándose a la vez.
+                frag.querySelectorAll('[class*="animate-"]').forEach(el => {
+                    el.className = el.className.replace(/\banimate-\S+/g, '');
+                });
+
+                // Pegado a la bienvenida, no al final: si el cliente llegó a escribir
+                // antes de que esto volviera, su mensaje nuevo queda abajo, donde va.
+                document.getElementById('chatMessages').firstElementChild.after(frag);
+                scrollToBottom();
+            } catch (e) {}
+        })();
+
         // Pregunta pre-cargada desde la pantalla de bienvenida (?q=...)
         (function () {
             try {
@@ -1905,18 +2237,22 @@
                     // era la palabra más buscada del comercio. No cambia cómo responde el
                     // modelo. Va separado de 'chip_chat' porque son dos momentos distintos y
                     // hay que poder compararlos.
-                    setTimeout(() => sendMessage(preQ.trim(), 'chip_portada', preQ.trim(), false, null, preChip), 400);
+                    // Después del historial, para que la pregunta nueva quede al final.
+                    historialListo.then(() => setTimeout(() => sendMessage(preQ.trim(), 'chip_portada', preQ.trim(), false, null, preChip), 400));
                 }
             } catch (e) {}
         })();
 
         // Event listeners
         document.getElementById('sendButton').addEventListener('click', function() {
+            // Con la grabación trabada, este botón manda el audio.
+            if (grab && grab.trabada) { terminarGrabacion(true); return; }
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value.trim();
             if (message) {
                 sendMessage(message);
                 messageInput.value = '';
+                actualizarBotonesBarra();
             }
         });
 
@@ -1926,6 +2262,7 @@
                 if (message) {
                     sendMessage(message);
                     this.value = '';
+                    actualizarBotonesBarra();
                 }
             }
         });

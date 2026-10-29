@@ -157,6 +157,26 @@ permitía ver qué ofreció el asistente.
   pregunta** que empuja el siguiente pedido ("¿Le sumamos algo dulce para cerrar?"), respetando
   la REGLA #1 (en un pedido específico no ofrece otro tipo).
 
+## Notas de voz (estilo WhatsApp, oct-2026)
+
+El navegador **graba** (MediaRecorder) y el servidor **transcribe** (`TranscripcionService`,
+`POST /api/chat/{slug}/transcribir`, modelo `services.openai.transcribe_model`, por defecto
+`gpt-4o-mini-transcribe`). El texto vuelve al front y se manda como un mensaje normal con
+`voz: true` (queda en `metadata.voz`; el `origen` sigue siendo `escrito` porque son palabras
+del cliente). **La cuota se descuenta una vez, en la respuesta**: transcribir no cuenta.
+
+- Antes era el dictado del navegador (Web Speech API): en Firefox, Samsung, Xiaomi y el
+  navegador de Instagram **el botón ni aparecía**. Y si una vez negaban el permiso, un flag
+  en localStorage lo escondía para siempre. No volver a eso.
+- Se le pasa la carta como `prompt` para que escriba los platos como están ("Capresse").
+- El audio **no se guarda**. En el historial vuelve como texto con 🎤.
+- Gestos: mantener = graba, soltar = envía, deslizar a la izquierda = cancela, hacia arriba
+  = traba (aparecen tacho y enviar). Toque corto = aviso de cómo se usa. Tope 30 s.
+- Permiso: la primera vez sólo se pide (el cartel corta el "mantener") y se avisa que ya puede
+  grabar. Negado: ningún navegador deja volver a preguntar, así que `#ayudaMic` explica cómo
+  habilitarlo según el teléfono (Android, iPhone, navegador de una app).
+- Probado con Chrome real y micrófono simulado (`--use-file-for-fake-audio-capture`).
+
 ## El asistente sabe qué hora es
 
 `ahoraMismo()` inyecta en el bloque variable el día, la hora y —si el comercio cargó
@@ -311,6 +331,13 @@ Cada respuesta de OpenAI trae un `usage` que **antes se descartaba**. Ahora se g
 
 - **Historial: 5 consultas** (`HISTORIAL_MENSAJES`). Son dos entradas cada una (pregunta +
   respuesta completa): con 10 medimos ~1.275 tokens extra en **cada** mensaje, con 5 son ~634.
+- **El historial es de la VISITA, no del dispositivo** (`ChatConversation::deLaVisita()`,
+  corte a las `HORAS_VISITA` = 3 sin escribir). El `session_id` vive en localStorage y no vence:
+  antes el asistente recordaba lo de la semana pasada mientras la pantalla arrancaba vacía.
+  Ahora la misma regla decide lo que recuerda el modelo y lo que el chat vuelve a dibujar al
+  reabrirlo (`GET /api/chat/{slug}/historial`, sólo con `X-Session-ID`: adivinar por IP mostraría
+  la charla de otro cliente del mismo wifi). La burbuja usa `metadata.etiqueta` (lo que mostró un
+  botón) y no el texto interno; las tarjetas se rearman contra el menú actual.
 - **La respuesta del historial lleva su `[[PLATOS]]` rearmado** desde `platos_ofrecidos`. Se
   guarda sin marcador y el texto ya no nombra los platos: sin rearmarlo, el modelo no sabía qué
   había mostrado y "Ver más" repitió las nueve tortas que acababa de dar (luna, 2 de 3 veces).

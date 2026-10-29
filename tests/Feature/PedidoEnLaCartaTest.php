@@ -76,7 +76,7 @@ class PedidoEnLaCartaTest extends TestCase
             ->assertOk()
             ->assertDontSee('id="btnPedir"', false)
             ->assertDontSee('Escaneá el código QR de tu mesa')
-            ->assertSee('Cuando venga el camarero, mostrale esta pantalla.');
+            ->assertSee('Cuando venga el camarer@, mostrale esta pantalla.');
     }
 
     public function test_el_pedido_de_la_carta_le_llega_al_mozo(): void

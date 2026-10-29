@@ -265,6 +265,13 @@
         .mi-pedido-total strong { font-variant-numeric: tabular-nums; }
         .mi-pedido-nota { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
         .mi-pedido-ayuda { margin: 12px 0 0; font-size: 13px; color: var(--text-dim); text-align: center; }
+        /* Igual que .pedir-aviso del chat: es la instrucción, no letra chica. */
+        .mi-pedido-aviso {
+            margin: 14px 0 0; padding: 14px 16px; border-radius: 12px;
+            background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            font-size: 17px; font-weight: 600; line-height: 1.35; color: var(--text); text-align: center;
+        }
         .mi-pedido-error { margin: 10px 0 0; font-size: 13px; color: #ff9b8a; text-align: center; }
         .btn-pedir {
             margin-top: 18px; width: 100%; cursor: pointer; border: 0; border-radius: 12px;
@@ -621,7 +628,7 @@
                 <p class="mi-pedido-ayuda">{{ __('El mozo lo ve al toque en su pantalla.') }}</p>
                 <p id="pedidoError" class="mi-pedido-error" hidden></p>
             @else
-                <p class="mi-pedido-ayuda">{{ __('Cuando venga el camarero, mostrale esta pantalla.') }}</p>
+                <p class="mi-pedido-aviso">{{ __('Cuando venga el camarer@, mostrale esta pantalla.') }}</p>
             @endif
 
             <button type="button" id="miPedidoVaciar" class="mi-pedido-vaciar">{{ __('Vaciar mi pedido') }}</button>

@@ -595,6 +595,19 @@ class ChatbotService
     }
 
     /**
+     * Las tarjetas de platos que ya se ofrecieron, a partir de los nombres guardados en
+     * `platos_ofrecidos`. Sirve para volver a dibujar el chat al reabrirlo: se resuelven
+     * contra el menú de AHORA, así que un plato borrado desde entonces no reaparece y uno
+     * con precio nuevo muestra el precio nuevo.
+     *
+     * @param  array<int, string>  $nombres
+     */
+    public function tarjetasDePlatos(Comercio $comercio, array $nombres): array
+    {
+        return empty($nombres) ? [] : $this->platosDesdeDeclaracion($comercio, $nombres);
+    }
+
+    /**
      * Platos a mostrar como tarjeta (foto, precio, botón "Lo quiero").
      *
      * Si el modelo declaró los platos en el marcador, se usa esa declaración: es su
@@ -1004,13 +1017,11 @@ class ChatbotService
     private function getConversationHistory(Comercio $comercio, string $sessionId, int $limit = self::HISTORIAL_MENSAJES): array
     {
         try {
-            // Obtener los últimos N mensajes de la sesión (excluyendo el actual)
-            $conversations = ChatConversation::where('comercio_id', $comercio->id)
-                ->where('session_id', $sessionId)
-                ->orderBy('created_at', 'desc')
-                ->limit($limit)
-                ->get(['user_message', 'bot_response', 'platos_ofrecidos', 'created_at'])
-                ->reverse(); // Invertir para tener el orden cronológico correcto
+            // Solo la visita en curso: es lo mismo que el cliente ve en pantalla al volver
+            // a entrar (ver ChatConversation::deLaVisita). Antes recordaba sin límite de
+            // tiempo, y el que volvía a la semana encontraba el chat vacío pero un asistente
+            // que se acordaba de lo de la vez anterior.
+            $conversations = ChatConversation::deLaVisita($comercio->id, $sessionId, $limit);
 
             $history = [];
             foreach ($conversations as $conv) {
