@@ -188,6 +188,12 @@ class ChatbotService
                         // La categoría es parte de cómo lo busca el cliente: pide "cerveza"
                         // y el plato se llama "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
                         'categoria' => trim((string) ($cat['nombre'] ?? '')),
+                        // Los tags también: el comercio marca "veggie" a un plato que no lo
+                        // dice en el nombre, y el cliente lo busca así.
+                        'tags' => array_values(array_filter(
+                            is_array($p['tags'] ?? null) ? $p['tags'] : [],
+                            fn ($t) => is_string($t) && trim($t) !== ''
+                        )),
                         'estrella' => ! empty($p['estrella']),
                     ];
                 }
@@ -220,6 +226,8 @@ class ChatbotService
         'gluten' => ['tacc'],
         'vegano' => ['vegano', 'veggie', 'veg'],
         'vegetariano' => ['vegetariano', 'veggie', 'veg'],
+        // "veg" tiene 3 letras y no se busca sola: llega por acá, como tag exacto.
+        'veggie' => ['veggie', 'veg', 'vegetariano'],
 
         // Inglés: el menú está en castellano, pero el cliente extranjero escribe en el
         // suyo. Con el asistente encendido el modelo lo resuelve; cuando contesta el
@@ -374,24 +382,41 @@ class ChatbotService
         // Se separan los dos tipos de coincidencia porque no valen lo mismo: preguntando
         // por "tortas" pesa más un plato que se llame así que uno de la categoría
         // "Panadería y tortas" (que devolvía ocho medialunas y tapaba las tortas de verdad).
+        //
+        // Los tags van en el medio: los marca el comercio a propósito ("veggie", "sin tacc"),
+        // así que dicen más que la categoría. Sin buscarlos, un plato con tag "veggie" que
+        // no lo dice en el nombre no aparecía preguntando por veggie.
         $porNombre = [];
+        $porTag = [];
         $porCategoria = [];
 
         foreach ($this->platosDelMenu($comercio) as $plato) {
             $nombre = $enPalabras($plato['nombre']);
+            $tags = $enPalabras(implode(' ', $plato['tags'] ?? []));
             $categoria = $enPalabras((string) ($plato['categoria'] ?? ''));
             $fila = ['nombre' => $plato['nombre'], 'precio' => $plato['precio']];
 
+            // Gana la mejor coincidencia de CUALQUIER palabra buscada, no la de la primera
+            // que encuentre algo: con "sin tacc" importa más el tag que una categoría.
+            $nivel = null;
             foreach ($buscadas as $b) {
                 if ($coincide($b, $nombre)) {
-                    $porNombre[] = $fila;
+                    $nivel = 0;
                     break;
                 }
-                if ($coincide($b, $categoria)) {
-                    $porCategoria[] = $fila;
-                    break;
+                if ($coincide($b, $tags)) {
+                    $nivel = 1;
+                } elseif ($nivel === null && $coincide($b, $categoria)) {
+                    $nivel = 2;
                 }
             }
+
+            match ($nivel) {
+                0 => $porNombre[] = $fila,
+                1 => $porTag[] = $fila,
+                2 => $porCategoria[] = $fila,
+                default => null,
+            };
         }
 
         // Tope bajo por defecto: alcanza para que el modelo sepa que el plato EXISTE, que es
@@ -399,7 +424,7 @@ class ChatbotService
         // nombrarlos a todos y más tarjetas le caen encima al cliente. El chat pide 6 (lo
         // máximo que muestra un pedido específico) y en "ver más" 25, porque ahí el cliente
         // pidió justamente la lista entera.
-        return array_slice(array_merge($porNombre, $porCategoria), 0, $max);
+        return array_slice(array_merge($porNombre, $porTag, $porCategoria), 0, $max);
     }
 
     /**

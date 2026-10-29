@@ -58,6 +58,9 @@ el banco, y eso es lo que hace viable el modelo 17 veces más barato.
   "Corona Sin Alcohol", dentro de "Cervezas 0.0%".
 - **El nombre pesa más que la categoría.** Sin eso, ocho medialunas de "Panadería y tortas"
   tapaban las tortas de verdad.
+- **Y busca en los tags** (oct-2026), con peso entre el nombre y la categoría: un plato con tag
+  "veggie" que no lo decía en el nombre no aparecía preguntando por veggie. "veggie" también
+  trae el tag `veg` (3 letras: sólo entra como sinónimo, exacto).
 - Plurales y acentos por raíz; `SINONIMOS` traduce jerga rioplatense (birra→cerveza,
   celíaco→tacc); `PALABRAS_VACIAS` saca muletillas **y adjetivos de opinión**.
 - Acepta el **arranque de una palabra** (`hamburg` → Hamburguesa) y **un error de tipeo, dos en

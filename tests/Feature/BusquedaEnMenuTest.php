@@ -54,6 +54,53 @@ class BusquedaEnMenuTest extends TestCase
         return array_column($m->invoke(new ChatbotService, $comercio, $mensaje), 'nombre');
     }
 
+    private function comercioConTags(): Comercio
+    {
+        $comercio = Comercio::factory()->create();
+
+        Menu::factory()->activo()->create([
+            'comercio_id' => $comercio->id,
+            'contexto_gpt' => json_encode(['categorias' => [
+                ['nombre' => 'Desayunos', 'platos' => [
+                    ['nombre' => 'Des. el de siempre', 'precio' => '$9.000', 'tags' => ['veg']],
+                    ['nombre' => 'Tostado Clásico', 'precio' => '$7.000'],
+                ]],
+                ['nombre' => 'Sandwiches', 'platos' => [
+                    ['nombre' => 'Sandwich de Hongos', 'precio' => '$11.000', 'tags' => ['veggie']],
+                    ['nombre' => 'Sandw. Veggie', 'precio' => '$12.000'],
+                    ['nombre' => 'Sandwich de Jamón', 'precio' => '$10.000'],
+                ]],
+                ['nombre' => 'Opciones Veggie', 'platos' => [
+                    ['nombre' => 'Ensalada de la casa', 'precio' => '$8.000'],
+                ]],
+            ]], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return $comercio;
+    }
+
+    public function test_encuentra_los_platos_por_su_tag_aunque_el_nombre_no_lo_diga(): void
+    {
+        // Tenían el tag "veggie" y preguntando por veggie no aparecían.
+        $encontrados = $this->buscar($this->comercioConTags(), 'tienen algo veggie?');
+
+        $this->assertContains('Sandwich de Hongos', $encontrados);
+        $this->assertNotContains('Sandwich de Jamón', $encontrados);
+    }
+
+    public function test_veggie_encuentra_tambien_el_tag_veg(): void
+    {
+        $this->assertContains('Des. el de siempre', $this->buscar($this->comercioConTags(), 'veggie'));
+    }
+
+    public function test_el_nombre_pesa_mas_que_el_tag_y_el_tag_mas_que_la_categoria(): void
+    {
+        $this->assertSame(
+            ['Sandw. Veggie', 'Des. el de siempre', 'Sandwich de Hongos', 'Ensalada de la casa'],
+            $this->buscar($this->comercioConTags(), 'veggie')
+        );
+    }
+
     public function test_encuentra_el_plato_por_su_nombre(): void
     {
         $this->assertSame(['Rabas'], $this->buscar($this->comercioConCarta(), 'tienen rabas?'));
