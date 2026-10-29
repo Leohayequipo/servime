@@ -100,12 +100,22 @@
             @if($menus->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     @foreach($menus as $menu)
-                        <div class="metric-card group relative overflow-visible">
-                            <!-- Label MENU arriba -->
+                        {{-- "En uso" = la que ven los clientes (MenuController::index calcula
+                             cuál con menuVigente). Antes todas las tarjetas decían "MENU" y la
+                             activa sólo tenía una pastillita: no se entendía cuál se usaba. --}}
+                        @php $enUso = $menu->id === $vigenteId; @endphp
+                        <div class="metric-card group relative overflow-visible {{ $enUso ? 'ring-2 ring-accent-green' : '' }}">
                             <div class="absolute top-3 left-4 z-20">
-                                <span class="bg-accent-blue hover:brightness-95 text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20">
-                                    MENU
-                                </span>
+                                @if($enUso)
+                                    <span class="inline-flex items-center gap-1.5 bg-accent-green text-white font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow-lg">
+                                        <span class="w-2 h-2 rounded-full bg-white"></span>
+                                        En uso
+                                    </span>
+                                @else
+                                    <span class="bg-white text-text-secondary font-bold text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full shadow border border-accent-gray">
+                                        Sin usar
+                                    </span>
+                                @endif
                             </div>
                             
                             {{-- Imagen del menú.
@@ -123,7 +133,7 @@
                                         ? asset('storage/'.$comercio->logo_url)
                                         : asset('images/logo_empresa_default.png'));
                             @endphp
-                            <div class="relative h-48 overflow-hidden rounded-t-xl bg-secondary-dark">
+                            <div class="relative h-48 overflow-hidden rounded-t-xl bg-secondary-dark {{ $enUso ? '' : 'opacity-60' }}">
                                 @if($esFotoDelMenu)
                                     <img src="{{ $imagenCard }}"
                                          alt="Imagen del menú"
@@ -140,17 +150,15 @@
                                          class="relative mx-auto h-full w-auto max-w-full object-contain py-3 group-hover:scale-105 transition-transform duration-500">
                                 @endif
 
-                                <!-- Estado del procesamiento -->
+                                <!-- Estado del procesamiento. Con la carta lista no se muestra
+                                     nada: el ✓ verde se leía como "esta es la elegida", y lo
+                                     tenían todas. "Listo" sigue abajo, en Estado. -->
                                 <div class="absolute top-4 right-4">
-                                    @if($menu->estado === \App\Models\Menu::ESTADO_LISTO)
-                                        <div class="w-8 h-8 bg-accent-green/20 backdrop-blur-sm rounded-full flex items-center justify-center neon-glow-green" title="Listo">
-                                            <span class="text-accent-green text-sm">✓</span>
-                                        </div>
-                                    @elseif($menu->estado === \App\Models\Menu::ESTADO_ERROR)
+                                    @if($menu->estado === \App\Models\Menu::ESTADO_ERROR)
                                         <div class="w-8 h-8 bg-danger/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Error al procesar">
                                             <span class="text-danger text-sm">⚠️</span>
                                         </div>
-                                    @else
+                                    @elseif($menu->estado !== \App\Models\Menu::ESTADO_LISTO)
                                         <div class="w-8 h-8 bg-warning/20 backdrop-blur-sm rounded-full flex items-center justify-center" title="Procesando">
                                             <span class="text-warning text-sm">⏳</span>
                                         </div>
@@ -165,13 +173,19 @@
                                         <h3 class="text-xl font-bold text-text-primary group-hover:text-accent-blue transition-colors duration-300">
                                             {{ $menu->nombre ?? 'Menú sin nombre' }}
                                         </h3>
-                                        @if($menu->activo)
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green">
-                                                <span class="w-1.5 h-1.5 bg-accent-green rounded-full mr-1.5"></span>
-                                                Activo
-                                            </span>
-                                        @endif
                                     </div>
+
+                                    @if($enUso)
+                                        <p class="mb-3 px-3 py-2 rounded-lg bg-accent-green/10 text-accent-green text-sm font-medium">
+                                            ✓ Es la carta que ven tus clientes al escanear el QR.
+                                            @unless($menu->activo)
+                                                {{-- menuVigente: sin ninguna activa, se muestra la última procesada --}}
+                                                <span class="block mt-1 font-normal text-text-secondary">No hay ninguna activada, así que se muestra la última que cargaste.</span>
+                                            @endunless
+                                        </p>
+                                    @else
+                                        <p class="mb-3 text-sm text-text-secondary">Tus clientes no la ven.</p>
+                                    @endif
                                     
                                     @if($menu->descripcion)
                                         <p class="text-text-secondary text-sm line-clamp-2">{{ $menu->descripcion }}</p>

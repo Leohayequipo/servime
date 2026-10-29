@@ -41,9 +41,15 @@ class MenuController extends Controller
         // Cargar relación de usuario
         $comercio->load('user');
 
-        $menus = $comercio->menus()->orderBy('created_at', 'desc')->get();
+        // La carta que ven los clientes: la activa o, si no hay ninguna, la última procesada
+        // (menuVigente). Va primera y marcada: con las tarjetas iguales y una pastillita
+        // "Activo" no se entendía cuál estaba en uso.
+        $vigenteId = $comercio->menuVigente()?->id;
+        $menus = $comercio->menus()->orderBy('created_at', 'desc')->get()
+            ->sortByDesc(fn ($menu) => $menu->id === $vigenteId)
+            ->values();
 
-        return view('menus.index', compact('comercio', 'menus'));
+        return view('menus.index', compact('comercio', 'menus', 'vigenteId'));
     }
 
     /**
