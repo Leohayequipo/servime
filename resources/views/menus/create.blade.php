@@ -1996,9 +1996,15 @@
             }
 
             document.querySelectorAll('.editor-categoria').forEach((cat) => {
-                cat.querySelector('.editor-categoria-cabecera').addEventListener('click', () => {
+                const cabecera = cat.querySelector('.editor-categoria-cabecera');
+                cabecera.addEventListener('click', () => {
                     const abrir = cat.querySelector('.editor-categoria-cuerpo').classList.contains('hidden');
+                    // Al abrir una de abajo se cierra la de arriba, todo sube de golpe y la que
+                    // se tocó se iba fuera de la pantalla: la vista quedaba en el medio (o al
+                    // fondo) de sus platos. Se deja la cabecera en el mismo lugar donde se tocó.
+                    const antes = cabecera.getBoundingClientRect().top;
                     document.querySelectorAll('.editor-categoria').forEach((c) => abrirCategoria(c, c === cat && abrir));
+                    window.scrollBy({ top: cabecera.getBoundingClientRect().top - antes, behavior: 'instant' });
                     try {
                         abrir ? localStorage.setItem(CLAVE_CATEGORIA, cat.dataset.categoriaEditor)
                               : localStorage.removeItem(CLAVE_CATEGORIA);
@@ -2067,8 +2073,17 @@
     <!-- JavaScript para vista previa en tiempo real -->
     <script>
         
-        // Función global para actualizar el estado visual del toggle de pedidos
+        // El interruptor del pedido en línea: lo toca el comerciante → se pinta y se guarda.
+        // Es lo único que lo guarda (el onchange del checkbox): antes se guardaba también
+        // al abrir la pantalla y tres veces por cada toque, y si alguno fallaba salía el
+        // cartel de error sin haber tocado nada.
         function updatePedidoStatus(isChecked) {
+            pintarPedidoStatus(isChecked);
+            guardarPedidoHabilitado(isChecked);
+        }
+
+        // Sólo el estado visual (al cargar la pantalla no hay nada que guardar).
+        function pintarPedidoStatus(isChecked) {
             const pedidoStatus = document.getElementById('pedido-status');
             const card = document.querySelector('.pedido-card') || document.querySelector('[class*="bg-gradient-to-br"][class*="from-green"]');
             
@@ -2094,12 +2109,6 @@
                     card.classList.add('bg-secondary-dark', 'border-accent-gray');
                 }
             }
-
-            // Y GUARDARLO. Hasta acá esta función sólo pintaba: el interruptor se movía,
-            // se veía verde, y al recargar volvía atrás. El checkbox tampoco tenía `name`,
-            // así que tampoco viajaba con el formulario — el pedido en línea no se podía
-            // encender desde esta pantalla.
-            guardarPedidoHabilitado(isChecked);
         }
 
         async function guardarPedidoHabilitado(activo) {
@@ -2134,13 +2143,10 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializar estado si el toggle existe
+            // Sólo se pinta: el guardado lo hace el onchange del propio checkbox.
             const pedidoToggle = document.querySelector('.pedido-toggle');
             if (pedidoToggle) {
-                updatePedidoStatus(pedidoToggle.checked);
-                pedidoToggle.addEventListener('change', function() {
-                    updatePedidoStatus(this.checked);
-                    savePedidoStatus(this.checked); // guarda en el server (acá sí está en scope)
-                });
+                pintarPedidoStatus(pedidoToggle.checked);
             }
             
             // Interceptar el input de archivo para procesar PDFs
@@ -2605,45 +2611,6 @@
                 }
             }
             
-            // Función para guardar estado de pedidos automáticamente
-            async function savePedidoStatus(isEnabled) {
-                try {
-                    const url = '{{ route("menus.update.chatbot.config", $comercio) }}';
-                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    
-                    const formData = new FormData();
-                    formData.append('pedido_habilitado', isEnabled ? '1' : '0');
-                    formData.append('_token', token);
-                    
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
-                    });
-                    
-                    let data;
-                    try {
-                        data = await response.json();
-                    } catch (e) {
-                        throw new Error('Error al procesar la respuesta del servidor');
-                    }
-                    
-                    if (response.ok && data.success) {
-                        showTemporaryMessage(isEnabled ? 'Pedidos en línea activados' : 'Pedidos en línea desactivados', 'success');
-                    } else {
-                        const errorMsg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : 'Error desconocido');
-                        console.error('Error al guardar estado de pedidos:', errorMsg);
-                        showTemporaryMessage('Error al guardar estado de pedidos', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error al guardar estado de pedidos:', error);
-                    showTemporaryMessage('Error al guardar estado de pedidos', 'error');
-                }
-            }
             
             // El nombre y la bienvenida del asistente se guardan solos al dejar de escribir.
             let chatbotNameTimeout;
