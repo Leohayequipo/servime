@@ -382,5 +382,6 @@
 </div></div>
 
 @include('menu.partials.tracking', ['trackView' => 'choose'])
+@include('menu.partials.guia', ['pantalla' => 'portada'])
 </body>
 </html>

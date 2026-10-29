@@ -189,6 +189,24 @@ acento. Si tomara el color de marca, un comercio con acento rojo tendría un pun
 que está abierto. (El `choose.blade.php` viejo todavía tiene ese bug: `background: var(--accent)`
 con la animación en verde hardcodeado.)
 
+## Guía de bienvenida (tour)
+
+`menu/partials/guia.blade.php`, incluida en `portada` y `chat` (no en `choose`, la portada
+sin foto, ni en la carta clásica). Es un tour con **Driver.js 1.3.1 por CDN**, que se descarga
+sólo cuando hay que mostrarlo. La prende o apaga cada comercio en el editor ("Tu asistente" →
+"Guía para tus clientes", campo `comercios.guia_clientes`, **arranca prendida**).
+
+- **Una vez por teléfono y por pantalla, para todos los comercios** (`servime_guia_{pantalla}_v1`
+  en localStorage, sin id de comercio: la app es la misma). Se marca **al mostrarse**, no al
+  terminarse. Subir a `_v2` la vuelve a mostrar a todos.
+- En el chat no sale si llegó con `?q` (`window.servimeLlegoConPregunta`) ni si ya charló en la
+  visita (espera a `historialListo`). Sin localStorage, no sale nunca.
+- `?guia=1` la fuerza sin marcar: lo usan "Ver en la portada / en el chat" del editor, y por
+  eso anda apagada y dentro de la vista previa. La vista previa normal **no** la muestra.
+- El "?" de la cabecera del chat (`#guiaAyuda`) la repite.
+- Eventos: `guia_vista`, `guia_completa`, `guia_cerrada` (con el paso en que la cerró).
+  Los repasos con "?" no cuentan como completa/cerrada.
+
 ## Abierto / cerrado
 
 `Comercio::estaAbierto()` sale de **`horarios`** (json, migración `2026_08_09_120000`):

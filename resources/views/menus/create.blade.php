@@ -1273,6 +1273,35 @@
                         </div>
                     </div>
 
+                    {{-- Guía de bienvenida del menú público (menu/partials/guia). Los botones la
+                         reproducen en el celular de la vista previa con ?guia=1, que la muestra
+                         aunque esté apagada: así se decide si prenderla viéndola. --}}
+                    <div class="editor-bloque">
+                        <h3 class="editor-bloque-titulo">Guía para tus clientes</h3>
+                        <p class="text-sm text-text-secondary mb-4">
+                            La primera vez que alguien entra, le señala dónde tocar: el asistente, los atajos y el micrófono.
+                            Sale una sola vez por teléfono y la pueden cerrar cuando quieran.
+                        </p>
+                        <label class="inline-flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="guia_clientes" class="sr-only peer"
+                                   @checked($comercio->guia_clientes) onchange="guardarGuiaClientes(this)">
+                            <span class="relative w-14 h-8 rounded-full bg-accent-gray peer-checked:bg-accent-green transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-6 after:h-6 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-6"></span>
+                            <span class="text-text-primary font-medium">Mostrar la guía a mis clientes</span>
+                        </label>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            @if($comercio->tienePortada())
+                                <button type="button" onclick="verGuia(this)" data-guia-url="{{ $previaEditor('menu.public', ['guia' => 1]) }}"
+                                        class="px-4 py-2 rounded-xl border border-accent-gray bg-white text-sm font-medium text-text-primary hover:border-accent-blue transition-colors">
+                                    ▶ Ver en la portada
+                                </button>
+                            @endif
+                            <button type="button" onclick="verGuia(this)" data-guia-url="{{ $previaEditor('menu.chat', ['guia' => 1]) }}"
+                                    class="px-4 py-2 rounded-xl border border-accent-gray bg-white text-sm font-medium text-text-primary hover:border-accent-blue transition-colors">
+                                ▶ Ver en el chat
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
                 </x-editor.seccion>
 
@@ -2108,6 +2137,42 @@
                     card.classList.remove('bg-accent-green/10', 'border-accent-green/40', 'shadow-accent-green/10');
                     card.classList.add('bg-secondary-dark', 'border-accent-gray');
                 }
+            }
+        }
+
+        // Guía de bienvenida: se guarda sola al tocar el interruptor.
+        async function guardarGuiaClientes(input) {
+            try {
+                const r = await fetch(`{{ route('menus.update.chatbot.config', ['comercio' => $comercio->slug]) }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ guia_clientes: input.checked })
+                });
+                const data = await r.json();
+                if (!data.success) throw new Error(data.error || 'no se pudo guardar');
+            } catch (e) {
+                input.checked = !input.checked; // como el pedido en línea: no dejarlo en un estado que no se guardó
+                showError('No se pudo guardar la guía. Probá de nuevo.');
+            }
+        }
+
+        // Reproduce la guía en el celular de la vista previa. En pantallas chicas el celular
+        // no se muestra, así que se abre aparte.
+        function verGuia(boton) {
+            const frame = document.getElementById('previewFrame');
+            const url = boton.dataset.guiaUrl + '&t=' + Date.now(); // para poder repetirla
+            if (frame && frame.getClientRects().length) {
+                frame.src = url;
+                frame.dataset.src = url; // así la próxima sección vuelve a cargar su pantalla
+                const titulo = document.getElementById('previewTitulo');
+                if (titulo) titulo.textContent = 'Así la ven tus clientes';
+            } else {
+                window.open(boton.dataset.guiaUrl, '_blank');
             }
         }
 

@@ -614,6 +614,13 @@
                     </span>
                 @endif
 
+                {{-- Volver a ver la guía de bienvenida (menu/partials/guia). Sólo si el
+                     comercio la tiene prendida. --}}
+                @if($comercio->guia_clientes)
+                    <button type="button" id="guiaAyuda" class="lang-btn flex-none" onclick="window.smGuia?.mostrar()"
+                            title="{{ __('Cómo se usa') }}" aria-label="{{ __('Cómo se usa') }}">?</button>
+                @endif
+
                 {{-- Selector de idioma. Sin banderas a propósito: una bandera es un país,
                      no un idioma (¿español es España o Argentina?). Van los nombres en su
                      propio idioma. Solo aparece si hay más de uno disponible. --}}
@@ -2230,6 +2237,8 @@
                 const preQ = params.get('q');
                 const preChip = params.get('chip');
                 if (preQ && preQ.trim()) {
+                    // La guía de bienvenida no sale: ya llegó preguntando algo.
+                    window.servimeLlegoConPregunta = true;
                     // Limpiar el query para que no se reenvíe si el usuario refresca
                     history.replaceState(null, '', window.location.pathname);
                     // tipo 'chip_portada': la pregunta la armó el atajo de la portada, no la
@@ -2279,6 +2288,7 @@
     </script>
 
     @include('menu.partials.tracking', ['trackView' => 'chat'])
+    @include('menu.partials.guia', ['pantalla' => 'chat'])
 
     {{-- Va DESPUÉS del tracking: el bloque usa window.smTrack para registrar que se mostró. --}}
     {{-- En vista previa se incluye aunque esté apagado o sin link: el comercio está

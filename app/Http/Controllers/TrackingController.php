@@ -34,6 +34,12 @@ class TrackingController extends Controller
         // texto no convence), el que ignora ni lo registró (el momento está mal). Sin
         // este evento las dos cosas caen en la misma bolsa y no se sabe qué corregir.
         'resena_dismiss', // lo cerró con el "Ahora no"
+
+        // Guía de bienvenida (menu/partials/guia). Con los tres se sabe si sirve o molesta:
+        // cuántos la ven, cuántos la terminan y en qué paso la cierran los que no.
+        'guia_vista',     // se le mostró (data.pantalla: portada|chat, data.repetida)
+        'guia_completa',  // llegó al último paso
+        'guia_cerrada',   // la cerró antes (data.paso, data.de)
     ];
 
     /**
