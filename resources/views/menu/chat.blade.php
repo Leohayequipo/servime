@@ -2270,7 +2270,10 @@
         // Auto-focus SOLO en desktop. En mobile abría el teclado apenas se escanea el QR
         // y tapaba media pantalla antes de que el cliente leyera la bienvenida.
         // (hover:hover + pointer:fine) = puntero de mouse, no dedo.
-        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        // Tampoco adentro de un marco (el celular de la vista previa del editor): el foco
+        // salta del documento de afuera al de adentro, y al comerciante se le iba el cursor
+        // del campo que estaba editando cada vez que el celular cargaba el chat.
+        if (window.self === window.top && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
             document.getElementById('messageInput').focus();
         }
     </script>
