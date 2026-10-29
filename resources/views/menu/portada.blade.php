@@ -58,7 +58,7 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('images/servime_ia.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -209,14 +209,18 @@
         .estrella-grande { transform-origin: 12px 10px; animation: twinkle 2.8s ease-in-out infinite; }
         .estrella-chica  { transform-origin: 19px 17.4px; animation: twinkle2 2.8s ease-in-out infinite; }
         .cta-ico {
-            flex-shrink: 0; width: 54px; height: 54px; border-radius: 50%;
+            flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
             background: color-mix(in srgb, var(--acento) 28%, transparent);
             display: flex; align-items: center; justify-content: center;
         }
-        .cta-txt { flex: 1; min-width: 0; }
-        .cta-txt h2 { font-family: 'Playfair Display', serif; font-weight: 500;
-                      font-size: 18.5px; line-height: 1.16; color: #241B12; margin-bottom: 4px; }
-        .cta-txt p { font-size: 10.5px; line-height: 1.45; font-weight: 300; color: #6B5842; }
+        /* El texto va por encima del destello: con el blanco al 70% pasándole por
+           arriba, el título se lavaba justo en el botón que más queremos que lean.
+           Antes era 18,5px / 10,5px en peso 300: en el celular no se leía. */
+        .cta-txt { flex: 1; min-width: 0; position: relative; z-index: 1; }
+        .cta-txt h2 { font-family: 'Playfair Display', serif; font-weight: 600;
+                      font-size: 21px; line-height: 1.15; letter-spacing: .05em; text-transform: uppercase;
+                      color: #1E160E; margin-bottom: 6px; }
+        .cta-txt p { font-size: 13px; line-height: 1.4; font-weight: 400; color: #4A3A28; }
         .cta-go {
             flex-shrink: 0; width: 41px; height: 41px; border-radius: 50%;
             background: #1A130D; display: flex; align-items: center; justify-content: center;
@@ -326,7 +330,7 @@
         {{-- La figura que el cliente ya conoce, en vez de "Nuestra IA". Lo de armar el
              pedido sólo se promete si el comercio tiene la lista de pedido prendida. --}}
         <span class="cta-txt">
-            <h2>Tu camarero<br>virtual</h2>
+            <h2>Tu camarero virtual</h2>
             @if($comercio->aceptaListaDePedido())
                 <p>Te recomienda, te cuenta cada plato y te arma el pedido.</p>
             @else
