@@ -432,6 +432,60 @@ class AnalyticsTrackingTest extends TestCase
         $respuesta->assertSee('Qué categorías miran', false);
     }
 
+    public function test_las_categorias_de_la_carta_suman_pero_el_atajo_todo_no(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+
+        $ahora = now()->subHour();
+        $this->evento($comercio, 'v1', 'categoria_tap', $ahora, ['nombre' => 'Postres']);
+        $this->evento($comercio, 'v2', 'categoria_tap', $ahora, ['nombre' => 'Postres', 'vista' => 'classic']);
+        // La carta mandaba "Todo" (volver a la carta entera) como si fuera una sección.
+        // Ya no lo manda, pero lo guardado hasta entonces no puede colarse en el ranking.
+        $this->evento($comercio, 'v2', 'categoria_tap', $ahora, ['nombre' => 'Todo', 'vista' => 'classic']);
+        $this->evento($comercio, 'v3', 'categoria_tap', $ahora, ['nombre' => 'Todo', 'vista' => 'classic']);
+
+        $top = $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk()
+            ->viewData('metrics')['topCategorias'];
+
+        $this->assertSame(['Postres' => 2], $top->all());
+    }
+
+    /**
+     * El ranking de promos cruza los "Lo quiero" con las promos del menú. Si el comercio no
+     * tiene ningún menú marcado como activo, las promos tienen que salir igual del menú
+     * vigente: la carta y el chat se las muestran al cliente, y el panel quedaba vacío.
+     */
+    public function test_el_ranking_de_promos_funciona_sin_menu_marcado_como_activo(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $comercio = Comercio::factory()->create([
+            'plan_id' => Plan::where('key', 'pro')->value('id'),
+        ]);
+        \App\Models\Menu::factory()->for($comercio)->create([
+            'procesado' => true,
+            'activo' => false,
+            'contexto_gpt' => json_encode(['categorias' => [
+                ['nombre' => 'Pizzas', 'platos' => [['nombre' => 'Muzzarella', 'precio' => '8900']]],
+                ['nombre' => 'Promociones del Día', 'platos' => [['nombre' => '2x1 en pintas', 'precio' => '6000']]],
+            ]]),
+        ]);
+
+        $ahora = now()->subHour();
+        $this->evento($comercio, 'v1', 'dish_want', $ahora, ['nombre' => '2x1 en pintas', 'vista' => 'classic']);
+        $this->evento($comercio, 'v2', 'dish_want', $ahora, ['nombre' => 'Muzzarella', 'vista' => 'classic']);
+        $this->evento($comercio, 'v2', 'promo_click', $ahora, ['promo' => 'Promociones del Día', 'vista' => 'classic']);
+
+        $metrics = $this->actingAs($admin)->get(route('analytics.comercio', $comercio))->assertOk()
+            ->viewData('metrics');
+
+        $this->assertSame(['2x1 en pintas' => 1], $metrics['topPromos']->all());
+        // La apertura desde la carta cuenta igual que la del chat.
+        $this->assertSame(1, $metrics['aperturasPromos']);
+    }
+
     public function test_el_panel_rankea_las_etiquetas_y_las_muestra_legibles(): void
     {
         $admin = User::factory()->superAdmin()->create();
@@ -466,7 +520,7 @@ class AnalyticsTrackingTest extends TestCase
             ->assertSee('¿Por dónde entran?', false)
             ->assertSee('Todavía nadie tocó un atajo', false)
             ->assertSee('Qué categorías miran', false)
-            ->assertSee('Todavía nadie abrió el listado de categorías', false)
+            ->assertSee('Todavía nadie tocó una categoría', false)
             ->assertSee('Qué etiquetas filtran', false)
             ->assertSee('Todavía nadie filtró por etiquetas', false);
     }

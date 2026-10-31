@@ -913,13 +913,14 @@ class Comercio extends Model
      * Promos cargadas en la sección "Promociones del Día" del panel de menús,
      * tal cual (nombre, precio, descripción, imagen). El chat las muestra
      * directamente, sin pasar por la IA. Devuelve TODAS las que existan.
+     *
+     * Del menú vigente, con su plan B: exigiendo `activo`, un comercio sin ningún menú
+     * marcado veía sus promos en la carta pero no en el chat, y el ranking de promos de
+     * las estadísticas le quedaba vacío.
      */
     public function getPromocionesDelMenu(): array
     {
-        $menuActivo = \App\Support\VistaPrevia::menu($this) ?? $this->menus()
-            ->where('activo', true)
-            ->where('procesado', true)
-            ->first();
+        $menuActivo = $this->menuVigente();
 
         if (! $menuActivo || ! $menuActivo->contexto_gpt) {
             return [];

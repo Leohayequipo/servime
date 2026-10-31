@@ -156,6 +156,18 @@ class PublicMenuController extends Controller
                 ->groupBy(fn ($p) => $p['categoria'] ?: 'Otros')
             : collect();
 
+        // Las promos, primero. El panel las guarda como la última categoría del menú, y ahí
+        // —después de veinte categorías— no llegaba nadie. Sin asistente es peor: esta
+        // lista es lo único que ve el cliente, y no hay chat que se las ofrezca al entrar.
+        // El chat ya las ponía primero (`Comercio::getCategoriasDelMenu()`).
+        $categoriaPromos = $platosPorCategoria->keys()->first(
+            fn ($c) => in_array(mb_strtolower(trim($c)), ['promociones del día', 'promociones del dia'], true)
+        );
+        if ($categoriaPromos !== null) {
+            $platosPorCategoria = collect([$categoriaPromos => $platosPorCategoria[$categoriaPromos]])
+                ->union($platosPorCategoria->except($categoriaPromos));
+        }
+
         // "Lo quiero" y "Mi pedido": la lista privada del cliente, para mostrársela al mozo.
         $aceptaLista = $comercio->aceptaListaDePedido();
 
@@ -168,7 +180,7 @@ class PublicMenuController extends Controller
 
         return view('menu.classic', compact(
             'comercio', 'menuActivo', 'archivoDisponible', 'vista', 'platosPorCategoria',
-            'aceptaLista', 'puedePedir'
+            'categoriaPromos', 'aceptaLista', 'puedePedir'
         ));
     }
 }

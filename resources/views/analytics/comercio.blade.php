@@ -670,7 +670,8 @@
                 </div>
             </div>
 
-            {{-- Cómo exploran la carta desde el chat: por categoría o filtrando por etiqueta.
+            {{-- Cómo exploran la carta: por categoría (en el chat y en los atajos de la carta)
+                 o filtrando por etiqueta (eso existe sólo en el chat).
                  Van después de "platos deseados" porque son el paso anterior: curiosear una
                  parte del menú, no querer un plato puntual. --}}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -679,10 +680,10 @@
                         <x-icono name="grid" class="w-4 h-4 flex-none opacity-60" />
                         Qué categorías miran
                         <x-ayuda titulo="Qué categorías miran"
-                                 texto="En el chat, el cliente puede abrir la lista de categorías de tu carta y tocar una. Esto es el ranking. No confundir con «Platos más deseados»: allá ya decidió que quiere un plato, acá recién está curioseando. Sirve para saber qué despierta interés y qué conviene mostrar primero."
-                                 admin="Evento categoria_tap, por toque (volver dos veces a postres suma dos) y con el nombre ORIGINAL del menú, no el traducido." />
+                                 texto="El cliente toca una sección de tu carta para verla: en los atajos de arriba de la carta o, si tenés asistente, en la lista de categorías del chat. Esto es el ranking. No confundir con «Platos más deseados»: allá ya decidió que quiere un plato, acá recién está curioseando. Sirve para saber qué despierta interés y qué conviene mostrar primero."
+                                 admin="Evento categoria_tap, del chat y de la carta (data.vista = classic), por toque (volver dos veces a postres suma dos) y con el nombre ORIGINAL del menú, no el traducido. El atajo de promos de la carta va como promo_click, igual que en el chat." />
                     </h3>
-                    <p class="text-text-secondary text-sm mb-4">Las secciones de tu carta que más abren en el chat.</p>
+                    <p class="text-text-secondary text-sm mb-4">Las secciones de tu carta que más abren.</p>
                     @php $catMax = $metrics['topCategorias']->max() ?: 1; @endphp
                     @forelse($metrics['topCategorias'] as $cat => $count)
                         <div class="mb-3">
@@ -694,7 +695,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-text-secondary text-center py-4">Todavía nadie abrió el listado de categorías.</p>
+                        <p class="text-text-secondary text-center py-4">Todavía nadie tocó una categoría.</p>
                     @endforelse
                 </div>
 

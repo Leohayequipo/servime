@@ -16,13 +16,13 @@ class TrackingController extends Controller
     private const ALLOWED_EVENTS = [
         'page_view',      // vio una pantalla (data.view: choose|chat|classic)
         'menu_choice',    // eligió IA o clásico (data.choice: ia|classic, data.desde, data.label)
-        'promo_click',    // clickeó una promo (data.promo)
+        'promo_click',    // abrió las promos, en el chat o en la carta (data.promo; data.vista: classic)
         'dish_want',      // clickeó "Lo quiero" (data.nombre, data.price)
         'dish_view',      // abrió el detalle de un plato para mirarlo (data.nombre). NO es
         // "lo quiero": mezclarlos inflaba "Platos más deseados".
         'order_summary',  // abrió el "Resumen para el camarero" (data.items) — el final del embudo
         'mic_start',      // arrancó a dictar por voz
-        'categoria_tap',  // tocó una categoría en el chat (data.nombre, el del menú sin traducir)
+        'categoria_tap',  // tocó una categoría, en el chat o en la carta (data.nombre, el del menú sin traducir; data.vista: classic)
         'tag_tap',        // filtró por una etiqueta del menú: sin TACC, vegano... (data.nombre)
 
         // Pedido de reseña en Google. Los DOS hacen falta: con los clicks solos, sin

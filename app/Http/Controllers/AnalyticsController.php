@@ -548,11 +548,15 @@ class AnalyticsController extends Controller
         // Cuántas veces abrieron la sección de promos (el chip). Es contexto, no ranking.
         $aperturasPromos = $events->where('event', 'promo_click')->count();
 
-        // Categorías más miradas en el chat. Se cuenta por tap y no por visita: la pregunta
-        // es qué parte de la carta despierta curiosidad, y que alguien vuelva dos veces a
-        // postres dice justamente eso.
+        // Categorías más miradas, en el chat y en los atajos de la carta. Se cuenta por tap
+        // y no por visita: la pregunta es qué parte de la carta despierta curiosidad, y que
+        // alguien vuelva dos veces a postres dice justamente eso.
+        //
+        // Hasta oct-2026 la carta registraba también el atajo "Todo" como si fuera una
+        // categoría. Ya no lo manda, pero esos eventos quedaron guardados y se dejan afuera.
         $topCategorias = $events->where('event', 'categoria_tap')
             ->filter(fn ($e) => ! empty($e->data['nombre']))
+            ->reject(fn ($e) => ($e->data['vista'] ?? null) === 'classic' && $e->data['nombre'] === 'Todo')
             ->groupBy(fn ($e) => $e->data['nombre'])
             ->map->count()->sortDesc()->take(8);
 

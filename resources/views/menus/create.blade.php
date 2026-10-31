@@ -1451,8 +1451,15 @@
                                 @endif
                             </div>
                             
+                            {{-- Sin asistente no hay chat: decirle "aparecen en el chat" a ese
+                                 comercio era prometerle una pantalla que sus clientes no ven. --}}
                             <p class="text-xs text-text-secondary mt-4">
-                                💡 Las promociones aparecerán como una categoría especial en el menú del chat.
+                                @if($comercio->tieneAsistente())
+                                    💡 En el chat aparecen como la primera categoría, y en la carta, arriba de todo y marcadas con 🔥.
+                                @else
+                                    💡 Aparecen arriba de todo en la carta, marcadas con 🔥, antes que tus platos.
+                                @endif
+                                No figuran en el archivo original de tu carta (el PDF o la foto).
                             </p>
                         </div>
                     </div>

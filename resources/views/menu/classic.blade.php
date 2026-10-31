@@ -197,6 +197,10 @@
             color: var(--text-dim); border-radius: 999px;
             padding: 7px 14px; font-size: 13px;
         }
+        /* Las promos se marcan con el BORDE y no con el relleno, como en el chat: acá el
+           relleno de acento es el atajo elegido, y un relleno fijo parecería "seleccionado".
+           Va antes de .activo para que, elegida, se vea como cualquier otra. */
+        .chip-cat.promo { border-color: var(--accent); color: var(--text); font-weight: 600; }
         .chip-cat.activo { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
         .buscador-estado { margin: 12px 2px 0; font-size: 13px; color: var(--text-dim); }
 
@@ -457,7 +461,11 @@
                     <div class="chips-cat" id="chipsCategorias">
                         <button type="button" class="chip-cat activo" data-cat="">{{ __('Todo') }}</button>
                         @foreach($platosPorCategoria as $categoria => $platos)
-                            <button type="button" class="chip-cat" data-cat="{{ $categoria }}">{{ $categoria }}</button>
+                            @if($categoria === $categoriaPromos)
+                                <button type="button" class="chip-cat promo" data-cat="{{ $categoria }}">🔥 {{ $categoria }}</button>
+                            @else
+                                <button type="button" class="chip-cat" data-cat="{{ $categoria }}">{{ $categoria }}</button>
+                            @endif
                         @endforeach
                     </div>
 
@@ -466,7 +474,7 @@
 
                     @foreach($platosPorCategoria as $categoria => $platos)
                         <section class="lista-categoria" data-categoria="{{ $categoria }}">
-                            <h2 class="lista-categoria-titulo">{{ $categoria }}</h2>
+                            <h2 class="lista-categoria-titulo">@if($categoria === $categoriaPromos)🔥 @endif{{ $categoria }}</h2>
 
                             {{-- La foto va a la DERECHA y el precio debajo del nombre, como en
                                  las apps de delivery. Con la foto a la izquierda, los pocos
@@ -683,7 +691,15 @@
             chips.forEach(chip => chip.addEventListener('click', () => {
                 chips.forEach(c => c.classList.toggle('activo', c === chip));
                 filtrarCategoria(chip.dataset.cat);
-                window.smTrack?.('categoria_tap', { nombre: chip.dataset.cat || 'Todo', vista: 'classic' });
+                // El de promos cuenta como apertura de promos y no como una categoría más,
+                // igual que en el chat: si no, el panel decía que nadie las abría nunca.
+                // "Todo" no se registra: es volver a la carta entera, no una sección, y
+                // en el ranking de categorías figuraba como si lo fuera.
+                if (chip.classList.contains('promo')) {
+                    window.smTrack?.('promo_click', { promo: chip.dataset.cat, vista: 'classic' });
+                } else if (chip.dataset.cat) {
+                    window.smTrack?.('categoria_tap', { nombre: chip.dataset.cat, vista: 'classic' });
+                }
             }));
 
             const aplicar = (nombres, texto, encontro) => {

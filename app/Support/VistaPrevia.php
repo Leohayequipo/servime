@@ -26,9 +26,8 @@ class VistaPrevia
      *
      * Sin esto el celular mostraba el menú VIGENTE del comercio, no el del editor: editando
      * un menú todavía no publicado se veía otro, y la vista previa mentía. Las pantallas
-     * públicas eligen el menú en tres lugares distintos (`Comercio::menuVigente()`,
-     * `Comercio::getPromocionesDelMenu()` y `ChatbotService::menusParaContexto()`), y los
-     * tres preguntan acá primero.
+     * públicas eligen el menú en dos lugares distintos (`Comercio::menuVigente()` y
+     * `ChatbotService::menusParaContexto()`), y los dos preguntan acá primero.
      *
      * Devuelve null fuera de la vista previa, así el menú de los clientes no cambia nunca.
      */

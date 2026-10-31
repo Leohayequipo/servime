@@ -73,6 +73,17 @@ class MenuVigenteTest extends TestCase
         $this->assertContains('SIN_TACC', $comercio->getTagsDelMenu());
     }
 
+    public function test_las_promos_usan_la_misma_regla(): void
+    {
+        $comercio = Comercio::factory()->create();
+        $this->menuCon($comercio, [
+            ['nombre' => 'Promociones del Día', 'platos' => [['nombre' => '2x1 en pintas', 'precio' => '6000']]],
+        ], activo: false);
+
+        // Exigía `activo`: la carta mostraba la promo y el chat y el panel no la veían.
+        $this->assertSame(['2x1 en pintas'], array_column($comercio->getPromocionesDelMenu(), 'nombre'));
+    }
+
     public function test_los_chips_de_la_portada_no_quedan_genericos_sin_menu_activo(): void
     {
         $comercio = Comercio::factory()->create();
