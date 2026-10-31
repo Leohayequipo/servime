@@ -67,6 +67,12 @@ for file in *; do
     fi
 done
 
+# Archivos que NO pueden existir en public_html. El loop de arriba copia pero nunca
+# borra, y el servidor sirve un archivo estático antes de llegar a Laravel: un
+# sitemap.xml viejo (del 17/07/2026, con /help que da 404 y sin ningún menú) tapaba
+# al que arma la ruta /sitemap.xml, y eso era lo que leía Google.
+rm -f "$PUBLIC_HTML_DIR/sitemap.xml"
+
 # 6. Restaurar el index.php que funciona
 echo -e "${YELLOW}🔧 Restaurando index.php...${NC}"
 cp "$PUBLIC_HTML_DIR/index.php.backup" "$PUBLIC_HTML_DIR/index.php" 2>/dev/null || true

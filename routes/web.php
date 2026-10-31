@@ -239,6 +239,9 @@ Route::get('/sitemap.xml', function () {
         ]];
 
         \App\Models\Comercio::whereHas('menus', fn ($q) => $q->where('procesado', true))
+            // La demo de la landing va con noindex (Comercio::esDemo): listarla acá sería
+            // pedirle a Google que indexe algo que la página le dice que no indexe.
+            ->when(config('servime.demo_slug'), fn ($q, $slug) => $q->where('slug', '!=', $slug))
             ->orderBy('slug')
             ->chunk(200, function ($comercios) use (&$urls) {
                 foreach ($comercios as $comercio) {

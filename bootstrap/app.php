@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Antes que todo: una visita por www se va al dominio sin www sin abrir sesión.
+        $middleware->prepend(\App\Http\Middleware\RedirigirSinWww::class);
+
         $middleware->web(append: [
             \App\Http\Middleware\VerifyCsrfToken::class,
             // Idioma del cliente: ?lang= → sesión → Accept-Language → español

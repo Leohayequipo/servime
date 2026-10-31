@@ -81,9 +81,15 @@ npm run dev   /   npm run build
   El segundo límite por IP no sobra: el `session_id` lo elige el cliente y se puede rotar.
   Al sumar una ruta pública nueva, usar estos limitadores y no `throttle:N,1`.
   Resto: crear menú `5,1`, landing-chat `20,1` (esas sí son por IP, y está bien).
-- **No hay proxy adelante** (verificado: Hostinger/LiteSpeed directo, sin Cloudflare), así que
-  `$request->ip()` es la IP real del cliente. No configurar `trustProxies`: haría que la IP
-  se pueda falsear por header y con eso se saltearían los límites del chat, que cuesta plata.
+- **Hay un CDN de Hostinger adelante** (las respuestas traen `Server: hcdn` y
+  `x-hcdn-request-id`, visto el 31/10/2026; antes se había verificado que no había proxy).
+  **Falta confirmar** si `$request->ip()` sigue siendo la IP real del cliente o es la del CDN:
+  si fuera la del CDN, los límites por IP del chat se compartirían entre todos los clientes.
+  Igual, no configurar `trustProxies` a ciegas: haría que la IP se pueda falsear por header y
+  con eso se saltearían los límites del chat, que cuesta plata.
+- **Un solo dominio:** `www.servime.net` redirige con 301 a `servime.net` (`RedirigirSinWww`).
+  Las URLs canónicas y el sitemap se arman con el dominio de la visita, así que sin esa
+  redirección Google veía dos sitios.
 - Rutas públicas resuelven comercio por `slug` (binding `{comercio:slug}`), no por id.
 - Servir logos valida path-traversal con `realpath` + prefijo permitido (ver `web.php`).
 - Menús con SoftDeletes; índices en `menus`; FK en `carts`.

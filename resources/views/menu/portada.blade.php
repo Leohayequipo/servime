@@ -41,7 +41,8 @@
     <title>Menú de {{ $comercio->nombre }} — carta digital online</title>
     <meta name="description" content="{{ $seoDesc }}">
     <link rel="canonical" href="{{ route('menu.public', $comercio->slug) }}">
-    <meta name="robots" content="index, follow, max-image-preview:large">
+    {{-- La demo de la landing no va a Google (ver Comercio::esDemo). --}}
+    <meta name="robots" content="{{ $comercio->esDemo() ? 'noindex, follow' : 'index, follow, max-image-preview:large' }}">
 
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ $comercio->nombre }}">

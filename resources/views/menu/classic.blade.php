@@ -8,7 +8,8 @@
     <title>Carta de {{ $comercio->nombre }} — menú completo</title>
     <meta name="description" content="Menú completo de {{ $comercio->nombre }} con todos los platos y precios actualizados. Miralo desde el celular, sin descargar ninguna app.">
     <link rel="canonical" href="{{ route('menu.classic', $comercio->slug) }}">
-    <meta name="robots" content="index, follow, max-image-preview:large">
+    {{-- La demo de la landing no va a Google (ver Comercio::esDemo). --}}
+    <meta name="robots" content="{{ $comercio->esDemo() ? 'noindex, follow' : 'index, follow, max-image-preview:large' }}">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Carta de {{ $comercio->nombre }}">
     <meta property="og:url" content="{{ route('menu.classic', $comercio->slug) }}">

@@ -688,6 +688,20 @@ class Comercio extends Model
     }
 
     /**
+     * ¿Es el comercio de la demo de la landing (`DEMO_MENU_SLUG`)?
+     *
+     * La demo existe para que un prospecto la pruebe desde la landing, no para salir en
+     * Google: indexada aparecía como "Menú de live_demo" en las búsquedas de ServiME. Sus
+     * pantallas van con noindex y queda fuera del sitemap; el link de la landing anda igual.
+     */
+    public function esDemo(): bool
+    {
+        $slug = config('servime.demo_slug');
+
+        return filled($slug) && $this->slug === $slug;
+    }
+
+    /**
      * ¿El cliente puede armar su lista con "Lo quiero" y ver "Mi pedido"?
      *
      * El plan decide si existe (`lista_pedido`) y el comercio decide si la usa (el
