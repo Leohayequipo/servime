@@ -4,5 +4,8 @@ Disallow: /admin
 Disallow: /profile
 Disallow: /comercios
 Disallow: /analytics
+# Google ejecuta el JS de los menús, y sin esto le preguntaba al asistente (consultas
+# pagas a OpenAI) y sumaba eventos a las estadísticas. Las páginas se siguen indexando.
+Disallow: /api/
 
 Sitemap: https://servime.net/sitemap.xml

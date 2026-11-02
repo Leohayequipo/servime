@@ -308,13 +308,15 @@ Route::middleware(\App\Http\Middleware\ResolverMesa::class)->group(function () {
     Route::get('/menu/{comercio:slug}/classic', [App\Http\Controllers\PublicMenuController::class, 'classic'])->name('menu.classic');
     // Chat con IA. Los límites 'chat-ia'/'tracking'/'carrito' van por dispositivo y no por IP:
     // todos los clientes de un local salen por el mismo wifi (ver AppServiceProvider).
+    // 'sin.robots': Google ejecuta la página y los atajos de la portada preguntan solos;
+    // cada pasada era una consulta paga (ver BloquearRobots).
     Route::post('/api/chat/{comercio:slug}', [App\Http\Controllers\ChatbotController::class, 'chat'])
-        ->middleware('throttle:chat-ia')->name('chat.api');
+        ->middleware(['sin.robots', 'throttle:chat-ia'])->name('chat.api');
     Route::post('/api/chat/{comercio:slug}/stream', [App\Http\Controllers\ChatbotController::class, 'chatStream'])
-        ->middleware('throttle:chat-ia')->name('chat.stream');
+        ->middleware(['sin.robots', 'throttle:chat-ia'])->name('chat.stream');
     // Nota de voz → texto. Llama a OpenAI, así que va con el límite del chat.
     Route::post('/api/chat/{comercio:slug}/transcribir', [App\Http\Controllers\ChatbotController::class, 'transcribir'])
-        ->middleware('throttle:chat-ia')->name('chat.transcribir');
+        ->middleware(['sin.robots', 'throttle:chat-ia'])->name('chat.transcribir');
     // La charla de la visita en curso, al reabrir el chat. No llama al modelo: va con el
     // límite de tracking, no con el del chat (que cuida la factura de OpenAI).
     Route::get('/api/chat/{comercio:slug}/historial', [App\Http\Controllers\ChatbotController::class, 'historial'])
@@ -326,9 +328,10 @@ Route::middleware(\App\Http\Middleware\ResolverMesa::class)->group(function () {
     Route::post('/api/buscar/{comercio:slug}', [App\Http\Controllers\BuscadorMenuController::class, 'buscar'])
         ->middleware('throttle:tracking')->name('menu.buscar');
 
-    // Tracking de eventos del menú público (sin auth, por sesión)
+    // Tracking de eventos del menú público (sin auth, por sesión). Sin robots: lo que
+    // Google toca al recorrer la carta no es un cliente mirando.
     Route::post('/api/track/{comercio:slug}', [App\Http\Controllers\TrackingController::class, 'store'])
-        ->middleware('throttle:tracking')->name('track');
+        ->middleware(['sin.robots', 'throttle:tracking'])->name('track');
 });
 
 // API ligera para carrito (por sesión, sin auth)

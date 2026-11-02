@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'plan.feature' => \App\Http\Middleware\EnsurePlanFeature::class,
             'mozo' => \App\Http\Middleware\MozoAutenticado::class,
+            'sin.robots' => \App\Http\Middleware\BloquearRobots::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

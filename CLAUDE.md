@@ -83,10 +83,15 @@ npm run dev   /   npm run build
   Resto: crear menú `5,1`, landing-chat `20,1` (esas sí son por IP, y está bien).
 - **Hay un CDN de Hostinger adelante** (las respuestas traen `Server: hcdn` y
   `x-hcdn-request-id`, visto el 31/10/2026; antes se había verificado que no había proxy).
-  **Falta confirmar** si `$request->ip()` sigue siendo la IP real del cliente o es la del CDN:
-  si fuera la del CDN, los límites por IP del chat se compartirían entre todos los clientes.
-  Igual, no configurar `trustProxies` a ciegas: haría que la IP se pueda falsear por header y
-  con eso se saltearían los límites del chat, que cuesta plata.
+  Igual `$request->ip()` es la IP real del cliente: el 1/11/2026 `chat_conversations.user_ip`
+  guardó las de Googlebot (`66.249.66.x`), una distinta por pedido. No configurar
+  `trustProxies`: haría que la IP se pueda falsear por header y con eso se saltearían los
+  límites del chat, que cuesta plata.
+- **Robots fuera del chat y de las estadísticas.** Google ejecuta el JS de los menús y los
+  atajos de la portada (`/chat?q=...`) preguntan solos: cada pasada era una consulta paga a
+  OpenAI, descontada del cupo del comercio. `robots.txt` cierra `/api/` y el middleware
+  `sin.robots` (`BloquearRobots`) frena a los que no lo respetan. Al sumar una ruta pública que
+  llame a la IA o guarde estadísticas, ponerle `sin.robots`.
 - **Un solo dominio:** `www.servime.net` redirige con 301 a `servime.net` (`RedirigirSinWww`).
   Las URLs canónicas y el sitemap se arman con el dominio de la visita, así que sin esa
   redirección Google veía dos sitios.
