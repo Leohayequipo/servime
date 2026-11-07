@@ -34,6 +34,38 @@ class CartTest extends TestCase
         $this->assertCount(1, $response->json('items'));
     }
 
+    /**
+     * La IA copia el precio "tal como aparece" en el PDF, así que llega en cualquier formato.
+     * Una carta con "$29,000.00" se leyó como 29 pesos y el total del pedido daba $69.
+     *
+     * @dataProvider formatosDePrecio
+     */
+    public function test_el_precio_se_lee_igual_en_cualquier_formato(string $texto, int $centavos): void
+    {
+        $comercio = $this->comercioConPedidos();
+
+        $this->postJson(route('api.cart.incr'), [
+            'comercio_id' => $comercio->id,
+            'session_id' => 'sess-formato',
+            'nombre' => 'Bife',
+            'price_text' => $texto,
+        ])->assertOk()->assertJson(['total_centavos' => $centavos]);
+    }
+
+    public static function formatosDePrecio(): array
+    {
+        return [
+            'inglés con decimales' => ['$29,000.00', 2900000],
+            'inglés sin decimales' => ['$ 45,000', 4500000],
+            'argentino' => ['$29.000', 2900000],
+            'argentino con decimales' => ['$29.000,50', 2900050],
+            'sin separador' => ['$29000', 2900000],
+            'punto al final' => ['$3800.', 380000],
+            'decimal con punto' => ['$3.50', 350],
+            'decimal con coma' => ['$3,50', 350],
+        ];
+    }
+
     public function test_guest_can_remove_and_clear_items(): void
     {
         $comercio = $this->comercioConPedidos();

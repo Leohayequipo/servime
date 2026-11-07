@@ -334,7 +334,9 @@ class ComandaService
             return null;
         }
 
-        if (str_contains($s, ',')) {
+        if (preg_match('/^\d{1,3}(,\d{3})+(\.\d+)?$/', $s)) {
+            $s = str_replace(',', '', $s);                 // formato inglés: "29,000.00" o "29,000"
+        } elseif (str_contains($s, ',')) {
             $s = str_replace(['.', ','], ['', '.'], $s);
         } elseif (! preg_match('/^\d+\.\d{2}$/', $s)) {
             $s = str_replace('.', '', $s);

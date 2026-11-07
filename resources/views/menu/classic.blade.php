@@ -825,7 +825,8 @@
         function aCentavos(txt) {
             let s = String(txt || '').replace(/[^0-9.,]/g, '');
             if (!s) return null;
-            if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+            if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');   // inglés: "29,000.00" o "29,000"
+            else if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
             else if (!/^\d+\.\d{2}$/.test(s)) s = s.replace(/\./g, '');
             const v = parseFloat(s);
             return isNaN(v) ? null : Math.round(v * 100);
@@ -932,10 +933,14 @@
                 caja.appendChild(fila);
             });
 
-            const centavos = lista.reduce((s, it) => s + (it.priceCents || 0) * it.qty, 0);
+            // El precio se recalcula del texto en cada pintada: el `priceCents` guardado en el
+            // navegador se calculó al sumar el plato, y si lo calculó el parser viejo quedaba
+            // mal para siempre (un pedido a medio armar seguía mostrando $69 con el arreglo hecho).
+            const centsDe = it => it.priceText ? aCentavos(it.priceText) : (it.priceCents ?? null);
+            const centavos = lista.reduce((s, it) => s + (centsDe(it) || 0) * it.qty, 0);
             document.getElementById('miPedidoTotal').textContent =
                 (centavos / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-            document.getElementById('miPedidoSinPrecio').hidden = !lista.some(it => it.priceCents == null);
+            document.getElementById('miPedidoSinPrecio').hidden = !lista.some(it => centsDe(it) == null);
 
             const pedir = document.getElementById('btnPedir');
             if (pedir) pedir.disabled = lista.length === 0;

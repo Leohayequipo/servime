@@ -1747,7 +1747,9 @@
             if(!txt) return null;
             let s = String(txt).replace(/[^0-9.,]/g,'');
             if(!s) return null;
-            if(s.includes(',')){
+            if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)){
+                s = s.replace(/,/g,'');                       // inglés: "29,000.00" o "29,000"
+            } else if(s.includes(',')){
                 s = s.replace(/\./g,'').replace(',', '.');   // coma decimal, puntos son miles
             } else if(!/^\d+\.\d{2}$/.test(s)){
                 s = s.replace(/\./g,'');                      // puntos = miles (salvo "X.YY" decimal)
@@ -1783,7 +1785,9 @@
         function renderWish(){
             if(!pedidosHabilitados) return;
             const list=document.getElementById('wishList'); if(!list) return;
-            const w=loadWish();
+            // El precio se recalcula del texto: el `priceCents` guardado en el navegador lo calculó
+            // el parser viejo y quedaba mal en un pedido a medio armar.
+            const w=loadWish().map(it=>({...it, priceCents: it.priceText ? parsePriceToCents(it.priceText) : (it.priceCents ?? null)}));
             let anyNoPrecio = false;
             const htmlItems = w.length
               ? w.map((it,idx)=>{
