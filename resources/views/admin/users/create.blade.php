@@ -76,10 +76,10 @@
                             <code class="font-mono bg-black/30 px-1.5 py-0.5 rounded select-all">{{ \App\Models\User::passwordInicial() }}</code>
                         </p>
                         <p class="text-warning/80 mt-1.5">
-                            Es la misma para todas las cuentas nuevas, así que conviene que la cambie apenas ingrese. Va a poder entrar con su usuario o con su email.
+                            Es la misma para todas las cuentas nuevas, así que conviene que la cambie: al entrar, el panel se lo recuerda. Va a poder entrar con su usuario o con su email.
                         </p>
                         <p class="text-warning/70 text-xs mt-2">
-                            También le llega un mail con un link para elegir su propia contraseña, que es la forma recomendada. Ese link <span class="font-medium">vence a la hora</span>: si tarda en abrirlo, tiene que pedir uno nuevo desde &ldquo;Olvidé mi contraseña&rdquo;.
+                            También le llega un mail con un link para elegir su propia contraseña, que es la forma recomendada. Ese link <span class="font-medium">vence a los 7 días</span>: si tarda más en abrirlo, tiene que pedir uno nuevo desde &ldquo;Olvidé mi contraseña&rdquo;.
                         </p>
                     </div>
                 </div>

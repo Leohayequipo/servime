@@ -95,6 +95,10 @@ class AdminController extends Controller
             'email_verified_at' => now(),
         ]);
 
+        // Mientras tenga la contraseña inicial, el panel le muestra un aviso para que elija
+        // una propia (<x-aviso-password />). Si la elige desde el mail, la marca se apaga.
+        $user->forceFill(['debe_cambiar_password' => true])->save();
+
         // Enviar email de bienvenida con link para establecer contraseña
         try {
             // Broker 'bienvenida': el link dura 7 días en vez de 1 hora. El comerciante

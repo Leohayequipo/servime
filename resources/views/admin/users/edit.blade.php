@@ -28,7 +28,7 @@
                         <div class="min-w-0 flex-1">
                             <h2 class="text-warning font-semibold">Credenciales de acceso</h2>
                             <p class="text-warning/80 text-sm mt-0.5">
-                                La contraseña inicial es la misma para todas las cuentas nuevas. Pedile que la cambie apenas entre.
+                                La contraseña inicial es la misma para todas las cuentas nuevas. Al entrar, el panel le recuerda que elija una propia.
                             </p>
 
                             <dl class="mt-4 grid gap-3 sm:grid-cols-3">

@@ -49,6 +49,9 @@ class NewPasswordController extends Controller
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
+                    // El mail de bienvenida es la otra forma de dejar la contraseña
+                    // inicial: al elegir una propia por acá ya no se le pide cambiarla.
+                    'debe_cambiar_password' => hash_equals(User::passwordInicial(), (string) $request->password),
                 ])->save();
 
                 event(new PasswordReset($user));

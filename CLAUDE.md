@@ -95,6 +95,12 @@ npm run dev   /   npm run build
 - **Un solo dominio:** `www.servime.net` redirige con 301 a `servime.net` (`RedirigirSinWww`).
   Las URLs canónicas y el sitemap se arman con el dominio de la visita, así que sin esa
   redirección Google veía dos sitios.
+- **Contraseña inicial pública.** Las cuentas que crea el admin nacen con la misma
+  contraseña para todas (`AUTH_PASSWORD_INICIAL`), y el repo es público. Por eso nacen con
+  `users.debe_cambiar_password` y el panel les muestra un aviso (`<x-aviso-password />`, en el
+  layout) hasta que elijan otra en `/cambiar-contrasena`. Es un recordatorio, NO un bloqueo:
+  se decidió así para no sumar pasos obligatorios. Lo que lo hace seguro es que la contraseña
+  inicial NO esté en el repo (ver `.env` de producción).
 - Rutas públicas resuelven comercio por `slug` (binding `{comercio:slug}`), no por id.
 - Servir logos valida path-traversal con `realpath` + prefijo permitido (ver `web.php`).
 - Menús con SoftDeletes; índices en `menus`; FK en `carts`.

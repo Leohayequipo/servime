@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -20,9 +21,11 @@ class PasswordController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $request->user()->update([
+        $request->user()->forceFill([
             'password' => Hash::make($validated['password']),
-        ]);
+            // Si vuelve a poner la inicial, queda marcada otra vez.
+            'debe_cambiar_password' => hash_equals(User::passwordInicial(), $validated['password']),
+        ])->save();
 
         return back()->with('status', 'password-updated');
     }

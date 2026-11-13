@@ -48,6 +48,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // No está en $fillable a propósito: se prende y apaga solo con forceFill
+            // desde el alta, el login y los cambios de contraseña.
+            'debe_cambiar_password' => 'boolean',
         ];
     }
 
@@ -120,10 +123,11 @@ class User extends Authenticatable
      * Se configura con AUTH_PASSWORD_INICIAL en el .env (por defecto "admin"). Es un
      * método y no una constante porque las constantes no pueden leer configuración.
      *
-     * ⚠️ Es la MISMA para todas las cuentas. Se eligió así para poder darle el acceso
-     * a alguien por teléfono sin depender del mail de bienvenida. El costo es que,
-     * mientras no la cambien, cualquiera que adivine el usuario (se deriva del email)
-     * entra a esa cuenta.
+     * ⚠️ Es la MISMA para todas las cuentas, y el repo es público. Se eligió así para
+     * poder darle el acceso a alguien por teléfono sin depender del mail de bienvenida.
+     * Para que eso no deje la cuenta abierta, la cuenta nace con `debe_cambiar_password`
+     * y el panel le muestra un aviso (<x-aviso-password />) hasta que elija otra. Es un
+     * recordatorio, no un bloqueo: se decidió no sumar un paso obligatorio.
      */
     public static function passwordInicial(): string
     {

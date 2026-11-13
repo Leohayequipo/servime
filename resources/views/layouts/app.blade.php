@@ -335,6 +335,8 @@
             </div>
         </nav>
 
+        <x-aviso-password />
+
         <!-- Main Content -->
         <main class="flex-1">
                 {{ $slot }}

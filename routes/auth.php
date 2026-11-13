@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\CambioPasswordInicialController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -57,6 +58,13 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    // Adonde lleva el aviso del panel a las cuentas que siguen con la contraseña inicial.
+    Route::get('cambiar-contrasena', [CambioPasswordInicialController::class, 'create'])
+        ->name('password.cambiar');
+    Route::put('cambiar-contrasena', [CambioPasswordInicialController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.cambiar.guardar');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
