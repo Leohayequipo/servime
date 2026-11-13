@@ -75,7 +75,8 @@
             const estilo = document.createElement('style');
             estilo.textContent = `
                 .driver-popover.servime-guia { background: #1A1614; color: #F5F2EF; border: 1px solid rgba(255,255,255,.12);
-                    border-radius: 16px; padding: 18px; max-width: 290px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+                    border-radius: 16px; padding: 18px; max-width: min(290px, calc(100vw - 24px)); min-width: 0;
+                    box-shadow: 0 12px 40px rgba(0,0,0,.5); overflow-y: auto; }
                 .servime-guia .driver-popover-title { font-size: 18px; font-weight: 700; color: #fff; }
                 .servime-guia .driver-popover-description { font-size: 15px; line-height: 1.45; color: #E4DDD5; margin-top: 6px; }
                 .servime-guia .driver-popover-progress-text { color: #A39A93; font-size: 13px; }
@@ -90,6 +91,50 @@
             document.head.appendChild(estilo);
         });
         return cargando;
+    }
+
+    // El globo siempre dentro de lo que se ve, con el botón "Siguiente" a mano.
+    //
+    // Driver.js lo calcula una vez contra la ventana. En el celular eso se rompe: el
+    // teclado y la barra del navegador cambian la pantalla visible (visualViewport) sin
+    // que el globo se entere, y queda tapado o fuera de pantalla, sin forma de tocar
+    // "Siguiente". Acá se mide contra la pantalla visible y se lo corre lo justo.
+    const MARGEN = 8;
+    function encuadrar() {
+        const el = document.querySelector('.driver-popover.servime-guia');
+        if (!el) return;
+        const vv = window.visualViewport;
+        const arriba = vv ? vv.offsetTop : 0;
+        const izq = vv ? vv.offsetLeft : 0;
+        const ancho = vv ? vv.width : window.innerWidth;
+        const alto = vv ? vv.height : window.innerHeight;
+
+        // Si es más alto que la pantalla, que scrollee por dentro en vez de salirse.
+        el.style.maxHeight = Math.max(120, alto - MARGEN * 2) + 'px';
+
+        const r = el.getBoundingClientRect();
+        let dx = 0, dy = 0;
+        if (r.left < izq + MARGEN) dx = izq + MARGEN - r.left;
+        else if (r.right > izq + ancho - MARGEN) dx = izq + ancho - MARGEN - r.right;
+        if (r.top < arriba + MARGEN) dy = arriba + MARGEN - r.top;
+        else if (r.bottom > arriba + alto - MARGEN) dy = arriba + alto - MARGEN - r.bottom;
+
+        if (dx || dy) {
+            el.style.left = (r.left + dx) + 'px';
+            el.style.top = (r.top + dy) + 'px';
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+            // Corrido, la flecha ya no apunta bien: mejor sin flecha que una torcida.
+            const flecha = el.querySelector('.driver-popover-arrow');
+            if (flecha) flecha.style.display = 'none';
+        }
+    }
+    let pendiente = null;
+    let escuchando = false;
+    function encuadrarDespues() {
+        clearTimeout(pendiente);
+        // Driver reposiciona el globo en su propio resize: se espera a que termine.
+        pendiente = setTimeout(encuadrar, 120);
     }
 
     async function mostrar(repetida) {
@@ -113,6 +158,12 @@
             prevBtnText: TEXTOS.atras,
             doneBtnText: TEXTOS.listo,
             popoverClass: 'servime-guia',
+            // Lo que se señala NO se toca mientras dura la guía. Si no, el que toca el
+            // campo de texto abre el teclado (y el globo se va de pantalla) y el que toca
+            // el micrófono empieza a grabar sin querer.
+            disableActiveInteraction: true,
+            onPopoverRender: encuadrarDespues,
+            onHighlighted: encuadrarDespues,
             overlayOpacity: 0.72,
             stagePadding: 6,
             stageRadius: 18,
@@ -126,6 +177,13 @@
             },
         });
         window.smTrack?.('guia_vista', { pantalla: PANTALLA, repetida: !!repetida });
+        // Teclado, barra del navegador, giro de pantalla: se vuelve a encuadrar.
+        if (!escuchando) {
+            escuchando = true;
+            window.addEventListener('resize', encuadrarDespues);
+            window.visualViewport?.addEventListener('resize', encuadrarDespues);
+            window.visualViewport?.addEventListener('scroll', encuadrarDespues);
+        }
         guia.drive();
     }
 

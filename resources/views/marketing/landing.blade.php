@@ -1024,10 +1024,13 @@
                         @if($demoSlug)
                             @php $demoUrl = route('menu.public', $demoSlug); @endphp
                             <div class="flex flex-col sm:flex-row gap-6 items-start">
-                                {{-- QR de verdad: escaneable con la cámara, apunta al menú demo.
-                                     Usa el mismo servicio que el generador de QR del panel. --}}
+                                {{-- QR fijo (public/images/qr-demo.png): es el QR de la mesa 1 del comercio
+                                     live-demo (https://servime.net/menu/live-demo?m=…). Es una imagen y no
+                                     uno generado a partir de $demoUrl para que sea EXACTAMENTE el que se
+                                     ve en la mesa de la demo. Si cambia el comercio demo, hay que
+                                     reemplazar la imagen. --}}
                                 <div class="shrink-0 mx-auto sm:mx-0 rounded-2xl p-3" style="background:var(--ground); border:1px solid var(--line);">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data={{ urlencode($demoUrl) }}&color=284236&bgcolor=F2EDE3&margin=8&ecc=H&format=png"
+                                    <img src="{{ asset('images/qr-demo.png') }}"
                                          alt="Código QR del menú de demostración de ServiME"
                                          width="140" height="140" loading="lazy" decoding="async"
                                          style="width:140px;height:140px;display:block;">
