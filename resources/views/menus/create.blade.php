@@ -447,6 +447,17 @@
                                          Los ids, `.plato-item`, `data-plato-index` y `#platos-container-N` NO se tocan:
                                          de eso cuelgan la edición en el lugar, las fotos, las etiquetas y el reordenamiento
                                          con arrastre. Los bloques con lógica están copiados tal cual. --}}
+                                    {{-- Todos los tags que tiene cargados la carta, con en cuántos platos está cada
+                                         uno. Lo arma resumenTagsRender() (JS) leyendo los tags de cada plato, así
+                                         siempre coincide con lo que hay en pantalla. Se ve con las categorías cerradas. --}}
+                                    <div class="mb-3 rounded-xl border border-accent-gray bg-secondary-dark px-4 py-3" id="resumen-tags-caja">
+                                        <p class="text-xs font-semibold text-text-secondary mb-2">
+                                            Tags de tu carta <span id="resumen-tags-total" class="font-normal"></span>
+                                        </p>
+                                        <p id="resumen-tags-filtro" class="hidden text-xs text-text-secondary mb-2"></p>
+                                        <div class="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto" id="resumen-tags"></div>
+                                    </div>
+
                                     <div class="space-y-3" id="editor-categorias">
                                         @foreach($categorias as $categoriaIndex => $categoria)
                                             @php
@@ -466,6 +477,8 @@
                                                 <svg class="editor-categoria-flecha w-4 h-4 text-text-secondary flex-shrink-0 -rotate-90 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                                 <span class="flex-1 min-w-0 font-semibold text-text-primary truncate">{{ $categoria['nombre'] ?? 'Sin nombre' }}</span>
                                                 <span class="text-sm text-text-secondary flex-shrink-0">{{ count($platosCat) }} {{ count($platosCat) === 1 ? 'plato' : 'platos' }}</span>
+                                                {{-- Los tags que hay en esta categoría y en cuántos platos. Lo arma tagsPorCategoriaRender() (JS). --}}
+                                                <span class="hidden md:flex items-center gap-1 flex-shrink-0 max-w-[15rem] overflow-hidden" data-tags-cat="{{ $categoriaIndex }}"></span>
                                                 @if($sinDescCat)
                                                     <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full border border-accent-gray text-text-secondary flex-shrink-0">{{ $sinDescCat }} sin descripción</span>
                                                 @endif
@@ -571,6 +584,17 @@
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                                         </svg>
                                                                     </button>
+                                                            </div>
+
+                                                            {{-- Los tags del plato, a la vista sin abrir el detalle. Sólo lectura: se
+                                                                 editan adentro del detalle y esta fila se repinta sola (actualizarTagsVista).
+                                                                 Sin tags queda oculta: lo que falta se ve en el recuadro de arriba. --}}
+                                                            @php $tagsFila = collect(is_array($plato['tags'] ?? null) ? $plato['tags'] : [])->filter()->values(); @endphp
+                                                            <div class="plato-tags-fila flex flex-wrap gap-1.5 px-3 sm:px-4 sm:pl-12 pb-2 {{ $tagsFila->isEmpty() ? 'hidden' : '' }}"
+                                                                 id="tags-fila-{{ $categoriaIndex }}-{{ $platoIndex }}">
+                                                                @foreach($tagsFila as $tagFila)
+                                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 whitespace-nowrap">{{ $tagFila }}</span>
+                                                                @endforeach
                                                             </div>
 
                                                             <div class="plato-detalle hidden flex flex-col sm:flex-row gap-4 px-4 pb-4 sm:pl-12 cursor-default">
@@ -4592,6 +4616,171 @@
             }
         }
 
+        // ── Tags a la vista ─────────────────────────────────────────────────────────
+        // La fuente de verdad son los `.tag-item` del detalle de cada plato (los mismos que
+        // lee addTag/removeTag para guardar). La fila bajo el nombre, los chips de cada
+        // categoría y el recuadro de arriba se arman desde ahí, así nunca se desincronizan
+        // de lo que se guarda.
+        function textosDeTags(lista) {
+            return Array.from(lista.querySelectorAll('.tag-item'))
+                .map(t => t.textContent.trim().replace('×', '').trim())
+                .filter(Boolean);
+        }
+
+        function chipTag(texto, clases) {
+            const chip = document.createElement('span');
+            chip.className = clases;
+            chip.textContent = texto;
+            return chip;
+        }
+
+        const CHIP_TAG = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/40 whitespace-nowrap';
+
+        // Tag que está filtrando la lista (null = se ve todo).
+        let tagFiltro = null;
+        // Categorías que abrió el filtro, para volver a cerrarlas al sacarlo.
+        const abiertasPorFiltro = new Set();
+
+        // Abre o cierra una categoría igual que el acordeón del editor (cuerpo, aria-expanded
+        // y flecha), pero sin pasar por su clic: ése cierra todas las demás y acá hacen falta
+        // abiertas TODAS las que tienen platos con el tag.
+        function abrirCategoriaDirecto(cat, abrir) {
+            cat.querySelector('.editor-categoria-cuerpo')?.classList.toggle('hidden', !abrir);
+            cat.querySelector('.editor-categoria-cabecera')?.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+            cat.querySelector('.editor-categoria-flecha')?.classList.toggle('-rotate-90', !abrir);
+        }
+
+        function aplicarFiltroTags() {
+            document.querySelectorAll('.editor-categoria').forEach(cat => {
+                let coinciden = 0;
+                cat.querySelectorAll('.plato-item').forEach(plato => {
+                    const lista = plato.querySelector('[id^="tags-list-"]');
+                    const ok = !tagFiltro || (lista && textosDeTags(lista).includes(tagFiltro));
+                    plato.style.display = ok ? '' : 'none';
+                    if (ok) coinciden++;
+                });
+                const cuerpo = cat.querySelector('.editor-categoria-cuerpo');
+                if (tagFiltro) {
+                    cat.style.display = coinciden ? '' : 'none';
+                    if (coinciden && cuerpo && cuerpo.classList.contains('hidden')) {
+                        abrirCategoriaDirecto(cat, true);
+                        abiertasPorFiltro.add(cat);
+                    }
+                } else {
+                    cat.style.display = '';
+                    if (abiertasPorFiltro.has(cat)) abrirCategoriaDirecto(cat, false);
+                }
+            });
+            if (!tagFiltro) abiertasPorFiltro.clear();
+        }
+
+        function filtrarPorTag(tag) {
+            tagFiltro = (tagFiltro === tag) ? null : tag;
+            resumenTagsRender();
+        }
+
+        // Los chips de tags de cada categoría, en su cabecera.
+        function tagsPorCategoriaRender() {
+            document.querySelectorAll('.editor-categoria').forEach(cat => {
+                const caja = cat.querySelector('[data-tags-cat]');
+                if (!caja) return;
+                const cuenta = new Map();
+                cat.querySelectorAll('[id^="tags-list-"]').forEach(lista => {
+                    [...new Set(textosDeTags(lista))].forEach(t => cuenta.set(t, (cuenta.get(t) || 0) + 1));
+                });
+                const ordenados = [...cuenta.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'));
+                const visibles = ordenados.slice(0, 2);
+                const resto = ordenados.length - visibles.length;
+                const chips = visibles.map(([t, n]) => chipTag(`${t} ${n}`, CHIP_TAG));
+                if (resto > 0) chips.push(chipTag(`+${resto}`, CHIP_TAG));
+                caja.replaceChildren(...chips);
+                caja.title = ordenados.map(([t, n]) => `${t} (${n})`).join(', ');
+            });
+        }
+
+        // El recuadro de la carta (cada tag es un botón que filtra) y todo lo que cuelga de él.
+        function resumenTagsRender() {
+            const caja = document.getElementById('resumen-tags');
+            if (!caja) return;
+
+            const listas = document.querySelectorAll('[id^="tags-list-"]');
+            const cuenta = new Map();
+            let platosConTags = 0;
+            listas.forEach(lista => {
+                const tags = [...new Set(textosDeTags(lista))];
+                if (tags.length) platosConTags++;
+                tags.forEach(t => cuenta.set(t, (cuenta.get(t) || 0) + 1));
+            });
+
+            // Si el tag que filtraba ya no existe en ningún plato, se saca el filtro.
+            if (tagFiltro && !cuenta.has(tagFiltro)) tagFiltro = null;
+
+            const total = document.getElementById('resumen-tags-total');
+            if (total) {
+                total.textContent = cuenta.size
+                    ? `· ${cuenta.size} distintos, en ${platosConTags} de ${listas.length} platos · tocá uno para ver cuáles son`
+                    : '';
+            }
+
+            const aviso = document.getElementById('resumen-tags-filtro');
+            if (aviso) {
+                aviso.replaceChildren();
+                aviso.classList.toggle('hidden', !tagFiltro);
+                if (tagFiltro) {
+                    aviso.append(`Mostrando solo los platos con «${tagFiltro}» (${cuenta.get(tagFiltro)}). `);
+                    const quitar = document.createElement('button');
+                    quitar.type = 'button';
+                    quitar.className = 'font-semibold underline underline-offset-2 hover:no-underline';
+                    quitar.textContent = 'Ver todos';
+                    quitar.onclick = () => filtrarPorTag(tagFiltro);
+                    aviso.appendChild(quitar);
+                }
+            }
+
+            if (!cuenta.size) {
+                caja.innerHTML = '<span class="text-xs text-text-secondary">Ningún plato tiene tags todavía. Se agregan abriendo un plato.</span>';
+            } else {
+                const ordenados = [...cuenta.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'));
+                caja.replaceChildren(...ordenados.map(([tag, n]) => {
+                    const boton = document.createElement('button');
+                    boton.type = 'button';
+                    const activo = tag === tagFiltro;
+                    boton.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-accent-blue border border-accent-blue/40 transition-colors cursor-pointer '
+                        + (activo ? 'bg-accent-blue/40 ring-2 ring-accent-blue' : 'bg-accent-blue/20 hover:bg-accent-blue/30');
+                    boton.setAttribute('aria-pressed', activo ? 'true' : 'false');
+                    boton.title = `${tag}: ${n} ${n === 1 ? 'plato' : 'platos'}. ${activo ? 'Tocá para ver todos.' : 'Tocá para ver cuáles son.'}`;
+                    boton.textContent = tag;
+                    const cant = document.createElement('span');
+                    cant.className = 'text-text-secondary font-normal';
+                    cant.textContent = n;
+                    boton.appendChild(cant);
+                    boton.onclick = () => filtrarPorTag(tag);
+                    return boton;
+                }));
+            }
+
+            tagsPorCategoriaRender();
+            aplicarFiltroTags();
+        }
+
+        // Repinta la fila de tags de UN plato y todo lo demás que depende de los tags.
+        function actualizarTagsVista(categoriaIndex, platoIndex) {
+            const lista = document.getElementById(`tags-list-${categoriaIndex}-${platoIndex}`);
+            const fila = document.getElementById(`tags-fila-${categoriaIndex}-${platoIndex}`);
+            if (lista && fila) {
+                const tags = textosDeTags(lista);
+                fila.replaceChildren(...tags.map(t => chipTag(t, CHIP_TAG)));
+                fila.classList.toggle('hidden', tags.length === 0);
+            }
+            resumenTagsRender();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', resumenTagsRender);
+        } else {
+            resumenTagsRender();
+        }
+
         // Función para manejar input de tags
         function handleTagInput(event, categoriaIndex, platoIndex) {
             if (event.key === 'Enter' || event.key === ',') {
@@ -4632,7 +4821,8 @@
                 </button>
             `;
             tagsList.appendChild(tagElement);
-            
+            actualizarTagsVista(categoriaIndex, platoIndex);
+
             // Actualizar tags en el servidor
             await updatePlatoTags(categoriaIndex, platoIndex, [...currentTags, tagValue]);
         }
@@ -4651,6 +4841,8 @@
                 }
             });
             
+            actualizarTagsVista(categoriaIndex, platoIndex);
+
             // Obtener tags restantes
             const remainingTags = Array.from(tagsList.querySelectorAll('.tag-item')).map(tag => tag.textContent.trim().replace('×', '').trim());
             
