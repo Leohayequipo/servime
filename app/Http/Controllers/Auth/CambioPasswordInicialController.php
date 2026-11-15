@@ -39,7 +39,7 @@ class CambioPasswordInicialController extends Controller
                 Rule::notIn([User::passwordInicial()]),
             ],
         ], [
-            'password.not_in' => 'Esa es la contraseña inicial, que es la misma para todas las cuentas. Elegí otra.',
+            'password.not_in' => 'Esa es la contraseña inicial. Elegí otra.',
         ]);
 
         $request->user()->forceFill([

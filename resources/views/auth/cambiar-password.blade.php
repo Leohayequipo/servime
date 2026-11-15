@@ -161,8 +161,8 @@
                 Elegí tu contraseña
             </h1>
             <p style="color:var(--muted); font-size:.95rem;">
-                Estás usando la contraseña inicial, que es la misma para varias cuentas.
-                Elegí una que sea solo tuya.
+                Estás usando la contraseña inicial.
+                Elegí una propia para proteger tu cuenta.
             </p>
         </div>
 

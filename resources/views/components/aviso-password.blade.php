@@ -15,7 +15,7 @@
                 <span class="flex-none w-6 h-6 rounded-full bg-warning/15 text-warning grid place-items-center text-sm font-bold" aria-hidden="true">!</span>
                 <p class="flex-1 min-w-[14rem] text-sm text-text-primary">
                     <span class="font-semibold">Estás usando la contraseña inicial.</span>
-                    Es la misma para varias cuentas: elegí una propia para proteger la tuya.
+                    Elegí una propia para proteger tu cuenta.
                 </p>
                 <a href="{{ route('password.cambiar') }}"
                    class="flex-none text-sm font-semibold underline underline-offset-2 text-text-primary hover:no-underline">
