@@ -120,7 +120,7 @@ class User extends Authenticatable
     /**
      * Contraseña con la que se crean las cuentas nuevas.
      *
-     * Se configura con AUTH_PASSWORD_INICIAL en el .env (por defecto "admin"). Es un
+     * Se configura con AUTH_PASSWORD_INICIAL en el .env, SIN valor por defecto. Es un
      * método y no una constante porque las constantes no pueden leer configuración.
      *
      * ⚠️ Es la MISMA para todas las cuentas, y el repo es público. Se eligió así para
@@ -131,8 +131,9 @@ class User extends Authenticatable
      */
     public static function passwordInicial(): string
     {
-        // Sin default acá a propósito: el valor por defecto vive en config/auth.php.
-        // Duplicarlo hacía que los dos se desincronizaran al cambiar uno solo.
+        // Sin default, ni acá ni en config/auth.php: el repo es público y cualquier valor
+        // escrito sería una contraseña conocida. Sin configurar devuelve '' y el alta de
+        // usuarios (AdminController::storeUser) se frena con un error.
         return (string) config('auth.password_inicial');
     }
 

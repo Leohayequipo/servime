@@ -103,9 +103,14 @@ return [
     | archivo: con la config cacheada en producción, env() devuelve null.
     | Si se cambia en el .env de producción hay que correr `php artisan config:cache`.
     |
+    | ⚠️ SIN valor por defecto, a propósito. El repo es público: cualquier default
+    | escrito acá es una contraseña que todos pueden leer, y se activaría sola y sin
+    | avisar si un día falta la línea en el .env. Sin el valor, el alta de usuarios
+    | se frena con un error en vez de crear cuentas con una contraseña conocida.
+    |
     */
 
-    'password_inicial' => env('AUTH_PASSWORD_INICIAL', 'servime2026'),
+    'password_inicial' => env('AUTH_PASSWORD_INICIAL'),
 
     'passwords' => [
         // "Olvidé mi contraseña": el pedido lo hace la propia persona en el momento,

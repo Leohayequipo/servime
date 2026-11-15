@@ -73,7 +73,13 @@
                     <div class="bg-warning/15 border border-warning/30 rounded-xl p-4 text-sm">
                         <p class="text-warning">
                             La cuenta se crea con la contraseña
-                            <code class="font-mono bg-black/30 px-1.5 py-0.5 rounded select-all">{{ \App\Models\User::passwordInicial() }}</code>
+                            @if(filled(\App\Models\User::passwordInicial()))
+                                <code class="font-mono bg-black/30 px-1.5 py-0.5 rounded select-all">{{ \App\Models\User::passwordInicial() }}</code>
+                            @else
+                                <span class="font-semibold">que todavía no está configurada</span>: falta
+                                <code class="font-mono bg-black/30 px-1.5 py-0.5 rounded">AUTH_PASSWORD_INICIAL</code>
+                                en el .env, y sin eso no se pueden crear usuarios.
+                            @endif
                         </p>
                         <p class="text-warning/80 mt-1.5">
                             Es la misma para todas las cuentas nuevas, así que conviene que la cambie: al entrar, el panel se lo recuerda. Va a poder entrar con su usuario o con su email.

@@ -44,6 +44,40 @@ class CambioPasswordInicialTest extends TestCase
         $this->assertTrue(User::where('email', 'donjose@example.com')->first()->debe_cambiar_password);
     }
 
+    public function test_sin_contrasena_inicial_configurada_no_se_crea_el_usuario(): void
+    {
+        Mail::fake();
+        config(['auth.password_inicial' => null]);
+        $admin = User::factory()->superAdmin()->create();
+
+        // La pantalla avisa antes de completar el formulario...
+        $this->actingAs($admin)->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('todavía no está configurada');
+
+        // ...y el alta se frena con un error, sin crear la cuenta ni mandar el mail.
+        $this->actingAs($admin)->post(route('admin.users.store'), [
+            'name' => 'Parrilla Don José',
+            'email' => 'donjose@example.com',
+            'username' => '',
+            'whatsapp' => '',
+            'role' => 'user',
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('users', ['email' => 'donjose@example.com']);
+        Mail::assertNothingQueued();
+    }
+
+    public function test_entrar_con_contrasena_vacia_no_marca_la_cuenta_si_falta_la_config(): void
+    {
+        config(['auth.password_inicial' => null]);
+        $user = User::factory()->create();
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password']);
+
+        $this->assertFalse($user->refresh()->debe_cambiar_password);
+    }
+
     public function test_una_cuenta_marcada_sigue_usando_el_panel_y_ve_el_aviso(): void
     {
         $user = $this->cuentaConPasswordInicial();

@@ -82,8 +82,17 @@ class AdminController extends Controller
         // dependía del mail de bienvenida para poder usarse. Ahora se genera una legible
         // y se le muestra al admin una sola vez, así puede entregarla en el momento sin
         // depender de que el mail llegue.
-        $username = $validated['username'] ?: User::generarUsername($validated['email'], $validated['name']);
         $passwordInicial = User::generarPasswordInicial();
+
+        // Sin contraseña inicial configurada no se crea nada: antes había un valor por
+        // defecto escrito en el repo (público) y se usaba solo, sin avisar.
+        if (blank($passwordInicial)) {
+            return back()->withInput()->with('error',
+                'No se puede crear el usuario: falta configurar AUTH_PASSWORD_INICIAL en el .env '
+                .'(y después correr php artisan config:cache).');
+        }
+
+        $username = $validated['username'] ?: User::generarUsername($validated['email'], $validated['name']);
 
         $user = User::create([
             'name' => $validated['name'],
