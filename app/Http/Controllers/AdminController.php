@@ -344,12 +344,12 @@ class AdminController extends Controller
     private function ensureMenuFileInPublicHtml(string $archivoPath): void
     {
         // Solo verificar/copiar si estamos en producción
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             return;
         }
 
         $filename = basename($archivoPath);
-        $targetFile = '/home/u560898880/domains/servime.net/public_html/storage/menus/'.$filename;
+        $targetFile = \App\Support\PublicHtml::ruta('storage/menus/').$filename;
 
         // Si ya existe en public_html, no hacer nada
         if (file_exists($targetFile)) {
@@ -366,10 +366,10 @@ class AdminController extends Controller
     private function copyMenuToPublicHtml(string $archivoPath): void
     {
         // Ruta directa conocida para servime.net en producción
-        $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/menus';
+        $publicHtmlPath = \App\Support\PublicHtml::ruta('storage/menus');
 
         // Verificar si estamos en producción (Hostinger)
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             // No estamos en producción, salir silenciosamente
             return;
         }

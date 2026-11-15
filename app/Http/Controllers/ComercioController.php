@@ -419,8 +419,8 @@ class ComercioController extends Controller
             }
 
             // Crear en public_html si estamos en producción
-            if (file_exists('/home/u560898880/domains')) {
-                $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
+            if (\App\Support\PublicHtml::disponible()) {
+                $publicHtmlBase = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}");
                 $publicHtmlDirs = [
                     "{$publicHtmlBase}/menu-items",
                     "{$publicHtmlBase}/menus",
@@ -554,13 +554,13 @@ class ComercioController extends Controller
     {
         // Nueva estructura: comercios/{id}/logos o estructura antigua logos/
         if ($comercioId) {
-            $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/logos";
+            $publicHtmlPath = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}/logos");
         } else {
-            $publicHtmlPath = '/home/u560898880/domains/servime.net/public_html/storage/logos';
+            $publicHtmlPath = \App\Support\PublicHtml::ruta('storage/logos');
         }
 
         // Verificar si estamos en producción (Hostinger)
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             // No estamos en producción, salir silenciosamente
             return;
         }

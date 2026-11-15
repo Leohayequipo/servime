@@ -1219,8 +1219,8 @@ class MenuController extends Controller
             }
 
             // Crear en public_html si estamos en producción
-            if (file_exists('/home/u560898880/domains')) {
-                $publicHtmlBase = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}";
+            if (\App\Support\PublicHtml::disponible()) {
+                $publicHtmlBase = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}");
                 $publicHtmlDirs = [
                     "{$publicHtmlBase}/menu-items",
                     "{$publicHtmlBase}/menus",
@@ -1249,12 +1249,12 @@ class MenuController extends Controller
     private function ensureMenuFileInPublicHtml(string $archivoPath, int $comercioId): void
     {
         // Solo verificar/copiar si estamos en producción
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             return;
         }
 
         $filename = basename($archivoPath);
-        $targetFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus/".$filename;
+        $targetFile = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}/menus/").$filename;
 
         // Si ya existe en public_html, no hacer nada
         if (file_exists($targetFile)) {
@@ -1275,12 +1275,12 @@ class MenuController extends Controller
         }
 
         // Verificar entorno de producción - salir rápido si no estamos en producción
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             return;
         }
 
         // Nueva estructura: comercios/{id}/menu-items
-        $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menu-items";
+        $publicHtmlPath = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}/menu-items");
         $sourceFile = storage_path('app/public/'.$archivoPath);
 
         // Verificaciones rápidas sin logs excesivos
@@ -1314,10 +1314,10 @@ class MenuController extends Controller
     private function copyMenuToPublicHtml(string $archivoPath, int $comercioId): void
     {
         // Nueva estructura: comercios/{id}/menus
-        $publicHtmlPath = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menus";
+        $publicHtmlPath = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}/menus");
 
         // Verificar si estamos en producción (Hostinger)
-        if (! file_exists('/home/u560898880/domains')) {
+        if (! \App\Support\PublicHtml::disponible()) {
             // No estamos en producción, salir silenciosamente
             return;
         }
@@ -1398,9 +1398,9 @@ class MenuController extends Controller
         }
 
         // Eliminar también de public_html/storage si existe (producción)
-        if ($comercioId && file_exists('/home/u560898880/domains')) {
+        if ($comercioId && \App\Support\PublicHtml::disponible()) {
             $filename = basename($archivoPath);
-            $publicHtmlFile = "/home/u560898880/domains/servime.net/public_html/storage/comercios/{$comercioId}/menu-items/{$filename}";
+            $publicHtmlFile = \App\Support\PublicHtml::ruta("storage/comercios/{$comercioId}/menu-items/{$filename}");
             if (file_exists($publicHtmlFile)) {
                 @unlink($publicHtmlFile);
                 Log::info('Imagen de plato/promoción eliminada de public_html', ['file' => $publicHtmlFile]);

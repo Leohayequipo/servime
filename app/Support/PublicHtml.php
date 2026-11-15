@@ -36,6 +36,21 @@ class PublicHtml
     }
 
     /**
+     * Ruta absoluta dentro de public_html, armada desde la configuración.
+     *
+     * Reemplaza la ruta del servidor que estaba escrita a mano en varios controladores: así
+     * vive en un solo lugar (config/servime.php) y se puede cambiar por .env.
+     *
+     * @param  string  $relativa  ej: "storage/comercios/14/logos"
+     */
+    public static function ruta(string $relativa = ''): string
+    {
+        $base = rtrim((string) config('servime.public_html'), '/');
+
+        return $relativa === '' ? $base : $base.'/'.ltrim($relativa, '/');
+    }
+
+    /**
      * Copia una ruta relativa del disco `public` a public_html, creando los directorios.
      *
      * @param  string|null  $ruta  ej: "comercios/14/portada/hero.webp"
