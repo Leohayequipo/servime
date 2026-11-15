@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'demo_slug' => env('DEMO_MENU_SLUG', 'ivanas'),
+    'demo_slug' => env('DEMO_MENU_SLUG', 'live-demo'),
 
     /*
     |--------------------------------------------------------------------------

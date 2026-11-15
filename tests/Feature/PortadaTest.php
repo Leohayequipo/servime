@@ -188,7 +188,7 @@ class PortadaTest extends TestCase
         // al comercio sin que nadie tocara ese campo.
         $this->actingAs($user)->put(route('comercios.update', $comercio), [
             'nombre' => $comercio->nombre,
-            'direccion' => 'Azopardo 1234',
+            'direccion' => 'Corrientes 1234',
             'primary_color' => '#3B82F6',
             'secondary_color' => '#1E40AF',
             'accent_color' => '#F59E0B',

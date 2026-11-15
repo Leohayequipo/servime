@@ -38,7 +38,7 @@ por ir al final, quedaban fuera del prefijo cacheado y se pagaban enteras en cad
 Hoy son ~73 (o ~223 si la búsqueda encontró platos). Al mover algo al `system`, **dejar en el
 mensaje un recordatorio de una línea**: lo último que lee el modelo pesa más.
 
-Medido en Azopardo: `system` ~4.800 tokens (de los cuales el menú son ~2.700), historial ~477.
+Medido en el comercio de prueba local (151 platos): `system` ~4.800 tokens (de los cuales el menú son ~2.700), historial ~477.
 
 ## La búsqueda la hace PHP, no el modelo
 
@@ -224,7 +224,7 @@ experiencia sin IA es el **buscador de la carta** (`BuscadorMenuController`, que
 
 **2. Sugerencias "va bien con" precalculadas.** La IA leía la carta una vez y guardaba, por
 plato, con qué acompañarlo y qué platos parecidos había; la carta las mostraba como chips.
-Funcionaba (con `gpt-5.6-luna` cubría 149 de 151 platos de Azopardo; `gpt-4o-mini`, 123 y con
+Funcionaba (con `gpt-5.6-luna` cubría 149 de 151 platos del comercio de prueba; `gpt-4o-mini`, 123 y con
 errores de criterio), pero se sacó entera antes de llegar a producción:
 
 - **No había forma de saber si servían**: no se medía si alguien tocaba una sugerencia ni si
@@ -242,21 +242,21 @@ decida qué es acompañamiento y qué es alternativa. Y medir antes de anunciarl
 
 ## Modelo: qué se probó y qué se descartó
 
-| Opción | Banco | Dietas | Costo (1k charlas) | Veredicto |
+| Opción | Banco | Dietas | Costo relativo (gpt-4o-mini = 1) | Veredicto |
 |---|---|---|---|---|
-| **gpt-5.6-luna** | ok | **3/3** | **$3,61 – $4,05** | **el elegido**; en producción lo usan **todos** los planes (confirmado oct-2026) |
-| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | $4,15 – $5,25 | ya no se usa en prod (sí en Básico y Pro de la base **local**); falla en dietas |
+| **gpt-5.6-luna** | ok | **3/3** | **~0,9** | **el elegido**; en producción lo usan **todos** los planes (confirmado oct-2026) |
+| gpt-4o-mini | 22/22 *(con la búsqueda)* | **0/3** | 1 | ya no se usa en prod (sí en Básico y Pro de la base **local**); falla en dietas |
 
 > Un cambio de prompt se valida con **luna**, que es lo que ve el cliente. En local, Básico y
-> Pro siguen con `gpt-4o-mini`: probar con un comercio Premium (Azopardo local) o cambiar el
+> Pro siguen con `gpt-4o-mini`: probar con un comercio Premium de la base local o cambiar el
 > plan en memoria. En oct-2026 se perdió media prueba ajustando el prompt para mini, que sigue
 > las reglas de formato a medias (nombra varios platos en el texto aunque se le pida uno).
-| gpt-5-nano | ok | 3/3 | $11,69 | razona 4.692 tokens: 3× más caro |
-| gpt-5-mini | ok | 3/3 | $32,56 | razona 2.534 tokens: 8× |
-| gpt-4.1 | ok | 3/3 | $40,22 | 9× |
-| gpt-4o | 22/22 | **1/2** | $71,87 | 17× **y falla**: la peor opción |
-| gemini-3.5-flash-lite | 7/8 | — | ~$2,28 | más rápido, no respeta bien marcadores |
-| gemini-2.5-flash | 4/8 | — | ~$3,10 | se deprecia 16/10/2026 |
+| gpt-5-nano | ok | 3/3 | ~3 | razona 4.692 tokens: 3× más caro |
+| gpt-5-mini | ok | 3/3 | ~8 | razona 2.534 tokens: 8× |
+| gpt-4.1 | ok | 3/3 | ~9 | 9× |
+| gpt-4o | 22/22 | **1/2** | ~17 | 17× **y falla**: la peor opción |
+| gemini-3.5-flash-lite | 7/8 | — | ~0,5 | más rápido, no respeta bien marcadores |
+| gemini-2.5-flash | 4/8 | — | ~0,7 | se deprecia 16/10/2026 |
 | Vector store (file_search) | 5/5 | — | más caro | **descartado** |
 
 **"Dietas" es el banco que importa y no existía antes.** `gpt-4o-mini` le ofrece a un vegano

@@ -19,7 +19,7 @@ class ComercioSlugTest extends TestCase
     private function datosValidos(array $extra = []): array
     {
         return array_merge([
-            'nombre' => 'Azopardo 2',
+            'nombre' => 'Esquina 2',
             'descripcion' => 'El mejor bar del mundo',
             'direccion' => 'Lebenson',
             'horario' => 'lunes a viernes',
@@ -33,7 +33,7 @@ class ComercioSlugTest extends TestCase
 
     public function test_nombre_repetido_no_rompe_y_genera_slug_con_sufijo(): void
     {
-        Comercio::factory()->create(['nombre' => 'Azopardo 2', 'slug' => 'azopardo-2']);
+        Comercio::factory()->create(['nombre' => 'Esquina 2', 'slug' => 'esquina-2']);
 
         $admin = User::factory()->create(['role' => 'super_admin']);
         $dueno = User::factory()->create();
@@ -51,79 +51,79 @@ class ComercioSlugTest extends TestCase
         ]));
 
         $response->assertRedirect();
-        $this->assertDatabaseHas('comercios', ['slug' => 'azopardo-2-2', 'user_id' => $dueno->id]);
+        $this->assertDatabaseHas('comercios', ['slug' => 'esquina-2-2', 'user_id' => $dueno->id]);
     }
 
     public function test_renombrar_actualiza_el_slug_y_archiva_el_anterior(): void
     {
         $user = User::factory()->create();
         $comercio = Comercio::factory()->for($user)->create([
-            'nombre' => 'Azopardo Cade Bar',
-            'slug' => 'azopardo-cade-bar',
+            'nombre' => 'Esquina Cade Bar',
+            'slug' => 'esquina-cade-bar',
         ]);
 
         $this->actingAs($user)->put(
             route('comercios.update', $comercio),
-            $this->datosValidos(['nombre' => 'Azopardo Cafe Bar'])
+            $this->datosValidos(['nombre' => 'Esquina Cafe Bar'])
         )->assertRedirect();
 
         $comercio->refresh();
-        $this->assertSame('azopardo-cafe-bar', $comercio->slug);
+        $this->assertSame('esquina-cafe-bar', $comercio->slug);
         $this->assertDatabaseHas('comercio_slugs', [
             'comercio_id' => $comercio->id,
-            'slug' => 'azopardo-cade-bar',
+            'slug' => 'esquina-cade-bar',
         ]);
     }
 
     public function test_la_url_vieja_sigue_llevando_al_menu(): void
     {
         $comercio = Comercio::factory()->create([
-            'nombre' => 'Azopardo Cafe Bar',
-            'slug' => 'azopardo-cafe-bar',
+            'nombre' => 'Esquina Cafe Bar',
+            'slug' => 'esquina-cafe-bar',
         ]);
-        $comercio->slugsAnteriores()->create(['slug' => 'azopardo-cade-bar']);
+        $comercio->slugsAnteriores()->create(['slug' => 'esquina-cade-bar']);
 
         // Esto es lo que pasa cuando alguien escanea un QR impreso antes del
         // renombrado: tiene que ver el menú, no un 404.
-        $this->get('/menu/azopardo-cade-bar')->assertOk();
+        $this->get('/menu/esquina-cade-bar')->assertOk();
     }
 
     public function test_super_admin_puede_fijar_la_url_a_mano(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin']);
         $comercio = Comercio::factory()->create([
-            'nombre' => 'Azopardo Cafe Bar',
-            'slug' => 'azopardo-cafe-bar',
+            'nombre' => 'Esquina Cafe Bar',
+            'slug' => 'esquina-cafe-bar',
         ]);
 
         $this->actingAs($admin)->put(
             route('comercios.update', $comercio),
-            $this->datosValidos(['nombre' => 'Azopardo Cafe Bar', 'slug' => 'azopardo'])
+            $this->datosValidos(['nombre' => 'Esquina Cafe Bar', 'slug' => 'esquina'])
         )->assertRedirect();
 
         $comercio->refresh();
-        $this->assertSame('azopardo', $comercio->slug);
+        $this->assertSame('esquina', $comercio->slug);
         $this->assertTrue($comercio->slug_manual);
         // La vieja sigue viva. Se sigue el redirect porque un comercio sin asistente entra
         // directo a la carta: lo que importa acá es que la URL no dé 404.
-        $this->followingRedirects()->get('/menu/azopardo-cafe-bar')->assertOk();
+        $this->followingRedirects()->get('/menu/esquina-cafe-bar')->assertOk();
     }
 
     public function test_una_url_fijada_a_mano_no_se_pisa_al_renombrar(): void
     {
         $user = User::factory()->create();
         $comercio = Comercio::factory()->for($user)->create([
-            'nombre' => 'Azopardo Cafe Bar',
-            'slug' => 'azopardo',
+            'nombre' => 'Esquina Cafe Bar',
+            'slug' => 'esquina',
             'slug_manual' => true,
         ]);
 
         $this->actingAs($user)->put(
             route('comercios.update', $comercio),
-            $this->datosValidos(['nombre' => 'Azopardo Cafe Bar & Resto'])
+            $this->datosValidos(['nombre' => 'Esquina Cafe Bar & Resto'])
         )->assertRedirect();
 
-        $this->assertSame('azopardo', $comercio->refresh()->slug);
+        $this->assertSame('esquina', $comercio->refresh()->slug);
     }
 
     public function test_no_se_puede_tomar_una_url_que_otro_comercio_tuvo(): void

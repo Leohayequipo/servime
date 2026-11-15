@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Hasta ahora se guardaba sólo CUÁNTOS (`platos_sugeridos`), y el marcador
  * `[[PLATOS: ...]]` —de donde salen los nombres— se borra de la respuesta antes de
  * guardarla. Así, en el historial de conversaciones del panel se leía "te recomiendo la
- * Pizza Azopardo…" y había que confiar: no se podía ver qué se ofreció realmente ni si el
+ * Pizza de la casa…" y había que confiar: no se podía ver qué se ofreció realmente ni si el
  * plato existía.
  *
  * Con los nombres, el comercio (y nosotros) ve de un vistazo cuándo el asistente recomendó

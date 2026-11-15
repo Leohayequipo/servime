@@ -177,7 +177,7 @@ un mensaje normal.
 > `ChatbotService::menusParaContexto()` sigue con su propia versión, porque devuelve una
 > colección y además filtra por `contexto_gpt`. Tiene el mismo plan B.
 
-Dos cosas medidas en Azopardo (26 candidatos, 22 de ellos categorías):
+Dos cosas medidas en un comercio de prueba (26 candidatos, 22 de ellos categorías):
 
 - **Las categorías nunca entran** si el comercio tiene promos y un tag: los 3 lugares se llenan
   con los pasos 1–3. Y si entraran, ganaría la primera del PDF, no la más pedida.

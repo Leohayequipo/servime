@@ -126,6 +126,7 @@ npm run dev   /   npm run build
 
 ## Producción — pendientes
 
-Checklist y estado de cierre para producción: ver `PRODUCCION_CHECKLIST.md`.
+Checklist y estado de cierre para producción: ver `PRODUCCION_CHECKLIST.md` (solo en local, no se versiona:
+el repo es público y describe bugs abiertos).
 </content>
 </invoke>

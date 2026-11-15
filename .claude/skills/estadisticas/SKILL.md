@@ -252,7 +252,7 @@ penalizar la ficha del negocio.
 
 ## Pendientes
 
-Los números son de la base local de Azopardo, medidos al auditar el panel contra la base.
+Los números son de un comercio de la base local, medidos al auditar el panel contra la base.
 
 0. 🔴 **El costo por comercio: el dato está y no se ve.** Cada consulta guarda su gasto en
    `chat_conversations.metadata.consumo` (entrada, cacheados, salida, razonamiento), pero **no

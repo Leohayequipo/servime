@@ -36,10 +36,10 @@ class AltaDeComercioTest extends TestCase
         $user = User::factory()->create();
 
         $respuesta = $this->actingAs($user)->post(route('comercios.store'), [
-            'nombre' => 'Bar Azopardo',
+            'nombre' => 'Bar La Esquina',
         ]);
 
-        $comercio = Comercio::where('nombre', 'Bar Azopardo')->firstOrFail();
+        $comercio = Comercio::where('nombre', 'Bar La Esquina')->firstOrFail();
 
         $respuesta->assertRedirect(route('menus.index', $comercio));
         $this->assertStringContainsString('cargá tu menú', session('success'));
@@ -137,7 +137,7 @@ class AltaDeComercioTest extends TestCase
         // Dos usuarios: el que ya tiene comercio no puede entrar al alta (sólo se
         // permite uno por usuario), así que la pantalla de crear la mira el otro.
         $conComercio = User::factory()->create();
-        $comercio = Comercio::factory()->for($conComercio)->create(['direccion' => 'Azopardo 1234']);
+        $comercio = Comercio::factory()->for($conComercio)->create(['direccion' => 'Corrientes 1234']);
         $sinComercio = User::factory()->create();
 
         $pantallas = [
@@ -158,7 +158,7 @@ class AltaDeComercioTest extends TestCase
         // Y en editar el componente trae los valores cargados.
         $this->actingAs($conComercio)
             ->get(route('comercios.edit', $comercio))
-            ->assertSee('value="Azopardo 1234"', false);
+            ->assertSee('value="Corrientes 1234"', false);
     }
 
     public function test_el_tope_del_logo_rige_igual_al_crear_que_al_editar(): void
